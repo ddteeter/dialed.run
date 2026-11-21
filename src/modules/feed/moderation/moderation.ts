@@ -62,7 +62,7 @@ import { captureException, oweOutbox, purgePublicPages } from "../../ops";
 import {
   moderationActionInsert,
   claimPurgeAfterCase,
-  openReviewRow,
+  openSubject,
   purgedWrite,
   restoreDueHolds,
   sweepClaims,
@@ -533,10 +533,10 @@ export async function decideReview(
   }
   // Only a row still open, and as the page showed it, is acted on; any
   // other is answered by safety's own writer below, which says why.
-  const row = await openReviewRow(queueId, shown);
+  const subject = await openSubject(queueId, shown);
   const isTakenDown =
-    typeof row !== "string" &&
-    (await wasTakenDown(db, reviewerId, decision, row));
+    subject !== undefined &&
+    (await wasTakenDown(db, reviewerId, decision, subject));
   // Anything not taken down here — a product, a profile, or an entry or
   // garment photo already gone — is settled by safety's own writer, so
   // the row never stays open on a subject nobody can act on.

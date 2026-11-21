@@ -377,6 +377,11 @@ async function seedAccount(): Promise<Seeded> {
           ADDRESS_SENDS.map((kind) => countRow(kind, address, 1, NOW)),
         ),
       ]),
+    // Its own statement: one more row in the insert above binds more
+    // parameters than D1 takes.
+    core
+      .insert(rateLimits)
+      .values(countRow("correction-runner", userId, 1, NOW)),
     core.insert(inviteRedemptions).values({
       userId,
       codeId: newUlid(),
@@ -494,7 +499,8 @@ function runnersCount(
     | "weather-runner"
     | "photo-runner"
     | "purge-runner"
-    | "deletion-notice",
+    | "deletion-notice"
+    | "correction-runner",
   userId: string,
 ) {
   return and(eq(rateLimits.kind, kind), eq(rateLimits.subject, userId));
@@ -740,6 +746,7 @@ async function footprint(seeded: Seeded) {
           runnersCount("photo-runner", userId),
           runnersCount("purge-runner", userId),
           runnersCount("deletion-notice", userId),
+          runnersCount("correction-runner", userId),
         ),
       ),
     spendLimits: await core

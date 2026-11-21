@@ -9,9 +9,11 @@ import {
   notifications,
   productCorrections,
   products,
+  rateLimits,
   userProfiles,
   wardrobeItems,
 } from "../../src/db/schema-core";
+import { nowSeconds } from "../../src/lib/now";
 import { orSqlNull } from "../../src/lib/sql/sql-null";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
@@ -293,6 +295,25 @@ describe("how many a runner may file", () => {
       "That's 20 corrections today. You can send more tomorrow.",
     );
     expect(await rowsOf(runner)).toHaveLength(CORRECTIONS_PER_DAY);
+  });
+
+  it("counts a day's corrections under the runner, for a day", async () => {
+    const { productId } = await product();
+    const who = await owner(productId);
+    // A full day's count, started an hour ago: still the same day.
+    await core()
+      .insert(rateLimits)
+      .values({
+        kind: "correction-runner",
+        subject: who.userId,
+        windowStartedAt: nowSeconds() - 3600,
+        count: CORRECTIONS_PER_DAY,
+      });
+
+    await expect(file(who, productId, "name", "Better")).rejects.toSatisfy(
+      (error: unknown) =>
+        controlRefusalMessage(error) === CORRECTION_LIMIT_REACHED,
+    );
   });
 
   it("does not count a repeat of the same key, or a filing refused before it", async () => {

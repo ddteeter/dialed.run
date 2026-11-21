@@ -363,4 +363,19 @@ describe("a handle taken away leaves the bells it rang", () => {
     expect(await bellOf(you)).toStrictEqual([]);
     expect(await bellOf(them)).toHaveLength(1);
   });
+
+  it("deletes a closed account's group row that names them newest", async () => {
+    const you = await makeVerifiedUser();
+    const ada = await makeUser({ username: "ada" });
+    const bo = await makeUser({ username: "bo" });
+    await follow(bo, you);
+    await follow(ada, you);
+
+    await banUser(
+      { userId: ada, reason: "Spam", rule: "spam", bannedBy: "op" },
+      noPurge,
+    );
+
+    expect(await bellOf(you)).toStrictEqual([]);
+  });
 });

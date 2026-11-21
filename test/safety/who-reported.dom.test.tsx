@@ -54,6 +54,10 @@ describe("WHO REPORTED (D-164, R-66)", () => {
     ]);
     const note = screen.getByText("The jacket's name is about my sister.");
     expect(note).toHaveAttribute("data-part", "reporter-note");
+    // Only the reporter who wrote one has a note under their line.
+    expect(
+      document.querySelectorAll("[data-part='reporter-note']"),
+    ).toHaveLength(1);
     expect(note).toHaveClass("block", "whitespace-pre-wrap");
     expect(screen.queryByText(/Folded\./u)).toBeNull();
   });

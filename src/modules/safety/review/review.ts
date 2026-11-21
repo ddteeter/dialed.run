@@ -505,13 +505,12 @@ async function subjectsFor(
         // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
         photoKey: entryPhotos.photoKey,
         owner: userProfiles.username,
-        // The photo's kit, when it still exists: under its own name, as
-        // D1 keys a row by column name and the kit's is also `id`.
+        // The photo's kit, when it still exists. An expression, not the
+        // kit's own column: D1 keys a row by column name, and the kit's is
+        // also `id`.
         kitId: sql<
           string | null
-        >`case when ${outfitEntries.id} is null then null else ${entryPhotos.entryId} end`.as(
-          "kit_id",
-        ),
+        >`case when ${outfitEntries.id} is null then null else ${entryPhotos.entryId} end`,
       })
       // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
       .from(entryPhotos)
@@ -891,12 +890,13 @@ export function settledHere(
 }
 
 /**
- * The subject of a queue row still waiting on a decision, or nothing — for
- * a caller that acts only on open rows and leaves "why not" to
- * `resolveReview`.
+ * The subject of a queue row still waiting on a decision, and still as the
+ * page showed it, or nothing — for a caller that acts only on open rows and
+ * leaves "why not" to `resolveReview`.
  */
 export async function openSubject(
   queueId: string,
+  shown: ShownRow,
 ): Promise<{ subjectType: ReviewSubjectType; subjectId: string } | undefined> {
   return firstRowWhere(
     db(),
@@ -904,6 +904,7 @@ export async function openSubject(
     and(
       eq(reviewQueue.id, queueId),
       inArray(reviewQueue.status, ["pending", "reviewing"]),
+      stillAsShown(shown),
     ),
   );
 }

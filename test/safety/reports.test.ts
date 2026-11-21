@@ -332,6 +332,22 @@ describe("after a person approved it", () => {
     expect(reopened).toStrictEqual({ status: "pending", approvedAt: 7 });
   });
 
+  it("keeps the Approve's time when the row is then removed", async () => {
+    const entryId = await reportableEntry();
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await report(entryId, await makeUser(), "explicit");
+    }
+    const [row] = await pendingReviewQueue();
+    if (row === undefined) throw new Error("nothing queued");
+
+    await resolveReview(row.id, await makeUser(), "remove");
+
+    const [removed] = await core()
+      .select({ approvedAt: reviewQueue.approvedAt })
+      .from(reviewQueue);
+    expect(removed?.approvedAt).toBeNull();
+  });
+
   it("does not hide it again for one new reporter under the bar", async () => {
     const entryId = await approvedEntry();
 
