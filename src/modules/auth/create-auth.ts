@@ -27,6 +27,8 @@ import {
 import { AUTH_COPY } from "./auth-copy";
 import { CLOSED_AUTH_PATHS } from "./closed-paths";
 import { clearSignInTries, countSignInTry } from "./sign-in-limit";
+import { cutUserAgent, endOldestSessions } from "./session-cap";
+import { holdSocialBody } from "./social-body";
 import {
   BREACHED_CODE,
   newPasswordIn,
@@ -165,6 +167,22 @@ export function deploymentPosture(baseUrl: string | undefined): {
 } {
   const isHttps = baseUrl?.startsWith("https://") === true;
   return { secureCookies: isHttps, rateLimited: isHttps };
+}
+
+/**
+ * The deployment's origin, or no auth instance at all.
+ *
+ * An origin decides the posture (`deploymentPosture`): with none, the
+ * limiter and the `__Host-` cookies are off and Better Auth takes its base
+ * URL from each request. So an unset or blank `BETTER_AUTH_URL` stops the
+ * deployed instance being built, as an unset secret does. Local dev and CI
+ * set an `http://localhost` origin, which is a posture of its own.
+ */
+export function deploymentOrigin(origin: string | undefined): string {
+  if (origin === undefined || origin.trim() === "") {
+    throw new Error("BETTER_AUTH_URL is not set: auth will not start");
+  }
+  return origin;
 }
 
 /**
@@ -402,6 +420,12 @@ export function createAuth({
           },
         },
       },
+      session: {
+        create: {
+          before: (row) => Promise.resolve(cutUserAgent(row)),
+          after: (row) => endOldestSessions(db, row),
+        },
+      },
       account: {
         create: { before: withoutProviderTokens },
         update: { before: withoutProviderTokens },
@@ -429,6 +453,8 @@ export function createAuth({
     }),
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        // A Google press carries only what the app's own press sends.
+        holdSocialBody(ctx);
         // The password first: a breached one is the form's to fix
         // whatever the code says. Then the way in.
         await screenPassword(passwordScreen, ctx);

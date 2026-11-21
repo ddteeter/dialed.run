@@ -63,7 +63,9 @@ export function quarantineInsert(db: Db, record: QuarantineRecord) {
  * times, IP address and browser — the only IP addresses we hold; no
  * upload records one. **Never a session's token**, which is a credential.
  * Read before the quarantine's batch, which cannot read for itself; an
- * account already gone gives no email or username and no sessions.
+ * account already gone gives no email or username and no sessions. At
+ * most the `SNAPSHOT_SESSIONS` newest sessions are kept, newest first: an
+ * account keeps no more than that many (`auth/session-cap.ts`).
  */
 export async function uploaderContextOf(
   db: Db,
@@ -93,7 +95,8 @@ export async function uploaderContextOf(
       })
       .from(session)
       .where(eq(session.userId, uploaderId))
-      .orderBy(asc(session.createdAt)),
+      .orderBy(desc(session.createdAt), desc(session.id))
+      .limit(SNAPSHOT_SESSIONS),
   ]);
   // An absent field is left out of the JSON, which says "not found".
   return JSON.stringify({
@@ -108,6 +111,11 @@ export async function uploaderContextOf(
 The most records one read returns.
 */
 export const QUARANTINE_PAGE = 100;
+
+/**
+The most sessions an uploader snapshot keeps.
+*/
+export const SNAPSHOT_SESSIONS = 50;
 
 /**
  * What is in quarantine, newest first — for an admin only. Anyone else

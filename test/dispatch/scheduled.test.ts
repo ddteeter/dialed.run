@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,6 +17,7 @@ import {
   stravaRevocations,
   userProfiles,
 } from "../../src/db/schema-core";
+import { verification } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
 import { configuredDeployment } from "../ops/configured-deployment";
 import type { RateLimitKind } from "../../src/lib/contracts/rate-limits";
@@ -66,6 +67,24 @@ import { importMessageFor } from "../queue-fakes";
 const HOUR = 3600;
 const DIGEST = { cron: "0 12 * * *" } as ScheduledController;
 const ENRICHMENT_RETRY = { cron: "30 * * * *" } as ScheduledController;
+
+function fromNow(seconds: number): Date {
+  return new Date((nowSeconds() + seconds) * 1000);
+}
+
+/**
+A Better Auth state row expiring `offset` seconds from now.
+*/
+function aState(id: string, offset: number) {
+  return {
+    id,
+    identifier: `state-${id}`,
+    value: "{}",
+    expiresAt: fromNow(offset),
+    createdAt: fromNow(-600),
+    updatedAt: fromNow(-600),
+  };
+}
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -184,6 +203,22 @@ describe("the cron heartbeat", () => {
     } as ScheduledController);
 
     expect(outcome).toStrictEqual({ cronName: "weather-retry", anomalies: [] });
+  });
+
+  it("deletes Better Auth's expired states on the hourly retry, and keeps a live one", async () => {
+    const expired = newUlid();
+    const live = newUlid();
+    await coreDb()
+      .insert(verification)
+      .values([aState(expired, -60), aState(live, 600)]);
+
+    await handleScheduled({ cron: "0 * * * *" } as ScheduledController);
+
+    const left = await coreDb()
+      .select({ id: verification.id })
+      .from(verification)
+      .where(inArray(verification.id, [expired, live]));
+    expect(left).toStrictEqual([{ id: live }]);
   });
 
   it("drains only the 'email' outbox kind on the hourly retry, leaving other kinds for the daily digest", async () => {
@@ -1495,11 +1530,11 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
 
     await expect(firing).rejects.toBeInstanceOf(AggregateError);
     // The weather retry, the sweep, the removal reminders (C6), the email
-    // drain, the product-link drain (D-113 Q1) and the zone fill (design
-    // 142), in that order.
+    // drain, the product-link drain (D-113 Q1), the expired-state sweep
+    // and the zone fill (design 142), in that order.
     await expect(firing).rejects.toMatchObject({
       message: "several upkeep steps failed",
-      errors: [boom, sweep, boom, boom, boom, boom],
+      errors: [boom, sweep, boom, boom, boom, boom, boom],
     });
     expect(swept).toBe(1);
   });

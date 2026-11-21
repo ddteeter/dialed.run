@@ -49,7 +49,10 @@ import {
 } from "../../src/modules/safety";
 import { banUser } from "../../src/modules/safety/runners/bans";
 import { pendingReviewQueue } from "../../src/modules/safety/review/review";
-import { QUARANTINE_RETENTION_SECONDS } from "../../src/modules/safety/takedowns/quarantine";
+import {
+  QUARANTINE_RETENTION_SECONDS,
+  SNAPSHOT_SESSIONS,
+} from "../../src/modules/safety/takedowns/quarantine";
 import { type CategoryScores } from "../../src/modules/safety/screening/classifier/moderation";
 import { type PhotoScope } from "../../src/modules/safety/screening/screening";
 
@@ -127,6 +130,10 @@ const SESSIONS = [
 /**
 An uploader with an account, a handle and two signed-in sessions.
 */
+function byText(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
 async function uploader(): Promise<string> {
   const userId = await makeUser({ username: `up_${newUlid().slice(-6)}` });
   await addAccount(userId, true);
@@ -344,6 +351,40 @@ describe("a quarantine keeps who uploaded it (§2258A(h)(2), design 157)", () =>
     ]);
     const expected = SESSIONS.map((pair) => [...pair]);
     expect(seen.toSorted(byIp)).toStrictEqual(expected.toSorted(byIp));
+  });
+
+  it(`keeps the ${String(SNAPSHOT_SESSIONS)} newest sessions, newest first`, async () => {
+    const author = await uploader();
+    const start = Date.now() - 86_400_000;
+    for (let n = 0; n < SNAPSHOT_SESSIONS; n += 1) {
+      const at = new Date(start + n * 1000);
+      await core()
+        .insert(session)
+        .values({
+          id: newUlid(),
+          token: `secret-token-${String(n)}`,
+          userId: author,
+          expiresAt: new Date(start + 7 * 86_400_000),
+          createdAt: at,
+          updatedAt: at,
+          ipAddress: `192.0.2.${String(n)}`,
+          userAgent: "Older",
+        });
+    }
+    const { photoId } = await postedPhoto(author);
+
+    await quarantinePhoto(photoId);
+
+    const kept = await keptUploader();
+    expect(kept.sessions).toHaveLength(SNAPSHOT_SESSIONS);
+    const ips = kept.sessions.map((row) => row.ipAddress);
+    // The two newest (made now) first, then the older ones newest first;
+    // the oldest two older ones are left out.
+    expect(ips.slice(0, 2).toSorted(byText)).toStrictEqual(
+      SESSIONS.map(([ip]) => ip).toSorted(byText),
+    );
+    expect(ips[2]).toBe(`192.0.2.${String(SNAPSHOT_SESSIONS - 1)}`);
+    expect(ips.at(-1)).toBe("192.0.2.2");
   });
 
   it("outlives a ban, the session sweep and the account's rows, and goes with the record", async () => {

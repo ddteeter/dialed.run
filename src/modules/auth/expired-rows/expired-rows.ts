@@ -10,7 +10,7 @@
 import { lt } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { rateLimit, session } from "../../../db/schema-auth";
+import { rateLimit, session, verification } from "../../../db/schema-auth";
 import { passwordAttempts } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { nowSeconds } from "../../../lib/now";
@@ -89,4 +89,26 @@ export async function sweepExpiredAuthRows(
       .where(lt(passwordAttempts.windowStartedAt, attemptsBefore)),
     db.delete(rateLimit).where(lt(rateLimit.lastRequest, countsBefore)),
   ]);
+}
+
+/**
+ * Delete Better Auth's `verification` rows whose expiry has passed: a
+ * Google press's state (ten minutes) and a reset link (an hour). Run on
+ * every hourly firing (owner, 2026-11-21), so at most about an hour of
+ * expired rows is ever kept.
+ *
+ * **An expired row is dead**, so no margin is kept: Better Auth refuses a
+ * state or reset whose `expiresAt` has passed, and deletes expired rows
+ * itself whenever it looks one up. The app's own writes to the table are
+ * deletes only. Re-runnable (law 1). It scans the table, which an hourly
+ * sweep keeps small.
+ */
+export async function sweepExpiredStates(
+  db: Db = coreDb(),
+  now = nowSeconds(),
+): Promise<void> {
+  // `expires_at` is a timestamp column: drizzle stores the Date in seconds.
+  await db
+    .delete(verification)
+    .where(lt(verification.expiresAt, new Date(now * 1000)));
 }

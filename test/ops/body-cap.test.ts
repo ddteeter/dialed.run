@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import serverSource from "../../src/server.ts?raw";
 import { maxPhotoBytes } from "../../src/lib/photo-constraints";
+import { isFromBlockedRegion } from "../../src/lib/contracts/access";
 import {
+  AUTH_BODY_LIMIT,
   MULTIPART_BODY_LIMIT,
   OTHER_BODY_LIMIT,
   bodyLimitFor,
@@ -48,6 +50,24 @@ function asRequest(answer: Request | Response): Request {
   throw new Error(`expected a request, got ${String(answer.status)}`);
 }
 
+function limitAt(path: string, type: string): number {
+  return bodyLimitFor(
+    new Request(`https://dialed.test${path}`, {
+      method: "POST",
+      body: "",
+      headers: { "content-type": type },
+    }),
+  );
+}
+
+function authPosting(bytes: number): Request {
+  return new Request("https://dialed.test/api/auth/sign-in/social", {
+    method: "POST",
+    body: streamOf(bytes),
+    headers: { "content-type": "application/json" },
+  });
+}
+
 describe("the ceilings", () => {
   it("gives a multipart upload room for the largest file, and anything else a megabyte", () => {
     expect(MULTIPART_BODY_LIMIT).toBe(
@@ -55,6 +75,19 @@ describe("the ceilings", () => {
     );
     expect(MULTIPART_BODY_LIMIT).toBe(26 * 1024 * 1024);
     expect(OTHER_BODY_LIMIT).toBe(1024 * 1024);
+    expect(AUTH_BODY_LIMIT).toBe(8 * 1024);
+  });
+
+  it("gives every path under /api/auth/ auth's ceiling, whatever it carries", () => {
+    expect(limitAt("/api/auth/sign-in/email", "application/json")).toBe(
+      AUTH_BODY_LIMIT,
+    );
+    expect(limitAt("/api/auth/x", "multipart/form-data; boundary=x")).toBe(
+      AUTH_BODY_LIMIT,
+    );
+    expect(limitAt("/api/authx/y", "application/json")).toBe(OTHER_BODY_LIMIT);
+    expect(limitAt("/api/auth", "application/json")).toBe(OTHER_BODY_LIMIT);
+    expect(limitAt("/x/api/auth/y", "application/json")).toBe(OTHER_BODY_LIMIT);
   });
 
   it("chooses by content type, in any case", () => {
@@ -122,6 +155,26 @@ describe("boundedRequest", () => {
     const request = await passed(sent);
     const body = await request.arrayBuffer();
     expect(body.byteLength).toBe(OTHER_BODY_LIMIT + 1);
+  });
+
+  it("holds an auth body to auth's ceiling", async () => {
+    const refused = await refusal(authPosting(AUTH_BODY_LIMIT + 1));
+    expect(refused.status).toBe(413);
+    const request = await passed(authPosting(AUTH_BODY_LIMIT));
+    const body = await request.arrayBuffer();
+    expect(body.byteLength).toBe(AUTH_BODY_LIMIT);
+  });
+
+  it("keeps where Cloudflare placed the request", async () => {
+    const sent = new Request(URL_, {
+      method: "POST",
+      body: "{}",
+      headers: { "content-type": "application/json" },
+      cf: { country: "US", regionCode: "TN" },
+    });
+    const request = await passed(sent);
+    expect(request).not.toBe(sent);
+    expect(isFromBlockedRegion(request)).toBe(true);
   });
 
   it("does not turn another failure into a 413", async () => {

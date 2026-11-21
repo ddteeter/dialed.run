@@ -2,12 +2,20 @@ import { eq, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
-import { rateLimit, session, user } from "../../src/db/schema-auth";
+import {
+  rateLimit,
+  session,
+  user,
+  verification,
+} from "../../src/db/schema-auth";
 import { passwordAttempts } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { sweepExpiredAuthRows } from "../../src/modules/auth/expired-rows/expired-rows";
+import {
+  sweepExpiredAuthRows,
+  sweepExpiredStates,
+} from "../../src/modules/auth/expired-rows/expired-rows";
 import { PASSWORD_ATTEMPT_WINDOW_S } from "../../src/modules/auth/password-check";
 
 /**
@@ -226,5 +234,43 @@ describe("the sweep reads by index, not by scanning (D1 bills rows scanned)", ()
     expect(sessionsPlan).not.toMatch(/SCAN\s+session\b/iu);
     expect(countsPlan).toMatch(/password_attempts_window/u);
     expect(countsPlan).not.toMatch(/SCAN\s+password_attempts\b/iu);
+  });
+});
+
+/**
+A verification row that expires at `expiresAt` (epoch seconds).
+*/
+async function aState(expiresAt: number): Promise<string> {
+  const id = newUlid();
+  await db.insert(verification).values({
+    id,
+    identifier: `state-${id}`,
+    value: "{}",
+    expiresAt: new Date(expiresAt * 1000),
+    createdAt: new Date((expiresAt - 600) * 1000),
+    updatedAt: new Date((expiresAt - 600) * 1000),
+  });
+  return id;
+}
+
+async function stateIds(ids: readonly string[]): Promise<string[]> {
+  const rows = await db.select({ id: verification.id }).from(verification);
+  return rows
+    .map((row) => row.id)
+    .filter((id) => ids.includes(id))
+    .toSorted(byText);
+}
+
+describe("sweepExpiredStates", () => {
+  it("deletes a state whose expiry has passed, and keeps one still live or expiring now", async () => {
+    const expired = await aState(NOW - 1);
+    const expiringNow = await aState(NOW);
+    const live = await aState(NOW + 600);
+
+    await sweepExpiredStates(db, NOW);
+
+    expect(await stateIds([expired, expiringNow, live])).toStrictEqual(
+      [expiringNow, live].toSorted(byText),
+    );
   });
 });

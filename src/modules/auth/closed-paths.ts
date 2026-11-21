@@ -14,7 +14,9 @@
  *
  * A parameterised route (`/reset-password/:token`, `/callback/:id`) cannot
  * be closed here: the router compares the request's own path with this
- * list. Those stay on the test's allow-list with their reasons.
+ * list. `./auth-route` serves the first never and the second only for a
+ * configured provider; both stay on the test's allow-list with their
+ * reasons.
  */
 import { CHANGE_PASSWORD_PATH } from "./breached-password";
 

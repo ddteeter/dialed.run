@@ -29,7 +29,7 @@ describe("the firings and the queue get their jobs from the dispatch", () => {
       'import { sweepExports } from "../account/export-build";',
       'import { rescreenHandlesFromEnv } from "../account/handles";',
       'import { purgeDueAccounts } from "../account/purge";',
-      'import { sweepExpiredAuthRows } from "../auth/expired-rows";',
+      'import { sweepExpiredAuthRows, sweepExpiredStates } from "../auth/expired-rows";',
       'import { linkTypedGarments } from "../closet";',
       'import { sweepCopyrightHolds } from "../feed/moderation";',
     ]) {

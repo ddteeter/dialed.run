@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import type { BetterAuthPlugin } from "better-auth";
 import { describe, expect, it } from "vitest";
 
 import { session } from "../../src/db/schema-auth";
@@ -67,8 +68,8 @@ async function leaving(userId: string, purgeStartedAt?: number) {
   });
 }
 
-async function signIn(email: string): Promise<Response> {
-  return auth.handler(
+async function signIn(email: string, through = auth): Promise<Response> {
+  return through.handler(
     new Request("http://localhost/api/auth/sign-in/email", {
       method: "POST",
       headers: {
@@ -177,6 +178,95 @@ describe("deletionGate — signing in", () => {
     await expect(
       context.internalAdapter.createSession(userId),
     ).rejects.toMatchObject({ body: { code: "INVALID_EMAIL_OR_PASSWORD" } });
+  });
+
+  it("writes no session at all once the purge has started, so nothing that follows a session's making runs", async () => {
+    const made: string[] = [];
+    const afterMade: BetterAuthPlugin = {
+      id: "after-made",
+      init: () => ({
+        options: {
+          databaseHooks: {
+            session: {
+              create: {
+                after: (row: { userId: string }) => {
+                  made.push(row.userId);
+                  return Promise.resolve();
+                },
+              },
+            },
+          },
+        },
+      }),
+    };
+    const watched = createAuth({
+      db,
+      secret: "test-secret-not-for-production",
+      baseUrl: "http://localhost",
+      passwordScreen: CLEAN_SCREEN,
+      mail: recordingMail(),
+      access: OPEN_ACCESS,
+      plugins: [afterMade, deletionGate(db)],
+    });
+    const { userId, email } = await runner();
+    await leaving(userId, 3);
+    const other = await runner();
+
+    const refused = await signIn(email, watched);
+    expect(refused.status).toBe(401);
+    expect(made).toStrictEqual([]);
+
+    // The watcher does see a session that is made.
+    const signedIn = await signIn(other.email, watched);
+    expect(signedIn.status).toBe(200);
+    expect(made).toStrictEqual([other.userId]);
+  });
+
+  it("deletes the session when the purge starts while it is being made", async () => {
+    const { userId, email } = await runner();
+    // Starts the purge after the gate's first read and before the insert.
+    const purgeStarts: BetterAuthPlugin = {
+      id: "purge-starts",
+      init: () => ({
+        options: {
+          databaseHooks: {
+            session: {
+              create: {
+                before: async (made: { userId: string }) => {
+                  await leaving(made.userId, 3);
+                },
+              },
+            },
+          },
+        },
+      }),
+    };
+    const racing = createAuth({
+      db,
+      secret: "test-secret-not-for-production",
+      baseUrl: "http://localhost",
+      passwordScreen: CLEAN_SCREEN,
+      mail: recordingMail(),
+      access: OPEN_ACCESS,
+      plugins: [deletionGate(db), purgeStarts],
+    });
+
+    const refused = await signIn(email, racing);
+
+    expect(refused.status).toBe(401);
+    expect(await refused.json()).toMatchObject({
+      code: "INVALID_EMAIL_OR_PASSWORD",
+    });
+    expect(refused.headers.getSetCookie()).toStrictEqual([]);
+    expect(await sessionsOf(userId)).toStrictEqual([]);
+  });
+
+  it("keeps the session when the second read still finds the week, not the purge", async () => {
+    const { userId } = await runner();
+    await leaving(userId);
+    const context = await auth.$context;
+    const made = await context.internalAdapter.createSession(userId);
+    expect(await sessionsOf(userId)).toStrictEqual([{ id: made.id }]);
   });
 
   it("lets a runner with no deletion straight in", async () => {
