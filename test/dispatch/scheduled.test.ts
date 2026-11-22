@@ -376,6 +376,55 @@ describe("the cron heartbeat", () => {
     expect(await env.PUBLIC_PHOTOS.head(orphan)).toBeNull();
   });
 
+  it("takes a stale claim back even when the screening retry throws", async () => {
+    const queueId = newUlid();
+    await coreDb()
+      .insert(reviewQueue)
+      .values({
+        id: queueId,
+        subjectType: "entry",
+        subjectId: newUlid(),
+        source: "reports",
+        status: "reviewing",
+        resolvedBy: newUlid(),
+        claimedAt: nowSeconds() - 3600,
+        createdAt: nowSeconds() - 3600,
+      });
+    // A photo to screen, whose read from storage fails.
+    const userId = newUlid();
+    const runId = await insertRun({ userId });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId,
+      runId,
+      verdict: 0,
+      audience: "runners",
+      createdAt: nowSeconds(),
+    });
+    await coreDb()
+      .insert(entryPhotos)
+      .values({
+        id: newUlid(),
+        entryId,
+        photoKey: `entries/${userId}/${entryId}/p`,
+        position: 0,
+      });
+    const failure = new Error("storage is down");
+    vi.spyOn(env.MEDIA, "get").mockRejectedValue(failure);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    await expect(
+      handleScheduled({ cron: "15 * * * *" } as ScheduledController),
+    ).rejects.toBe(failure);
+
+    const [row] = await coreDb()
+      .select({ status: reviewQueue.status })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+    expect(row?.status).toBe("pending");
+  });
+
   it("says so when it takes a stale review claim back", async () => {
     // A claim stamped long enough ago that its lease has run out. Written
     // directly because the only other way to reach this state is to wait

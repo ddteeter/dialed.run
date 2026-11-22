@@ -217,6 +217,26 @@ describe("a photo still pending a day after upload", () => {
     ]);
   });
 
+  it("escalates a full batch of day-old pending photos, 50 of each kind", async () => {
+    const now = nowSeconds();
+    const entries = await Promise.all(
+      Array.from({ length: 50 }, async () => entryPhoto(now, DAY + 60)),
+    );
+    const garments = await Promise.all(
+      Array.from({ length: 50 }, async () => garmentPhoto(now, DAY + 60)),
+    );
+    const anomalies: string[] = [];
+
+    const report = await retryPendingScreenings(unavailable, anomalies, now);
+
+    expect(report).toMatchObject({ considered: 100, escalated: 100 });
+    const queued = new Set(await queuedIds());
+    expect(queued.size).toBe(100);
+    for (const id of [...entries, ...garments]) {
+      expect(queued.has(id), id).toBe(true);
+    }
+  });
+
   it("goes as missing_file when storage has no object, and the lines say so", async () => {
     const now = nowSeconds();
     const photoId = await entryPhoto(now, DAY + 60, false);

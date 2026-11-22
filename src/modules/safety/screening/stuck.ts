@@ -13,6 +13,7 @@ import { and, eq, inArray, lt } from "drizzle-orm";
 
 import { photoScreenings, reviewQueue } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
+import { readInChunks } from "../../../lib/chunked";
 
 import { enqueueForReview } from "../review";
 import { queueSubjectOf, type PhotoScope } from "./screening";
@@ -105,14 +106,16 @@ async function heldFlagsAmong(
   stuck: readonly StuckPhoto[],
 ): Promise<ReadonlySet<string>> {
   const ids = stuck.map((photo) => photo.photoId);
-  const rows = await coreDb()
-    .selectDistinct({ photoId: photoScreenings.photoId })
-    .from(photoScreenings)
-    .where(
-      and(
-        eq(photoScreenings.decision, "held_back"),
-        inArray(photoScreenings.photoId, ids),
+  const rows = await readInChunks(ids, async (chunk) =>
+    coreDb()
+      .selectDistinct({ photoId: photoScreenings.photoId })
+      .from(photoScreenings)
+      .where(
+        and(
+          eq(photoScreenings.decision, "held_back"),
+          inArray(photoScreenings.photoId, chunk),
+        ),
       ),
-    );
+  );
   return new Set(rows.map((row) => row.photoId));
 }
