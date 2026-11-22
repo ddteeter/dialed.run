@@ -52,7 +52,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           LABEL: owner-approved
           PROTECTED: >-
@@ -80,7 +80,10 @@ jobs:
               raw package-lock.json "$1" |
               jq -ce '.packages["node_modules/guardrails-core"] | [.resolved, .integrity]'
           }
-          merge_base=$(gh api "repos/$REPO/compare/$BASE_SHA...$HEAD_SHA" --jq .merge_base_commit.sha)
+          # The merge-base with the base branch as it is now, read by its
+          # full ref name so a tag of the same name cannot stand in.
+          base_tip=$(gh api "repos/$REPO/git/ref/heads/$BASE_REF" --jq .object.sha)
+          merge_base=$(gh api "repos/$REPO/compare/$base_tip...$HEAD_SHA" --jq .merge_base_commit.sha)
           if ! before=$(pin "$merge_base") || ! after=$(pin "$HEAD_SHA") || [ "$before" != "$after" ]; then
             touched=$(printf '%s\n%s' "$touched" "the guardrails-core pin in package.json or package-lock.json")
           fi
@@ -92,7 +95,8 @@ jobs:
           fi
           echo "This PR changes:"
           printf '%s\n' "$touched" | sed 's/^/  /'
-          if gh api "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name' | grep -qxF "$LABEL"; then
+          labels=$(gh api "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name')
+          if grep -qxF "$LABEL" <<<"$labels"; then
             echo "The PR has the $LABEL label."
             exit 0
           fi

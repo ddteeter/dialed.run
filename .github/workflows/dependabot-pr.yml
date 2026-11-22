@@ -234,6 +234,7 @@ jobs:
           permission-pull-requests: write
 
       - name: Turn auto-merge off
+        id: off
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ steps.app.outputs.token }}
@@ -246,6 +247,7 @@ jobs:
           else
             echo "Auto-merge was not on for $PR_URL"
           fi
+          echo "was_armed=$armed" >>"$GITHUB_OUTPUT"
 
       # The reasons are classify's text: they go to a file through the
       # environment, never into a script.
@@ -255,11 +257,16 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ steps.app.outputs.token }}
           HELD: ${{ needs.classify.outputs.held }}
+          WAS_ARMED: ${{ steps.off.outputs.was_armed }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
           {
-            echo "This push is held for a person, so auto-merge is off. [Run]($RUN_URL)"
+            if [ "$WAS_ARMED" = true ]; then
+              echo "This push is held for a person, so auto-merge is now off. [Run]($RUN_URL)"
+            else
+              echo "This push is held for a person; the PR does not merge itself. [Run]($RUN_URL)"
+            fi
             echo
             if [ -n "$HELD" ]; then
               printf '%s\n' "$HELD" | sed -E 's/@([A-Za-z0-9_-])/@\xe2\x80\x8b\1/g'
