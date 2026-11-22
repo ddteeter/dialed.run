@@ -511,6 +511,20 @@ describe("a PR's mutation shard", () => {
   });
 });
 
+describe("the Mutation gate", () => {
+  const gate = codeOf(jobIn(workflowNamed("mutation.yml"), "gate"));
+
+  it("holds a self-merging Dependabot PR to the answer for its head, reading only", () => {
+    expect(gate).toContain(
+      "      - name: Check a self-merging Dependabot PR was cleared for its head\n        if: github.event_name == 'pull_request'\n",
+    );
+    expect(gate).toContain(
+      "    permissions:\n      contents: read\n      pull-requests: read\n      actions: read\n",
+    );
+    expect(gate).not.toContain("actions/checkout@");
+  });
+});
+
 describe("the protected-paths check", () => {
   const source = workflowNamed("protected-paths.yml");
   const job = codeOf(jobIn(source, "protected-paths"));

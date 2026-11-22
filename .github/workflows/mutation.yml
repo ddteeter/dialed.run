@@ -360,6 +360,12 @@ jobs:
     needs: [scopes, mutate]
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # For the Dependabot step below: the PR's auto-merge state and the
+      # Dependabot run for its head.
+      pull-requests: read
+      actions: read
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
@@ -384,6 +390,44 @@ jobs:
             echo "::error::A mutation scope did not reach 100. See the shard that failed."
             exit 1
           fi
+
+      # A Dependabot PR that is set to merge itself passes this required
+      # check only when the newest dependabot-pr.yml run for its head has
+      # answered yes: classify finished and disarm was skipped (or classify
+      # was skipped, as for the open-source-list commit). A disarm that
+      # ran, failed or is still to run, or no run at all, fails it, so the
+      # PR waits for a person. This job runs long after classify, checks
+      # nothing out and runs no package code. Every other PR passes the
+      # step. Values reach the script through `env`.
+      - name: Check a self-merging Dependabot PR was cleared for its head
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          state=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '"\(.user.login) \(.auto_merge != null)"')
+          if [ "$state" != "dependabot[bot] true" ]; then
+            echo "Not a Dependabot PR set to merge itself."
+            exit 0
+          fi
+          run=$(gh api "repos/$REPO/actions/workflows/dependabot-pr.yml/runs?head_sha=$HEAD_SHA&per_page=1" \
+            --jq '.workflow_runs[0].id // empty')
+          if [ -z "$run" ]; then
+            echo "::error::This Dependabot PR is set to merge itself, and no Dependabot run has answered for its head."
+            exit 1
+          fi
+          jobs=$(gh api "repos/$REPO/actions/runs/$run/jobs?per_page=100" --jq '[.jobs[] | {name, status, conclusion}]')
+          classify=$(jq -r 'map(select(.name == "classify")) | first // {} | "\(.status) \(.conclusion)"' <<<"$jobs")
+          disarm=$(jq -r 'map(select(.name == "disarm")) | first // {} | .conclusion // "absent"' <<<"$jobs")
+          if [ "$classify" = "completed skipped" ] || { [ "${classify%% *}" = completed ] && [ "$disarm" = skipped ]; }; then
+            echo "Cleared for its head by run $run."
+            exit 0
+          fi
+          echo "::error::This Dependabot PR is set to merge itself, but run $run has not cleared its head (classify: $classify, disarm: $disarm). It waits for a person."
+          exit 1
 
   # Main's result where a coordinator will see it (#876, resilience law 6).
   # Nothing told anyone when main went red: a survivor that reached main

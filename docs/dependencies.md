@@ -32,7 +32,10 @@ file explains them and does not restate them.
    that are all the App's and change the list alone. Every later push by
    Dependabot is classified again; when the answer is not a yes (a hold,
    or a classify that failed), the `disarm` job turns auto-merge off and
-   comments on the PR why it no longer merges itself.
+   comments on the PR why it no longer merges itself. The required
+   `Mutation` check backs it: on a Dependabot PR still set to merge
+   itself, it fails unless the newest Dependabot run for the head
+   answered yes, so a disarm that failed or never ran still holds the PR.
 4. **Anything else waits for you**: majors, 0.x minors, 0.0.x updates, a
    version under seven days old (a security update skips Dependabot's
    cooldown, not this one), a new publisher, and every GitHub Actions bump (Actions run with this repo's
