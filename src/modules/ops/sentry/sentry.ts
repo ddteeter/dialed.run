@@ -147,7 +147,10 @@ export function captureException(
 /**
  * The reporter for requests that threw out of the Worker, over a gate and
  * a send handed in: one issue per kind of error (`./repeats`), and a kind
- * the gate has seen within its window is not sent again.
+ * the gate has seen within its window is not sent again. The kind is read
+ * from the error with its bound values removed, so a failed statement's
+ * key and fingerprint name the statement and the database's reason only,
+ * and every failure of one statement for one reason is one kind.
  */
 export function requestReporter(
   isDue: RepeatGate,
@@ -155,7 +158,7 @@ export function requestReporter(
   now: () => number = Date.now,
 ): (error: unknown) => void {
   return (error) => {
-    const kind = errorKind(error);
+    const kind = errorKind(withoutBoundValues(error));
     if (!isDue(kind, now())) return;
     send(error, {
       context: { surface: "fetch" },
