@@ -1566,7 +1566,10 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     holdState: text("hold_state", {
       enum: ["held", "confirm", "valve", "blocked"],
     }),
-    // When it hid something — at filing, or at the confirm.
+    // When it held its subject — at filing, or at the confirm: one a hold
+    // moves, or one already out of public view (hidden by a report or a
+    // request, or removed under a copyright hold). A pending request with
+    // it pins its subject against an Approve.
     heldAt: integer("held_at"),
     // SHA-256 of the confirm link's token, for a request waiting on one.
     confirmTokenHash: text("confirm_token_hash"),
@@ -1578,6 +1581,9 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     // When a request that hid nothing alerted every operator one by one:
     // the hour's allowance of such alerts counts these.
     alertedAt: integer("alerted_at"),
+    // When it moved its subject out of public view: the hide valve counts
+    // these, one per subject newly hidden.
+    hidAt: integer("hid_at"),
   },
   (t) => [
     uniqueIndex("takedown_requests_idempotency").on(
@@ -1589,8 +1595,10 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     // The cap: this requester's open requests, by either key.
     index("takedown_requests_requester_status").on(t.requesterKey, t.status),
     index("takedown_requests_ip_status").on(t.ipKey, t.status),
-    // The valve: what hid something in the last hour.
+    // What held a subject, by when.
     index("takedown_requests_held_at").on(t.heldAt),
+    // The valve: what newly hid a subject in the last hour.
+    index("takedown_requests_hid_at").on(t.hidAt),
     // The alerts of requests that hid nothing, in the last hour.
     index("takedown_requests_alerted_at").on(t.alertedAt),
     // The confirm link's lookup.
