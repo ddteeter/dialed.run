@@ -7,7 +7,7 @@
  * human, and the daily digest reports how deep it is so an empty queue is a
  * fact rather than an assumption.
  */
-import { and, asc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, lt, ne, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -435,15 +435,27 @@ function pendingRows(also?: SQL) {
 }
 
 /**
- * A row Review shows: pending, and not about a closed account's things.
- * A row whose subject belongs to a runner whose account is closed leaves
- * the page and its count, and comes back as it was if the account is
- * reopened, so nothing about the row itself is written. A product has no
- * owner, so its rows always show.
+ * A row Review shows: pending, and not about a closed account's things,
+ * unless it is on the removal clock, which shows whatever its owner's
+ * state (owner, 2026-11-22). A row whose subject belongs to a runner
+ * whose account is closed leaves the page and its count, and comes back
+ * as it was if the account is reopened, so nothing about the row itself
+ * is written. A product has no owner, so its rows always show.
  */
 function waitingOnReview(): SQL | undefined {
+  return and(
+    eq(reviewQueue.status, "pending"),
+    or(ownerNotClosed(), reportOnTheClock()),
+  );
+}
+
+/**
+ * A row whose subject's owner's account is not closed: one any runner
+ * owns, or a product, which has none.
+ */
+function ownerNotClosed(): SQL {
   const closed = sql`exists (select 1 from ${userProfiles} where ${qualified(userProfiles, userProfiles.userId)} = ${subjectOwner()} and ${qualified(userProfiles, userProfiles.bannedAt)} is not null)`;
-  return and(eq(reviewQueue.status, "pending"), sql`not ${closed}`);
+  return sql`not ${closed}`;
 }
 
 /**

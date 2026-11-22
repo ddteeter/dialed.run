@@ -847,10 +847,11 @@ describe("a closed account's rows", () => {
     },
   );
 
-  it("leave a row on the removal clock off the page too", async () => {
+  it("leave a row on the removal clock on the page and in its count, whatever its owner's state", async () => {
     const owner = await makeUser();
     const entryId = await subjectOwnedBy.entry(owner);
-    await pendingRowAbout("entry", entryId);
+    const rowId = await pendingRowAbout("entry", entryId);
+    await pendingRowAbout("entry", await subjectOwnedBy.entry(owner));
     await core()
       .insert(reports)
       .values({
@@ -863,7 +864,9 @@ describe("a closed account's rows", () => {
       });
     await setClosed(owner, 500);
 
-    expect(await pendingReviewQueue(1)).toStrictEqual([]);
+    // The owner's other row, on no clock, stays off.
+    expect(await reviewIds()).toStrictEqual([rowId]);
+    expect(await pendingReviewCount()).toBe(1);
   });
 
   it("leave a product's row where it is, since a product has no owner", async () => {
