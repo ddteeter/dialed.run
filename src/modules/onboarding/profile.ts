@@ -112,7 +112,9 @@ async function stampedPlace(
   verifyStamp: FoundPlaceDeps["verifyStamp"],
 ): Promise<StoredPlace> {
   const found = { address: place.cityLabel, lat: place.lat, lng: place.lng };
-  if (!(await verifyStamp(found, stamp ?? ""))) throw new UnstampedPlaceError();
+  if (stamp === undefined || !(await verifyStamp(found, stamp))) {
+    throw new UnstampedPlaceError();
+  }
   return {
     cityLabel: placeNameOf(place.cityLabel),
     lat: place.lat,

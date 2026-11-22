@@ -120,7 +120,7 @@ export function knownRoutes(
  * path with anything after the id is named by the id alone.
  */
 function serverFnSegment(pathname: string): string {
-  return pathname.slice(SERVER_FN_PREFIX.length).split("/", 1)[0] ?? "";
+  return pathname.slice(SERVER_FN_PREFIX.length).replace(/\/.*/u, "");
 }
 
 /**

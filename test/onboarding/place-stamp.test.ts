@@ -19,6 +19,28 @@ describe("placeStamps", () => {
     expect(await stamps.stamp(MADISON)).toMatch(/^[\da-f]{64}$/u);
   });
 
+  it("signs the place's address and coordinates under its purpose label", async () => {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode("test-secret"),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const signed = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      new TextEncoder().encode(
+        'dialed.run place stamp v1|["Madison, WI, United States",43.07,-89.38]',
+      ),
+    );
+    const hex = Array.from(new Uint8Array(signed), (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+
+    expect(await stamps.stamp(MADISON)).toBe(hex);
+  });
+
   it("takes a stamp back for its own place", async () => {
     const stamp = await stamps.stamp(MADISON);
 

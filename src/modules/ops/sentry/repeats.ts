@@ -39,12 +39,14 @@ export function repeatGate(
   const sentAt = new Map<string, number>();
   return (kind, now) => {
     const last = sentAt.get(kind);
-    if (last !== undefined && now - last < windowMs) return false;
+    const isDue = last === undefined || now - last >= windowMs;
+    if (!isDue) return false;
     sentAt.delete(kind);
     sentAt.set(kind, now);
-    if (sentAt.size > maxKinds) {
-      const [oldest] = sentAt.keys();
-      if (oldest !== undefined) sentAt.delete(oldest);
+    // Oldest first, until no more than `maxKinds` are left.
+    for (const oldest of sentAt.keys()) {
+      if (sentAt.size <= maxKinds) break;
+      sentAt.delete(oldest);
     }
     return true;
   };

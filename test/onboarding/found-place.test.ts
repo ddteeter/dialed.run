@@ -193,6 +193,21 @@ describe("saveFoundCalibration: O1's write", () => {
     expect(await placeOf(userId)).toBeUndefined();
   });
 
+  it("refuses a city with no stamp without asking the checker", async () => {
+    const userId = newUlid();
+    const { cityLabel, lat, lng } = await found();
+
+    await expect(
+      saveFoundCalibration(
+        coreDb(),
+        userId,
+        { thermalLevel: 2, cityLabel, lat, lng },
+        { ...deps, verifyStamp: () => Promise.resolve(true) },
+      ),
+    ).rejects.toBeInstanceOf(UnstampedPlaceError);
+    expect(await placeOf(userId)).toBeUndefined();
+  });
+
   it("saves a calibration with no city as it came, keeping its coordinates", async () => {
     const userId = newUlid();
 

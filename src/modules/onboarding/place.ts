@@ -84,7 +84,7 @@ export function placeNameOf(address: string): string | undefined {
     .split(",")
     .map((part) =>
       part
-        .split(/\s+/u)
+        .split(/\s/u)
         .filter((word) => word !== "" && !/\d/u.test(word))
         .join(" "),
     )
