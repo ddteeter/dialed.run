@@ -25,6 +25,7 @@ import {
 } from "../../src/modules/safety";
 import {
   claimForReview,
+  openSubject,
   pendingReviewQueue,
   reasonsFrom,
   type ReviewSubjectType,
@@ -1443,5 +1444,89 @@ describe("reading the reasons back out of one column", () => {
     // nothing, and a reviewer cannot tell a blank line from a reason
     // with no words.
     expect(reasonsFrom("explicit,retired_reason,")).toEqual(["explicit"]);
+  });
+});
+
+/**
+`openSubject`'s hold on an open row of its own.
+*/
+async function heldTo() {
+  const id = newUlid();
+  await core().insert(reviewQueue).values({
+    id,
+    subjectType: "entry",
+    subjectId: newUlid(),
+    source: "reports",
+    status: "pending",
+    createdAt: 1,
+    openedAt: 1,
+  });
+  const subject = await openSubject(id, { openedAt: 1, source: "reports" });
+  if (subject === undefined) throw new Error("not open");
+  return subject.heldTo;
+}
+
+describe("what holds a takedown to the row the page showed", () => {
+  beforeEach(resetSafetyTables);
+
+  it("knows its own refusal, as workerd's D1 words it", async () => {
+    const { refused } = await heldTo();
+    expect(
+      refused(
+        new Error(
+          "NOT NULL constraint failed: review_queue.status: SQLITE_CONSTRAINT (extended: SQLITE_CONSTRAINT_NOTNULL)",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("knows it wrapped, wherever the words sit", async () => {
+    const { refused } = await heldTo();
+    expect(
+      refused(
+        new Error(
+          "D1_ERROR: NOT NULL constraint failed: review_queue.status: SQLITE_CONSTRAINT",
+        ),
+      ),
+    ).toBe(true);
+    expect(refused("review_queue.status may not be NULL (NOT NULL)")).toBe(
+      true,
+    );
+  });
+
+  it("does not take another constraint's failure for it", async () => {
+    const { refused } = await heldTo();
+    expect(
+      refused(
+        new Error(
+          "D1_ERROR: UNIQUE constraint failed: review_queue.subject_type, review_queue.subject_id",
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      refused(new Error("NOT NULL constraint failed: reports.reason")),
+    ).toBe(false);
+    expect(refused(new Error("D1 is down"))).toBe(false);
+  });
+
+  it("does not take another constraint on the row's status for it", async () => {
+    const { refused } = await heldTo();
+    expect(
+      refused(
+        new Error(
+          "D1_ERROR: CHECK constraint failed: review_queue.status: SQLITE_CONSTRAINT",
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  it("fails its batch once the row is decided, and only then", async () => {
+    const { statement } = await heldTo();
+    await core().batch([statement]);
+    await core().update(reviewQueue).set({ status: "approved" });
+
+    await expect(core().batch([statement])).rejects.toThrow(
+      /NOT NULL[\s\S]*review_queue\.status/u,
+    );
   });
 });

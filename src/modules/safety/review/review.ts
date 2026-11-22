@@ -936,20 +936,57 @@ export function settledHere(
  * The subject of a queue row still waiting on a decision, and still as the
  * page showed it, or nothing — for a caller that acts only on open rows and
  * leaves "why not" to `resolveReview`.
+ *
+ * `heldTo` holds the caller's own batch to the same: its `statement`, in
+ * that batch, fails the whole batch when the row was decided or
+ * re-opened since this read (it would set the row's status, which may
+ * not be empty, to nothing), and `refused` says whether an error is that
+ * failure.
  */
 export async function openSubject(
   queueId: string,
   shown: ShownRow,
-): Promise<{ subjectType: ReviewSubjectType; subjectId: string } | undefined> {
-  return firstRowWhere(
-    db(),
-    reviewQueue,
-    and(
-      eq(reviewQueue.id, queueId),
-      inArray(reviewQueue.status, ["pending", "reviewing"]),
-      stillAsShown(shown),
-    ),
+): Promise<OpenSubject | undefined> {
+  const openAsShown = and(
+    eq(reviewQueue.id, queueId),
+    inArray(reviewQueue.status, ["pending", "reviewing"]),
+    stillAsShown(shown),
   );
+  const row = await firstRowWhere(db(), reviewQueue, openAsShown);
+  if (row === undefined) return undefined;
+  type Status = (typeof reviewQueue.$inferSelect)["status"];
+  const status = sql<Status>`(case when ${openAsShown} then ${reviewQueue.status} else null end)`;
+  return {
+    subjectType: row.subjectType,
+    subjectId: row.subjectId,
+    heldTo: {
+      statement: db()
+        .update(reviewQueue)
+        .set({ status })
+        .where(eq(reviewQueue.id, queueId)),
+      refused: isHoldRefusal,
+    },
+  };
+}
+
+/**
+ * Whether an error is the one `openSubject`'s statement fails its batch
+ * with: a NOT NULL refusal of `review_queue.status`. Only the parts
+ * SQLite's own text keeps are matched, wherever D1 or a wrapper puts
+ * them in the message.
+ */
+function isHoldRefusal(error: unknown): boolean {
+  const text = String(error);
+  return text.includes("NOT NULL") && text.includes("review_queue.status");
+}
+
+interface OpenSubject {
+  readonly subjectType: ReviewSubjectType;
+  readonly subjectId: string;
+  readonly heldTo: {
+    readonly statement: BatchItem<"sqlite">;
+    readonly refused: (error: unknown) => boolean;
+  };
 }
 
 /**

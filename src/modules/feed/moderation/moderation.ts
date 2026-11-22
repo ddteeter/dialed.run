@@ -85,10 +85,14 @@ import {
   type RemovalReason,
   type ResolveOutcome,
   type ReviewActionValues,
-  type ReviewSubjectType,
 } from "../../safety";
 
-import { moderateGarmentPhoto, preserveObject } from "./garment-moderation";
+import {
+  moderateGarmentPhoto,
+  passedOn,
+  preserveObject,
+  type HeldTo,
+} from "./garment-moderation";
 import { clearMissingPhoto } from "./missing-photo";
 
 import {
@@ -121,6 +125,14 @@ export interface ModerateInput {
    * audit row after the reason. The runner is told the reason only.
    */
   notice?: string | undefined;
+  /**
+   * A statement that fails the takedown's whole batch unless what the
+   * decision answers is still so as it lands: a Review row still open as
+   * the page showed it (`openSubject`'s `heldTo`). Ahead of every write
+   * but the audit row's, which the failed batch takes back with them.
+   * `refused` says whether an error is that failure.
+   */
+  heldTo?: HeldTo | undefined;
 }
 
 /**
@@ -266,7 +278,11 @@ async function preservation(
   target: Target,
   input: ModerateInput,
   actionId: string,
-): Promise<{ preservedKey: string; record: BatchItem<"sqlite"> }> {
+): Promise<{
+  preservedKey: string;
+  copies: string[];
+  record: BatchItem<"sqlite">;
+}> {
   const copyOf = await copyBytes(target.photoKeys);
   const rows = await rowsOf(db, target, input);
   const photos = rows.photos.map((photo) => ({
@@ -280,6 +296,9 @@ async function preservation(
   );
   return {
     preservedKey,
+    copies: Array.from(copyOf.values(), (copy) => copy?.preservedKey).filter(
+      (key) => key !== undefined,
+    ),
     record: quarantineInsert(db, {
       moderationActionId: actionId,
       subjectType: input.subjectType,
@@ -455,37 +474,44 @@ export async function moderateContent(
         };
   const words = removalStatements[input.reason];
   const takenDown = plan.statements(actionId);
-  await commit(
-    db,
-    [
-      moderationActionInsert(db, {
-        id: actionId,
-        actorId: input.actorId,
-        action: input.action,
-        subjectType: input.subjectType,
-        subjectId: input.subjectId,
-        subjectOwnerId: target.ownerId,
-        reason:
-          input.notice === undefined ? words : `${words} — ${input.notice}`,
-        preservedKey: kept?.preservedKey,
-        // Read before the delete, in `targetOf`: once the batch lands the
-        // entry is gone, and this is how its author's run still finds it.
-        runId: target.runId,
-      }),
-      // Before the delete in `takenDown`, which they read.
-      ...fingerprintWrites(db, input, target, actionId),
-      ...takenDown,
-      ...(kept === undefined ? [] : [kept.record]),
-      ...(told === undefined ? [] : [told.statement, ...told.reporters]),
-    ],
-    [
-      // A hold keeps the bytes, and with them the photo's fingerprint
-      // (C16), until its purge owes them.
-      ...(plan.keepsBytes ? [] : mediaDebts(target.ownerId, [target.entryId])),
-      ...(told === undefined ? [] : [told.debt]),
-    ],
-    report,
-  );
+  try {
+    await commit(
+      db,
+      [
+        moderationActionInsert(db, {
+          id: actionId,
+          actorId: input.actorId,
+          action: input.action,
+          subjectType: input.subjectType,
+          subjectId: input.subjectId,
+          subjectOwnerId: target.ownerId,
+          reason:
+            input.notice === undefined ? words : `${words} — ${input.notice}`,
+          preservedKey: kept?.preservedKey,
+          // Read before the delete, in `targetOf`: once the batch lands the
+          // entry is gone, and this is how its author's run still finds it.
+          runId: target.runId,
+        }),
+        ...(input.heldTo === undefined ? [] : [input.heldTo.statement]),
+        // Before the delete in `takenDown`, which they read.
+        ...fingerprintWrites(db, input, target, actionId),
+        ...takenDown,
+        ...(kept === undefined ? [] : [kept.record]),
+        ...(told === undefined ? [] : [told.statement, ...told.reporters]),
+      ],
+      [
+        // A hold keeps the bytes, and with them the photo's fingerprint
+        // (C16), until its purge owes them.
+        ...(plan.keepsBytes
+          ? []
+          : mediaDebts(target.ownerId, [target.entryId])),
+        ...(told === undefined ? [] : [told.debt]),
+      ],
+      report,
+    );
+  } catch (error: unknown) {
+    await passedOn(error, input.heldTo, kept?.copies, "kit-photo", report);
+  }
   purgeTakenDown(target, purge);
   return "removed";
 }
@@ -556,27 +582,55 @@ async function wasTakenDown(
   db: Db,
   reviewerId: string,
   decision: Exclude<ReviewActionValues, { action: "approve" | "clear" }>,
-  subject: { subjectType: ReviewSubjectType; subjectId: string },
+  subject: NonNullable<Awaited<ReturnType<typeof openSubject>>>,
 ): Promise<boolean> {
-  if (isModerated(subject)) {
-    const outcome = await moderateContent(db, {
-      actorId: reviewerId,
-      action: decision.action,
-      subjectType: subject.subjectType,
-      subjectId: subject.subjectId,
-      reason: decision.reason,
-    });
-    return outcome === "removed";
+  const takeDown = takeDownOf(db, reviewerId, decision, subject);
+  if (takeDown === undefined) return false;
+  // Held to the row in the takedown's own batch: a decision or a re-open
+  // that lands after the read above takes nothing down, and safety's
+  // writer then answers why.
+  try {
+    return (await takeDown()) === "removed";
+  } catch (error: unknown) {
+    if (subject.heldTo.refused(error)) return false;
+    throw error;
   }
-  return (
-    subject.subjectType === "garment" &&
-    (await moderateGarmentPhoto(db, {
-      actorId: reviewerId,
-      itemId: subject.subjectId,
-      action: decision.action,
-      reason: decision.reason,
-    })) === "removed"
-  );
+}
+
+/**
+ * The takedown itself, for a subject feed takes down: a kit or a kit
+ * photo, or a garment's photo. Nothing for anything else.
+ */
+function takeDownOf(
+  db: Db,
+  reviewerId: string,
+  decision: Exclude<ReviewActionValues, { action: "approve" | "clear" }>,
+  subject: NonNullable<Awaited<ReturnType<typeof openSubject>>>,
+): (() => Promise<string>) | undefined {
+  const { heldTo } = subject;
+  const { action, reason } = decision;
+  if (isModerated(subject)) {
+    const { subjectType, subjectId } = subject;
+    return () =>
+      moderateContent(db, {
+        actorId: reviewerId,
+        action,
+        subjectType,
+        subjectId,
+        reason,
+        heldTo,
+      });
+  }
+  return subject.subjectType === "garment"
+    ? () =>
+        moderateGarmentPhoto(db, {
+          actorId: reviewerId,
+          itemId: subject.subjectId,
+          action,
+          reason,
+          heldTo,
+        })
+    : undefined;
 }
 
 /**

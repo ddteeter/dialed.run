@@ -22,6 +22,7 @@
  * `moderation.ts`'s outbox commit, and safety may not import ops.
  */
 import { and, eq, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { photoScreenings, wardrobeItems } from "../../../db/schema-core";
@@ -58,6 +59,61 @@ export interface GarmentModeration {
   itemId: string;
   action: "remove" | "quarantine";
   reason: RemovalReason;
+  /**
+   * A statement that fails the takedown's whole batch unless the Review
+   * row the decision answers is still open as the page showed it
+   * (`openSubject`'s `heldTo`). First in the batch. `refused` says whether
+   * an error is that failure.
+   */
+  heldTo?: HeldTo | undefined;
+}
+
+/**
+`openSubject`'s hold on a Review row, as a takedown carries it.
+*/
+export interface HeldTo {
+  readonly statement: BatchItem<"sqlite">;
+  readonly refused: (error: unknown) => boolean;
+}
+
+/**
+ * A takedown's failure, passed on as it came. Refused by its Review row,
+ * a quarantine's copies made for a record that never landed go first, so
+ * nothing is kept that nothing lists; any other failure keeps them.
+ */
+export async function passedOn(
+  error: unknown,
+  heldTo: HeldTo | undefined,
+  copies: readonly string[] | undefined,
+  kind: CopyKind,
+  report: Report,
+): Promise<never> {
+  if (copies !== undefined && heldTo?.refused(error) === true) {
+    await dropCopies(copies, kind, report);
+  }
+  throw error;
+}
+
+/**
+What a quarantine copied: a kit's photos or a garment's photo.
+*/
+type CopyKind = "kit-photo" | "garment-photo";
+
+/**
+ * Deletes a refused quarantine's copies. A failure is reported by the
+ * surface and the copies' kind, never a key, and leaves the refusal to be
+ * answered as it would be.
+ */
+async function dropCopies(
+  copies: readonly string[],
+  kind: CopyKind,
+  report: Report,
+): Promise<void> {
+  try {
+    await env.MEDIA.delete([...copies]);
+  } catch (error: unknown) {
+    report(error, { surface: "refused-quarantine-copies", kind });
+  }
 }
 
 /**
@@ -196,7 +252,13 @@ async function quarantineWrites(
       quarantinedAt: nowSeconds(),
     }),
   ];
-  return { statements, debts: [] };
+  return {
+    statements,
+    debts: [],
+    copies: copies
+      .map((copy) => copy.preservedKey)
+      .filter((key) => key !== undefined),
+  };
 }
 
 /**
@@ -257,18 +319,25 @@ export async function moderateGarmentPhoto(
       : "not_found";
   }
   const { userId, id: itemId } = found.item;
-  const { statements, debts } =
+  const { statements, debts, copies } =
     input.action === "quarantine"
       ? await quarantineWrites(db, input, found)
-      : await removalWrites(db, input, found);
-  await commit(
-    db,
-    statements,
-    [
-      oweOutbox({ kind: "photo_delete", payload: { userId, itemId } }),
-      ...debts,
-    ],
-    report,
-  );
+      : { ...(await removalWrites(db, input, found)), copies: undefined };
+  const { heldTo } = input;
+  const held: Statements =
+    heldTo === undefined ? statements : [heldTo.statement, ...statements];
+  try {
+    await commit(
+      db,
+      held,
+      [
+        oweOutbox({ kind: "photo_delete", payload: { userId, itemId } }),
+        ...debts,
+      ],
+      report,
+    );
+  } catch (error: unknown) {
+    await passedOn(error, heldTo, copies, "garment-photo", report);
+  }
   return "removed";
 }

@@ -189,3 +189,23 @@ export async function shownRowOf(queueId: string): Promise<ShownRow> {
     .where(eq(reviewQueue.id, queueId));
   return row ?? anyShownRow;
 }
+
+/**
+ * A handle on the core database whose first batch first lets `before`
+ * land: the moment between a decision's read and its takedown.
+ */
+export function firstBatchAfter(before: () => Promise<unknown>) {
+  const db = drizzle(env.DIALED_CORE);
+  const batch = db.batch.bind(db);
+  const seen = { batches: 0 };
+  Reflect.set(
+    db,
+    "batch",
+    async (...statements: Parameters<typeof db.batch>) => {
+      seen.batches += 1;
+      if (seen.batches === 1) await before();
+      return batch(...statements);
+    },
+  );
+  return db;
+}
