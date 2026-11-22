@@ -51,9 +51,11 @@ file explains them and does not restate them.
 The checks that carry an unattended merge are the required set:
 `Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails`,
 `Mutation` and `Protected paths`. `Protected paths` runs from main and
-passes a PR that changes the checks' own inputs (the gate and Stryker
-configs, workflows, hooks, lint and build configs, the Claude settings,
-the guardrails-core pin) only with the `owner-approved` label, which the
+passes a PR that changes the checks' own inputs (the gate, Stryker,
+lint, build, test and TypeScript configs under every name their tools
+look for, workflows, hooks, `scripts/`, `test/architecture/`, `.npmrc`,
+the Claude settings, package.json outside its dependency lists, the
+guardrails-core pin) only with the `owner-approved` label, which the
 owner sets; `protected-paths.yml` lists the files. `e2e (build)` exists because the dev server never runs the
 production bundle, and the updates most likely to break the app
 (Vite, the Cloudflare plugin, TanStack Start, React) can break the build's

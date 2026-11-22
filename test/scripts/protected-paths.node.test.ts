@@ -66,9 +66,9 @@ function routesOf(pr: PullRequest): Record<string, unknown> {
   const files = pr.files ?? ["src/app.ts"];
   return {
     [`repos/${REPO}/pulls/${PR}`]: { changed_files: files.length },
-    [`repos/${REPO}/pulls/${PR}/files?per_page=100`]: files.map(
-      (filename) => ({ filename }),
-    ),
+    [`repos/${REPO}/pulls/${PR}/files?per_page=100`]: files.map((filename) => ({
+      filename,
+    })),
     [`repos/${REPO}/git/ref/heads/main`]: { object: { sha: TIP } },
     [`repos/${REPO}/compare/${TIP}...${HEAD}`]: {
       merge_base_commit: { sha: MERGE_BASE },
@@ -133,6 +133,103 @@ describe("the protected-paths check", () => {
     ];
     const run = check({ files: ["guardrails.config.json"], labels });
     expect(run.stdout).toContain(`The PR has the ${LABEL} label.`);
+    expect(run.status).toBe(0);
+  });
+
+  it.each([
+    "guardrails.config.json",
+    "stryker.conf.json",
+    "stryker.config.mjs",
+    ".stryker.conf.js",
+    ".github/workflows/ci.yml",
+    ".githooks/pre-push",
+    "eslint.config.js",
+    "eslint.config.ts",
+    ".dependency-cruiser.cjs",
+    ".dependency-cruiser.json",
+    ".dependency-cruiser.js",
+    ".dependency-cruiser.mjs",
+    "lockfile-lint.config.mjs",
+    ".lockfile-lintrc",
+    ".lockfile-lintrc.json",
+    "knip.json",
+    "knip.jsonc",
+    ".knip.json",
+    "knip.ts",
+    "knip.config.js",
+    ".fallowrc.jsonc",
+    ".fallowrc.json",
+    "fallow.toml",
+    ".fallow.toml",
+    "vite.config.ts",
+    "vite.config.js",
+    "vite.config.mjs",
+    "vitest.config.ts",
+    "vitest.config.js",
+    "playwright.config.ts",
+    "playwright.smoke.config.ts",
+    "playwright.config.js",
+    "tsconfig.json",
+    "tsconfig.build.json",
+    ".npmrc",
+    "scripts/fetch-mutation-seed.sh",
+    "scripts/track/index.ts",
+    "test/architecture/workflow-floor.test.ts",
+    ".claude/settings.json",
+  ])("fails a change to %s without the label", (file) => {
+    const run = check({ files: ["src/app.ts", file] });
+    expect(run.stdout).toContain(`This PR changes:\n  ${file}\n`);
+    expect(run.status).toBe(1);
+  });
+
+  it.each([
+    "src/vite.config.ts",
+    "docs/tsconfig.json",
+    "test/scripts/track.test.ts",
+    "src/scripts/x.ts",
+    "test/architecture.md",
+    ".claude/settings.local.json",
+    "README.md",
+  ])("passes a change to %s, which no check reads as its config", (file) => {
+    const run = check({ files: [file] });
+    expect(run.stdout).toContain("No protected path changes.");
+    expect(run.status).toBe(0);
+  });
+
+  it("fails a PR that changes package.json's scripts", () => {
+    const run = check({
+      head: {
+        ...MANIFEST,
+        package: { ...MANIFEST.package, scripts: { test: "true" } },
+      },
+    });
+    expect(run.stdout).toContain("package.json outside its dependency lists");
+    expect(run.status).toBe(1);
+  });
+
+  it("fails a PR that adds a tool's config to package.json", () => {
+    const run = check({
+      head: {
+        ...MANIFEST,
+        package: { ...MANIFEST.package, "lockfile-lint": { path: "x" } },
+      },
+    });
+    expect(run.stdout).toContain("package.json outside its dependency lists");
+    expect(run.status).toBe(1);
+  });
+
+  it("passes a PR that only moves a dependency other than guardrails-core", () => {
+    const run = check({
+      head: {
+        ...MANIFEST,
+        package: {
+          ...MANIFEST.package,
+          devDependencies: { "guardrails-core": "0.15.0", vitest: "4.1.0" },
+          dependencies: { react: "19.0.0" },
+        },
+      },
+    });
+    expect(run.stdout).toContain("No protected path changes.");
     expect(run.status).toBe(0);
   });
 

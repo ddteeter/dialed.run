@@ -520,22 +520,11 @@ describe("the protected-paths check", () => {
     );
   });
 
-  it.each([
-    "guardrails\\.config\\.json",
-    "stryker\\.conf\\.json",
-    "\\.github/.+",
-    "\\.githooks/.+",
-    "eslint\\.config\\.js",
-    "\\.dependency-cruiser\\.cjs",
-    "lockfile-lint\\.config\\.mjs",
-    "knip\\.json",
-    "\\.fallowrc\\.jsonc",
-    "vite\\.config\\.ts",
-    "vitest\\.config\\.ts",
-    "\\.claude/settings\\.json",
-  ])("protects %s", (pattern) => {
-    const protectedPaths = /\n {12}(\^\(.*\)\$)\n/u.exec(job)?.[1] ?? "";
-    expect(protectedPaths.slice(2, -2).split("|")).toContain(pattern);
+  it("matches each changed path against its list, one whole-path pattern a line", () => {
+    expect(job).toContain(
+      "          PROTECTED: |\n            guardrails\\.config\\.json\n",
+    );
+    expect(job).toContain('grep -Ex -f "$RUNNER_TEMP/protected"');
   });
 
   it("compares the guardrails-core pin at the merge-base and the head", () => {
@@ -544,6 +533,9 @@ describe("the protected-paths check", () => {
       `jq -ce '.packages["node_modules/guardrails-core"] | [.resolved, .integrity]'`,
     );
     expect(job).toContain(".merge_base_commit.sha");
+    expect(job).toContain(
+      "jq -cSe 'del(.dependencies, .devDependencies, .optionalDependencies)'",
+    );
   });
 
   it("passes a protected change only with the owner's label", () => {

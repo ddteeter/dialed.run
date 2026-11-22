@@ -4,10 +4,14 @@ name: Protected paths
 # owner's `owner-approved` label before this check passes. The files: the
 # guardrails config and its grants, the Stryker config, the workflows and
 # the git hooks, the ESLint, dependency-cruiser, lockfile-lint, knip,
-# fallow, Vite and Vitest configs, the Claude settings, and the
-# guardrails-core pin (its line in package.json, its entry in
-# package-lock.json). A rename or a deletion counts as a change. The
-# ruleset requires this check as "Protected paths".
+# fallow, Vite, Vitest, Playwright and TypeScript configs, `.npmrc`,
+# `scripts/`, `test/architecture/`, the Claude settings, and in
+# package.json everything outside its dependency lists (the scripts among
+# it), plus the guardrails-core pin (its line in package.json, its entry
+# in package-lock.json). Each config is listed under every file name its
+# tool looks for, not only the one this repository uses. A rename or a
+# deletion counts as a change. The ruleset requires this check as
+# "Protected paths".
 #
 # FROM MAIN. pull_request_target runs this file from main, so a pull
 # request cannot change the list it is checked against. It checks nothing
@@ -55,8 +59,28 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           LABEL: owner-approved
-          PROTECTED: >-
-            ^(guardrails\.config\.json|stryker\.conf\.json|\.github/.+|\.githooks/.+|eslint\.config\.js|\.dependency-cruiser\.cjs|lockfile-lint\.config\.mjs|knip\.json|\.fallowrc\.jsonc|vite\.config\.ts|vitest\.config\.ts|\.claude/settings\.json)$
+          # One extended regular expression per line, matched against the
+          # whole path.
+          PROTECTED: |
+            guardrails\.config\.json
+            \.?stryker\.(conf|config)\.(json|[cm]?js)
+            \.github/.+
+            \.githooks/.+
+            eslint\.config\.[cm]?[jt]s
+            \.dependency-cruiser\.(json|[cm]?[jt]s)
+            lockfile-lint\.config\.[cm]?js
+            \.lockfile-lintrc(\.(json|ya?ml|[cm]?js))?
+            \.?knip\.jsonc?
+            knip(\.config)?\.[cm]?[jt]s
+            \.?fallow(rc)?\.(jsonc?|toml|ya?ml|[cm]?[jt]s)
+            vite\.config\.[cm]?[jt]s
+            vitest\.(config|workspace)\.[cm]?[jt]s
+            playwright(\.[a-z]+)?\.config\.[cm]?[jt]s
+            tsconfig(\..+)?\.json
+            \.npmrc
+            scripts/.+
+            test/architecture/.+
+            \.claude/settings\.json
         run: |
           set -euo pipefail
 
@@ -65,7 +89,8 @@ jobs:
           count=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .changed_files)
           files=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" \
             --jq '.[] | .filename, (.previous_filename // empty)')
-          touched=$(printf '%s\n' "$files" | grep -E "$PROTECTED" | sort -u || true)
+          printf '%s' "$PROTECTED" | sed '/^$/d' >"$RUNNER_TEMP/protected"
+          touched=$(printf '%s\n' "$files" | grep -Ex -f "$RUNNER_TEMP/protected" | sort -u || true)
           if [ "$count" -ge 3000 ]; then
             touched=$(printf '%s\n%s' "$touched" "(more than 3000 files: the list is incomplete)")
           fi
@@ -86,6 +111,17 @@ jobs:
           merge_base=$(gh api "repos/$REPO/compare/$base_tip...$HEAD_SHA" --jq .merge_base_commit.sha)
           if ! before=$(pin "$merge_base") || ! after=$(pin "$HEAD_SHA") || [ "$before" != "$after" ]; then
             touched=$(printf '%s\n%s' "$touched" "the guardrails-core pin in package.json or package-lock.json")
+          fi
+
+          # package.json outside its dependency lists: the scripts the
+          # checks run by name, the install hook, and any tool config kept
+          # there. Read the same way, keys sorted.
+          manifest() {
+            raw package.json "$1" |
+              jq -cSe 'del(.dependencies, .devDependencies, .optionalDependencies)'
+          }
+          if ! before=$(manifest "$merge_base") || ! after=$(manifest "$HEAD_SHA") || [ "$before" != "$after" ]; then
+            touched=$(printf '%s\n%s' "$touched" "package.json outside its dependency lists (its scripts among it)")
           fi
 
           touched=$(printf '%s\n' "$touched" | sed '/^$/d')
