@@ -215,6 +215,9 @@ export async function fileTakedownRequest<Attempt>(
  * insert or the confirm's claim has recorded the limits' state, in the
  * same batch (design 137):
  *
+ * 0. the state `held` for one the valve quieted whose subject is already
+ *    out of public view: it hides nothing new, so it holds that subject
+ *    whatever the valve says, and its alert follows 2 and 3;
  * 1. `held_at`, where that state may hide and the subject is one a hold
  *    moves or one already out of public view; and `hid_at` beside it
  *    where the subject is still public, so this request is the one that
@@ -241,6 +244,16 @@ function decisionWrites(
     ...(subject === undefined
       ? []
       : [
+          db
+            .update(takedownRequests)
+            .set({ holdState: "held" })
+            .where(
+              and(
+                row,
+                eq(takedownRequests.holdState, "valve"),
+                subjectOutOfView(subject),
+              ),
+            ),
           db
             .update(takedownRequests)
             .set({ heldAt: now })
@@ -345,6 +358,13 @@ function owedWhere(
 function subjectHoldable(subject: TakedownSubject): SQL {
   const { table, where } = holdable(subject, HOLD_OR_REVIEW);
   return sql`exists (select 1 from ${table} where ${where})`;
+}
+
+/**
+Whether the subject is one a request still pins, but no longer public.
+*/
+function subjectOutOfView(subject: TakedownSubject): SQL {
+  return sql`(${subjectHoldable(subject)} and not ${subjectPublic(subject)})`;
 }
 
 /**

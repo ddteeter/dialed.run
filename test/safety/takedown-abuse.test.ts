@@ -92,6 +92,30 @@ async function hiddenKit(): Promise<string> {
 const entryLink = (entryId: string) =>
   `https://dialed.run/feed/entry/${entryId}`;
 
+const photoLink = (entryId: string, photoId: string) =>
+  `https://dialed.run/feed/photo/entries/runner/${entryId}/${photoId}`;
+
+/**
+A photo on the kit, in `screenStatus`.
+*/
+async function photoOn(
+  entryId: string,
+  screenStatus: "pass" | "hidden_pending_review",
+  position = 0,
+): Promise<string> {
+  const photoId = newUlid();
+  await core()
+    .insert(entryPhotos)
+    .values({
+      id: photoId,
+      entryId,
+      photoKey: `entries/x/${entryId}/${photoId}.jpg`,
+      position,
+      screenStatus,
+    });
+  return photoId;
+}
+
 async function file(
   email: string,
   location: string,
@@ -1468,6 +1492,113 @@ describe("a request that holds a subject already out of view", () => {
         ),
       ),
     ).toHaveLength(2);
+  });
+});
+
+describe("a request about a subject already out of view, while the valve is shut", () => {
+  it("holds a kit a report hid, and pins it against a review's Approve", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
+    const entryId = await hiddenKit();
+    const row = await file("me@example.com", entryLink(entryId));
+
+    expect(row).toMatchObject({
+      holdState: "held",
+      heldAt: NOW,
+      hidAt: NOT_SET,
+      alertedAt: NOW,
+    });
+    const queueId = newUlid();
+    await core().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "entry",
+      subjectId: entryId,
+      source: "reports",
+      status: "pending",
+      createdAt: NOW,
+      openedAt: NOW,
+    });
+    await resolveReview(queueId, await makeUser(), "approve");
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("holds a kit a copyright hold removed", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
+    const entryId = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, entryId));
+
+    const row = await file("me@example.com", entryLink(entryId));
+
+    expect(row).toMatchObject({ holdState: "held", heldAt: NOW });
+    expect(await entryStatus(entryId)).toBe("removed");
+  });
+
+  it("holds a photo a report hid", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
+    const entryId = await sharedEntry();
+    const photoId = await photoOn(entryId, "hidden_pending_review");
+
+    const row = await file("me@example.com", photoLink(entryId, photoId));
+
+    expect(row).toMatchObject({
+      subjectType: "photo",
+      holdState: "held",
+      heldAt: NOW,
+    });
+  });
+
+  it("still holds nothing for a public kit, or for a blocked requester", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
+    const open = await file("one@example.com", entryLink(await sharedEntry()), {
+      ip: "198.51.100.61",
+    });
+    expect(open).toMatchObject({ holdState: "valve", heldAt: NOT_SET });
+
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: requesterKey("two@example.com"),
+        kind: "email",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+    const blocked = await file(
+      "two@example.com",
+      entryLink(await hiddenKit()),
+      {
+        ip: "198.51.100.62",
+      },
+    );
+    expect(blocked).toMatchObject({ holdState: "blocked", heldAt: NOT_SET });
+    // A later request's statements touch only its own row.
+    const [after] = await core()
+      .select({ holdState: takedownRequests.holdState })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, open.id));
+    expect(after?.holdState).toBe("valve");
+  });
+
+  it("holds it at its confirm too", async () => {
+    const entryId = await hiddenKit();
+    await file("me@example.com", entryLink(await sharedEntry()));
+    await file("me@example.com", entryLink(await sharedEntry()));
+    const waiting = await file("me@example.com", entryLink(entryId));
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW + 60);
+
+    await confirmTakedownRequest(
+      core(),
+      await confirmTokenFor(waiting.id),
+      { oweWhere: oweInCoreWhere, purge: noPurge },
+      NOW + 60,
+    );
+
+    const [row] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, waiting.id));
+    expect(row).toMatchObject({ holdState: "held", heldAt: NOW + 60 });
   });
 });
 
