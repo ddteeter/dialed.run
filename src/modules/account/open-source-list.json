@@ -942,7 +942,7 @@
     },
     {
       "name": "@playwright/test",
-      "version": "1.65.0",
+      "version": "1.65.1",
       "licence": "Apache-2.0",
       "project": "https://playwright.dev"
     },
@@ -1008,7 +1008,7 @@
     },
     {
       "name": "@testing-library/user-event",
-      "version": "14.6.8",
+      "version": "14.6.10",
       "licence": "MIT",
       "project": "https://github.com/testing-library/user-event#readme"
     },
@@ -1062,7 +1062,7 @@
     },
     {
       "name": "@vitejs/plugin-react",
-      "version": "6.2.1",
+      "version": "6.3.0",
       "licence": "MIT",
       "project": "https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#readme"
     },
@@ -1104,7 +1104,7 @@
     },
     {
       "name": "eslint",
-      "version": "10.14.0",
+      "version": "10.15.0",
       "licence": "MIT",
       "project": "https://eslint.org"
     },
@@ -1116,7 +1116,7 @@
     },
     {
       "name": "eslint-plugin-better-tailwindcss",
-      "version": "4.10.0",
+      "version": "4.11.0",
       "licence": "MIT",
       "project": "https://github.com/schoero/eslint-plugin-better-tailwindcss#readme"
     },
@@ -1140,7 +1140,7 @@
     },
     {
       "name": "fallow",
-      "version": "3.41.0",
+      "version": "3.43.1",
       "licence": "MIT",
       "project": "https://fallow.tools/docs/"
     },
@@ -1157,7 +1157,7 @@
     },
     {
       "name": "knip",
-      "version": "6.44.2",
+      "version": "6.45.1",
       "licence": "ISC",
       "project": "https://knip.dev"
     },
@@ -1187,7 +1187,7 @@
     },
     {
       "name": "prettier",
-      "version": "3.9.10",
+      "version": "3.10.1",
       "licence": "MIT",
       "project": "https://prettier.io"
     },
@@ -1205,13 +1205,13 @@
     },
     {
       "name": "typescript-eslint",
-      "version": "8.72.1",
+      "version": "8.72.2",
       "licence": "MIT",
       "project": "https://typescript-eslint.io/packages/typescript-eslint"
     },
     {
       "name": "vite",
-      "version": "8.3.6",
+      "version": "8.3.8",
       "licence": "MIT",
       "project": "https://vite.dev"
     },
