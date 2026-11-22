@@ -22,6 +22,7 @@ import {
   START,
   fitFile,
   fitFileOfDeveloperFields,
+  fitFileWithEmptyField,
   fitFileWithFieldDescriptions,
   fitFileWithoutSession,
 } from "./fit-file";
@@ -336,6 +337,7 @@ function definition(
   sizes: readonly number[],
   globalMessageNumber = 20,
   fields = 0,
+  fieldSize = 1,
 ): MesgDefinition {
   return {
     recordHeader: 0x40,
@@ -349,7 +351,7 @@ function definition(
     developerDataSize: 0,
     fieldDefinitions: Array.from({ length: fields }, (_, number) => ({
       fieldDefinitionNumber: number,
-      size: 1,
+      size: fieldSize,
       baseType: 0x02,
       invalidValue: 0xff,
       baseTypeSize: 1,
@@ -407,7 +409,27 @@ describe("fit: the decode budget (SA-M29)", () => {
     }).not.toThrow();
     expect(() => {
       mesgDefinitionListener(definition([1, 0]));
-    }).toThrow("fit: a developer field of size zero");
+    }).toThrow("fit: a field of size zero");
+  });
+
+  it("refuses a definition with a field of its own of size zero, on any type", () => {
+    const { mesgDefinitionListener } = fitReadLimits();
+    expect(() => {
+      mesgDefinitionListener(definition([], 65_280, 2, 4));
+    }).not.toThrow();
+    expect(() => {
+      mesgDefinitionListener(definition([], 20, 2, 0));
+    }).toThrow("fit: a field of size zero");
+    expect(() => {
+      mesgDefinitionListener(definition([], 65_280, 1, 0));
+    }).toThrow("fit: a field of size zero");
+  });
+
+  it("refuses a file with a field of size zero on a type the profile does not name", async () => {
+    const failure = await failureFrom(fitFileWithEmptyField(65_280));
+    expect(failure.message).toBe(PARSE_FAILURE_MESSAGE);
+    expect(failure.reason).toBe("fit: decoder reported 1 error(s)");
+    expect(failure.cause).toStrictEqual(new Error("fit: a field of size zero"));
   });
 
   it("is 256", () => {
