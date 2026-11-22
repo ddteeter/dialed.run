@@ -3,10 +3,10 @@
  * place writers make before they store one: a place is saved only as the
  * provider named it, never as text a request chose.
  *
- * Keyed by the auth secret under its own purpose label, as the
- * unsubscribe link is: a stamp can never be read as anything else that
- * secret signs. A stamp names the place and nothing else, so it can be
- * reused only for that same place.
+ * Keyed by the auth secret, and every message it signs starts with its
+ * own purpose label, so a stamp is never a signature over anything else
+ * that secret signs. A stamp names the place and nothing else, so it can
+ * be reused only for that same place.
  *
  * Reads no binding, so the e2e suite's stand-in for Find can stamp its
  * answer as the server would (`place-stamp-env.ts` is the Worker's).
