@@ -76,6 +76,12 @@ describe("placeNameOf: the provider's address as a place name", () => {
     );
   });
 
+  it("keeps only the last three of more parts than that", () => {
+    expect(
+      placeNameOf("Camden, Holborn, London, England, United Kingdom"),
+    ).toBe("London, England, United Kingdom");
+  });
+
   it("drops a street part that holds a house number whole", () => {
     expect(placeNameOf("10 Downing Street, London")).toBe("London");
     expect(placeNameOf("Hauptstraße 5, 10115 Berlin, Germany")).toBe(
