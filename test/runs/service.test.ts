@@ -942,6 +942,47 @@ describe("retimeRun: A1's time correction", () => {
     expect(moved?.startedAt).toBe(lastMinute);
   });
 
+  it("holds the date fixed on the observation's clock, over the runner's home clock", async () => {
+    // A Chicago runner's run observed in Tokyo: 12:00 UTC on the 12th is
+    // 21:00 on the 12th in Tokyo and 07:00 on the 12th in Chicago. Each
+    // move below is the same day on one clock and another on the other,
+    // and Tokyo's clock decides both.
+    const userId = newUlid();
+    await coreDb()
+      .insert(userProfiles)
+      .values({ userId, timeZone: "America/Chicago" });
+    const tokyo = { lat: 35.68, lng: 139.69 };
+    const runId = await aRun(userId, { ...tokyo, weatherStatus: "attached" });
+    await makeObservation({
+      ...tokyo,
+      startedAt: START,
+      tempC: 25,
+      feelsLikeC: 27,
+      timeZone: "Asia/Tokyo",
+    });
+    const weather = fakeWeather();
+    // 00:00 on the 13th in Tokyo; 10:00 on the 12th in Chicago.
+    const tokyoNextDay = Math.floor(Date.UTC(2025, 7, 12, 15, 0) / 1000);
+    // 13:59 on the 12th in Tokyo; 23:59 on the 11th in Chicago.
+    const chicagoDayBefore = Math.floor(Date.UTC(2025, 7, 12, 4, 59) / 1000);
+
+    const summary = await getRunSummary(coreDb(), userId, runId);
+    expect(summary?.clockZone).toBe("Asia/Tokyo");
+    expect(await retime(weather, userId, runId, tokyoNextDay)).toBe("refused");
+    expect(await getRun(coreDb(), userId, runId)).toMatchObject({
+      startedAt: START,
+      weatherStatus: "attached",
+    });
+    expect(weather.attached).toHaveLength(0);
+
+    expect(await retime(weather, userId, runId, chicagoDayBefore)).toBe(
+      "moved",
+    );
+    const moved = await getRun(coreDb(), userId, runId);
+    expect(moved?.startedAt).toBe(chicagoDayBefore);
+    expect(weather.attached).toStrictEqual([runId]);
+  });
+
   it("holds the date fixed on UTC's clock for a runner with no zone", async () => {
     // The same move as above, for a runner with no home zone and a run
     // with no place, so no conditions: on UTC's clock 04:59 on the 13th
