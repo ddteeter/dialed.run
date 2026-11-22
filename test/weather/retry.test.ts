@@ -704,3 +704,36 @@ async function insertImportFor(runId: Ulid, createdAt: number): Promise<void> {
       createdAt,
     });
 }
+
+describe("one runner's many pending runs", () => {
+  it("try every runner's oldest before any runner's second", async () => {
+    // On the hour, so the other runner's run below has every hour settled.
+    const now = Math.floor(nowSeconds() / HOUR) * HOUR;
+    pinNow(now);
+    mockVisualCrossing();
+    const many = newUlid();
+    const theirs: Ulid[] = [];
+    for (let hour = 1; hour <= 60; hour += 1) {
+      theirs.push(
+        await insertPendingRun({
+          userId: many,
+          startedAt: hour * HOUR,
+          lat: 51.5,
+          lng: -0.12,
+        }),
+      );
+    }
+    const other = await insertPendingRun({
+      startedAt: now - 4 * HOUR,
+      lat: 40.71,
+      lng: -74,
+    });
+
+    await retryPendingWeather(nothing);
+
+    expect(await statusOf(other)).toBe("attached");
+    // The first runner's oldest are read, oldest first; their newest waits.
+    expect(await statusOf(theirs[0] ?? newUlid())).not.toBe("pending");
+    expect(await statusOf(theirs.at(-1) ?? newUlid())).toBe("pending");
+  });
+});

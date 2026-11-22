@@ -5,7 +5,7 @@
  * the idempotent unit — re-invoking it on an already-resolved run is a
  * no-op (CLAUDE.md resilience law 1).
  */
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { gaveUpClear, gaveUpUpsert } from "../../db/gave-up";
 import { gaveUp, imports, runs } from "../../db/schema-core";
@@ -396,19 +396,33 @@ export async function retryPendingWeather(
   report: Report,
 ): Promise<RetryCronResult> {
   const db = coreDb();
-  // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; retryPendingWeather reads the runs still waiting for weather with when their import arrived
-  const candidates = await db
+  // Each runner's pending runs, numbered oldest first. The pass reads by
+  // that number before the start, so every runner with a run waiting has
+  // one tried before any runner has a second.
+  const ranked = db
     .select({
-      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; retryPendingWeather reads the runs still waiting for weather with when their import arrived
       id: runs.id,
       startedAt: runs.startedAt,
       durationS: runs.durationS,
       importCreatedAt: imports.createdAt,
+      place:
+        sql<number>`row_number() over (partition by ${runs.userId} order by ${runs.startedAt}, ${runs.id})`.as(
+          "place",
+        ),
     })
     .from(runs)
     .leftJoin(imports, eq(imports.runId, runs.id))
     .where(eq(runs.weatherStatus, "pending"))
-    .orderBy(asc(runs.startedAt))
+    .as("ranked");
+  const candidates = await db
+    .select({
+      id: ranked.id,
+      startedAt: ranked.startedAt,
+      durationS: ranked.durationS,
+      importCreatedAt: ranked.importCreatedAt,
+    })
+    .from(ranked)
+    .orderBy(asc(ranked.place), asc(ranked.startedAt), asc(ranked.id))
     .limit(RETRY_BATCH_SIZE);
 
   // The copy's repair (law 8c): a run owed weather again keeps no half
