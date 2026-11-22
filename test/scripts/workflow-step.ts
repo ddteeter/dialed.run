@@ -141,7 +141,7 @@ fs.appendFileSync(dir + "/calls.log", (args.join(" ") + body).replace(/\\n/g, " 
 // "run list", "run view 42", "run download 42".
 const key = args.slice(0, args.findIndex((arg) => arg.startsWith("-")) >>> 0).join(" ");
 const route = Object.hasOwn(routes, key) ? routes[key] : undefined;
-if (route === null) process.exitCode = 1;
+if (route !== undefined && route !== null && typeof route === "object" && route.fails === true) process.exitCode = 1;
 else if (route !== undefined && typeof route === "object" && Object.hasOwn(route, "files")) {
   const into = flag("--dir");
   fs.mkdirSync(into, { recursive: true });
@@ -154,6 +154,12 @@ else {
 }
 }
 `;
+
+/**
+A route whose `gh` call fails, as an API error does: nothing on stdout,
+exit status 1.
+*/
+export const FAILS = { fails: true } as const;
 
 export interface StepRun {
   readonly status: number | null;

@@ -272,10 +272,14 @@ jobs:
             echo "::notice::could not fetch main's history; running cold"
             exit 0
           fi
-          runs=$(sh scripts/main-mutation-runs.sh refs/remotes/origin/main 20)
+          # An API error anywhere here runs the shard cold; it never fails it.
+          if ! runs=$(sh scripts/main-mutation-runs.sh refs/remotes/origin/main 20); then
+            echo "::notice::could not list main's runs; running cold"
+            exit 0
+          fi
           for run in $runs; do
             passed=$(gh run view "$run" --json jobs |
-              jq --arg name "$SHARD" 'any(.jobs[]; .name == $name and .conclusion == "success")')
+              jq --arg name "$SHARD" 'any(.jobs[]; .name == $name and .conclusion == "success")') || continue
             [ "$passed" = true ] || continue
             rm -rf "$seed"
             gh run download "$run" --name "stryker-incremental-$SLUG" --dir "$seed" 2>/dev/null || continue

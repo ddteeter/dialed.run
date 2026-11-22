@@ -21,7 +21,7 @@ import path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import { literalEnvOf, runStep, scriptOf } from "./workflow-step";
+import { FAILS, literalEnvOf, runStep, scriptOf } from "./workflow-step";
 
 const GIT = "/usr/bin/git";
 const WORKFLOW = readFileSync(
@@ -161,7 +161,39 @@ describe("a PR shard's seed in CI", () => {
     );
     expect(run.calls.some((call) => call.startsWith("run view 3"))).toBe(false);
   });
+
+  it("passes over a run whose jobs the API would not read", () => {
+    rmSync(path.join(checkout, "reports"), { recursive: true, force: true });
+    const run = seedStep({ ...routes(), "run view 2": FAILS });
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain("::notice::seeded from main's run 1");
+  });
+
+  it("runs cold when the API would not list main's runs", () => {
+    rmSync(path.join(checkout, "reports"), { recursive: true, force: true });
+    const run = seedStep({ ...routes(), "run list": FAILS });
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain(
+      "::notice::could not list main's runs; running cold",
+    );
+    expect(existsSync(path.join(checkout, "reports"))).toBe(false);
+  });
 });
+
+function seedStep(stubRoutes: Record<string, unknown>) {
+  return runStep(scriptOf(WORKFLOW, STEP), {
+    cwd: checkout,
+    env: {
+      ...literalEnvOf(WORKFLOW, STEP),
+      GH_TOKEN: "token",
+      GH_REPO: "owner/repo",
+      SHARD,
+      SLUG,
+      DEPS,
+    },
+    routes: stubRoutes,
+  });
+}
 
 function list(reference: string): string {
   return runStep(`sh scripts/main-mutation-runs.sh ${reference} 20\n`, {
