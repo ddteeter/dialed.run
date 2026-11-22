@@ -8,7 +8,6 @@ import {
   count,
   desc,
   eq,
-  getTableColumns,
   isNull,
   ne,
   notInArray,
@@ -240,9 +239,24 @@ export async function listNotifications(
     eq(userProfiles.userId, notifications.linkId),
     followerFloor,
   );
+  const followRow = sql`${notifications.kind} = 'followed'`;
+  // Only what the bell shows and links by. A follow row's follower is
+  // its handle now, never their id: a group is told apart by having no
+  // one follower, and the id is left out of the row.
   return db
     .select({
-      ...getTableColumns(notifications),
+      id: notifications.id,
+      kind: notifications.kind,
+      body: notifications.body,
+      read: notifications.read,
+      createdAt: notifications.createdAt,
+      linkId: sql<
+        string | null
+      >`(case when ${followRow} then null else ${notifications.linkId} end)`,
+      isGroup:
+        sql<number>`(${followRow} and ${notifications.linkId} is null)`.mapWith(
+          Boolean,
+        ),
       markable: sql<number>`coalesce(${markable}, 0)`.mapWith(Boolean),
       // The follower's handle as it is now, for a follow row's link
       // (R48·131c): a handle changes, and the row's body keeps the old one.

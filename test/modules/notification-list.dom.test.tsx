@@ -53,17 +53,17 @@ function notification(
     kind?: string;
     linkId?: string;
     linkHandle?: string;
+    isGroup?: boolean;
   } = {},
 ) {
   const isRead = overrides.read ?? false;
   return {
     id: overrides.id ?? "01N",
-    userId: "01USER",
     kind: overrides.kind ?? "kit_reminder",
-    subjectId: NOTHING,
     body: overrides.body ?? "Log your kit?",
     linkId: overrides.linkId ?? NOTHING,
     linkHandle: overrides.linkHandle ?? NOTHING,
+    isGroup: overrides.isGroup ?? false,
     read: isRead,
     createdAt: 1_755_000_000,
     markable: overrides.markable ?? !isRead,
@@ -507,7 +507,6 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
           notification({
             kind: "followed",
             body: "@ada followed you.",
-            linkId: "01ADA",
             linkHandle: "ada_runs",
           }),
         ]}
@@ -530,6 +529,7 @@ describe("NotificationList · where a row goes (R48·129f, R48·131c)", () => {
           notification({
             kind: "followed",
             body: "@ada and 3 others followed you.",
+            isGroup: true,
           }),
         ]}
         markAllRead={nothing}

@@ -517,7 +517,11 @@ describe("what a row links to (design 183)", () => {
       userId,
       runnerVisibleToViewer(userId),
     );
-    expect(row).toMatchObject({ linkId: followerId, linkHandle: "ada_now" });
+    expect(row).toMatchObject({
+      linkId: NOTHING,
+      linkHandle: "ada_now",
+      isGroup: false,
+    });
   });
 
   it.each([
@@ -540,11 +544,41 @@ describe("what a row links to (design 183)", () => {
 
       const rows = await listNotifications(db, you, runnerVisibleToViewer(you));
       expect(rows.find((row) => row.kind === "followed")).toMatchObject({
-        linkId: ada,
+        linkId: NOTHING,
         linkHandle: NOTHING,
       });
+      expect(JSON.stringify(rows)).not.toContain(ada);
     },
   );
+
+  it("returns only what the bell shows, and no follower's id", async () => {
+    const db = coreDb();
+    const you = await makeVerifiedUser({ username: "you_hidden" });
+    const ada = await makeVerifiedUser({ username: "ada_hidden" });
+    await follow(ada, you);
+    await blockRunner(you, ada);
+
+    const rows = await listNotifications(db, you, runnerVisibleToViewer(you));
+
+    expect(
+      rows.map((row) =>
+        Object.keys(row).toSorted((one, other) => one.localeCompare(other)),
+      ),
+    ).toStrictEqual([
+      [
+        "body",
+        "createdAt",
+        "id",
+        "isGroup",
+        "kind",
+        "linkHandle",
+        "linkId",
+        "markable",
+        "read",
+      ],
+    ]);
+    expect(JSON.stringify(rows)).not.toContain(ada);
+  });
 
   it("names no follower who is banned", async () => {
     const db = coreDb();
@@ -558,7 +592,7 @@ describe("what a row links to (design 183)", () => {
 
     const rows = await listNotifications(db, you, runnerVisibleToViewer(you));
     expect(rows.find((row) => row.kind === "followed")).toMatchObject({
-      linkId: ada,
+      linkId: NOTHING,
       linkHandle: NOTHING,
     });
   });
@@ -600,6 +634,7 @@ describe("what a row links to (design 183)", () => {
     expect(rows[0]).toMatchObject({
       linkId: NOTHING,
       linkHandle: NOTHING,
+      isGroup: true,
     });
   });
 });
