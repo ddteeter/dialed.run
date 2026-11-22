@@ -23,7 +23,7 @@ import {
   requestAccountDeletion,
   type DeletionEffects,
 } from "../../src/modules/account/data/deletion";
-import { captureException } from "../../src/modules/ops";
+import { captureException, purgePublicPagesFor } from "../../src/modules/ops";
 import { settleOwedEmail } from "../../src/modules/ops/owed-email";
 import { purgeSpy } from "../purge-spy";
 import { core, fakeMail, owedTo, seedUser } from "../email/helpers";
@@ -616,11 +616,12 @@ describe("leavingView", () => {
 });
 
 describe("deletionEffectsFromEnv", () => {
-  it("wires the platform: waitUntil, Sentry, the outbox fast path", () => {
+  it("wires the platform: waitUntil, Sentry, the outbox fast path, the counted edge purge", () => {
     const effects = deletionEffectsFromEnv();
     expect(effects.keepAlive).toBe(waitUntil);
     expect(effects.report).toBe(captureException);
     expect(effects.settle).toBe(settleOwedEmail);
+    expect(effects.purgeFor).toBe(purgePublicPagesFor);
   });
 
   it("disconnects Strava through runs' own primitive: the connection gone, the revocation owed", async () => {

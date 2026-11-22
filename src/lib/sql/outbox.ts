@@ -296,6 +296,6 @@ export function readOutboxRow(kind: string, payload: string): ReadOutboxRow {
 export function operatorEmailMessage(
   email: EmailPayload,
   dedupeKey: string,
-): OutboxMessage {
+): OutboxMessageOf<"operator_email"> {
   return { kind: "operator_email", payload: { dedupeKey, email } };
 }
