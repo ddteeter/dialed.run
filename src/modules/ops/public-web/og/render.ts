@@ -28,8 +28,24 @@ const FONTS = [
   { name: "IBM Plex Mono", data: plexMono600, weight: 600, style: "normal" },
 ] as const;
 
+/**
+ * A card is drawn with the bundled fonts and nothing else: a character
+ * none of them has (another script, an emoji) is drawn as the missing
+ * glyph, and the render makes no request. An empty list, not nothing:
+ * the library's own loader, which fetches, runs when this answers
+ * `undefined`.
+ */
+function noAdditionalAssets(): [] {
+  return [];
+}
+
 function cardOptions() {
-  return { width: OG_WIDTH, height: OG_HEIGHT, fonts: [...FONTS] };
+  return {
+    width: OG_WIDTH,
+    height: OG_HEIGHT,
+    fonts: [...FONTS],
+    loadAdditionalAsset: noAdditionalAssets,
+  };
 }
 
 /**
