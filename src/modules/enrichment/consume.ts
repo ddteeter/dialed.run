@@ -9,6 +9,7 @@ import {
 } from "../../db/gave-up";
 import { products, productSnapshots } from "../../db/schema-core";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
+import { withoutBoundValues } from "../../lib/statement-error";
 import { consumeEach } from "../../lib/sql/queue-batch";
 import type { ExtractionModel } from "../../lib/contracts";
 import { applyExtraction, type ApplyReport } from "../products";
@@ -60,14 +61,17 @@ type Db = DrizzleD1Database & { $client: D1Database };
  * `PageFetchError` is the page itself refusing — a 403 with no proxy, a
  * private host, an oversized body, a 404 — and no retry changes that, so
  * the row goes to `failed` and the message is acked (law 6: the failure is
- * on the row, where the closet can show it). So is an `UnreadableAnswerError`:
- * no model answer to read (not an object, no content, or none in time),
- * one try on the product, and the hourly sweep's re-drive is the next one. So is anything thrown
- * before the page is stored — a network throw, a timeout, a D1 or R2
- * error — which `beforeStored` makes a `PageFetchError`, so each try is
- * one counted fetch. Anything else — a write-back conflict, a model
- * HTTP or network error — is thrown, so the queue's own retry machinery owns it (law 3)
- * and the DLQ handler below marks the row when it gives up.
+ * on the row, where the closet can show it). So is an
+ * `UnreadableAnswerError`: no model answer to read (not an object, no
+ * content, or none in time), one try on the product, and the hourly
+ * sweep's re-drive is the next one. So is anything thrown while the page
+ * is fetched and stored — a network throw, a timeout, a D1 or R2 error
+ * there — which `beforeStored` makes a `PageFetchError`, so each try is
+ * one counted fetch. A D1 error in the reads before the fetch (the
+ * product, its stored page, the counts) is thrown as itself, as is
+ * anything else — a write-back conflict, a model HTTP or network error —
+ * so the queue's own retry machinery owns it (law 3) and the DLQ handler
+ * below marks the row when it gives up.
  */
 
 const REUSE_WINDOW_MS = 60 * 60 * 1000;
@@ -259,16 +263,20 @@ async function dropDeniedSource(db: Db, productId: string): Promise<void> {
 }
 
 /**
- * `work`, with whatever it throws made a `PageFetchError` that names it
- * and keeps it as its cause: a try that fails before the page is stored
- * is a failed try, so each costs one counted fetch.
+ * `work`, with whatever it throws made a `PageFetchError`: a try that
+ * fails before the page is stored is a failed try, so each costs one
+ * counted fetch. The new error's message and cause are the thrown one
+ * without bound values (`withoutBoundValues`): a failed D1 statement is
+ * named by its first words and the database's reason, and anything else
+ * as it was thrown.
  */
 async function beforeStored<T>(work: () => Promise<T>): Promise<T> {
   try {
     return await work();
   } catch (error) {
     if (error instanceof PageFetchError) throw error;
-    throw new PageFetchError(String(error), { cause: error });
+    const scrubbed = withoutBoundValues(error);
+    throw new PageFetchError(String(scrubbed), { cause: scrubbed });
   }
 }
 

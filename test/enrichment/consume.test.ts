@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -38,6 +38,7 @@ import {
 import { isDeniedLink, isDeniedOnLanding } from "../../src/modules/safety";
 import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import { nowSeconds } from "../../src/lib/now";
+import { reportException } from "../../src/modules/ops/sentry/sentry";
 import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage, type SpiedMessage } from "../queue-fakes";
 
@@ -124,6 +125,25 @@ function serving(html: string, status = 200) {
   const impl: typeof fetch = () =>
     Promise.resolve(new Response(html, { status }));
   return vi.fn(impl);
+}
+
+/**
+A value bound to a statement, which no report or stored error may carry.
+*/
+const BOUND_VALUE = "https://shop.example.com/tee?token=bound-secret";
+
+/**
+ * `error` as text: its message and every cause's below it, as a reporter
+ * that follows causes would see them.
+ */
+function withEveryCause(error: unknown): string {
+  const parts: string[] = [];
+  let current = error;
+  while (current instanceof Error) {
+    parts.push(String(current));
+    current = current.cause;
+  }
+  return parts.join(" <- ");
 }
 
 /**
@@ -592,7 +612,7 @@ describe("handleEnrichmentBatch: failures", () => {
     );
   });
 
-  it("fails the try when storing the page throws", async () => {
+  it("fails the try when the landing check throws, before the page is stored", async () => {
     const productId = await pendingProduct();
     const message = jobFor(productId);
 
@@ -607,6 +627,60 @@ describe("handleEnrichmentBatch: failures", () => {
       extractionError: "Error: D1 unavailable",
     });
     expect(await snapshotsOf(productId)).toEqual([]);
+  });
+
+  it("keeps a failed statement's bound values out of the report and the stored error", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
+    const deps = {
+      ...depsWith(serving(PAGE)),
+      isLandingDenied: async () => {
+        await db().run(
+          sql`select id from products where no_such_column = ${BOUND_VALUE}`,
+        );
+        return false;
+      },
+    };
+
+    await consumeWith(productId, deps);
+
+    const reported: unknown = deps.captureException.mock.calls[0]?.[0];
+    const logged = vi.spyOn(console, "error").mockImplementation(vi.fn());
+    reportException(
+      { dsn: undefined, environment: "development" },
+      vi.fn(),
+      reported,
+      { context: { productId }, tags: {} },
+    );
+    const lines = [...logged.mock.calls];
+    logged.mockRestore();
+    expect(lines).toHaveLength(1);
+    expect(withEveryCause(lines[0]?.[2])).not.toContain(BOUND_VALUE);
+    expect(withEveryCause(reported)).not.toContain(BOUND_VALUE);
+    expect(withEveryCause(reported)).toContain(
+      "failed statement select id from",
+    );
+    const listed = await gaveUpRow("enrichment", productId);
+    expect(listed?.rawError).toContain("failed statement select id from");
+    expect(listed?.rawError).not.toContain(BOUND_VALUE);
+  });
+
+  it("keeps a failed statement's bound values out of the error parked on the product", async () => {
+    const productId = await pendingProduct();
+    const deps = {
+      ...depsWith(serving(PAGE)),
+      isLandingDenied: async () => {
+        await db().run(
+          sql`select id from products where no_such_column = ${BOUND_VALUE}`,
+        );
+        return false;
+      },
+    };
+
+    await consumeWith(productId, deps);
+
+    const row = await rowOf(productId);
+    expect(row.extractionError).toContain("failed statement select id from");
+    expect(row.extractionError).not.toContain(BOUND_VALUE);
   });
 
   it("keeps going after one bad message so the rest of the batch is served", async () => {
