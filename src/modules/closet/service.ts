@@ -1008,7 +1008,8 @@ export async function withResolvedProduct(
  * The paste path (107): a product with a URL and no extraction yet gets
  * one asked for. Here rather than in the server function for the same
  * reason the type inheritance is — it runs wherever a garment is linked,
- * so it cannot be skipped. `enqueueEnrichment` never throws: enrichment
+ * so it cannot be skipped. A denied link is left out: the product is
+ * linked without it, so it never becomes the product's source page. `enqueueEnrichment` never throws: enrichment
  * must not be able to fail the save that asked for it (law 5), and the
  * row it leaves behind is what the retry cron re-drives.
  *
@@ -1026,10 +1027,11 @@ export async function productLinkFor(
   }>,
   createdBy: string,
 ): Promise<{ productId: string; type: string | undefined }> {
+  const link = typed.productUrl ?? undefined;
   const { product } = await resolveProduct(db, {
     brandName: typed.brand,
     productName: typed.name,
-    sourceUrl: typed.productUrl ?? undefined,
+    sourceUrl: (await isDeniedLink(link)) ? undefined : link,
     createdBy,
   });
   await enqueueEnrichment(db, product, createdBy, captureException);

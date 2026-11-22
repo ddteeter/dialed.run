@@ -11,14 +11,14 @@ views {
         description 'The products row is the durable marker'
       }
 
-    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey); src/modules/closet/service.ts withResolvedProduct, isListedName, isUnconfirmed, assertLinkAllowed; src/modules/closet/product-link.ts linkTypedGarments, productLinkFor
+    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey); src/modules/closet/service.ts withResolvedProduct, isListedName, isUnconfirmed, assertLinkAllowed, productLinkFor (isDeniedLink); src/modules/closet/product-link.ts linkTypedGarments, productLinkFor
     runner -> cf.app.closet.saveGarment 'saves a garment with a brand, a model and a product link' {
       notes '''
         **Guard: the garment\'s idempotency key, on a create.** A repeat of the save also asks for enrichment again, which the claim below turns into nothing.
 
         **Guard: only a nameable product.** An empty or listed brand or model, or an unconfirmed runner, makes no product and asks for nothing; the garment saves as typed. Confirming the account later links those garments the same way, and that asks for enrichment too.
 
-        **Guard: the denylist, before the product.** A link the denylist refuses fails the save before the shared product is found or made, so it never becomes a product\'s link and asks for nothing.
+        **Guard: the denylist, before the product.** A link the denylist refuses fails the save before the shared product is found or made, so it never becomes a product\'s link and asks for nothing. Wherever a garment is linked, confirming included, a denied link is left out and the product is linked without it.
       '''
     }
     // source: src/modules/products/service.ts resolveProduct, createOrGetProduct (onConflictDoUpdate, coalesce on source_url)
