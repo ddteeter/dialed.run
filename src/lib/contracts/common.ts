@@ -9,6 +9,26 @@ import { isOwnHost } from "../domain";
 // ---- Common ---------------------------------------------------------------
 
 /**
+ * Characters a short name never needs and a reader never sees: the
+ * direction overrides, embeddings and isolates (U+202A–202E,
+ * U+2066–2069), the direction marks (U+200E, U+200F, U+061C), and the
+ * zero-width space, word joiner and byte-order mark (U+200B, U+2060,
+ * U+FEFF). The zero-width joiner and non-joiner stay: Persian, several
+ * Indic scripts and emoji sequences are spelt with them.
+ */
+const HIDDEN_CONTROLS =
+  /[\u{202A}-\u{202E}\u{2066}-\u{2069}\u{200E}\u{200F}\u{61C}\u{200B}\u{2060}\u{FEFF}]/gu;
+
+/**
+ * A name with its hidden controls taken out, so it reads in the line it
+ * is printed in and nothing else of that line moves. Applied before a
+ * field's length is checked.
+ */
+export function withoutHiddenControls(value: string): string {
+  return value.replaceAll(HIDDEN_CONTROLS, "");
+}
+
+/**
  * A link, checked by parsing rather than by pattern.
  *
  * `URL.parse` returns null instead of throwing, which is why there is no

@@ -13,6 +13,7 @@
 import { z } from "zod";
 
 import { ulidSchema } from "../ids";
+import { withoutHiddenControls } from "./common";
 import { usernameSchema } from "./garments";
 
 export const SIGNATURE_MAX = 120;
@@ -40,6 +41,7 @@ export const takedownRequestSchema = z.object({
     .pipe(z.email(TAKEDOWN_COPY.emailShape)),
   signature: z
     .string()
+    .overwrite(withoutHiddenControls)
     .trim()
     .min(1, TAKEDOWN_COPY.signature)
     .max(SIGNATURE_MAX, TAKEDOWN_COPY.signatureLong),
