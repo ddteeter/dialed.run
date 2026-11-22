@@ -221,8 +221,10 @@ export async function uploadPhoto(
 
 /**
  * `uploadPhoto` as the attach screen hears it: the key, or the sentence
- * for a runner whose day's photo uploads are used up (SA-M14), which the
- * photo row shows in place of "Not sent". Anything else still throws.
+ * for a runner whose day's photo uploads are used up (SA-M14), or whose
+ * last photos are still being checked, which the photo row shows in
+ * place of "Not sent", as the garment's photo does. Anything else still
+ * throws.
  */
 export async function uploadPhotoAnswer(
   input: UploadPhotoInput,
@@ -232,13 +234,21 @@ export async function uploadPhotoAnswer(
   } catch (error: unknown) {
     if (
       error instanceof InvalidPhotoError &&
-      error.message === PHOTO_LIMIT_REACHED
+      UPLOAD_REFUSALS.has(error.message)
     ) {
-      return { refusal: PHOTO_LIMIT_REACHED };
+      return { refusal: error.message };
     }
     throw error;
   }
 }
+
+/**
+The refusals the photo row says in its own words.
+*/
+const UPLOAD_REFUSALS: ReadonlySet<string> = new Set([
+  PHOTO_LIMIT_REACHED,
+  PHOTOS_STILL_HELD,
+]);
 
 /**
  * The photo's row, written only while the kit has room (SA-M14) and the

@@ -905,6 +905,25 @@ describe("bounds on what one runner stores (SA-M14)", () => {
     });
   });
 
+  it("answers the attach screen with the held photos' sentence at their limit", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE);
+
+    expect(
+      await uploadPhotoAnswer({
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      }),
+    ).toStrictEqual({
+      refusal:
+        "Your last 10 photos are still being checked. You can add more once they're through.",
+    });
+  });
+
   it("still throws any other refusal", async () => {
     const userId = await makeUser();
     await expect(
