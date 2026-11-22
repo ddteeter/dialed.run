@@ -303,3 +303,21 @@ test("a server function answers only this app's own pages", async ({
     elsewhere.close();
   }
 });
+
+test("a server-function path with no function id is answered with a 404", async ({
+  request,
+}) => {
+  for (const path of [
+    "/_serverFn/",
+    "/_serverFn//x",
+    "/%5FserverFn/",
+    "/_serverFn/%20",
+  ]) {
+    const response = await request.get(path, {
+      headers: { "sec-fetch-site": "cross-site" },
+    });
+    expect(response.status(), path).toBe(404);
+    // The Worker's own answer: it carries the security headers.
+    expect(response.headers()["x-content-type-options"], path).toBe("nosniff");
+  }
+});

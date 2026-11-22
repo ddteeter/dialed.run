@@ -11,7 +11,11 @@ import {
 
 import { handleQueueBatch, handleScheduled } from "./modules/dispatch";
 import { captureException } from "./modules/ops";
-import { boundedRequest, secureResponse } from "./modules/ops/edge";
+import {
+  boundedRequest,
+  isServerFnWithoutId,
+  secureResponse,
+} from "./modules/ops/edge";
 import { withoutCookiesWhenPublic } from "./modules/ops/public-web";
 import {
   dailySpeed,
@@ -67,7 +71,17 @@ export default {
       // a dev server that counts them (design 182).
       //
       // SA-L05: a body is bounded before anything reads it (body-cap.ts).
-      const context = requestContext(new URL(request.url).pathname);
+      const url = new URL(request.url);
+      const context = requestContext(url.pathname);
+      // A server-function path with no id is answered here: the
+      // framework reads that path before any response is built.
+      if (isServerFnWithoutId(url)) {
+        return await secureResponse(
+          new Response("Not found", { status: 404 }),
+          context.nonce,
+          context.marker,
+        );
+      }
       const bounded = await boundedRequest(request);
       if (bounded instanceof Response) {
         return await secureResponse(bounded, context.nonce, context.marker);
