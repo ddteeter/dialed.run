@@ -21,7 +21,9 @@ name: Protected paths
 #
 # THE LABEL. Labels are set by people with triage access or more. A fork's
 # PR cannot set it; for a branch pushed with write access, it makes a
-# change to these files visible on the PR before it can merge.
+# change to these files visible on the PR before it can merge. It covers
+# one push: added before the head was pushed, it does not count, and the
+# owner removes it and adds it again.
 #
 # PINS. Every `uses:` is a full version tag, locked to a commit in
 # `actions.lock` (D-182).
@@ -43,6 +45,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      # The label's events, and the runs that date the head.
+      issues: read
+      actions: read
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
@@ -132,9 +137,24 @@ jobs:
           echo "This PR changes:"
           printf '%s\n' "$touched" | sed 's/^/  /'
           labels=$(gh api "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name')
-          if grep -qxF "$LABEL" <<<"$labels"; then
-            echo "The PR has the $LABEL label."
+          if ! grep -qxF "$LABEL" <<<"$labels"; then
+            echo "::error::This PR changes protected paths; it needs the $LABEL label to pass."
+            exit 1
+          fi
+
+          # The label covers the head it was added for, so it must be newer
+          # than the head. The head's time is when GitHub created CI's
+          # newest pull_request run for this commit: opening, pushing and
+          # reopening start one, a label does not. Both times are GitHub's.
+          labelled=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/events?per_page=100" |
+            jq -r --arg label "$LABEL" \
+              '.[] | select(.event == "labeled" and .label.name == $label) | .created_at' |
+            sort | tail -n 1)
+          pushed=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=100" \
+            --jq '[.workflow_runs[].created_at] | max // empty')
+          if [ -n "$labelled" ] && [ -n "$pushed" ] && [[ "$labelled" > "$pushed" ]]; then
+            echo "The PR has the $LABEL label, added at $labelled, after this head ($pushed)."
             exit 0
           fi
-          echo "::error::This PR changes protected paths; it needs the $LABEL label to pass."
+          echo "::error::The $LABEL label (added ${labelled:-at no time found}) is older than this head (${pushed:-no CI run found yet}). It covers one push: remove it and add it again."
           exit 1

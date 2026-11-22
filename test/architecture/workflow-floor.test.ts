@@ -516,7 +516,7 @@ describe("the protected-paths check", () => {
     expect(source).toContain("pull_request_target:");
     expect(source).not.toContain("actions/checkout@");
     expect(job).toContain(
-      "    permissions:\n      contents: read\n      pull-requests: read\n    steps:",
+      "    permissions:\n      contents: read\n      pull-requests: read\n      issues: read\n      actions: read\n    steps:",
     );
   });
 
@@ -541,6 +541,17 @@ describe("the protected-paths check", () => {
   it("passes a protected change only with the owner's label", () => {
     expect(job).toContain("LABEL: owner-approved");
     expect(job).toContain('grep -qxF "$LABEL"');
+  });
+
+  it("dates the head by CI's pull_request runs, which every push starts and no label does", () => {
+    expect(job).toContain(
+      "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$HEAD_SHA&event=pull_request",
+    );
+    const ci = workflowNamed("ci.yml");
+    const on = ci.slice(ci.indexOf("\non:\n"), ci.indexOf("\npermissions:"));
+    expect(codeOf(on)).toBe(
+      "\non:\n  pull_request:\n  push:\n    branches: [main]\n",
+    );
   });
 });
 

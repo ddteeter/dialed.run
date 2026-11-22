@@ -49,7 +49,24 @@ interface PullRequest {
   readonly base?: Manifest;
   readonly head?: Manifest;
   readonly labels?: readonly string[];
+  /**
+  The label's events, oldest first: when it was added and removed.
+  */
+  readonly labelEvents?: readonly LabelEvent[];
+  /**
+  When CI's pull_request runs for the head were created.
+  */
+  readonly headRuns?: readonly string[];
 }
+
+interface LabelEvent {
+  readonly event: "labeled" | "unlabeled";
+  readonly label: string;
+  readonly at: string;
+}
+
+const PUSHED = "2026-11-22T10:00:00Z";
+const LABELLED = "2026-11-22T10:05:00Z";
 
 function contents(sha: string, manifest: Manifest): Record<string, string> {
   return {
@@ -60,6 +77,13 @@ function contents(sha: string, manifest: Manifest): Record<string, string> {
       manifest.lock,
     ),
   };
+}
+
+/**
+Each label the PR has, added after the head was pushed.
+*/
+function defaultEvents(labels: readonly string[]): LabelEvent[] {
+  return labels.map((label) => ({ event: "labeled", label, at: LABELLED }));
 }
 
 function routesOf(pr: PullRequest): Record<string, unknown> {
@@ -78,6 +102,22 @@ function routesOf(pr: PullRequest): Record<string, unknown> {
     [`repos/${REPO}/issues/${PR}/labels`]: (pr.labels ?? []).map((name) => ({
       name,
     })),
+    [`repos/${REPO}/issues/${PR}/events?per_page=100`]: [
+      { event: "renamed", created_at: "2026-11-22T11:00:00Z" },
+      ...(pr.labelEvents ?? defaultEvents(pr.labels ?? [])).map(
+        ({ event, label, at }) => ({
+          event,
+          label: { name: label },
+          created_at: at,
+        }),
+      ),
+    ],
+    [`repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${HEAD}&event=pull_request&per_page=100`]:
+      {
+        workflow_runs: (pr.headRuns ?? [PUSHED]).map((created_at) => ({
+          created_at,
+        })),
+      },
   };
 }
 
@@ -132,7 +172,7 @@ describe("the protected-paths check", () => {
       ...Array.from({ length: 20_000 }, (_, index) => `label-${String(index)}`),
     ];
     const run = check({ files: ["guardrails.config.json"], labels });
-    expect(run.stdout).toContain(`The PR has the ${LABEL} label.`);
+    expect(run.stdout).toContain(`The PR has the ${LABEL} label, added at`);
     expect(run.status).toBe(0);
   });
 
@@ -231,6 +271,68 @@ describe("the protected-paths check", () => {
     });
     expect(run.stdout).toContain("No protected path changes.");
     expect(run.status).toBe(0);
+  });
+
+  describe("with a protected change", () => {
+    const files = ["guardrails.config.json"];
+
+    it("passes when the label was added after the head was pushed", () => {
+      const run = check({ files, labels: [LABEL] });
+      expect(run.stdout).toContain(
+        `The PR has the ${LABEL} label, added at ${LABELLED}, after this head (${PUSHED}).`,
+      );
+      expect(run.status).toBe(0);
+    });
+
+    it("fails when the label was added before the head was pushed", () => {
+      const run = check({
+        files,
+        labels: [LABEL],
+        headRuns: ["2026-11-22T09:00:00Z", "2026-11-22T10:06:00Z"],
+      });
+      expect(run.stdout).toContain(
+        `::error::The ${LABEL} label (added ${LABELLED}) is older than this head (2026-11-22T10:06:00Z).`,
+      );
+      expect(run.status).toBe(1);
+    });
+
+    it("dates the label by its newest addition", () => {
+      const run = check({
+        files,
+        labels: [LABEL],
+        labelEvents: [
+          { event: "labeled", label: LABEL, at: "2026-11-22T09:00:00Z" },
+          { event: "unlabeled", label: LABEL, at: "2026-11-22T09:30:00Z" },
+          { event: "labeled", label: LABEL, at: LABELLED },
+        ],
+      });
+      expect(run.status).toBe(0);
+    });
+
+    it("does not date the label by another label's events", () => {
+      const run = check({
+        files,
+        labels: [LABEL, "docs"],
+        labelEvents: [
+          { event: "labeled", label: LABEL, at: "2026-11-22T09:00:00Z" },
+          { event: "labeled", label: "docs", at: LABELLED },
+          { event: "unlabeled", label: LABEL, at: LABELLED },
+        ],
+      });
+      expect(run.status).toBe(1);
+    });
+
+    it("fails when no CI run dates the head", () => {
+      const run = check({ files, labels: [LABEL], headRuns: [] });
+      expect(run.stdout).toContain("no CI run found yet");
+      expect(run.status).toBe(1);
+    });
+
+    it("fails when no event dates the label", () => {
+      const run = check({ files, labels: [LABEL], labelEvents: [] });
+      expect(run.stdout).toContain("at no time found");
+      expect(run.status).toBe(1);
+    });
   });
 
   it("fails a protected change without the label", () => {

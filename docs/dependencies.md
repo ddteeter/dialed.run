@@ -56,7 +56,9 @@ lint, build, test and TypeScript configs under every name their tools
 look for, workflows, hooks, `scripts/`, `test/architecture/`, `.npmrc`,
 the Claude settings, package.json outside its dependency lists, the
 guardrails-core pin) only with the `owner-approved` label, which the
-owner sets; `protected-paths.yml` lists the files. `e2e (build)` exists because the dev server never runs the
+owner sets; `protected-paths.yml` lists the files. The label covers one
+push: one added before the head was pushed does not count, so a later
+push, a Dependabot rebase included, needs it removed and added again. `e2e (build)` exists because the dev server never runs the
 production bundle, and the updates most likely to break the app
 (Vite, the Cloudflare plugin, TanStack Start, React) can break the build's
 server rendering while dev stays green.
