@@ -43,7 +43,7 @@ import {
   isProfaneHandle,
   readBackDigits,
 } from "../../../lib/contracts/profanity";
-import { followRowsNaming } from "../../notifications";
+import { followRowsNaming, followRowsOpeningWith } from "../../notifications";
 import { purgePublicPages } from "../../ops";
 import { isPlaceholderHandle } from "../../safety";
 import type { ScreenHandle } from "./handle-screen";
@@ -582,17 +582,22 @@ function ownUnlocked(userId: string, handle: string) {
 
 /**
  * Locks a handle the runner gave up themselves, so neither they nor anyone
- * may take it. Nothing when it is not in their own history, unlocked.
+ * may take it, and takes the follow rows that open with it off the other
+ * runners' bells, in one batch. Nothing when it is not in their own
+ * history, unlocked.
  */
 async function lockOwnHistoryHandle(
   db: Db,
   userId: string,
   handle: string,
 ): Promise<void> {
-  await db
-    .update(usernameHistory)
-    .set({ lockedAt: nowSeconds() })
-    .where(ownUnlocked(userId, handle));
+  const unlocked = ownUnlocked(userId, handle);
+  const stillTheirs = sql`exists (select 1 from ${usernameHistory} where ${unlocked})`;
+  const rowsOpening = followRowsOpeningWith(db, userId, handle);
+  await db.batch([
+    db.delete(notifications).where(and(rowsOpening, stillTheirs)),
+    db.update(usernameHistory).set({ lockedAt: nowSeconds() }).where(unlocked),
+  ]);
 }
 
 /**
