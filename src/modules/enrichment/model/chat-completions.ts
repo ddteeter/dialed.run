@@ -6,10 +6,11 @@ import {
   garmentCategories,
   type ExtractedProduct,
   type ExtractionModel,
+  validExtracted,
 } from "../../../lib/contracts";
 import { knownFibres } from "../fibres";
 import { parseJson } from "../html";
-import { strictSchemaFor, withoutNulls } from "./json-schema";
+import { isRecord, strictSchemaFor, withoutNulls } from "./json-schema";
 
 /**
  * The LLM rung, over the chat-completions wire format (packet §5).
@@ -44,6 +45,29 @@ export const OPENROUTER_ENDPOINT =
   "https://openrouter.ai/api/v1/chat/completions";
 const TIMEOUT_MS = 30_000;
 const MAX_ERROR_CHARS = 400;
+
+/**
+ * The most the model may write, its reasoning included: about ten times
+ * the longest answer the eval corpus produced (owner, 2026-11-21). An
+ * answer cut off here is not JSON, so it is a failed try like any other
+ * answer the contract refuses.
+ */
+export const MAX_ANSWER_TOKENS = 4000;
+
+/**
+ * How much of the page's address the prompt names: its origin and path,
+ * never its query or fragment, cut to this many characters.
+ */
+export const MAX_PROMPT_ADDRESS_LENGTH = 300;
+
+/**
+The page's address as the prompt names it.
+*/
+export function promptAddress(url: string): string {
+  const parsed = URL.parse(url);
+  const address = parsed === null ? "" : parsed.origin + parsed.pathname;
+  return address.slice(0, MAX_PROMPT_ADDRESS_LENGTH);
+}
 
 /**
  * What the model is asked for: the contract **minus `extras`**, derived
@@ -182,6 +206,7 @@ async function askModel(
     },
     body: JSON.stringify({
       model: options.model,
+      max_completion_tokens: MAX_ANSWER_TOKENS,
       // Pinned, and fallbacks off, where there is a router to pin — see the
       // note above on per-endpoint structured output.
       ...(options.provider !== undefined && {
@@ -204,7 +229,10 @@ async function askModel(
       },
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Page URL: ${url}\n\n${pageText}` },
+        {
+          role: "user",
+          content: `Page URL: ${promptAddress(url)}\n\n${pageText}`,
+        },
       ],
     }),
   });
@@ -240,12 +268,13 @@ async function askModel(
     throw new ModelUnavailableError("Model returned no completion");
   }
 
+  // Field by field: a bad image costs the image, not the composition
+  // beside it. Only an answer that is not an object at all is a failure.
   const answer = withoutNulls(parseJson(content));
-  const extracted = modelOutputSchema.safeParse(answer);
-  if (!extracted.success) {
+  if (!isRecord(answer)) {
     throw new ModelUnavailableError("Model output did not match the contract");
   }
-  return withoutSaidNull(extracted.data);
+  return withoutSaidNull(validExtracted({ ...answer, extras: undefined }));
 }
 
 /**

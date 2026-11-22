@@ -6,9 +6,12 @@ import { knownFibres } from "../../../src/modules/enrichment/fibres";
 
 import {
   createChatCompletionsModel,
+  MAX_ANSWER_TOKENS,
+  MAX_PROMPT_ADDRESS_LENGTH,
   ModelUnavailableError,
   OPENAI_ENDPOINT,
   OPENROUTER_ENDPOINT,
+  promptAddress,
 } from "../../../src/modules/enrichment/model/chat-completions";
 
 /**
@@ -68,6 +71,7 @@ const responseFormatSchema = z.object({
 const messageSchema = z.object({ role: z.string(), content: z.string() });
 const requestSchema = z.object({
   model: z.string(),
+  max_completion_tokens: z.number(),
   provider: providerSchema.optional(),
   temperature: z.number().optional(),
   response_format: responseFormatSchema,
@@ -398,12 +402,37 @@ describe("createChatCompletionsModel: every way it can fail", () => {
     expect(String(error)).toContain("output did not match the contract");
   });
 
-  it("fails on JSON the contract rejects", async () => {
-    // A model that answers the right shape with the wrong values — here a
-    // weight outside the enum — is not a usable extraction.
-    const error = await refuses(
-      answering(JSON.stringify({ weight: "chunky" })),
+  it("drops a field the contract rejects and keeps the rest", async () => {
+    // A weight outside the enum costs the weight; an image that is not
+    // https costs the image. The name beside them is kept.
+    const fetchImpl = answering(
+      JSON.stringify({
+        name: "Rover Tee",
+        weight: "chunky",
+        imageUrl: ["http:", "//cdn.shop.example/tee.jpg"].join(""),
+      }),
     );
+    await expect(
+      modelWith(fetchImpl).extract(PAGE_TEXT, HINT),
+    ).resolves.toStrictEqual({ name: "Rover Tee" });
+  });
+
+  it("keeps no field the model is not asked for", async () => {
+    const fetchImpl = answering(
+      JSON.stringify({ name: "Rover Tee", extras: { note: "x" } }),
+    );
+    await expect(
+      modelWith(fetchImpl).extract(PAGE_TEXT, HINT),
+    ).resolves.toStrictEqual({ name: "Rover Tee" });
+  });
+
+  it.each([
+    ["a list", "[]"],
+    ["a string", JSON.stringify("Rover Tee")],
+    ["an answer cut off partway", '{"name": "Rover'],
+  ])("fails on %s where an object was asked for", async (_, content) => {
+    const error = await refuses(answering(content));
+    expect(error).toBeInstanceOf(ModelUnavailableError);
     expect(String(error)).toContain("output did not match the contract");
   });
 
@@ -412,5 +441,45 @@ describe("createChatCompletionsModel: every way it can fail", () => {
     // as retryable, but nothing should dress one up as the other.
     const error = await refuses(vi.fn(networkDown));
     expect(error).toBeInstanceOf(TypeError);
+  });
+});
+
+describe("what the request asks of the model", () => {
+  it("caps the answer at MAX_ANSWER_TOKENS", async () => {
+    const fetchImpl = answering(FOUND);
+    await modelWith(fetchImpl).extract(PAGE_TEXT, HINT);
+    expect(MAX_ANSWER_TOKENS).toBe(4000);
+    expect(sentBody(fetchImpl).max_completion_tokens).toBe(MAX_ANSWER_TOKENS);
+  });
+
+  it("names the page's origin and path, never its query or fragment", async () => {
+    const fetchImpl = answering(FOUND);
+    await modelWith(fetchImpl).extract(PAGE_TEXT, {
+      url: `https://shop.example.com/p/tee?token=${"t".repeat(50)}#frag`,
+    });
+    const prompt = sentBody(fetchImpl).messages[1]?.content;
+    expect(prompt).toBe(
+      `Page URL: https://shop.example.com/p/tee\n\n${PAGE_TEXT}`,
+    );
+  });
+});
+
+describe("promptAddress", () => {
+  it("cuts a long path to MAX_PROMPT_ADDRESS_LENGTH", () => {
+    const url = `https://shop.example.com/${"p".repeat(5000)}`;
+    expect(promptAddress(url)).toBe(url.slice(0, MAX_PROMPT_ADDRESS_LENGTH));
+    expect(MAX_PROMPT_ADDRESS_LENGTH).toBe(300);
+  });
+
+  it("keeps an address no longer than the cut whole", () => {
+    const url = "https://shop.example.com/".padEnd(
+      MAX_PROMPT_ADDRESS_LENGTH,
+      "p",
+    );
+    expect(promptAddress(url)).toBe(url);
+  });
+
+  it("names nothing for an address that does not parse", () => {
+    expect(promptAddress("not a url")).toBe("");
   });
 });
