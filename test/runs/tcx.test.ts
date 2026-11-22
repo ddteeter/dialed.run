@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { RunDraft } from "../../src/lib/contracts";
-import { tcxSource } from "../../src/modules/runs/parsers/tcx";
+import { MAX_TCX_LAPS, tcxSource } from "../../src/modules/runs/parsers/tcx";
 import {
   NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
@@ -335,6 +335,29 @@ describe("tcx: the treadmill case", () => {
 });
 
 describe("tcx: every way it refuses", () => {
+  it("reads the most laps an activity may hold, and refuses one more", async () => {
+    const short = { startTime: START, seconds: 1, metres: 1 };
+    const most = lap(short).repeat(MAX_TCX_LAPS);
+    const draft = await parse(tcxWith(most));
+    expect(draft.distanceM).toBe(MAX_TCX_LAPS);
+    expect(await reasonFor(tcxWith(`${most}<Lap/>`))).toBe(
+      "tcx: more than 2000 laps",
+    );
+  });
+
+  it("counts the laps of the activity it reads only", async () => {
+    const short = { startTime: START, seconds: 1, metres: 1 };
+    const second = `<Activity>${"<Lap/>".repeat(MAX_TCX_LAPS + 1)}</Activity>`;
+    const document = `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase><Activities><Activity>${lap(short)}</Activity>${second}</Activities></TrainingCenterDatabase>`;
+    const draft = await parse(document);
+    expect(draft.distanceM).toBe(1);
+  });
+
+  it("is two thousand laps", () => {
+    expect(MAX_TCX_LAPS).toBe(2000);
+  });
+
   it("says when there is no lap to read", async () => {
     const documents = [
       '<?xml version="1.0"?><other/>',

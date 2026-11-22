@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 import {
+  MAX_KEPT_ELEMENT_CHILDREN,
   MAX_XML_DEPTH,
+  MAX_XML_FAULTS,
   MAX_XML_NODES,
   XML_CHUNK_BYTES,
   isAt,
@@ -268,6 +270,55 @@ describe("readXml: its budgets", () => {
     expect(failure.reason).toBe("xml: XML parser threw");
     expect(failure.cause).toBeInstanceOf(Error);
     expect(String(failure.cause)).toContain("Max buffer length exceeded");
+  });
+
+  it("reads a kept element holding the budget's elements, and refuses one more", () => {
+    // Half as children, half one level down, so every depth counts.
+    const half = MAX_KEPT_ELEMENT_CHILDREN / 2;
+    const within = `<r><k>${"<c><d/></c>".repeat(half)}</k></r>`;
+    const [value] = read(within, ["r/k"]).values;
+    expect(value?.[0]).toBe("r/k");
+    expect(value?.[1]).toStrictEqual({
+      c: Array.from({ length: half }, () => ({ d: "" })),
+    });
+    expect(
+      failureOf(`<r><k>${"<c><d/></c>".repeat(half)}<c/></k></r>`, ["r/k"])
+        .reason,
+    ).toBe("xml: an element holds more than 256 elements");
+  });
+
+  it("counts each kept element on its own, and nothing outside one", () => {
+    const kept = `<k>${"<c/>".repeat(MAX_KEPT_ELEMENT_CHILDREN)}</k>`;
+    const free = "<f/>".repeat(MAX_KEPT_ELEMENT_CHILDREN + 1);
+    const { values } = read(`<r>${kept}${free}${kept}</r>`, ["r/k"]);
+    expect(values).toHaveLength(2);
+  });
+
+  it("keeps a kept element's repeated children in document order", () => {
+    expect(valueOfB("<b><c>1</c><c>2</c><c>3</c></b>")).toStrictEqual({
+      c: [1, 2, 3],
+    });
+  });
+
+  it("forgives the budget's faults, and refuses one more with sax's as the cause", () => {
+    // Text after the root is one fault a character.
+    expect(read(`<a/>${"x".repeat(MAX_XML_FAULTS)}`).opened).toHaveLength(1);
+    const failure = failureOf(`<a/>${"x".repeat(MAX_XML_FAULTS + 1)}`);
+    expect(failure.reason).toBe("xml: more than 1000 XML faults");
+    expect(String(failure.cause)).toContain("Text data outside of root node");
+  });
+
+  it("refuses a DOCTYPE, wherever it is", () => {
+    expect(failureOf("<!DOCTYPE a><a/>").reason).toBe("xml: a DOCTYPE");
+    expect(failureOf("<a><!DOCTYPE a></a>").reason).toBe("xml: a DOCTYPE");
+    // And so a long value after one is never read either.
+    const long = `<!DOCTYPE a><a b="${"x".repeat(3 * XML_CHUNK_BYTES)}"/>`;
+    expect(failureOf(long).reason).toBe("xml: a DOCTYPE");
+  });
+
+  it("holds 256 elements in a kept one and forgives a thousand faults", () => {
+    expect(MAX_KEPT_ELEMENT_CHILDREN).toBe(256);
+    expect(MAX_XML_FAULTS).toBe(1000);
   });
 
   it("is two million nodes, sixty-four deep, in 64 kB chunks", () => {

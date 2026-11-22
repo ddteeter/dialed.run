@@ -5,7 +5,7 @@
  * treadmill FIT file (no start position) naturally parses as `indoor` with
  * real duration/distance — no separate code path needed.
  */
-import { Decoder, Stream, Utils } from "@garmin/fitsdk";
+import { Decoder, Profile, Stream, Utils } from "@garmin/fitsdk";
 import type { MesgDefinition } from "@garmin/fitsdk";
 
 import { rpeSchema, runDraftSchema } from "../../../lib/contracts";
@@ -55,25 +55,58 @@ export const MAX_FIELD_DESCRIPTIONS = 256;
  */
 export const MAX_DEVELOPER_FIELD_LOOKUPS = 500_000_000;
 
+/**
+ * The most the decoder may keep of a file, counted as it reads: each
+ * message the profile names is kept with a value for each of its fields,
+ * until the read ends. A message counts `FIT_MESSAGE_WEIGHT` and each
+ * field one. A thirty-hour run recorded every second, with a watch's
+ * usual fields, is about two million.
+ */
+export const MAX_FIT_KEPT_VALUES = 3_000_000;
+
+/**
+What one kept message counts towards `MAX_FIT_KEPT_VALUES`, before its fields.
+*/
+export const FIT_MESSAGE_WEIGHT = 4;
+
 const FIELD_DESCRIPTION = 206;
+
+/**
+ * Whether the profile names a message type. The decoder reads a type it
+ * does not name and keeps nothing of it, so such a message never reaches
+ * `mesgListener`.
+ */
+function isProfileMessage(globalMessageNumber: number): boolean {
+  return Object.hasOwn(Profile.messages, globalMessageNumber);
+}
 
 /**
  * The decoder's listeners that keep a file inside its budgets. A throw in
  * either lands in `read()`'s `errors`, which the parse turns into a
  * refusal. A definition may not declare a developer field of size zero,
- * so every developer field a message carries costs it at least a byte.
+ * so every developer field a message carries costs it at least a byte,
+ * nor put developer fields on a type the profile does not name, since
+ * only a named type's messages are counted.
  *
  * A message does not say which of its type's definitions it was written
- * under, so it is counted at the most developer fields any definition of
- * its type has declared: the count errs towards refusing.
+ * under, so it is counted at the most fields and developer fields any
+ * definition of its type has declared: the count errs towards refusing.
  */
-export function fitReadLimits(lookupBudget = MAX_DEVELOPER_FIELD_LOOKUPS): {
+export function fitReadLimits(
+  lookupBudget = MAX_DEVELOPER_FIELD_LOOKUPS,
+  keptBudget = MAX_FIT_KEPT_VALUES,
+): {
   mesgListener: (mesgNum: number) => void;
   mesgDefinitionListener: (definition: MesgDefinition) => void;
 } {
   let descriptions = 0;
   let lookups = 0;
+  let kept = 0;
   const developerFieldsOf = new Map<number, number>();
+  const fieldsOf = new Map<number, number>();
+  const widest = (of: Map<number, number>, type: number, count: number) => {
+    of.set(type, Math.max(of.get(type) ?? 0, count));
+  };
   return {
     mesgListener: (mesgNum) => {
       if (mesgNum === FIELD_DESCRIPTION) {
@@ -86,16 +119,25 @@ export function fitReadLimits(lookupBudget = MAX_DEVELOPER_FIELD_LOOKUPS): {
       if (lookups > lookupBudget) {
         throw new Error("fit: too many developer field lookups");
       }
+      kept += FIT_MESSAGE_WEIGHT + (fieldsOf.get(mesgNum) ?? 0);
+      if (kept > keptBudget) {
+        throw new Error("fit: too many messages and fields");
+      }
     },
     mesgDefinitionListener: (definition) => {
-      const fields = definition.developerFieldDefinitions;
-      if (fields.some((field) => field.size === 0)) {
+      const developerFields = definition.developerFieldDefinitions;
+      if (developerFields.some((field) => field.size === 0)) {
         throw new Error("fit: a developer field of size zero");
       }
       const type = definition.globalMessageNumber;
-      developerFieldsOf.set(
+      if (developerFields.length > 0 && !isProfileMessage(type)) {
+        throw new Error("fit: developer fields on an unknown message type");
+      }
+      widest(developerFieldsOf, type, developerFields.length);
+      widest(
+        fieldsOf,
         type,
-        Math.max(developerFieldsOf.get(type) ?? 0, fields.length),
+        definition.fieldDefinitions.length + developerFields.length,
       );
     },
   };
