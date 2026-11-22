@@ -75,11 +75,11 @@ const importFileDelete = z.object({
 });
 
 /**
- * Delete a run file on a date: a failed import's 30 days after it failed
- * (owner, 2026-10-04), and a read one's at once, in the batch that
- * concludes its import (D-116). Neither has a fast path; the daily drain
- * pays both. The same payload and the same prefix rule as
- * `import_file_delete`.
+ * Delete a failed import's run file 30 days after it failed (owner,
+ * 2026-10-04). It has no fast path; the daily drain pays it. The same
+ * payload and the same prefix rule as `import_file_delete`, which is how
+ * a read file goes (D-116): owed in the batch that concludes its import
+ * and paid straight after it.
  *
  * Its own kind rather than a held `import_file_delete`, because the drain
  * reads the two differently: a due `import_file_delete` is a fast path

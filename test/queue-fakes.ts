@@ -5,7 +5,10 @@ import type { Mock } from "vitest";
  * The imports consumer's `owe`, as the queue entry wires it: an outbox
  * row in the core database, for the caller's batch.
  */
-export { oweInCore } from "../src/modules/ops/outbox/owe-in-core";
+export {
+  oweImportFileDeleteInCore,
+  oweInCore,
+} from "../src/modules/ops/outbox/owe-in-core";
 
 /**
  * A real `Message`, with `ack`/`retry` replaced by spies. A consumer's only

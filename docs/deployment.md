@@ -98,21 +98,24 @@ wrangler r2 bucket create dialed-media-backup --location enam
 
 The same region hint as the databases (§1), for the same reason.
 
-| Bucket                 | Binding                | Holds                                                                                 | Retention                                                                                                                             |
-| ---------------------- | ---------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `dialed-media`         | `MEDIA`                | Garment photos, entry photos                                                          | Indefinite — the app renders these; deleting one breaks a page                                                                        |
-| `dialed-imports`       | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`; data export ZIPs                                       | Run files: **until the run or account is deleted** (D-110); a file whose import failed, 30 days. Export ZIPs under `exports/`: 8 days |
-| `dialed-public-photos` | `PUBLIC_PHOTOS`        | Copies of the screened photos on `world` (PUBLIC) kits, served at `photos.dialed.run` | Only while the kit is public: deleted on any retraction (D-153, design 163 step 8)                                                    |
-| `dialed-media-backup`  | `MEDIA_BACKUP`         | Daily copies of `MEDIA`'s garment and entry photos (D-172, design 186)                | A copy while its photo exists; a deleted photo's copy, 30 days (#529). Never `quarantine/` (#530). See §10                            |
-| `dialed-guides`        | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals                                | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket                                     |
+| Bucket                 | Binding                | Holds                                                                                 | Retention                                                                                                                                            |
+| ---------------------- | ---------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dialed-media`         | `MEDIA`                | Garment photos, entry photos                                                          | Indefinite — the app renders these; deleting one breaks a page                                                                                       |
+| `dialed-imports`       | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`; data export ZIPs                                       | Run files: **until read** (D-116), or until the run or account is deleted; a file whose import failed, 30 days. Export ZIPs under `exports/`: 8 days |
+| `dialed-public-photos` | `PUBLIC_PHOTOS`        | Copies of the screened photos on `world` (PUBLIC) kits, served at `photos.dialed.run` | Only while the kit is public: deleted on any retraction (D-153, design 163 step 8)                                                                   |
+| `dialed-media-backup`  | `MEDIA_BACKUP`         | Daily copies of `MEDIA`'s garment and entry photos (D-172, design 186)                | A copy while its photo exists; a deleted photo's copy, 30 days (#529). Never `quarantine/` (#530). See §10                                           |
+| `dialed-guides`        | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals                                | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket                                                    |
 
-**No rule expires a run file** (decision D-110). An uploaded file is kept
-for as long as its run: deleting a run deletes its file (feed's `deleteRuns`,
-through the outbox's `import_file_delete`), and deleting an account deletes
-everything under `imports/<user>/` (the purge lists the prefix). A file
-whose import failed has no run, so the batch that fails the import owes its
-deletion 30 days later (outbox `import_file_expire`, owner 2026-10-04), and
-the daily digest's drain deletes it — in code, not a bucket rule. A bucket
+**No rule expires a run file.** A file is deleted once it has been read
+(D-116, replacing D-110's "kept as long as its run"): the batch that
+concludes its import owes `import_file_delete`, and the imports consumer
+deletes the file straight after it, leaving the row for the drain if the
+delete fails. Deleting a run deletes its file too (feed's `deleteRuns`,
+through the same kind), and deleting an account deletes everything under
+`imports/<user>/` (the purge lists the prefix). A file whose import failed
+has no run, so the batch that fails the import owes its deletion 30 days
+later (outbox `import_file_expire`, owner 2026-10-04), and the daily
+digest's drain deletes it — in code, not a bucket rule. A bucket
 whose whole-bucket 30-day rule is still set from before D-110 must have it
 **removed** — it would delete files the runner was promised we keep.
 

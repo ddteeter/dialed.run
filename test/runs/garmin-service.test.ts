@@ -14,6 +14,7 @@ import {
 } from "../../src/modules/runs/garmin/service";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
 import { oweInCore } from "../../src/modules/ops";
+import { oweImportFileDeleteInCore } from "../queue-fakes";
 import {
   batchOf,
   fakeMessage,
@@ -317,6 +318,7 @@ describe("importGarminActivity", () => {
         importBucket: env.IMPORTS,
         captureException: ignoreException,
         owe: oweInCore,
+        oweFileDelete: oweImportFileDeleteInCore,
         attachObservation: weatherLater,
       },
     );

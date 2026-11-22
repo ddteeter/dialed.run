@@ -22,6 +22,7 @@ import {
 import {
   batchOf,
   fakeMessage,
+  oweImportFileDeleteInCore,
   oweInCore,
   weatherLater,
 } from "../queue-fakes";
@@ -50,6 +51,7 @@ async function deliver(body: unknown): Promise<void> {
     importBucket: env.IMPORTS,
     captureException: nothing,
     owe: oweInCore,
+    oweFileDelete: oweImportFileDeleteInCore,
     attachObservation: weatherLater,
   });
 }
