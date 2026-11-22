@@ -12,6 +12,7 @@ import {
   OPENAI_ENDPOINT,
   OPENROUTER_ENDPOINT,
   promptAddress,
+  UnreadableAnswerError,
 } from "../../../src/modules/enrichment/model/chat-completions";
 
 /**
@@ -431,9 +432,17 @@ describe("createChatCompletionsModel: every way it can fail", () => {
     ["a string", JSON.stringify("Rover Tee")],
     ["an answer cut off partway", '{"name": "Rover'],
   ])("fails on %s where an object was asked for", async (_, content) => {
+    // Unreadable, which the consumer fails the try on rather than retrying.
     const error = await refuses(answering(content));
+    expect(error).toBeInstanceOf(UnreadableAnswerError);
     expect(error).toBeInstanceOf(ModelUnavailableError);
+    expect(error).toMatchObject({ name: "UnreadableAnswerError" });
     expect(String(error)).toContain("output did not match the contract");
+  });
+
+  it("fails as retryable, not unreadable, on an envelope it cannot read", async () => {
+    const error = await refuses(raw("<html>gateway timeout</html>"));
+    expect(error).not.toBeInstanceOf(UnreadableAnswerError);
   });
 
   it("lets a network failure through as itself", async () => {

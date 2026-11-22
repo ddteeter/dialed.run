@@ -10,7 +10,8 @@
  *   before a fetch. Over it the job stays `pending` for the hourly sweep;
  * - proxy calls for one product, one a day, counted before the shared
  *   count below, so a product's later tries that day go direct only and
- *   spend nothing shared (owner, 2026-11-21);
+ *   spend nothing shared (owner, 2026-11-21). A product whose call the
+ *   shared count refuses is given its count back;
  * - proxy calls across everyone, 150 a day, counted before each one. Over
  *   either, a refused page is a failed fetch, as it is with no proxy key;
  * - model calls across everyone, 200 an hour, counted before each one the
@@ -95,6 +96,14 @@ export const canSpendProductProxyCall = perSubject(
   PROXY_CALLS_PER_PRODUCT_PER_DAY,
   DAY_S,
 );
+
+/**
+ * The product's proxy count, forgotten: one statement, for a call the
+ * shared count refused, so the product has not had its call.
+ */
+export function forgetProductProxyCall(db: Db, productId: string) {
+  return forgetRateLimit(db, "proxy-product", productId);
+}
 
 /**
 One model call this hour, if any is left.

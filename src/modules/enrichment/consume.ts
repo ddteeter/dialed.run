@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, or, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
@@ -16,6 +16,7 @@ import { abandonedBefore } from "./abandon";
 import { PageFetchError, pageFailureReason } from "./bounds";
 import { fetchProductPage } from "./fetch-page";
 import { runLadder, type LadderResult } from "./ladder";
+import { UnreadableAnswerError } from "./model/chat-completions";
 import { modelPass } from "./model/rung";
 import { enrichJobSchema } from "./queue-messages";
 import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
@@ -24,6 +25,7 @@ import {
   canSpendPageFetch,
   canSpendProductProxyCall,
   canSpendProxyCall,
+  forgetProductProxyCall,
 } from "./spend-limit";
 
 /**
@@ -44,7 +46,10 @@ type Db = DrizzleD1Database & { $client: D1Database };
  * must resume from the snapshot it already has. A snapshot fetched inside
  * `REUSE_WINDOW_MS` is therefore reused rather than refetched, which is the
  * idempotency the packet asks for ("dedupe on productId + snapshot") and
- * also what makes a duplicate message from the sweep cost nothing.
+ * also what makes a duplicate message from the sweep cost nothing. A
+ * snapshot no rung has read yet (`rung` still `none`) is reused whatever
+ * its age, so a job put off with its page stored reads that page when it
+ * next runs, however long it waited.
  *
  * **Only a `pending` row is work.** `requestEnrichment` flips the row to
  * `pending` before sending, so `pending` is the claim: a message for a
@@ -55,7 +60,9 @@ type Db = DrizzleD1Database & { $client: D1Database };
  * `PageFetchError` is the page itself refusing — a 403 with no proxy, a
  * private host, an oversized body, a 404 — and no retry changes that, so
  * the row goes to `failed` and the message is acked (law 6: the failure is
- * on the row, where the closet can show it). Anything else — a network
+ * on the row, where the closet can show it). So is an `UnreadableAnswerError`,
+ * a model answer that is not an object at all: one try on the product, and
+ * the hourly sweep's re-drive is the next one. Anything else — a network
  * throw, a timeout, a write-back conflict — is thrown, so the queue's own
  * retry machinery owns it (law 3) and the DLQ handler below marks the row
  * when it gives up.
@@ -112,7 +119,7 @@ export interface EnrichmentDeps {
 async function markFailed(
   db: Db,
   product: { id: string; createdAt: number },
-  error: PageFetchError,
+  error: PageFetchError | UnreadableAnswerError,
 ): Promise<void> {
   const failed = eq(products.id, product.id);
   if (product.createdAt > abandonedBefore()) {
@@ -139,18 +146,18 @@ async function markFailed(
 }
 
 /**
-The newest snapshot of a product fetched after `since` (epoch ms), if any.
-*/
+ * The newest snapshot of a product fetched after `since` (epoch ms) or not
+ * yet read by any rung, if any.
+ */
 async function latestSnapshot(db: Db, productId: string, since: number) {
+  const reusable = or(
+    gt(productSnapshots.fetchedAt, since),
+    eq(productSnapshots.rung, "none"),
+  );
   const [row] = await db
     .select()
     .from(productSnapshots)
-    .where(
-      and(
-        eq(productSnapshots.productId, productId),
-        gt(productSnapshots.fetchedAt, since),
-      ),
-    )
+    .where(and(eq(productSnapshots.productId, productId), reusable))
     .orderBy(desc(productSnapshots.fetchedAt))
     .limit(1);
   return row;
@@ -283,7 +290,8 @@ async function fetchAndExtract(
     fetchedAt,
   });
   // After the page is stored, so the sweep's next try reads it again
-  // rather than fetching it again.
+  // rather than fetching it again: its rung is still `none`, which keeps
+  // it reusable at any age.
   if (await isModelCallSpent(deps)) return "deferred";
   const ladder = deps.ladder ?? runLadder;
   const result = ladder(new URL(page.finalUrl), page.html);
@@ -312,19 +320,22 @@ async function isModelCallSpent(deps: EnrichmentDeps): Promise<boolean> {
 /**
  * One proxy call for this product: the product's own count for the day
  * first, so a product that has had its call spends nothing shared, then
- * the day's count across everyone.
+ * the day's count across everyone. When the day's count refuses, the
+ * product's count is forgotten, so the product has its call still when
+ * the day's count has room again.
  */
 async function canSpendProxyFor(db: Db, productId: string): Promise<boolean> {
-  return (
-    (await canSpendProductProxyCall(db, productId)) && canSpendProxyCall(db)
-  );
+  if (!(await canSpendProductProxyCall(db, productId))) return false;
+  if (await canSpendProxyCall(db)) return true;
+  await forgetProductProxyCall(db, productId);
+  return false;
 }
 
 /**
  * The work for a `pending` product: the page stored within the reuse
- * window, or a fresh fetch — `deferred` when the hour's fetches or model
- * calls are spent (`spend-limit.ts`), and the row stays `pending` for the
- * hourly sweep.
+ * window or not yet read by any rung, or a fresh fetch — `deferred` when
+ * the hour's fetches or model calls are spent (`spend-limit.ts`), and the
+ * row stays `pending` for the hourly sweep.
  */
 async function extractPending(
   deps: EnrichmentDeps,
@@ -373,7 +384,11 @@ async function processEnrichJob(
     );
     if (outcome === "deferred") return;
   } catch (error) {
-    if (!(error instanceof PageFetchError)) throw error;
+    if (
+      !(error instanceof PageFetchError) &&
+      !(error instanceof UnreadableAnswerError)
+    )
+      throw error;
     deps.captureException(error, { surface: "enrichment-fetch", productId });
     await markFailed(deps.db, row, error);
     return;

@@ -29,6 +29,7 @@ import {
 } from "../../src/modules/enrichment/abandon";
 import { MAX_OPEN_TAGS } from "../../src/modules/enrichment/html";
 import { pageFailureReason } from "../../src/modules/enrichment/bounds";
+import { UnreadableAnswerError } from "../../src/modules/enrichment/model/chat-completions";
 import {
   MODEL_CALLS_PER_HOUR,
   PAGE_FETCHES_PER_HOUR,
@@ -468,8 +469,9 @@ describe("handleEnrichmentBatch: rows that are not work", () => {
   });
 
   it("reuses a snapshot from inside the window — half an hour is recent", async () => {
-    // The window is an hour. A snapshot from thirty minutes ago is on the
-    // reuse side of it, which is what separates an hour from a second.
+    // The window is an hour. A snapshot a rung has read, from thirty
+    // minutes ago, is on the reuse side of it, which is what separates an
+    // hour from a second.
     const productId = await pendingProduct();
     const fetchImpl = serving(PAGE);
     const halfHourAgo = Date.now() - 30 * 60 * 1000;
@@ -480,7 +482,7 @@ describe("handleEnrichmentBatch: rows that are not work", () => {
       productId,
       url: URL_UNDER_TEST,
       r2Key,
-      rung: "none",
+      rung: "text",
       fetchedAt: halfHourAgo,
     });
 
@@ -1622,5 +1624,162 @@ describe("handleEnrichmentBatch: the hour's model calls", () => {
 
     expect(deps.model.extract).toHaveBeenCalledTimes(1);
     expect(await limitCountOf("model-call")).toBe(MODEL_CALLS_PER_HOUR);
+  });
+});
+
+/**
+ * A snapshot of the tee page in R2 and its row, fetched `ageMs` ago and
+ * recorded with `rung`.
+ */
+async function storedPage(
+  productId: string,
+  ageMs: number,
+  rung: "none" | "text",
+): Promise<void> {
+  const fetchedAt = Date.now() - ageMs;
+  const r2Key = `products/${productId}/snapshot-${String(fetchedAt)}.html`;
+  await env.MEDIA.put(r2Key, PAGE);
+  await db().insert(productSnapshots).values({
+    id: newUlid(),
+    productId,
+    url: URL_UNDER_TEST,
+    r2Key,
+    rung,
+    fetchedAt,
+  });
+}
+
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+describe("handleEnrichmentBatch: a stored page no rung has read", () => {
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("reads it however long ago it was stored, and fetches nothing", async () => {
+    const productId = await pendingProduct();
+    await storedPage(productId, TWO_HOURS_MS, "none");
+    const fetchImpl = serving(PAGE);
+
+    await consumeWith(productId, depsWith(fetchImpl));
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("page-fetch")).toBeUndefined();
+    const [snapshot] = await snapshotsOf(productId);
+    expect(snapshot?.rung).toBe("llm");
+  });
+
+  it("reads the page a deferral kept on a later try past the reuse window, with no proxy call", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const productId = await pendingProduct();
+    const deps = { ...depsWith(vi.fn(refusingWithProxy)), proxyApiKey: "k" };
+    await consumeWith(productId, deps);
+    await db()
+      .update(productSnapshots)
+      .set({ fetchedAt: Date.now() - TWO_HOURS_MS })
+      .where(eq(productSnapshots.productId, productId));
+    await db().delete(rateLimits);
+    const fetchImpl = vi.fn(refusingWithProxy);
+
+    await consumeWith(productId, { ...deps, fetchImpl });
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(await statusOf(productId)).toBe("done");
+    expect(await snapshotsOf(productId)).toHaveLength(1);
+  });
+});
+
+/**
+A model whose every answer is unreadable.
+*/
+function modelUnreadable() {
+  return {
+    extract: vi.fn(() =>
+      Promise.reject(
+        new UnreadableAnswerError("Model output did not match the contract"),
+      ),
+    ),
+  };
+}
+
+describe("handleEnrichmentBatch: a model answer that is not an object", () => {
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("fails the try with one model call, acks, and keeps the page for the next", async () => {
+    const productId = await pendingProduct();
+    const deps = { ...depsWith(serving(OPAQUE)), model: modelUnreadable() };
+    const message = jobFor(productId);
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(message.retry).not.toHaveBeenCalled();
+    expect(await limitCountOf("model-call")).toBe(1);
+    expect(await rowOf(productId)).toMatchObject({
+      extractionStatus: "failed",
+      extractionError: "Model output did not match the contract",
+      extractionTries: 1,
+    });
+    expect(deps.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "UnreadableAnswerError" }),
+      { surface: "enrichment-fetch", productId },
+    );
+    const [kept] = await snapshotsOf(productId);
+    expect(kept?.rung).toBe("none");
+  });
+
+  it("lists it past the product's day with the page's reason and the answer's error", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
+
+    await consumeWith(productId, {
+      ...depsWith(serving(OPAQUE)),
+      model: modelUnreadable(),
+    });
+
+    expect(await gaveUpRow("enrichment", productId)).toMatchObject({
+      reason: "The shop's page couldn't be read.",
+      rawError: "Model output did not match the contract",
+    });
+  });
+});
+
+describe("handleEnrichmentBatch: a proxy call the day's count refuses", () => {
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("leaves the product its call for when the day's count has room again", async () => {
+    await spentAlready("proxy-call", PROXY_CALLS_PER_DAY);
+    const productId = await pendingProduct();
+    const deps = { ...depsWith(vi.fn(refusingWithProxy)), proxyApiKey: "k" };
+    await consumeWith(productId, deps);
+    expect(await statusOf(productId)).toBe("failed");
+    await db().delete(rateLimits).where(eq(rateLimits.kind, "proxy-call"));
+    await repend(productId);
+    const fetchImpl = vi.fn(refusingWithProxy);
+
+    await consumeWith(productId, { ...deps, fetchImpl });
+
+    expect(hasCalledTheProxy(fetchImpl)).toBe(true);
+    expect(await statusOf(productId)).toBe("done");
+  });
+
+  it("keeps the product's count when the product has had its call", async () => {
+    const productId = await pendingProduct();
+    const deps = { ...depsWith(vi.fn(refusedThroughProxy)), proxyApiKey: "k" };
+    await consumeWith(productId, deps);
+    await spentAlready("proxy-call", PROXY_CALLS_PER_DAY);
+    await repend(productId);
+    await consumeWith(productId, deps);
+    await db().delete(rateLimits).where(eq(rateLimits.kind, "proxy-call"));
+    await repend(productId);
+    const fetchImpl = vi.fn(refusingWithProxy);
+
+    await consumeWith(productId, { ...deps, fetchImpl });
+
+    expect(hasCalledTheProxy(fetchImpl)).toBe(false);
   });
 });
