@@ -8,7 +8,6 @@ export {
 export {
   enqueueForReview,
   firstReportHidingAtOnce,
-  type HandleReview,
   openRow,
   openSubject,
   pendingReviewCount,

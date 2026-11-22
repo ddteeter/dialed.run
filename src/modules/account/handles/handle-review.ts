@@ -25,7 +25,6 @@ import {
   reporterNotices,
   reviewResolution,
   settledHere,
-  type HandleReview,
   type HandleReviewValues,
 } from "../../safety";
 import { forceRename } from "./username";
@@ -52,11 +51,7 @@ type HandleRow = Readonly<{
  * shown. Anyone who reported the runner is told it stayed up, as an
  * Approve tells them.
  */
-async function keep(
-  db: Db,
-  row: HandleRow,
-  reviewerId: string,
-): Promise<HandleReview> {
+async function keep(db: Db, row: HandleRow, reviewerId: string) {
   const { queueId, userId } = row;
   const settled = { reviewerId, status: "approved", at: nowSeconds() } as const;
   const here = settledHere(queueId, settled);
@@ -92,7 +87,9 @@ async function keep(
     cleared,
     ...told,
   ]);
-  return { outcome: settle.length === 0 ? "already_resolved" : "resolved" };
+  return {
+    outcome: settle.length === 0 ? "already_resolved" : "resolved",
+  } as const;
 }
 
 /**
@@ -107,7 +104,7 @@ async function rename(
     reviewerId: string;
     decision: Extract<HandleReviewValues, { action: "rename" }>;
   }>,
-): Promise<HandleReview> {
+) {
   const { nameReason } = input.decision;
   const renamed = await forceRename(db, {
     userId: row.userId,
@@ -131,31 +128,38 @@ async function rename(
   });
   // A rename that lost the race names the handle it lost to (round 38 #60).
   return renamed.kind === "moved"
-    ? { outcome: "moved", username: renamed.username }
-    : { outcome: RENAMED[renamed.kind] };
+    ? ({ outcome: "moved", username: renamed.username } as const)
+    : ({ outcome: RENAMED[renamed.kind] } as const);
 }
 
 const RENAMED = {
   renamed: "resolved",
   taken: "taken",
   not_found: "not_found",
-} as const satisfies Record<string, HandleReview["outcome"]>;
+} as const;
 
 /**
  * Keep or Rename on a review row. Only a row still open, about a runner,
  * is acted on. A row already settled, or gone, is answered as the queue
  * answers it (`already_resolved`, `not_found`), writing nothing; a row
  * about anything but a runner has no handle to keep or rename.
+ *
+ * The answer's type is inferred, not named here: safety's `HandleReview`
+ * is the one statement of it, and the Review page's `reviewHandle` prop,
+ * which the route hands this function's server function, holds the two
+ * together.
  */
 export async function reviewFlaggedHandle(
   db: Db,
   reviewerId: string,
   decision: HandleReviewValues,
-): Promise<HandleReview> {
+) {
   const { queueId, shown } = decision;
   const subject = await openReviewRow(queueId, shown);
-  if (typeof subject === "string") return { outcome: subject };
-  if (subject.subjectType !== "profile") return { outcome: "not_found" };
+  if (typeof subject === "string") return { outcome: subject } as const;
+  if (subject.subjectType !== "profile") {
+    return { outcome: "not_found" } as const;
+  }
   const row = {
     queueId,
     userId: subject.subjectId,
