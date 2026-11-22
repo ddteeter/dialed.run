@@ -1,6 +1,8 @@
 import { decodeHTML } from "entities";
 import { Parser } from "htmlparser2";
 
+import { PageFetchError } from "./bounds";
+
 /**
  * Reading a page: the `<script>` payloads, the `<meta>` tags and the prose,
  * through a real HTML tokenizer.
@@ -58,6 +60,15 @@ const KEEP_BODY_OF = new Map<string, boolean>([
   ["style", false],
 ]);
 
+/**
+ * How many tags may be open at once before a page is refused. The parser
+ * keeps every unclosed tag open until an ancestor closes it, so it reads a
+ * sloppy page deeper than a browser would: the deepest of the 22 eval
+ * pages, read this way, is 31. 512 is far above any shop's page, and a
+ * parse under it costs time in proportion to the page.
+ */
+export const MAX_OPEN_TAGS = 512;
+
 export function readPage(html: string): PageRead {
   const scripts: ScriptBlock[] = [];
   const metas: Record<string, string>[] = [];
@@ -75,6 +86,10 @@ export function readPage(html: string): PageRead {
     | undefined
     | { attribs: Record<string, string>; body: string; keep: boolean };
 
+  // Tags open now. The parser reports a close for every tag it pops,
+  // void ones included, so this follows its stack exactly.
+  let open = 0;
+
   const flush = (): void => {
     if (node !== "") text.push(node);
     node = "";
@@ -82,6 +97,12 @@ export function readPage(html: string): PageRead {
 
   const parser = new Parser({
     onopentag(name, attribs) {
+      open += 1;
+      if (open > MAX_OPEN_TAGS) {
+        throw new PageFetchError(
+          `Page nests more than ${String(MAX_OPEN_TAGS)} tags`,
+        );
+      }
       flush();
       if (name === "meta") metas.push(attribs);
       const keep = KEEP_BODY_OF.get(name);
@@ -95,6 +116,7 @@ export function readPage(html: string): PageRead {
       }
     },
     onclosetag() {
+      open -= 1;
       flush();
       if (code?.keep === true) {
         scripts.push({ attribs: code.attribs, body: code.body });
