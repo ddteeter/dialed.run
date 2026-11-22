@@ -343,6 +343,22 @@ describe("linkDetailOf: E's link and its one line (round 43 #94-95)", () => {
  * A link that redirects somewhere denied is denied wherever a link typed
  * there would be (R-176, design 171): kit views, E, F's Edit, the save.
  */
+describe("linkDetailOf beside a product source with a deep host", () => {
+  beforeEach(resetSafetyTables);
+
+  it("answers for a runner's garment whose product's source has 150 labels", async () => {
+    const deep = `https://${"a.".repeat(149)}com/p`;
+
+    const detail = await linkDetailOf(
+      core(),
+      garment(await runner(true)),
+      extraction({ sourceUrl: deep }),
+    );
+
+    expect(detail.link).toBe("https://janji.com/p/rover");
+  });
+});
+
 describe("a link denied by where it lands (R-176)", () => {
   beforeEach(resetSafetyTables);
 

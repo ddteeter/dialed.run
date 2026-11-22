@@ -4,7 +4,11 @@
  */
 import { z } from "zod";
 
-import { httpsUrlSchema, productLinkSchema } from "./common";
+import {
+  httpsUrlSchema,
+  MAX_PRODUCT_LINK_LENGTH,
+  productLinkSchema,
+} from "./common";
 import { fabricSchema, weightSchema } from "./garments";
 
 // ---- Products (D-26/D-31/D-34) --------------------------------------------
@@ -74,15 +78,53 @@ export const extractedProductSchema = z.object({
 export type ExtractedProduct = z.infer<typeof extractedProductSchema>;
 
 /**
+ * How much of a fabric composition is kept (owner, 2026-11-21): about three
+ * times the longest the eval corpus holds, 160 characters in a few parts.
+ */
+export const COMPOSITION_LIMITS = {
+  verbatim: 500,
+  parts: 10,
+  materials: 10,
+  name: 60,
+} as const;
+
+/**
+The composition schemas above, each string and list held to its limit.
+*/
+const storedMaterialSchema = fabricMaterialSchema.extend({
+  material: fabricMaterialSchema.shape.material.max(COMPOSITION_LIMITS.name),
+});
+const storedPartSchema = fabricPartSchema.extend({
+  part: fabricPartSchema.shape.part
+    .unwrap()
+    .max(COMPOSITION_LIMITS.name)
+    .optional(),
+  materials: z
+    .array(storedMaterialSchema)
+    .min(1)
+    .max(COMPOSITION_LIMITS.materials),
+});
+const storedCompositionSchema = fabricCompositionSchema.extend({
+  verbatim: fabricCompositionSchema.shape.verbatim.max(
+    COMPOSITION_LIMITS.verbatim,
+  ),
+  parts: z.array(storedPartSchema).max(COMPOSITION_LIMITS.parts).optional(),
+});
+
+/**
  * Each field as it may be stored: its own member of the schema above, and
  * a name and brand no longer than a product's own (SA-L17). A category
- * hint gets a brand's bound, being a word or two.
+ * hint gets a brand's bound, being a word or two; an image's address is
+ * no longer than a product link; a composition is held to
+ * `COMPOSITION_LIMITS`.
  */
 const storedFieldSchemas: Readonly<Record<string, z.ZodType>> = {
   ...extractedProductSchema.shape,
   name: productNameSchema,
   brand: brandNameSchema,
   categoryHint: brandNameSchema,
+  imageUrl: z.string().max(MAX_PRODUCT_LINK_LENGTH).pipe(httpsUrlSchema),
+  fabricComposition: storedCompositionSchema,
 };
 
 /**
