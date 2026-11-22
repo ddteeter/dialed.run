@@ -27,7 +27,7 @@ export interface D1RequestDeps {
    * Names a request whose D1 work goes back in the `x-d1-queries` header
    * (design 182, part 2); none, and nothing is counted.
    */
-  readonly nameQueries: ((pathname: string) => string) | undefined;
+  readonly nameQueries: ((url: URL) => string) | undefined;
 }
 
 /**
@@ -35,7 +35,7 @@ export interface D1RequestDeps {
  * the query report and the timing log call a request the same thing.
  */
 export function d1RequestDepsFromEnv(
-  name: (pathname: string) => string,
+  name: (url: URL) => string,
 ): D1RequestDeps {
   return {
     db: primaryCoreDb(),
@@ -79,7 +79,7 @@ export async function respondInD1Scope(
   deps: D1RequestDeps,
 ): Promise<Response> {
   const device = deviceBookmarkFrom(request.headers.get("cookie"));
-  const tallyAs = deps.nameQueries?.(new URL(request.url).pathname);
+  const tallyAs = deps.nameQueries?.(new URL(request.url));
   const work = async () => {
     const response = await handle();
     const { bookmark, writerId, backwards, queries } = scopeOutcome();
