@@ -2,7 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import type { CityLookup } from "../../../../lib/contracts/city-lookup";
+import type {
+  CityLookup,
+  FoundPlace,
+} from "../../../../lib/contracts/city-lookup";
 import type { ResolvedPlace, Units } from "../../../../lib/contracts";
 import {
   formatTempRange,
@@ -39,7 +42,7 @@ interface Coords {
 /**
 Use this: saves the found place through the one writer of the profile's.
 */
-type SaveCity = (input: { data: Place }) => Promise<Place>;
+type SaveCity = (input: { data: Place }) => Promise<unknown>;
 type LookUpCity = (input: { data: { label: string } }) => Promise<CityLookup>;
 
 /**
@@ -317,7 +320,7 @@ function CityForm({
 }: Readonly<CityActions & { onSaved: (city: Place) => Promise<void> }>) {
   const [typed, setTyped] = useState("");
   const save = useControlAction({
-    action: async (found: ResolvedPlace) => saveCity({ data: placeOf(found) }),
+    action: async (found: FoundPlace) => saveCity({ data: placeOf(found) }),
     kicker: "Not saved",
     onSuccess: async (found) => {
       const place = placeOf(found);
@@ -377,8 +380,13 @@ function CityForm({
 /**
 The found place as the profile stores it: the provider's name is the label.
 */
-function placeOf(found: ResolvedPlace): Place {
-  return { cityLabel: found.address, lat: found.lat, lng: found.lng };
+function placeOf(found: FoundPlace): Place {
+  return {
+    cityLabel: found.address,
+    lat: found.lat,
+    lng: found.lng,
+    stamp: found.stamp,
+  };
 }
 
 /**

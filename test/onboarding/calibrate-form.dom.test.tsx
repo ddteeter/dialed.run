@@ -30,6 +30,7 @@ const FOUND: CityLookup = {
   address: "Minneapolis, MN, United States",
   lat: 44.98,
   lng: -93.27,
+  stamp: "a-stamp",
 };
 
 function renderForm(
@@ -114,6 +115,7 @@ describe("the question", () => {
         cityLabel: undefined,
         lat: undefined,
         lng: undefined,
+        stamp: undefined,
         tempUnit: "f",
         distanceUnit: "mi",
       },
@@ -200,7 +202,7 @@ describe("where you run: Find, then Use this (round 26 #12)", () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it("makes the found place the chip on Use this, and saves it with its coordinates", async () => {
+  it("makes the found place the chip on Use this, and saves it with its coordinates and stamp", async () => {
     const { user, save } = renderForm({
       lookUpCity: () => Promise.resolve(FOUND),
     });
@@ -226,6 +228,7 @@ describe("where you run: Find, then Use this (round 26 #12)", () => {
         cityLabel: "Minneapolis, MN, United States",
         lat: 44.98,
         lng: -93.27,
+        stamp: "a-stamp",
       },
     });
   });

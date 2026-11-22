@@ -1,5 +1,6 @@
 import type { CityLookup } from "../../lib/contracts/city-lookup";
 import type { ResolvedPlace } from "../../lib/contracts";
+import { roundCoordinate } from "../../lib/coords";
 import { isWeatherBudgetSpent } from "../weather";
 
 /**
@@ -33,24 +34,27 @@ export type PlaceResolver = (
 export async function lookUpCity({
   label,
   resolver,
+  stamp,
   report,
   userId,
 }: Readonly<{
   label: string;
   resolver: PlaceResolver;
+  stamp: (place: ResolvedPlace) => Promise<string>;
   report: (error: unknown, context: Record<string, string>) => void;
   userId: string;
 }>): Promise<CityLookup> {
   try {
-    const place = await resolver(label);
-    return place === undefined
-      ? { kind: "not-found" }
-      : {
-          kind: "found",
-          address: place.address,
-          lat: place.lat,
-          lng: place.lng,
-        };
+    const found = await resolver(label);
+    if (found === undefined) return { kind: "not-found" };
+    // Rounded as a profile's coordinates are, so the stamp names the
+    // place exactly as the writers will parse it.
+    const place = {
+      address: found.address,
+      lat: roundCoordinate(found.lat),
+      lng: roundCoordinate(found.lng),
+    };
+    return { kind: "found", ...place, stamp: await stamp(place) };
   } catch (error: unknown) {
     // Context to act on, never the label: a typed place is the runner's
     // own words about where they live. A spent budget (SA-M13) is the
@@ -60,4 +64,30 @@ export async function lookUpCity({
     }
     return { kind: "unavailable" };
   }
+}
+
+/**
+ * The most parts of the provider's address a saved place keeps: city,
+ * region and country, the last three.
+ */
+const PLACE_PARTS = 3;
+
+/**
+ * The provider's address as a place name: its last three comma parts,
+ * each without the words that hold a digit (a house number, a postcode),
+ * so a street address the provider resolved keeps only where it is.
+ * `undefined` when nothing is left, as for an answer that is only
+ * coordinates.
+ */
+export function placeNameOf(address: string): string | undefined {
+  const parts = address
+    .split(",")
+    .map((part) =>
+      part
+        .split(/\s+/u)
+        .filter((word) => word !== "" && !/\d/u.test(word))
+        .join(" "),
+    )
+    .filter((part) => part !== "");
+  return parts.length === 0 ? undefined : parts.slice(-PLACE_PARTS).join(", ");
 }

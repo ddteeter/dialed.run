@@ -2,8 +2,7 @@ import type { JSX, KeyboardEvent, ReactNode } from "react";
 import { useId, useState } from "react";
 
 import { cityLookupInput, cityNotFound } from "../lib/contracts/city-lookup";
-import type { CityLookup } from "../lib/contracts/city-lookup";
-import type { ResolvedPlace } from "../lib/contracts";
+import type { CityLookup, FoundPlace } from "../lib/contracts/city-lookup";
 import { chipPlaceName } from "../lib/place-name";
 import { FailureBand, PendingLabel, TextField, inFlight } from "./form";
 import type { FieldProps } from "./use-form-submit";
@@ -74,7 +73,7 @@ export function CityFinder({
   field?: ((name: string) => FieldProps) | undefined;
   error?: string | undefined;
   lookUp: LookUp;
-  onUse: (place: ResolvedPlace) => void;
+  onUse: (place: FoundPlace) => void;
   /**
   Use this is in flight — the caller's save, where there is one.
   */
@@ -92,7 +91,7 @@ export function CityFinder({
   announce: (status: string) => void;
 }>): JSX.Element {
   const [isFinding, setIsFinding] = useState(false);
-  const [found, setFound] = useState<ResolvedPlace>();
+  const [found, setFound] = useState<FoundPlace>();
   const [message, setMessage] = useState<string>();
   const [hasFailed, setHasFailed] = useState(false);
   const resolvedId = useId();
@@ -137,13 +136,8 @@ export function CityFinder({
     }
     setIsFinding(false);
     if (answer.kind === "found") {
-      const place = {
-        address: answer.address,
-        lat: answer.lat,
-        lng: answer.lng,
-      };
-      setFound(place);
-      announce(`Weather for ${chipPlaceName(place.address)}.`);
+      setFound(answer);
+      announce(`Weather for ${chipPlaceName(answer.address)}.`);
     } else if (answer.kind === "not-found") {
       say(cityNotFound(parsed.data.label));
     } else {
@@ -247,9 +241,9 @@ function ResolvedCard({
   onUse,
   resolvedId,
 }: Readonly<{
-  found: ResolvedPlace;
+  found: FoundPlace;
   using: boolean;
-  onUse: (place: ResolvedPlace) => void;
+  onUse: (place: FoundPlace) => void;
   resolvedId: string;
 }>): JSX.Element {
   return (

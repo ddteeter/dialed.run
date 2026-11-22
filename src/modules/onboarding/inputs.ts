@@ -24,6 +24,12 @@ const profileLatitude = latitudeSchema.transform(roundCoordinate);
 const profileLongitude = longitudeSchema.transform(roundCoordinate);
 
 /**
+ * Find's stamp on a place, as Use this hands it back: hex, bounded, and
+ * checked by the place writers rather than here.
+ */
+const placeStampSchema = z.string().max(64);
+
+/**
  * Next pressed with a city typed but never found (round 26 #12): the
  * field message says the two ways on. `calibrationInput` carries it, so
  * the server refuses an unconfirmed city as the form does.
@@ -60,6 +66,10 @@ export const calibrationInput = z
       .optional(),
     lat: profileLatitude.optional(),
     lng: profileLongitude.optional(),
+    /**
+     * Find's stamp on the city (`place-stamp.ts`), handed back with it.
+     */
+    stamp: placeStampSchema.optional(),
     tempUnit: tempUnitSchema.optional(),
     distanceUnit: distanceUnitSchema.optional(),
   })
@@ -84,6 +94,7 @@ export const placeInput = z.object({
   cityLabel: z.string().trim().min(1).max(200),
   lat: profileLatitude,
   lng: profileLongitude,
+  stamp: placeStampSchema,
 });
 export type Place = z.infer<typeof placeInput>;
 

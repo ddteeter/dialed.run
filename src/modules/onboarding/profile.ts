@@ -16,6 +16,8 @@ import type {
   SharingChoice,
   UnitsChoice,
 } from "./inputs";
+import { placeNameOf } from "./place";
+import type { PlaceStamps } from "./place-stamp";
 import { fillZoneInBackground, type SaveZoneDeps } from "./time-zone";
 
 /**
@@ -69,18 +71,105 @@ export async function saveCalibration(
  * Answers with what it saved, so the screen shows the stored place rather
  * than its own copy of what it sent.
  */
-export async function savePlace(
+export async function savePlace<TPlace extends StoredPlace>(
   db: DrizzleD1Database,
   userId: string,
-  place: Place,
+  place: TPlace,
   zones: SaveZoneDeps,
-): Promise<Place> {
+): Promise<TPlace> {
   await placeWrite(db, userId, placeColumns(place));
   fillZoneInBackground(db, userId, place, zones);
   return place;
 }
 
+/**
+ * What the two server functions hand the place writers: the stamp check,
+ * and the zone fill that follows a write.
+ */
+export interface FoundPlaceDeps {
+  readonly verifyStamp: PlaceStamps["verifyStamp"];
+  readonly zones: SaveZoneDeps;
+}
+
+/**
+ * A place that does not carry Find's stamp for it. Use this shows its
+ * failure band.
+ */
+export class UnstampedPlaceError extends Error {
+  constructor() {
+    super("the place does not carry Find's stamp");
+    this.name = "UnstampedPlaceError";
+  }
+}
+
+/**
+ * The place a found label names, as stored: `placeNameOf` of the
+ * provider's address, at its coordinates, once Find's stamp is checked.
+ */
+async function stampedPlace(
+  place: Readonly<{ cityLabel: string; lat: number; lng: number }>,
+  stamp: string | undefined,
+  verifyStamp: FoundPlaceDeps["verifyStamp"],
+): Promise<StoredPlace> {
+  const found = { address: place.cityLabel, lat: place.lat, lng: place.lng };
+  if (!(await verifyStamp(found, stamp ?? ""))) throw new UnstampedPlaceError();
+  return {
+    cityLabel: placeNameOf(place.cityLabel),
+    lat: place.lat,
+    lng: place.lng,
+  };
+}
+
+/**
+ * Your conditions' Use this, as the server function calls it: only a
+ * place Find stamped is stored, under the name `placeNameOf` keeps.
+ * Answers with what it stored.
+ */
+export async function saveFoundPlace(
+  db: DrizzleD1Database,
+  userId: string,
+  place: Place,
+  deps: FoundPlaceDeps,
+): Promise<StoredPlace> {
+  const stored = await stampedPlace(place, place.stamp, deps.verifyStamp);
+  return savePlace(db, userId, stored, deps.zones);
+}
+
+/**
+ * O1's write, as the server function calls it: a calibration with a
+ * found city stores it only with Find's stamp, under the name
+ * `placeNameOf` keeps. A calibration with no city is saved as it came
+ * (coordinates alone, or nothing).
+ */
+export async function saveFoundCalibration(
+  db: DrizzleD1Database,
+  userId: string,
+  input: Calibration,
+  deps: FoundPlaceDeps,
+): Promise<void> {
+  const { cityLabel, lat, lng } = input;
+  if (cityLabel === undefined || lat === undefined || lng === undefined) {
+    await saveCalibration(db, userId, input, deps.zones);
+    return;
+  }
+  const stored = await stampedPlace(
+    { cityLabel, lat, lng },
+    input.stamp,
+    deps.verifyStamp,
+  );
+  await saveCalibration(db, userId, { ...input, ...stored }, deps.zones);
+}
+
 type PlaceParts = Pick<Calibration, "cityLabel" | "lat" | "lng">;
+
+/**
+What the place writer stores: a name, if one is left, and where it is.
+*/
+interface StoredPlace {
+  readonly cityLabel: string | undefined;
+  readonly lat: number;
+  readonly lng: number;
+}
 
 /**
  * Whether any part of a place arrived. A recalibration that answered only

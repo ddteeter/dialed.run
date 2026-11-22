@@ -4,6 +4,7 @@ import {
   cityLookupInput,
   cityNotFound,
 } from "../../src/lib/contracts/city-lookup";
+import type { ResolvedPlace } from "../../src/lib/contracts";
 import { lookUpCity } from "../../src/modules/onboarding/place";
 import { WeatherBudgetSpentError } from "../../src/modules/weather/budget";
 import type { PlaceResolver } from "../../src/modules/onboarding/place";
@@ -15,11 +16,16 @@ import type { PlaceResolver } from "../../src/modules/onboarding/place";
  */
 function lookUp(resolver: PlaceResolver) {
   const report = vi.fn();
+  const stamp = vi.fn<(place: ResolvedPlace) => Promise<string>>(() =>
+    Promise.resolve("the-stamp"),
+  );
   return {
     report,
+    stamp,
     answer: lookUpCity({
       label: "Minneapolis",
       resolver,
+      stamp,
       report,
       userId: "u-1",
     }),
@@ -41,22 +47,52 @@ describe("lookUpCity", () => {
         address: "Minneapolis, MN, United States",
       }),
     );
-    const { answer, report } = lookUp(resolver);
+    const { answer, report, stamp } = lookUp(resolver);
 
     expect(await answer).toStrictEqual({
       kind: "found",
       address: "Minneapolis, MN, United States",
       lat: 44.98,
       lng: -93.27,
+      stamp: "the-stamp",
     });
     expect(resolver).toHaveBeenCalledWith("Minneapolis");
+    expect(stamp).toHaveBeenCalledWith({
+      address: "Minneapolis, MN, United States",
+      lat: 44.98,
+      lng: -93.27,
+    });
     expect(report).not.toHaveBeenCalled();
   });
 
-  it("answers not-found when the provider has no such place", async () => {
-    const { answer, report } = lookUp(() => Promise.resolve(undefined));
+  it("rounds the provider's coordinates as a profile's are, and stamps the rounded place", async () => {
+    const { answer, stamp } = lookUp(() =>
+      Promise.resolve({
+        lat: 44.9775,
+        lng: -93.2651,
+        address: "Minneapolis, MN, United States",
+      }),
+    );
+
+    expect(await answer).toStrictEqual({
+      kind: "found",
+      address: "Minneapolis, MN, United States",
+      lat: 44.98,
+      lng: -93.27,
+      stamp: "the-stamp",
+    });
+    expect(stamp).toHaveBeenCalledWith({
+      address: "Minneapolis, MN, United States",
+      lat: 44.98,
+      lng: -93.27,
+    });
+  });
+
+  it("answers not-found when the provider has no such place, and stamps nothing", async () => {
+    const { answer, report, stamp } = lookUp(() => Promise.resolve(undefined));
     expect(await answer).toStrictEqual({ kind: "not-found" });
     expect(report).not.toHaveBeenCalled();
+    expect(stamp).not.toHaveBeenCalled();
   });
 
   it("reports a provider failure with context to act on, and answers unavailable", async () => {
@@ -78,6 +114,7 @@ describe("lookUpCity", () => {
       await lookUpCity({
         label: "Portland",
         resolver: spentBudget,
+        stamp: () => Promise.resolve("unused"),
         report,
         userId: "r",
       }),

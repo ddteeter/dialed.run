@@ -29,11 +29,12 @@ import {
 } from "./inputs";
 import { ladderFrom } from "./ladder";
 import { lookUpCity } from "./place";
+import { placeStampsFromEnv } from "./place-stamp-env";
 import {
   completeOnboarding,
   currentSettings,
   requiresOnboarding,
-  saveCalibration,
+  saveFoundCalibration,
   savePreferences,
 } from "./profile";
 import { saveSharing, setPublicProfile } from "./public-profile";
@@ -71,7 +72,10 @@ export const saveCalibrationFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => calibrationInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return saveCalibration(db(), userId, data, zonesFor(userId));
+    return saveFoundCalibration(db(), userId, data, {
+      verifyStamp: placeStampsFromEnv().verifyStamp,
+      zones: zonesFor(userId),
+    });
   });
 
 export const starterListQuery = createServerFn({ method: "GET" }).handler(
@@ -197,6 +201,7 @@ export const lookUpCityFn = createServerFn({ method: "POST" })
     return lookUpCity({
       label: data.label,
       resolver: resolvePlaceFor(userId),
+      stamp: placeStampsFromEnv().stamp,
       report: captureException,
       userId,
     });

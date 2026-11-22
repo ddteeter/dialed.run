@@ -266,25 +266,44 @@ describe("savePlace — the one writer of the profile's place (FEED-5)", () => {
   });
 });
 
+/**
+A found place as Use this sends it: with Find's stamp.
+*/
+const FOUND_PORTLAND = { ...PORTLAND, stamp: "a-stamp" };
+
 describe("placeInput", () => {
-  it("takes a found place: the provider's name, trimmed, and where it is", () => {
+  it("takes a found place: the provider's name, trimmed, where it is, and its stamp", () => {
     expect(
-      placeInput.parse({ ...PORTLAND, cityLabel: `  ${PORTLAND.cityLabel} ` }),
-    ).toStrictEqual(PORTLAND);
+      placeInput.parse({
+        ...FOUND_PORTLAND,
+        cityLabel: `  ${PORTLAND.cityLabel} `,
+      }),
+    ).toStrictEqual(FOUND_PORTLAND);
   });
 
   it("refuses a place with no name, a name past the provider's cap, or no coordinates", () => {
     for (const bad of [
-      { ...PORTLAND, cityLabel: " " },
-      { ...PORTLAND, cityLabel: "a".repeat(201) },
-      { cityLabel: PORTLAND.cityLabel, lat: PORTLAND.lat },
-      { ...PORTLAND, lat: 91 },
-      { ...PORTLAND, lng: -181 },
+      { ...FOUND_PORTLAND, cityLabel: " " },
+      { ...FOUND_PORTLAND, cityLabel: "a".repeat(201) },
+      { cityLabel: PORTLAND.cityLabel, lat: PORTLAND.lat, stamp: "a-stamp" },
+      { ...FOUND_PORTLAND, lat: 91 },
+      { ...FOUND_PORTLAND, lng: -181 },
     ]) {
       expect(placeInput.safeParse(bad).success).toBe(false);
     }
     expect(
-      placeInput.safeParse({ ...PORTLAND, cityLabel: "a".repeat(200) }).success,
+      placeInput.safeParse({ ...FOUND_PORTLAND, cityLabel: "a".repeat(200) })
+        .success,
+    ).toBe(true);
+  });
+
+  it("refuses a place with no stamp, or a stamp past a SHA-256's 64 characters", () => {
+    expect(placeInput.safeParse(PORTLAND).success).toBe(false);
+    expect(
+      placeInput.safeParse({ ...PORTLAND, stamp: "a".repeat(65) }).success,
+    ).toBe(false);
+    expect(
+      placeInput.safeParse({ ...PORTLAND, stamp: "a".repeat(64) }).success,
     ).toBe(true);
   });
 });
@@ -293,7 +312,9 @@ describe("a profile's coordinates are rounded where they are parsed (STR-14, R-1
   const PRECISE = { ...PORTLAND, lat: 45.523456, lng: -122.676789 };
 
   it("rounds a place from Your conditions to two decimal places", () => {
-    expect(placeInput.parse(PRECISE)).toStrictEqual(PORTLAND);
+    expect(placeInput.parse({ ...PRECISE, stamp: "a-stamp" })).toStrictEqual(
+      FOUND_PORTLAND,
+    );
   });
 
   it("rounds O1's calibration the same way, and leaves absent coordinates absent", () => {
@@ -423,6 +444,22 @@ describe("calibrationInput", () => {
   it("takes the provider's name for a place, up to its cap of 200", () => {
     expect(isCityLengthTaken(200)).toBe(true);
     expect(isCityLengthTaken(201)).toBe(false);
+  });
+
+  it("carries Find's stamp on a found city when one is sent, up to 64 characters", () => {
+    expect(
+      calibrationInput.parse({ thermalLevel: 0, ...FOUND_PORTLAND }).stamp,
+    ).toBe("a-stamp");
+    expect(calibrationInput.parse({ thermalLevel: 0 })).not.toHaveProperty(
+      "stamp",
+    );
+    expect(
+      calibrationInput.safeParse({
+        thermalLevel: 0,
+        ...PORTLAND,
+        stamp: "a".repeat(65),
+      }).success,
+    ).toBe(false);
   });
 
   it("trims a typed city, because people type trailing spaces", () => {

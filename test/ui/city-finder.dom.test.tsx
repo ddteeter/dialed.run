@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CityLookup } from "../../src/lib/contracts/city-lookup";
-import type { ResolvedPlace } from "../../src/lib/contracts";
+import type {
+  CityLookup,
+  FoundPlace,
+} from "../../src/lib/contracts/city-lookup";
 import { CITY_HINT, CityFinder } from "../../src/ui";
 import type { FieldProps } from "../../src/ui";
 
@@ -14,12 +16,13 @@ import type { FieldProps } from "../../src/ui";
  * nothing used until Use this. The same field on O1 and Your conditions.
  */
 
-const PORTLAND: ResolvedPlace = {
+const FOUND: FoundPlace = {
+  kind: "found",
   address: "Portland, OR, United States",
   lat: 45.52,
   lng: -122.68,
+  stamp: "a-stamp",
 };
-const FOUND: CityLookup = { kind: "found", ...PORTLAND };
 
 type LookUp = (input: { data: { label: string } }) => Promise<CityLookup>;
 
@@ -34,7 +37,7 @@ function Harness({
   footnote,
 }: Readonly<{
   lookUp: LookUp;
-  onUse: (place: ResolvedPlace) => void;
+  onUse: (place: FoundPlace) => void;
   announce: (status: string) => void;
   field?: (name: string) => FieldProps;
   error?: string;
@@ -69,7 +72,7 @@ function Harness({
 
 function setup(props: Partial<Parameters<typeof Harness>[0]> = {}) {
   const lookUp = vi.fn<LookUp>(props.lookUp ?? (() => Promise.resolve(FOUND)));
-  const onUse = vi.fn<(place: ResolvedPlace) => void>();
+  const onUse = vi.fn<(place: FoundPlace) => void>();
   const announce = vi.fn<(status: string) => void>();
   const onSubmit = vi.fn<() => void>();
   render(
@@ -140,7 +143,8 @@ describe("CityFinder", () => {
       "Weather for Portland, OR, United States",
     );
     await user.click(useThis);
-    expect(onUse).toHaveBeenCalledWith(PORTLAND);
+    // The place as Find answered it, stamp and all.
+    expect(onUse).toHaveBeenCalledWith(FOUND);
   });
 
   it("names the found place as the chip will, and hands on the provider's string (R58·294)", async () => {
@@ -149,6 +153,7 @@ describe("CityFinder", () => {
       address: "Minneapolis, Hennepin County, Minnesota, United States",
       lat: 44.98,
       lng: -93.27,
+      stamp: "minneapolis-stamp",
     };
     const { onUse, announce, user } = setup({
       lookUp: () => Promise.resolve(county),
@@ -166,9 +171,11 @@ describe("CityFinder", () => {
     );
     await user.click(screen.getByRole("button", { name: "Use this" }));
     expect(onUse).toHaveBeenCalledWith({
+      kind: "found",
       address: county.address,
       lat: county.lat,
       lng: county.lng,
+      stamp: "minneapolis-stamp",
     });
   });
 

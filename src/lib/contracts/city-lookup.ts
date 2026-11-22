@@ -13,14 +13,20 @@ import type { ResolvedPlace } from "./weather";
  * What Find came to. Three answers, because the field does three different
  * things with them:
  *
- * - `found` — "Weather for {address}", with Use this;
+ * - `found` — "Weather for {address}", with Use this, and the stamp that
+ *   Use this hands back so the place is saved as the provider named it;
  * - `not-found` — a field message: the fix is in the field;
  * - `unavailable` — the lookup itself failed, the `NOT FOUND YET` band.
  */
 export type CityLookup =
-  | ({ kind: "found" } & ResolvedPlace)
+  | ({ kind: "found"; stamp: string } & ResolvedPlace)
   | { kind: "not-found" }
   | { kind: "unavailable" };
+
+/**
+What Use this is handed: the place Find found, with its stamp.
+*/
+export type FoundPlace = Extract<CityLookup, { kind: "found" }>;
 
 /**
  * What Find sends, and the one field message it can fail with before it

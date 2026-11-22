@@ -1,4 +1,7 @@
-import { CALL_VERDICT_THRESHOLD, coverageOfVerdicts } from "../../lib/contracts";
+import {
+  CALL_VERDICT_THRESHOLD,
+  coverageOfVerdicts,
+} from "../../lib/contracts";
 import type { VerdictCoverage } from "../../lib/contracts";
 import type { CoverageBand } from "../feed";
 
