@@ -1543,13 +1543,19 @@ describe("handleEnrichmentBatch: the hour's model calls", () => {
 
   it("stores the page but asks no model once the hour's calls are spent, and leaves the row pending", async () => {
     await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
-    const productId = await pendingProduct();
+    const productId = await pendingProduct({
+      extractionError: "Page returned 403",
+      extractionTries: 2,
+    });
     const deps = depsWith(serving(PAGE));
 
     await consumeWith(productId, deps);
 
     expect(deps.model.extract).not.toHaveBeenCalled();
-    expect(await statusOf(productId)).toBe("pending");
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("pending");
+    expect(row.extractionError).toBe("Page returned 403");
+    expect(row.extractionTries).toBe(2);
     expect(await snapshotsOf(productId)).toHaveLength(1);
   });
 
@@ -1571,13 +1577,20 @@ describe("handleEnrichmentBatch: the hour's model calls", () => {
     const productId = await pendingProduct();
     await consumeWith(productId, depsWith(serving(PAGE)));
     await repend(productId);
+    await db()
+      .update(products)
+      .set({ extractionError: "Page returned 403", extractionTries: 2 })
+      .where(eq(products.id, productId));
     await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
     const deps = depsWith(serving(PAGE));
 
     await consumeWith(productId, deps);
 
     expect(deps.model.extract).not.toHaveBeenCalled();
-    expect(await statusOf(productId)).toBe("pending");
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("pending");
+    expect(row.extractionError).toBe("Page returned 403");
+    expect(row.extractionTries).toBe(2);
   });
 
   it("asks the model for the last call the hour allows", async () => {

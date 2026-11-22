@@ -512,6 +512,32 @@ describe("what a stored composition and image may hold", () => {
     },
   );
 
+  it.each([
+    ["a material", { material: "m".repeat(61), pct: 10 }, "p".repeat(60)],
+    ["a part", { material: "m".repeat(60), pct: 10 }, "p".repeat(61)],
+  ])(
+    "drops a composition whose %s name alone is one past the limit",
+    (_, material, part) => {
+      const fabricComposition = {
+        verbatim: "x",
+        parts: [{ part, materials: [material] }],
+      };
+      expect(validExtracted({ name: "Tee", fabricComposition })).toStrictEqual({
+        name: "Tee",
+      });
+    },
+  );
+
+  it("keeps a composition with a short part name", () => {
+    const fabricComposition = {
+      verbatim: "x",
+      parts: [{ part: "Body", materials: [{ material: "Cotton", pct: 100 }] }],
+    };
+    expect(validExtracted({ fabricComposition })).toStrictEqual({
+      fabricComposition,
+    });
+  });
+
   it("drops a composition part with no materials", () => {
     const fabricComposition = { verbatim: "x", parts: [{ materials: [] }] };
     expect(validExtracted({ fabricComposition })).toStrictEqual({});
