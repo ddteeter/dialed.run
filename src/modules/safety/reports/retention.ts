@@ -24,6 +24,7 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import {
   copyrightHolds,
+  heldTakeDowns,
   moderationActions,
   quarantinedContent,
   removedFingerprints,
@@ -105,16 +106,20 @@ function expiredHolds(cutoff: number) {
 /**
  * An audit row stays while a hold or a quarantine record names it: the
  * hold reads its notice and actor, and the quarantine its preserved
- * object. It goes with its hold, or after the quarantine's purge.
+ * object. It goes with its hold, or after the quarantine's purge. A
+ * take-down of held material stays too while its record waits for the
+ * hold to end, since the delete it is owed reads its actor.
  */
 function expiredActions(db: Db, cutoff: number) {
   const action = moderationActions.id;
   const hold = eq(copyrightHolds.moderationActionId, action);
   const quarantine = eq(quarantinedContent.moderationActionId, action);
+  const heldTakeDown = eq(heldTakeDowns.actionId, action);
   return and(
     lt(moderationActions.createdAt, cutoff),
     noRow(db, copyrightHolds, hold),
     noRow(db, quarantinedContent, quarantine),
+    noRow(db, heldTakeDowns, heldTakeDown),
   );
 }
 

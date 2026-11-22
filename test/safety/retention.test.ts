@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   copyrightHolds,
+  heldTakeDowns,
   moderationActions,
   quarantinedContent,
   removedFingerprints,
@@ -45,6 +46,7 @@ beforeEach(async () => {
     db.delete(moderationActions),
     db.delete(quarantinedContent),
     db.delete(removedFingerprints),
+    db.delete(heldTakeDowns),
   ]);
 });
 
@@ -331,6 +333,22 @@ describe("moderation actions", () => {
 
     expect(await kept.actions()).toStrictEqual([quarantined]);
   });
+
+  it("stay while a take-down of held material waits for its hold to end", async () => {
+    const takenDown = await anAction(LINE - 900 * DAY);
+    await db.insert(heldTakeDowns).values({
+      actionId: takenDown,
+      subjectType: "entry",
+      subjectId: newUlid(),
+      entryId: newUlid(),
+      ownerId: newUlid(),
+      createdAt: LINE - 900 * DAY,
+    });
+
+    await sweepModerationRecords(db, NOW);
+
+    expect(await kept.actions()).toStrictEqual([takenDown]);
+  });
 });
 
 async function aFingerprint(createdAt: number): Promise<string> {
@@ -429,7 +447,7 @@ describe("the sweep reads by index, not by scanning (D1 bills rows scanned)", ()
       /review_queue_resolved[\s\S]*reports_subject/u,
       /copyright_holds_status_settled/u,
       /removed_fingerprints_created/u,
-      /moderation_actions_created[\s\S]*copyright_holds_action[\s\S]*quarantined_content_action/u,
+      /moderation_actions_created[\s\S]*copyright_holds_action[\s\S]*quarantined_content_action[\s\S]*held_take_downs/u,
     ];
     for (const [index, plan] of plans.entries()) {
       expect(plan).toMatch(expected[index] ?? /never/u);
