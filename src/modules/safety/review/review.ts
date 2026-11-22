@@ -36,6 +36,7 @@ import { garmentCategoryLabels } from "../../../lib/contracts";
 import type { GarmentCategory } from "../../../lib/contracts/garment-fields";
 import { garmentLabel } from "../../../lib/garment-label";
 import { inJsonList } from "../../../lib/sql/json-list";
+import { qualified } from "../../../lib/sql/qualified";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
@@ -411,8 +412,39 @@ function pendingRows(also?: SQL) {
         eq(reports.subjectId, reviewQueue.subjectId),
       ),
     )
-    .where(and(eq(reviewQueue.status, "pending"), also))
+    .where(and(waitingOnReview(), also))
     .groupBy(reviewQueue.id);
+}
+
+/**
+ * A row Review shows: pending, and not about a closed account's things.
+ * A row whose subject belongs to a runner whose account is closed leaves
+ * the page and its count, and comes back as it was if the account is
+ * reopened, so nothing about the row itself is written. A product has no
+ * owner, so its rows always show.
+ */
+function waitingOnReview(): SQL | undefined {
+  const closed = sql`exists (select 1 from ${userProfiles} where ${qualified(userProfiles, userProfiles.userId)} = ${subjectOwner()} and ${qualified(userProfiles, userProfiles.bannedAt)} is not null)`;
+  return and(eq(reviewQueue.status, "pending"), sql`not ${closed}`);
+}
+
+/**
+ * Whose a row's subject is, as SQL: the runner for a profile, the kit's
+ * author for a kit or one of its photos, the garment's owner for a
+ * garment's photo, and NULL for a product. Every column is named with its
+ * table, so none binds to the reports joined beside the queue.
+ */
+function subjectOwner(): SQL {
+  const type = qualified(reviewQueue, reviewQueue.subjectType);
+  const id = qualified(reviewQueue, reviewQueue.subjectId);
+  const kitAuthor = qualified(outfitEntries, outfitEntries.userId);
+  const kitId = qualified(outfitEntries, outfitEntries.id);
+  return sql`case ${type}
+    when 'profile' then ${id}
+    when 'entry' then (select ${kitAuthor} from ${outfitEntries} where ${kitId} = ${id})
+    when 'photo' then (select ${kitAuthor} from ${entryPhotos} join ${outfitEntries} on ${kitId} = ${qualified(entryPhotos, entryPhotos.entryId)} where ${qualified(entryPhotos, entryPhotos.id)} = ${id})
+    when 'garment' then (select ${qualified(wardrobeItems, wardrobeItems.userId)} from ${wardrobeItems} where ${qualified(wardrobeItems, wardrobeItems.id)} = ${id})
+  end`;
 }
 
 /**
@@ -648,14 +680,15 @@ export function reasonsFrom(concatenated: string | null): ReportReason[] {
 /**
  * How many decisions are waiting. The daily digest reports this (packet
  * §2), which is the difference between "the queue is empty" and "nobody has
- * looked at the queue".
+ * looked at the queue". It counts the rows Review shows, so a closed
+ * account's are not among them.
  */
 export async function pendingReviewCount(): Promise<number> {
   const ids = await columnWhere(
     db(),
     reviewQueue,
     reviewQueue.id,
-    eq(reviewQueue.status, "pending"),
+    waitingOnReview(),
   );
   return ids.length;
 }

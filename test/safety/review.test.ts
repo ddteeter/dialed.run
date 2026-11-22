@@ -12,6 +12,7 @@ import {
   reports,
   reviewQueue,
   userProfiles,
+  wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
@@ -26,6 +27,7 @@ import {
   claimForReview,
   pendingReviewQueue,
   reasonsFrom,
+  type ReviewSubjectType,
 } from "../../src/modules/safety/review/review";
 import { fileReport } from "../../src/modules/safety/reports/reports";
 import { pendingEntryPhotos } from "../../src/modules/safety/screening/screening";
@@ -734,6 +736,140 @@ async function rowAt(createdAt: number, intimateAt?: number) {
   }
   return id;
 }
+
+/**
+ * A thing of each kind Review can be about, belonging to `owner`: the
+ * subject a row names.
+ */
+const subjectOwnedBy = {
+  profile: (owner: string) => Promise.resolve(owner),
+  entry: async (owner: string) =>
+    makeEntry({ userId: owner, runId: await makeRun({ userId: owner }) }),
+  photo: async (owner: string) => {
+    const entryId = await makeEntry({
+      userId: owner,
+      runId: await makeRun({ userId: owner }),
+    });
+    const photoId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: photoId,
+        entryId,
+        photoKey: `entries/${owner}/${entryId}/${photoId}`,
+        position: 0,
+      });
+    return photoId;
+  },
+  garment: async (owner: string) => {
+    const itemId = newUlid();
+    await core()
+      .insert(wardrobeItems)
+      .values({
+        id: itemId,
+        userId: owner,
+        category: "top",
+        type: "tee",
+        name: "Tee",
+        photoKey: `items/${owner}/${itemId}/original`,
+        origin: "manual",
+        createdAt: 1,
+      });
+    return itemId;
+  },
+} as const;
+
+async function pendingRowAbout(
+  subjectType: ReviewSubjectType,
+  subjectId: string,
+): Promise<string> {
+  const id = newUlid();
+  await core().insert(reviewQueue).values({
+    id,
+    subjectType,
+    subjectId,
+    source: "classifier",
+    status: "pending",
+    createdAt: 100,
+    openedAt: 100,
+  });
+  return id;
+}
+
+/**
+Closes the account at `bannedAt`, or reopens it when that is left out.
+*/
+async function setClosed(userId: string, bannedAt?: number) {
+  await core()
+    .update(userProfiles)
+    .set({ bannedAt: orSqlNull(bannedAt) })
+    .where(eq(userProfiles.userId, userId));
+}
+
+async function reviewIds(): Promise<string[]> {
+  const rows = await pendingReviewQueue();
+  return rows.map((row) => row.id);
+}
+
+describe("a closed account's rows", () => {
+  beforeEach(resetSafetyTables);
+
+  it.each(["profile", "entry", "photo", "garment"] as const)(
+    "leave Review and its count while the %s's owner is closed, and come back as they were",
+    async (subjectType) => {
+      const owner = await makeUser();
+      const rowId = await pendingRowAbout(
+        subjectType,
+        await subjectOwnedBy[subjectType](owner),
+      );
+      const other = await pendingRowAbout(
+        subjectType,
+        await subjectOwnedBy[subjectType](await makeUser()),
+      );
+
+      await setClosed(owner, 500);
+      expect(await reviewIds()).toStrictEqual([other]);
+      expect(await pendingReviewCount()).toBe(1);
+
+      await setClosed(owner);
+      expect(new Set(await reviewIds())).toStrictEqual(new Set([rowId, other]));
+      expect(await pendingReviewCount()).toBe(2);
+      const row = await queueRow(rowId);
+      expect(row?.status).toBe("pending");
+    },
+  );
+
+  it("leave a row on the removal clock off the page too", async () => {
+    const owner = await makeUser();
+    const entryId = await subjectOwnedBy.entry(owner);
+    await pendingRowAbout("entry", entryId);
+    await core()
+      .insert(reports)
+      .values({
+        id: newUlid(),
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "intimate",
+        createdAt: 100,
+      });
+    await setClosed(owner, 500);
+
+    expect(await pendingReviewQueue(1)).toStrictEqual([]);
+  });
+
+  it("leave a product's row where it is, since a product has no owner", async () => {
+    const productId = await makeProduct();
+    const rowId = await pendingRowAbout("product", productId);
+    const [creator] = await core()
+      .select({ id: products.createdBy })
+      .from(products)
+      .where(eq(products.id, productId));
+    await setClosed(creator?.id ?? "", 500);
+
+    expect(await reviewIds()).toStrictEqual([rowId]);
+  });
+});
 
 describe("the queue itself", () => {
   beforeEach(resetSafetyTables);
