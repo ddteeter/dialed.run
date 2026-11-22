@@ -759,8 +759,8 @@ describe("the queue itself", () => {
     expect(ids).toStrictEqual([onTheClock, later]);
   });
 
-  it("takes the most pressing rows on the clock first, and only pending ones", async () => {
-    await rowAt(100);
+  it("lists every row on the clock past the page's limit, most pressing first, and only pending ones", async () => {
+    const oldest = await rowAt(100);
     const lessPressing = await rowAt(200, 500);
     const morePressing = await rowAt(300, 400);
     const decided = await rowAt(50, 50);
@@ -772,9 +772,30 @@ describe("the queue itself", () => {
     const page = await pendingReviewQueue(1);
     const ids = page.map((row) => row.id);
 
-    expect(ids).toHaveLength(2);
-    expect(ids[1]).toBe(morePressing);
-    expect(ids).not.toContain(lessPressing);
+    expect(ids).toStrictEqual([oldest, morePressing, lessPressing]);
+  });
+
+  it("lists a row on the clock filed after as many on the clock as the page's limit", async () => {
+    const pile = [await rowAt(100, 100), await rowAt(200, 200)];
+    const later = await rowAt(300, 300);
+
+    const page = await pendingReviewQueue(2);
+    const ids = page.map((row) => row.id);
+
+    expect(ids).toStrictEqual([...pile, later]);
+  });
+
+  it("reads a page of more than 100 rows, fingerprint holds included", async () => {
+    await Promise.all(
+      Array.from({ length: 100 }, (_, index) => rowAt(index + 1)),
+    );
+    const onTheClock = await rowAt(500, 500);
+    await core().update(reviewQueue).set({ source: "fingerprint" });
+
+    const page = await pendingReviewQueue(100);
+
+    expect(page).toHaveLength(101);
+    expect(page.at(-1)?.id).toBe(onTheClock);
   });
 
   it("gives each row the time it last went in front of a person", async () => {

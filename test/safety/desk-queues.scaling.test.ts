@@ -415,8 +415,10 @@ describe("the names the per-row reads give (design 188)", () => {
 
     const searches = prepared.filter((sql) => sql.includes("json_each"));
     // Other photos, the probes, the kit and garment searches, and the
-    // removed images: five reads bind their subjects as a list.
-    expect(searches).toHaveLength(5);
+    // removed images: five reads bind their subjects as a list. The six
+    // subject reads and the two fingerprint reads behind them bind their
+    // ids as one too.
+    expect(searches).toHaveLength(13);
     for (const statement of searches) {
       const { once, copies } = namesGiven(statement);
       for (const name of [...once, ...copies]) {
