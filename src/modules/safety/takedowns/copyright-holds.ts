@@ -42,6 +42,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
   copyrightHolds,
   entryPhotos,
+  heldTakeDowns,
   moderationActions,
   outfitEntries,
   reviewQueue,
@@ -157,12 +158,12 @@ const LIVE = ["hidden", "purging"] as const;
  * How a takedown goes, as the holds see it (D-130; owner, 2026-11-21):
  *
  * - nothing, for a repeat — a copyright takedown of what a live hold
- *   already holds, or a take-down of material every covering hold
- *   already records;
+ *   already holds, or a take-down of a held subject already taken down
+ *   (`held_take_downs` names it);
  * - `keep` — the bytes stay, and its statements say how: a copyright
  *   takedown writes the hold and the hide, for 30 days; a Remove or a
- *   removal request's takedown of material a live hold keeps records the
- *   take-down on the holds (`takenDownWrite`), hides the subject, and
+ *   removal request's takedown of material a live hold keeps writes its
+ *   own `held_take_downs` row (`takenDownWrite`), hides the subject, and
  *   settles its open Review rows, a kit's photos' too, by the moderator;
  * - `none` — nothing holds it, so the caller deletes it. A quarantine is
  *   always `none`: it keeps its own copy (D-70).
@@ -206,14 +207,14 @@ export async function takeDownHoldOf(
         }),
     };
   }
-  if (input.action === "quarantine") return { kind: "none" };
-  const holds = await coveringHoldsOf(db, subject);
-  if (holds.length === 0) return { kind: "none" };
-  if (holds.every((hold) => hold.takenDownBy !== null)) return;
+  if (input.action === "quarantine" || !(await isKept(db, subject))) {
+    return { kind: "none" };
+  }
+  if (await wasTakenDownHeld(db, subject)) return;
   return {
     kind: "keep",
     statements: (actionId) => [
-      takenDownWrite(db, subject, actionId),
+      takenDownWrite(db, { ...subject, ownerId: target.ownerId }, actionId),
       heldOutOfSight(db, input.subjectType, input.subjectId),
       settleOpenReviews(
         db,
@@ -241,7 +242,7 @@ export async function takeDownHoldOf(
 /**
  * What the daily sweep owes after its restore (`restoreDueHolds`): the
  * holds its purge claims (`claimDuePurges`), and what was taken down
- * under a hold whose kit no live hold keeps any more
+ * while a hold kept it, on a kit no live hold keeps any more
  * (`takenDownSubjectsDue`) — read after the claim, so a kit whose hold
  * is purging now waits for the next sweep.
  */
@@ -282,7 +283,10 @@ async function isCopyrightHeld(
 /**
  * Not a takedown a restore undid — for the author's "removed" band
  * (`run-removals.ts`), which stops showing once the thing is back.
- * `copyright_holds_action` keys it.
+ * `copyright_holds_action` keys it. A restored hold whose subject stays
+ * out because it was taken down while held (`held_take_downs`) drops its
+ * own band too: that take-down's band, on the subject or on its kit, is
+ * the one the run shows.
  */
 export function notRestored(actionId: SQLiteColumn): SQL {
   return sql`not exists (select 1 from ${copyrightHolds} where ${copyrightHolds.moderationActionId} = ${actionId} and ${copyrightHolds.status} = 'restored')`;
@@ -319,37 +323,65 @@ function covering(subject: KeptSubject): SQL | undefined {
 }
 
 /**
-The live holds that keep `subject`'s material, with the take-down each records.
+Whether a live hold keeps `subject`'s material.
 */
-function coveringHoldsOf(db: Db, subject: KeptSubject) {
-  return db
-    .select({ takenDownBy: copyrightHolds.takenDownBy })
+async function isKept(db: Db, subject: KeptSubject): Promise<boolean> {
+  const rows = await db
+    .select({ id: copyrightHolds.id })
     .from(copyrightHolds)
-    .where(covering(subject));
+    .where(covering(subject))
+    .limit(1);
+  return rows.length > 0;
 }
 
 /**
- * A take-down of held material, for its batch (owner, 2026-11-21): every
- * covering hold records the take-down's moderation action, so no hold's
- * end restores the subject, and the material stays as the hold keeps it
- * until the last covering hold ends (`takenDownSubjectsDue`).
+ * Whether this very subject was already taken down while held, so a
+ * second take-down of it answers "already removed". A take-down of a kit
+ * whose photo was taken down, or of a photo on a kit taken down, is not a
+ * repeat: it records its own action and its own row.
+ */
+async function wasTakenDownHeld(
+  db: Db,
+  subject: KeptSubject,
+): Promise<boolean> {
+  const taken = await db.$count(
+    heldTakeDowns,
+    and(
+      eq(heldTakeDowns.subjectType, subject.subjectType),
+      eq(heldTakeDowns.subjectId, subject.subjectId),
+    ),
+  );
+  return taken > 0;
+}
+
+/**
+ * A take-down of held material, for its batch (owner, 2026-11-21): its
+ * own `held_take_downs` row, whatever the holds are by the time the batch
+ * lands. No hold's end gives the subject back, and the sweep deletes it
+ * once no live hold keeps its kit (`takenDownSubjectsDue`) — the next
+ * sweep, for a take-down that landed after the last hold ended.
  */
 function takenDownWrite(
   db: Db,
-  subject: KeptSubject,
+  subject: KeptSubject & { readonly ownerId: string },
   actionId: string,
+  now = nowSeconds(),
 ): BatchItem<"sqlite"> {
-  return db
-    .update(copyrightHolds)
-    .set({ takenDownBy: actionId })
-    .where(and(covering(subject), isNull(copyrightHolds.takenDownBy)));
+  return db.insert(heldTakeDowns).values({
+    actionId,
+    subjectType: subject.subjectType,
+    subjectId: subject.subjectId,
+    entryId: subject.entryId,
+    ownerId: subject.ownerId,
+    createdAt: now,
+  });
 }
 
 /**
  * What a take-down made under a hold is owed once no live hold keeps the
- * kit: the action's subject, deleted with the statements a Remove uses.
- * Only while the subject is still there, so each is listed until its
- * delete lands, and never again.
+ * kit: its subject, deleted with the statements a Remove uses. Only
+ * while the subject is still there, so each is listed until its delete
+ * lands, and never again.
  */
 interface TakenDownSubject {
   readonly actionId: string;
@@ -357,7 +389,7 @@ interface TakenDownSubject {
   readonly subjectType: HeldSubjectType;
   readonly subjectId: string;
   /**
-  The kit's runner and the kit, from the hold: what the delete owes R2 for.
+  The kit's runner and the kit: what the delete owes R2 for.
   */
   readonly ownerId: string;
   readonly entryId: string;
@@ -369,23 +401,21 @@ The most take-downs one sweep deletes; the rest wait for the next.
 const TAKEN_DOWN_PER_SWEEP = 50;
 
 async function takenDownSubjectsDue(db: Db): Promise<TakenDownSubject[]> {
-  const action = moderationActions;
-  const stillLive = sql`exists (select 1 from ${copyrightHolds} as "live" where "live"."entry_id" = ${qualified(copyrightHolds, copyrightHolds.entryId)} and "live"."status" in ('hidden', 'purging'))`;
-  const stillThere = sql`(case ${qualified(action, action.subjectType)} when 'entry' then exists (select 1 from ${outfitEntries} where ${qualified(outfitEntries, outfitEntries.id)} = ${qualified(action, action.subjectId)}) else exists (select 1 from ${entryPhotos} where ${qualified(entryPhotos, entryPhotos.id)} = ${qualified(action, action.subjectId)}) end)`;
+  const row = heldTakeDowns;
+  const kitHeld = sql`exists (select 1 from ${copyrightHolds} where ${qualified(copyrightHolds, copyrightHolds.entryId)} = ${qualified(row, row.entryId)} and ${qualified(copyrightHolds, copyrightHolds.status)} in ('hidden', 'purging'))`;
+  const stillThere = sql`(case ${qualified(row, row.subjectType)} when 'entry' then exists (select 1 from ${outfitEntries} where ${qualified(outfitEntries, outfitEntries.id)} = ${qualified(row, row.subjectId)}) else exists (select 1 from ${entryPhotos} where ${qualified(entryPhotos, entryPhotos.id)} = ${qualified(row, row.subjectId)}) end)`;
   return db
-    .selectDistinct({
-      actionId: action.id,
-      actorId: action.actorId,
-      // Only `takenDownWrite` names an action here, and only for a kit
-      // or a photo.
-      subjectType: sql<HeldSubjectType>`${action.subjectType}`,
-      subjectId: action.subjectId,
-      ownerId: copyrightHolds.ownerId,
-      entryId: copyrightHolds.entryId,
+    .select({
+      actionId: row.actionId,
+      actorId: moderationActions.actorId,
+      subjectType: row.subjectType,
+      subjectId: row.subjectId,
+      ownerId: row.ownerId,
+      entryId: row.entryId,
     })
-    .from(copyrightHolds)
-    .innerJoin(action, eq(action.id, copyrightHolds.takenDownBy))
-    .where(and(sql`not ${stillLive}`, stillThere))
+    .from(row)
+    .innerJoin(moderationActions, eq(moderationActions.id, row.actionId))
+    .where(and(sql`not ${kitHeld}`, stillThere))
     .limit(TAKEN_DOWN_PER_SWEEP);
 }
 
@@ -515,10 +545,11 @@ export async function restoreDueHolds(
  * - **The rest go back as public**: an entry as `ok`, a photo as
  *   `pending`, never `pass`, so screening looks at it again as after
  *   every give-back (`releaseHoldWrites`).
- * - **A hold whose subject was taken down while held gives nothing
- *   back** (`taken_down_by`): the claim ends the hold, and the sweep
- *   deletes the subject once no live hold covers it
- *   (`takenDownSubjectsDue`).
+ * - **A subject taken down while held is not given back**, nor a photo
+ *   whose kit was (`notTakenDown`): the claim ends the hold, and the
+ *   sweep deletes it once no live hold is on its kit
+ *   (`takenDownSubjectsDue`). The rest of the kit comes back: a kit
+ *   whose photo was taken down returns without that photo.
  *
  * The read names each hold's owner for the notice; the claim, not the
  * read, decides what is restored.
@@ -536,7 +567,7 @@ async function restoreBatch(
       ownerId: copyrightHolds.ownerId,
     })
     .from(copyrightHolds)
-    .where(and(where, isNull(copyrightHolds.takenDownBy)));
+    .where(and(where, notTakenDown()));
   const thisClaim = and(
     eq(copyrightHolds.status, "restored"),
     eq(copyrightHolds.settledAt, settle.settledAt),
@@ -630,12 +661,19 @@ function restoredBy(
     .select({ id: copyrightHolds.subjectId })
     .from(copyrightHolds)
     .where(
-      and(
-        eq(copyrightHolds.subjectType, subjectType),
-        isNull(copyrightHolds.takenDownBy),
-        claim,
-      ),
+      and(eq(copyrightHolds.subjectType, subjectType), notTakenDown(), claim),
     );
+}
+
+/**
+ * A hold's subject not taken down while held: no `held_take_downs` row
+ * names it, or, for a photo, the kit it is on (the hold's `entry_id`).
+ * `held_take_downs_subject` keys both.
+ */
+function notTakenDown(): SQL {
+  const row = heldTakeDowns;
+  const hold = copyrightHolds;
+  return sql`not exists (select 1 from ${row} where (${qualified(row, row.subjectType)} = ${qualified(hold, hold.subjectType)} and ${qualified(row, row.subjectId)} = ${qualified(hold, hold.subjectId)}) or (${qualified(row, row.subjectType)} = 'entry' and ${qualified(row, row.subjectId)} = ${qualified(hold, hold.entryId)}))`;
 }
 
 interface NotHeld {

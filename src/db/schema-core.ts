@@ -1950,10 +1950,6 @@ export const copyrightHolds = /*#__PURE__*/ sqliteTable(
     caseClosedBy: text("case_closed_by"),
     // When the sweep restored or purged it.
     settledAt: integer("settled_at"),
-    // The Remove or Take it down (its moderation action) made while this
-    // hold kept the material: the hold's end then deletes the subject
-    // rather than restoring it.
-    takenDownBy: text("taken_down_by"),
   },
   (t) => [
     uniqueIndex("copyright_holds_action").on(t.moderationActionId),
@@ -1967,6 +1963,35 @@ export const copyrightHolds = /*#__PURE__*/ sqliteTable(
     index("copyright_holds_owner").on(t.ownerId),
     // The 3-year sweep (D-131, design 150): holds settled before its line.
     index("copyright_holds_status_settled").on(t.status, t.settledAt),
+  ],
+);
+
+/**
+ * A Remove or a non-copyright Take it down of material a live copyright
+ * or litigation hold kept (owner, 2026-11-21): one row per take-down, the
+ * moderation action's id as its key. The bytes stay while any live hold
+ * is on the kit; no hold's end gives back a subject a row names, or a
+ * photo whose kit a row names; and the daily sweep deletes the subject
+ * once no live hold is on its kit. No foreign keys: the row outlives the
+ * subject, and names nothing once it is gone.
+ */
+export const heldTakeDowns = /*#__PURE__*/ sqliteTable(
+  "held_take_downs",
+  {
+    actionId: text("action_id").primaryKey(),
+    subjectType: text("subject_type", { enum: ["entry", "photo"] }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    // The kit the subject is, or is on, and its runner.
+    entryId: text("entry_id").notNull(),
+    ownerId: text("owner_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    // The give-back's check: is this subject, or this photo's kit, taken
+    // down.
+    index("held_take_downs_subject").on(t.subjectType, t.subjectId),
+    // By kit.
+    index("held_take_downs_entry").on(t.entryId),
   ],
 );
 
