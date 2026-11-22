@@ -309,10 +309,12 @@ describe("retryGaveUp", () => {
 
     expect(await retryGaveUp({ id, step: "again" }, deps)).toBe("retried");
 
-    expect(enrichmentQueue.send).toHaveBeenCalledWith({
-      type: "enrich",
-      productId: shoe.id,
-    });
+    expect(enrichmentQueue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "enrich",
+        productId: shoe.id,
+      }),
+    );
     expect(reextract).not.toHaveBeenCalled();
     const [row] = await db()
       .select({ status: products.extractionStatus })

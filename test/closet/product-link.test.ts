@@ -183,10 +183,12 @@ describe("a link pasted for a product made without one (design 163, Q1)", () => 
     const [product] = await productRows(name);
     expect(product?.sourceUrl).toBe("https://janji.com/p/tee");
     expect(product?.extractionStatus).toBe("pending");
-    expect(send).toHaveBeenCalledWith({
-      type: "enrich",
-      productId: product?.id,
-    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "enrich",
+        productId: product?.id,
+      }),
+    );
   });
 });
 
@@ -348,10 +350,12 @@ describe("nameItem for a confirmed runner — the link a confirmation owes, now"
 
     await nameItem(db(), userId, itemId, { brand, model });
 
-    expect(send).toHaveBeenCalledWith({
-      type: "enrich",
-      productId: product.id,
-    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "enrich",
+        productId: product.id,
+      }),
+    );
   });
 
   it("gives a brand alone the shared brand's spelling, and no product", async () => {
@@ -568,10 +572,12 @@ describe("linkTypedGarments — the link a confirmation owes", () => {
     await linkTypedGarments(db(), userId);
 
     const linked = await getOwnedItem(db(), userId, item.id);
-    expect(send).toHaveBeenCalledWith({
-      type: "enrich",
-      productId: linked.productId,
-    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "enrich",
+        productId: linked.productId,
+      }),
+    );
   });
 
   it("leaves a row with no brand, or a blank one, alone", async () => {

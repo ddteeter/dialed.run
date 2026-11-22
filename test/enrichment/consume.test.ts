@@ -30,6 +30,11 @@ import {
 import { MAX_OPEN_TAGS } from "../../src/modules/enrichment/html";
 import { pageFailureReason } from "../../src/modules/enrichment/bounds";
 import { UnreadableAnswerError } from "../../src/modules/enrichment/model/chat-completions";
+import type { EnrichJob } from "../../src/modules/enrichment/queue-messages";
+import {
+  requestEnrichment,
+  retryFailedEnrichment,
+} from "../../src/modules/enrichment/request";
 import {
   MODEL_CALLS_PER_HOUR,
   PAGE_FETCHES_PER_HOUR,
@@ -1788,6 +1793,144 @@ describe("handleEnrichmentBatch: a stored page no rung has read", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(await statusOf(productId)).toBe("done");
     expect(await snapshotsOf(productId)).toHaveLength(1);
+  });
+});
+
+/**
+ * A product failed past its first day, which a paste or the Desk's Retry
+ * may claim, with a page no rung has read stored two hours ago.
+ */
+async function failedWithUnreadPage(): Promise<string> {
+  const productId = await pendingProduct({
+    ...PAST_THE_DAY,
+    extractionStatus: "failed",
+  });
+  await storedPage(productId, TWO_HOURS_MS, "none");
+  return productId;
+}
+
+/**
+A queue that keeps what it is sent, so a person's ask can be consumed.
+*/
+function keepingQueue() {
+  const sent: EnrichJob[] = [];
+  const queue = {
+    send: (message: EnrichJob) => {
+      sent.push(message);
+      return Promise.resolve();
+    },
+  };
+  return { sent, asking: { queue, captureException: vi.fn() } };
+}
+
+/**
+Every job `sent` delivered once to the consumer.
+*/
+async function consumeSent(
+  sent: readonly EnrichJob[],
+  deps: Parameters<typeof handleEnrichmentBatch>[1],
+): Promise<void> {
+  const messages = sent.map((job, index) =>
+    fakeMessage(`asked-${String(index)}`, job),
+  );
+  await handleEnrichmentBatch(batchOf("dialed-enrichment", messages), deps);
+}
+
+const CORRECTED_LINK = "https://shop.example.com/products/tee-corrected";
+
+describe("handleEnrichmentBatch: a person's ask fetches a fresh page", () => {
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("fetches for a paste past the product's day, over a page no rung has read", async () => {
+    const productId = await failedWithUnreadPage();
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+
+    expect(await requestEnrichment(db(), productId, asking)).toBe("queued");
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(await statusOf(productId)).toBe("done");
+    expect(await snapshotsOf(productId)).toHaveLength(2);
+  });
+
+  it("fetches for the Desk's Retry, over a page no rung has read", async () => {
+    const productId = await failedWithUnreadPage();
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+
+    expect(await retryFailedEnrichment(db(), productId, asking)).toBe("queued");
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(await statusOf(productId)).toBe("done");
+  });
+
+  it("fetches the corrected link, not the page stored from the old one", async () => {
+    const productId = await failedWithUnreadPage();
+    // What a link correction's Apply writes: the product's source.
+    await db()
+      .update(products)
+      .set({ sourceUrl: CORRECTED_LINK })
+      .where(eq(products.id, productId));
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+
+    await requestEnrichment(db(), productId, asking);
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl.mock.calls.map(([input]) => urlOf(input))).toEqual([
+      CORRECTED_LINK,
+    ]);
+  });
+
+  it("fetches for the Desk's Retry over a page read inside the hour", async () => {
+    const productId = await pendingProduct({
+      ...PAST_THE_DAY,
+      extractionStatus: "failed",
+    });
+    await storedPage(productId, 1000, "text");
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+
+    await retryFailedEnrichment(db(), productId, asking);
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads the page its own earlier delivery stored, and fetches once", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const productId = await failedWithUnreadPage();
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+    await requestEnrichment(db(), productId, asking);
+    await consumeSent(sent, depsWith(fetchImpl));
+    expect(await statusOf(productId)).toBe("pending");
+    await db().delete(rateLimits);
+
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(await statusOf(productId)).toBe("done");
+    const snapshots = await snapshotsOf(productId);
+    expect(snapshots.map(({ rung }) => rung)).toHaveLength(2);
+    expect(snapshots.map(({ rung }) => rung)).toEqual(
+      expect.arrayContaining(["llm", "none"]),
+    );
+  });
+
+  it("still reads a page no rung has read when the sweep sends the job", async () => {
+    const productId = await failedWithUnreadPage();
+    await repend(productId);
+    const fetchImpl = serving(PAGE);
+
+    await consumeSent([{ type: "enrich", productId }], depsWith(fetchImpl));
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(await statusOf(productId)).toBe("done");
   });
 });
 

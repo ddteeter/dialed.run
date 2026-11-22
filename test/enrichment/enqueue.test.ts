@@ -53,7 +53,12 @@ describe("enqueueEnrichment", () => {
       await enqueueEnrichment(db(), product, newUlid(), captureException),
     ).toBe("queued");
 
-    expect(send).toHaveBeenCalledWith({ type: "enrich", productId });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "enrich",
+        productId,
+      }),
+    );
     const [row] = await db()
       .select({ status: products.extractionStatus })
       .from(products)

@@ -16,5 +16,12 @@ import { z } from "zod";
 export const enrichJobSchema = z.object({
   type: z.literal("enrich"),
   productId: z.string().min(1),
+  /**
+   * When a person asked (epoch ms): a paste or the Desk's Retry. The job
+   * reads only a page stored since, and otherwise fetches a fresh one. The
+   * sweep's re-sends carry none. Optional, so a message sent before it
+   * existed still parses (law 9).
+   */
+  askedAt: z.number().int().nonnegative().optional(),
 });
 export type EnrichJob = z.infer<typeof enrichJobSchema>;

@@ -45,10 +45,12 @@ views {
         **This column is the recovery marker.** `pending` means the product still owes an extraction.
       '''
     }
-    // source: src/modules/enrichment/request.ts requestEnrichment (queue.send); src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, ENRICHMENT_STALL_GRACE_S (15 minutes); src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
-    cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob: the product id' {
+    // source: src/modules/enrichment/request.ts requestEnrichment (queue.send, askedAt); src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, ENRICHMENT_STALL_GRACE_S (15 minutes); src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
+    cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob: the product id and when it was asked' {
       notes '''
         **Not atomic with the claim.** D1 and a queue are two systems.
+
+        **When it was asked** (`askedAt`): the consumer reads no page stored before it, so a paste fetches a fresh page. The sweep\'s re-send carries none.
 
         **If it is lost:** the product stays `pending`, and the hourly enrichment-retry cron sends it again once it is 15 minutes old. A lost send costs up to about an hour and a quarter (15 minutes\' grace, then the next :30), never the save.
       '''

@@ -84,10 +84,12 @@ describe("withResolvedProduct", () => {
       newUlid(),
     );
 
-    expect(send).toHaveBeenCalledWith({
-      type: "enrich",
-      productId: resolved.productId,
-    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "enrich",
+        productId: resolved.productId,
+      }),
+    );
     const [row] = await db()
       .select({ status: products.extractionStatus })
       .from(products)
