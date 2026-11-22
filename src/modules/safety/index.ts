@@ -49,6 +49,7 @@ export {
   openRow as openReviewRow,
   openSubject,
   pendingReviewCount,
+  waitingBySource,
   hasPhotosHeldAtLimit,
   releaseStaleClaims,
   resolveReview,
@@ -102,7 +103,6 @@ export {
   retryPendingScreenings,
   screenPhoto,
   screeningDeletes,
-  stuckSources,
   thresholdsAnomaly,
 } from "./screening";
 export {

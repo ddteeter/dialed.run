@@ -25,7 +25,7 @@ import {
 } from "../../../lib/contracts/hold-causes";
 import { nowSeconds } from "../../../lib/now";
 import { noReportHidingAtOnce } from "../limits";
-import { claimForReview, releaseReview } from "./review";
+import { claimForReview, ownerNotClosed, releaseReview } from "./review";
 
 /**
  * A row still waiting on a decision: pending, or claimed by a tab that
@@ -48,6 +48,9 @@ function openSince(since: number, ...also: readonly SQL[]) {
     // and a reported runner as a `reports` one; each is a person's to look
     // at, so a release leaves it and its count leaves it out.
     ne(reviewQueue.subjectType, "profile"),
+    // Not about a closed account's things: Review does not list those,
+    // so a release neither counts nor approves them.
+    ownerNotClosed(),
     ...also,
   );
 }

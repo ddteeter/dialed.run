@@ -7,7 +7,18 @@
  * human, and the daily digest reports how deep it is so an empty queue is a
  * fact rather than an assumption.
  */
-import { and, asc, eq, inArray, isNotNull, lt, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNotNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -453,7 +464,7 @@ function waitingOnReview(): SQL | undefined {
  * A row whose subject's owner's account is not closed: one any runner
  * owns, or a product, which has none.
  */
-function ownerNotClosed(): SQL {
+export function ownerNotClosed(): SQL {
   const closed = sql`exists (select 1 from ${userProfiles} where ${qualified(userProfiles, userProfiles.userId)} = ${subjectOwner()} and ${qualified(userProfiles, userProfiles.bannedAt)} is not null)`;
   return sql`not ${closed}`;
 }
@@ -721,6 +732,42 @@ export async function pendingReviewCount(): Promise<number> {
     waitingOnReview(),
   );
   return ids.length;
+}
+
+/**
+ * Why a photo still pending a day after upload is in the queue (D-157,
+ * design 167): storage had nothing to screen, or the classifier has not
+ * answered. A verdict that finally lands settles exactly these.
+ */
+export const stuckSources = [
+  "missing_file",
+  "unscreened",
+] as const satisfies readonly ReviewSource[];
+
+/**
+ * The sources Today counts as "photos the screener couldn't finish": what
+ * it flagged, and what it never screened at all (D-157).
+ */
+const screenerSources = ["classifier", ...stuckSources] as const;
+
+/**
+ * The rows Review lists, grouped by whether the screener sent them, with
+ * how many and when the oldest arrived: Today's and the digest's figures
+ * beside the count, read from the same rows. Grouped rather than one
+ * aggregate row, so "nothing waiting" is no row. Built, not run, for the
+ * caller's batch.
+ */
+export function waitingBySource(database: ReturnType<typeof drizzle>) {
+  const fromScreener = inArray(reviewQueue.source, [...screenerSources]);
+  return database
+    .select({
+      isScreener: sql<number>`${fromScreener}`.mapWith(Boolean),
+      rows: count(),
+      oldest: sql<number>`min(${reviewQueue.createdAt})`,
+    })
+    .from(reviewQueue)
+    .where(waitingOnReview())
+    .groupBy(fromScreener);
 }
 
 export type ClaimOutcome = "claimed" | "already_taken";

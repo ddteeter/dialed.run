@@ -12,6 +12,7 @@ export {
   openRow,
   openSubject,
   pendingReviewCount,
+  waitingBySource,
   releaseStaleClaims,
   type ResolveOutcome,
   resolveReview,
@@ -20,6 +21,7 @@ export {
   type ReviewSubjectType,
   settledHere,
   settleOpenReviews,
+  stuckSources,
   wasFlaggedAutomatically,
 } from "./review";
 export { withdrawnGarmentUnderReview, withdrawnUnderReview } from "./withdrawn";
