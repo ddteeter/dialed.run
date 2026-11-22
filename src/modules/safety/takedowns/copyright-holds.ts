@@ -244,7 +244,9 @@ export async function takeDownHoldOf(
  * holds its purge claims (`claimDuePurges`), and what was taken down
  * while a hold kept it, on a kit no live hold keeps any more
  * (`takenDownSubjectsDue`) — read after the claim, so a kit whose hold
- * is purging now waits for the next sweep.
+ * is purging now waits for the next sweep. First it forgets the
+ * `held_take_downs` rows whose subject is gone (`forgetGoneTakeDowns`),
+ * so a row goes the sweep after its subject's delete.
  */
 export async function sweepClaims(
   db: Db,
@@ -253,6 +255,7 @@ export async function sweepClaims(
   readonly purges: ClaimedPurge[];
   readonly takenDown: TakenDownSubject[];
 }> {
+  await forgetGoneTakeDowns(db);
   const purges = await claimDuePurges(db, now);
   return { purges, takenDown: await takenDownSubjectsDue(db) };
 }
@@ -400,10 +403,25 @@ The most take-downs one sweep deletes; the rest wait for the next.
 */
 const TAKEN_DOWN_PER_SWEEP = 50;
 
+/**
+Whether a `held_take_downs` row's subject is still there.
+*/
+function stillThere(): SQL {
+  const row = heldTakeDowns;
+  return sql`(case ${qualified(row, row.subjectType)} when 'entry' then exists (select 1 from ${outfitEntries} where ${qualified(outfitEntries, outfitEntries.id)} = ${qualified(row, row.subjectId)}) else exists (select 1 from ${entryPhotos} where ${qualified(entryPhotos, entryPhotos.id)} = ${qualified(row, row.subjectId)}) end)`;
+}
+
+/**
+ * The rows whose subject is gone, deleted: nothing is left for them to
+ * keep from a give-back or to owe a delete, so they do not outlive it.
+ */
+async function forgetGoneTakeDowns(db: Db): Promise<void> {
+  await db.delete(heldTakeDowns).where(sql`not ${stillThere()}`);
+}
+
 async function takenDownSubjectsDue(db: Db): Promise<TakenDownSubject[]> {
   const row = heldTakeDowns;
   const kitHeld = sql`exists (select 1 from ${copyrightHolds} where ${qualified(copyrightHolds, copyrightHolds.entryId)} = ${qualified(row, row.entryId)} and ${qualified(copyrightHolds, copyrightHolds.status)} in ('hidden', 'purging'))`;
-  const stillThere = sql`(case ${qualified(row, row.subjectType)} when 'entry' then exists (select 1 from ${outfitEntries} where ${qualified(outfitEntries, outfitEntries.id)} = ${qualified(row, row.subjectId)}) else exists (select 1 from ${entryPhotos} where ${qualified(entryPhotos, entryPhotos.id)} = ${qualified(row, row.subjectId)}) end)`;
   return db
     .select({
       actionId: row.actionId,
@@ -415,7 +433,7 @@ async function takenDownSubjectsDue(db: Db): Promise<TakenDownSubject[]> {
     })
     .from(row)
     .innerJoin(moderationActions, eq(moderationActions.id, row.actionId))
-    .where(and(sql`not ${kitHeld}`, stillThere))
+    .where(and(sql`not ${kitHeld}`, stillThere()))
     .limit(TAKEN_DOWN_PER_SWEEP);
 }
 

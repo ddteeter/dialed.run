@@ -1458,6 +1458,30 @@ describe("held take-downs, in sequence (owner, 2026-11-21)", () => {
     expect(await isStored(key)).toBe(false);
   });
 
+  it("forgets a take-down's row the sweep after its subject's delete", async () => {
+    const { photoId } = await posted();
+    await takeDown("photo", photoId);
+    const { restoreAt } = await counterNotice(await holdIdOf(photoId));
+    await takeDown("photo", photoId, "intimate");
+    await sweepCopyrightHolds(core(), restoreAt, quiet);
+    expect(await photoRow(photoId)).toBeUndefined();
+    expect(await takenDown()).toHaveLength(1);
+
+    await sweepCopyrightHolds(core(), restoreAt + DAY, quiet);
+
+    expect(await takenDown()).toStrictEqual([]);
+  });
+
+  it("keeps the row of a take-down whose subject is still there", async () => {
+    const { photoId } = await posted();
+    await takeDown("photo", photoId);
+    await takeDown("photo", photoId, "intimate");
+
+    await sweepCopyrightHolds(core(), nowSeconds(), quiet);
+
+    expect(await takenDown()).toHaveLength(1);
+  });
+
   it("keeps a kit taken down under its photo's hold out when a later hold on the kit ends", async () => {
     const { entryId, photoId, key } = await posted();
     await takeDown("photo", photoId);
