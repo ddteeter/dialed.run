@@ -61,7 +61,9 @@ export const SEND_LIMIT_KINDS = [
  * - `access-to` — Au5's asks for one address in a day, whoever asks; the
  *   address, lowercased;
  * - `correction-runner` — one runner's product corrections in a day; the
- *   runner's id.
+ *   runner's id;
+ * - `strava-connect-runner` — the Strava code exchanges one runner's
+ *   connect callbacks make in an hour; the runner's id.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -82,6 +84,7 @@ export const RATE_LIMIT_KINDS = [
   "deletion-notice",
   "access-to",
   "correction-runner",
+  "strava-connect-runner",
 ] as const;
 
 /**

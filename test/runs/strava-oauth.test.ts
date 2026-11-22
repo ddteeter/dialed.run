@@ -18,6 +18,7 @@ import {
   isCapacityRefusal,
   isStravaConnected,
   readStateCookie,
+  STRAVA_EXCHANGES_PER_HOUR,
   STRAVA_STATE_COOKIE,
   STRAVA_STATE_COOKIE_CLEAR,
   stravaAuthorizeUrl,
@@ -601,6 +602,72 @@ describe("isCapacityRefusal (STR-6: the eleventh athlete)", () => {
 
 describe("connectFromCallback (the callback, as one decision)", () => {
   const GOOD = { expectedState: "s-1", state: "s-1", code: "code-1" };
+
+  it("exchanges at most five codes a runner an hour, and reports at most five refusals", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const exchangeCode = vi.fn(() =>
+      Promise.reject(
+        new StravaApiError("Strava responded 400", 400, "Bad Request"),
+      ),
+    );
+    const spy = captureExceptionSpy();
+    const results = [];
+    for (let call = 0; call < STRAVA_EXCHANGES_PER_HOUR + 3; call += 1) {
+      results.push(
+        await connectFromCallback(
+          db,
+          { ...fakeApi(), exchangeCode },
+          userId,
+          GOOD,
+          spy.captureException,
+        ),
+      );
+    }
+
+    expect(exchangeCode).toHaveBeenCalledTimes(STRAVA_EXCHANGES_PER_HOUR);
+    expect(spy.reports).toHaveLength(STRAVA_EXCHANGES_PER_HOUR);
+    expect(results.at(-1)).toStrictEqual({
+      ok: false,
+      reason: "Strava didn't connect.",
+      full: false,
+    });
+    // Another runner's count is their own.
+    const other = await connectFromCallback(
+      db,
+      fakeApi(),
+      newUlid(),
+      GOOD,
+      spy.captureException,
+    );
+    expect(other).toStrictEqual({ ok: true });
+  });
+
+  it("counts no exchange for a callback refused before it", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    for (let call = 0; call < STRAVA_EXCHANGES_PER_HOUR + 1; call += 1) {
+      await connectFromCallback(
+        db,
+        fakeApi(),
+        userId,
+        { ...GOOD, state: "other" },
+        captureExceptionSpy().captureException,
+      );
+    }
+    const result = await connectFromCallback(
+      db,
+      fakeApi(),
+      userId,
+      GOOD,
+      captureExceptionSpy().captureException,
+    );
+    expect(result).toStrictEqual({ ok: true });
+  });
+
+  it("is five an hour", () => {
+    expect(STRAVA_EXCHANGES_PER_HOUR).toBe(5);
+  });
 
   it("connects a callback whose state matches", async () => {
     const db = coreDb();
