@@ -339,6 +339,19 @@ jobs:
           name: worker-bundle
           path: .
 
+      # This job runs no build. The deploy config must be exactly the
+      # redirect the Cloudflare plugin writes, and the Worker config it
+      # names must declare no `build`, or the job stops here, before any
+      # step that holds the token.
+      - name: Check the deploy config
+        run: |
+          set -euo pipefail
+          jq -e '. == {"configPath": "../../dist/server/wrangler.json", "auxiliaryWorkers": []}' \
+            .wrangler/deploy/config.json >/dev/null ||
+            { echo "::error::.wrangler/deploy/config.json is not the expected redirect"; exit 1; }
+          jq -e 'type == "object" and (has("build") | not)' dist/server/wrangler.json >/dev/null ||
+            { echo "::error::dist/server/wrangler.json declares a build"; exit 1; }
+
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 24

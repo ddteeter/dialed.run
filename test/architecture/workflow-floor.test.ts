@@ -548,10 +548,30 @@ describe("the deploy (SA-L10)", () => {
     expect(deploy).toContain("needs: [bundle]");
     expect(deploy).toContain("name: worker-bundle");
     expect(runsOf(deploy)).toStrictEqual([
+      "|",
       "npm ci --ignore-scripts",
       "|",
       "npx wrangler deploy",
     ]);
     expect(deploy).toContain("environment: production");
+  });
+
+  it("checks the downloaded deploy config before any step that holds the token", () => {
+    const steps = stepLinesOf(job("deploy"));
+    const check = steps.indexOf("      - name: Check the deploy config");
+    const download = steps.findIndex((line) =>
+      line.includes("actions/download-artifact@"),
+    );
+    const migrations = steps.indexOf("      - name: Apply migrations");
+    expect(check).toBeGreaterThan(download);
+    expect(download).toBeGreaterThan(-1);
+    expect(check).toBeLessThan(migrations);
+    const deploy = job("deploy");
+    expect(deploy).toContain(
+      `jq -e '. == {"configPath": "../../dist/server/wrangler.json", "auxiliaryWorkers": []}'`,
+    );
+    expect(deploy).toContain(
+      `jq -e 'type == "object" and (has("build") | not)' dist/server/wrangler.json`,
+    );
   });
 });
