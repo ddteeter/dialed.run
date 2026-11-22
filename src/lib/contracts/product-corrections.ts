@@ -11,13 +11,13 @@
 import { z } from "zod";
 
 import { ulidSchema } from "../ids";
-import { httpsUrlSchema } from "./common";
+import { httpsUrlSchema, withoutHiddenControls } from "./common";
 import {
   hasGarmentAttribute,
   type GarmentAttributeKey,
   type GarmentCategory,
 } from "./garment-fields";
-import { fabricSchema, weightSchema } from "./garments";
+import { fabricSchema, GARMENT_NAME_MAX, weightSchema } from "./garments";
 
 /**
  * The seven, in the sheet's order (R48·129b): one field per correction.
@@ -89,7 +89,7 @@ export const yesNoSchema = z.enum(["yes", "no"]);
  * The longest a name and a composition may be (R48·129c). The product
  * name column takes 120, but the sheet's rule is the garment name's.
  */
-const CORRECTION_NAME_MAX = 80;
+const CORRECTION_NAME_MAX = GARMENT_NAME_MAX;
 const CORRECTION_COMPOSITION_MAX = 120;
 
 /**
@@ -101,6 +101,7 @@ export const CORRECTION_NOTE_COUNTER_FROM = 240;
 function textValue(max: number, noun: string) {
   return z
     .string()
+    .overwrite(withoutHiddenControls)
     .trim()
     .min(1, `Type the ${noun}.`)
     .max(max, `Keep the ${noun} to ${String(max)} characters.`);

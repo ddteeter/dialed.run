@@ -167,6 +167,14 @@ export const weightSchema = z.enum(garmentWeights);
 export const fabricSchema = z.enum(garmentFabrics);
 
 /**
+ * The longest a garment's name and brand may be. Every writer of the
+ * same labels (onboarding's naming step, a name correction) reads them
+ * from here.
+ */
+export const GARMENT_NAME_MAX = 80;
+export const GARMENT_BRAND_MAX = 60;
+
+/**
  * The sentences are part of the schema, not of whatever renders it.
  *
  * `docs/product.md` §Forms & failure: "Error copy lives in the schema, in
@@ -184,11 +192,17 @@ const garmentBase = z.strictObject({
     .string()
     .overwrite(withoutHiddenControls)
     .min(1, "Give it a name.")
-    .max(80, "Keep the name under 80 characters."),
+    .max(
+      GARMENT_NAME_MAX,
+      `Keep the name under ${String(GARMENT_NAME_MAX)} characters.`,
+    ),
   brand: z
     .string()
     .overwrite(withoutHiddenControls)
-    .max(60, "Keep the brand under 60 characters.")
+    .max(
+      GARMENT_BRAND_MAX,
+      `Keep the brand under ${String(GARMENT_BRAND_MAX)} characters.`,
+    )
     .optional(),
   size: z.string().max(20, "Keep the size under 20 characters.").optional(),
   color: z.string().max(30, "Keep the color under 30 characters.").optional(),

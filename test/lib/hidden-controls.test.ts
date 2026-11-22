@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { garmentSchema, withoutHiddenControls } from "../../src/lib/contracts";
+import {
+  GARMENT_BRAND_MAX,
+  GARMENT_NAME_MAX,
+  garmentSchema,
+  withoutHiddenControls,
+} from "../../src/lib/contracts";
+import { fileCorrectionSchema } from "../../src/lib/contracts/product-corrections";
 import { takedownRequestSchema } from "../../src/lib/contracts/takedown";
+import { newUlid } from "../../src/lib/ids";
+import { nameIdentityInput } from "../../src/modules/onboarding/inputs";
 
 const at = (...points: number[]): string => String.fromCodePoint(...points);
 
@@ -63,6 +71,65 @@ describe("the fields that strip them", () => {
     expect(garmentSchema.parse({ category: "shoes", name }).name).toHaveLength(
       80,
     );
+  });
+
+  it("onboarding's brand and model, before they are trimmed", () => {
+    const parsed = nameIdentityInput.parse({
+      brand: `${at(0x20_2e)} Smart${at(0x20_0b)}wool`,
+      model: `250 Base${at(0x20_66)} ${at(0xfe_ff)}`,
+    });
+    expect(parsed).toStrictEqual({ brand: "Smartwool", model: "250 Base" });
+  });
+
+  it("refuses an onboarding brand or model that is nothing but them", () => {
+    expect(nameIdentityInput.safeParse({ brand: at(0x20_2e) }).success).toBe(
+      false,
+    );
+    expect(
+      nameIdentityInput.safeParse({ brand: "S", model: at(0x20_0b, 0x20_60) })
+        .success,
+    ).toBe(false);
+  });
+
+  it("holds onboarding's brand and model to the garment's own limits", () => {
+    expect(GARMENT_NAME_MAX).toBe(80);
+    expect(GARMENT_BRAND_MAX).toBe(60);
+    const model = "m".repeat(GARMENT_NAME_MAX);
+    const brand = "b".repeat(GARMENT_BRAND_MAX);
+    expect(nameIdentityInput.safeParse({ brand, model }).success).toBe(true);
+    expect(
+      nameIdentityInput.safeParse({ brand, model: `${model}m` }).success,
+    ).toBe(false);
+    expect(
+      nameIdentityInput.safeParse({ brand: `${brand}b`, model }).success,
+    ).toBe(false);
+    expect(
+      nameIdentityInput.parse({ brand, model: `${model}${at(0x20_0b)}` })
+        .model,
+    ).toHaveLength(GARMENT_NAME_MAX);
+  });
+
+  it("a name correction", () => {
+    const parsed = fileCorrectionSchema.parse({
+      productId: newUlid(),
+      garmentId: newUlid(),
+      idempotencyKey: newUlid(),
+      field: "name",
+      value: ` Pegasus${at(0x20_2e)} 41 `,
+    });
+    expect(parsed.value).toBe("Pegasus 41");
+  });
+
+  it("refuses a name correction that is nothing but them", () => {
+    expect(
+      fileCorrectionSchema.safeParse({
+        productId: newUlid(),
+        garmentId: newUlid(),
+        idempotencyKey: newUlid(),
+        field: "name",
+        value: at(0x20_0e, 0x20_0f),
+      }).success,
+    ).toBe(false);
   });
 
   it("a removal request's signature", () => {

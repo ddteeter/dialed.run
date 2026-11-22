@@ -5,10 +5,13 @@ import { ulidSchema } from "../../lib/ids";
 
 import {
   distanceUnitSchema,
+  GARMENT_BRAND_MAX,
+  GARMENT_NAME_MAX,
   latitudeSchema,
   longitudeSchema,
   tempUnitSchema,
   thermalLevelSchema,
+  withoutHiddenControls,
   writableAudienceSchema,
 } from "../../lib/contracts";
 
@@ -188,10 +191,17 @@ export type Preferences = UnitsChoice & SharingChoice;
 export const nameIdentityInput = z.object({
   brand: z
     .string()
+    .overwrite(withoutHiddenControls)
     .trim()
     .min(1, { message: "Which brand? That alone is enough." })
-    .max(60),
-  model: z.string().trim().min(1).max(120).optional(),
+    .max(GARMENT_BRAND_MAX),
+  model: z
+    .string()
+    .overwrite(withoutHiddenControls)
+    .trim()
+    .min(1)
+    .max(GARMENT_NAME_MAX)
+    .optional(),
 });
 export type NameIdentity = z.infer<typeof nameIdentityInput>;
 
