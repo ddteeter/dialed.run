@@ -37,10 +37,13 @@ const SINCE = nowSeconds() - 60 * 60;
 beforeEach(resetSafetyTables);
 
 /**
- * A photo held by a fingerprint match, queued at `openedAt`: what a
- * release puts back.
+ * A photo held by `source` (a fingerprint match unless named), queued at
+ * `openedAt`: what a release puts back.
  */
-async function heldPhoto(openedAt: number): Promise<string> {
+async function heldPhoto(
+  openedAt: number,
+  source: "fingerprint" | "classifier" = "fingerprint",
+): Promise<string> {
   const userId = await makeUser();
   const entryId = await makeEntry({
     userId,
@@ -60,7 +63,7 @@ async function heldPhoto(openedAt: number): Promise<string> {
     id: newUlid(),
     subjectType: "photo",
     subjectId: photoId,
-    source: "fingerprint",
+    source,
     status: "pending",
     createdAt: openedAt,
     openedAt,
@@ -91,6 +94,20 @@ describe("releaseHolds", () => {
       .from(reviewQueue);
     expect(row).toStrictEqual({ status: "approved", resolvedBy: reviewer });
     // Where an Approve puts a held photo: back to be screened.
+    const [photo] = await core()
+      .select({ screenStatus: entryPhotos.screenStatus })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.id, photoId));
+    expect(photo?.screenStatus).toBe("pending");
+  });
+
+  it("sends a photo the classifier held back to be screened, publishing nothing", async () => {
+    const photoId = await heldPhoto(SINCE, "classifier");
+
+    const outcome = await releaseHolds("classifier", SINCE, await makeUser());
+
+    expect(outcome).toStrictEqual({ released: 1, hasMore: false });
+    expect(await statusesOf()).toStrictEqual(["approved"]);
     const [photo] = await core()
       .select({ screenStatus: entryPhotos.screenStatus })
       .from(entryPhotos)

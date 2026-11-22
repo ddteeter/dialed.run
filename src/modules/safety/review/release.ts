@@ -4,10 +4,12 @@
  *
  * The breakers bound how many photos a bug can hide in an hour; this is
  * the undo for the hours before anyone noticed. Each row goes through
- * `resolveReview` exactly as one Approve does — its own batch, the
- * reviewer stamped on it, the subject back where an Approve puts it, and
- * whoever an Approve tells, told — so a release is many decisions, not a
- * new kind of one.
+ * `releaseReview`, one Approve's decision — its own batch, the reviewer
+ * stamped on it, the subject back where an Approve puts it, and whoever an
+ * Approve tells, told — so a release is many decisions, not a new kind of
+ * one. Nobody opened these rows, so a kit photo a release approves goes
+ * back to `pending` to be screened again; only a person's Approve
+ * publishes one.
  *
  * **Bounded a press.** `RELEASE_BATCH` rows, oldest first, and the answer
  * says whether more wait; the operator presses again. Each row is a few
@@ -23,7 +25,7 @@ import {
 } from "../../../lib/contracts/hold-causes";
 import { nowSeconds } from "../../../lib/now";
 import { noReportHidingAtOnce } from "../limits";
-import { claimForReview, resolveReview } from "./review";
+import { claimForReview, releaseReview } from "./review";
 
 /**
  * A row still waiting on a decision: pending, or claimed by a tab that
@@ -101,7 +103,7 @@ export async function releaseHolds(
     // row a tab took in the meantime is that tab's to decide, and one a
     // report re-opened since is no longer this burst's.
     if ((await claimForReview(id, reviewerId, cause)) !== "claimed") continue;
-    if ((await resolveReview(id, reviewerId, "approve")) === "resolved") {
+    if ((await releaseReview(id, reviewerId)) === "resolved") {
       released += 1;
     }
   }

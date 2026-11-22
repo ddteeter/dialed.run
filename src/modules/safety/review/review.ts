@@ -927,9 +927,35 @@ export async function resolveReview(
   decision: ReviewDecision,
   /**
    * The row as the deciding page showed it; nothing for a decision no page
-   * showed (a burst release), which holds to the row as read here.
+   * showed, which holds to the row as read here.
    */
   shown?: ShownRow,
+): Promise<ResolveOutcome> {
+  return decide(queueId, reviewerId, decision, shown, false);
+}
+
+/**
+ * An Approve made as part of a burst release (design 164): the same
+ * decision as `resolveReview`'s, except that no person opened the row, so
+ * a kit photo it approves goes back to `pending` to be screened again,
+ * whatever the row's source.
+ */
+export async function releaseReview(
+  queueId: string,
+  reviewerId: string,
+): Promise<ResolveOutcome> {
+  return decide(queueId, reviewerId, "approve", undefined, true);
+}
+
+async function decide(
+  queueId: string,
+  reviewerId: string,
+  decision: ReviewDecision,
+  shown: ShownRow | undefined,
+  /**
+  A burst release of many rows nobody opened, rather than a person's decision on one.
+  */
+  isRelease: boolean,
 ): Promise<ResolveOutcome> {
   const row = await openRow(queueId, shown);
   if (typeof row === "string") return row;
@@ -958,7 +984,7 @@ export async function resolveReview(
       row.unchanged,
       settled.at,
     ).returning({ id: reviewQueue.id }),
-    ...subjectWritesFor(row, decision, here),
+    ...subjectWritesFor(row, decision, isRelease, here),
     ...told,
   ]);
   return settle.length === 0 ? "already_resolved" : "resolved";
@@ -1114,12 +1140,13 @@ export function reviewResolution(
 function subjectWritesFor(
   row: Exclude<OpenRow, string>,
   decision: ReviewDecision,
+  isRelease: boolean,
   here: SQL,
 ) {
   return subjectWriters[row.subjectType](
     row.subjectId,
     decision,
-    row.source,
+    approvedPhotoStatus(row.source, isRelease),
     here,
   );
 }
@@ -1139,7 +1166,7 @@ const subjectWriters: Record<
   (
     subjectId: string,
     decision: ReviewDecision,
-    source: ReviewSource,
+    photoOnApprove: ApprovedPhotoStatus,
     here: SQL,
   ) => BatchItem<"sqlite">[]
 > = {
@@ -1149,7 +1176,7 @@ const subjectWriters: Record<
   // request's decision gives it back or takes it down. (A Remove reaches
   // these two only for a kit or photo already gone, so the guard is
   // Approve's in effect.)
-  entry: (subjectId, decision, _source, here) => [
+  entry: (subjectId, decision, _photoOnApprove, here) => [
     unlessRequestHolds(
       { table: outfitEntries, subjectType: "entry", subjectId },
       { moderationStatus: onDecision(decision, "ok", "removed") },
@@ -1159,7 +1186,7 @@ const subjectWriters: Record<
   // Hidden products drop out of autocomplete and linked garments fall
   // back to their own text fields (packet §2) — the column 000 reserved
   // for exactly this.
-  product: (subjectId, decision, _source, here) => [
+  product: (subjectId, decision, _photoOnApprove, here) => [
     setOnSubject(
       products,
       subjectId,
@@ -1184,16 +1211,13 @@ const subjectWriters: Record<
   // (owner, 2026-10-31). And a photo the classifier did answer for: its
   // row is the classifier's answer, so screening it again gives the same
   // answer and the same row. A person has looked at either now, and their
-  // Approve publishes it (owner, 2026-11-21).
-  photo: (subjectId, decision, source, here) => [
+  // Approve publishes it (owner, 2026-11-21). A burst release is an Approve
+  // nobody looked at, so it sends either back to `pending`.
+  photo: (subjectId, decision, photoOnApprove, here) => [
     unlessRequestHolds(
       { table: entryPhotos, subjectType: "photo", subjectId },
       {
-        screenStatus: onDecision(
-          decision,
-          approvedPhotoStatus(source),
-          "flagged",
-        ),
+        screenStatus: onDecision(decision, photoOnApprove, "flagged"),
       },
       and(ne(entryPhotos.screenStatus, heldPhotoStatus), here),
     ),
@@ -1205,7 +1229,7 @@ const subjectWriters: Record<
   // photo off first; safety's own Remove, reached without it, keeps a
   // photo still there hidden (`flagged`) rather than leave it waiting.
   // Only a garment that still has a photo.
-  garment: (subjectId, decision, _source, here) => [
+  garment: (subjectId, decision, _photoOnApprove, here) => [
     setOnSubject(
       wardrobeItems,
       subjectId,
@@ -1249,15 +1273,21 @@ function notHeldByRequest(
   return sql`not exists (select 1 from ${takedownRequests} where ${takedownRequests.subjectType} = ${subjectType} and ${takedownRequests.subjectId} = ${subjectId} and ${takedownRequests.status} = 'pending' and ${takedownRequests.heldAt} is not null)`;
 }
 
+type ApprovedPhotoStatus = typeof publicPhotoStatus | "pending";
+
 /**
- * Where Approve leaves an entry photo: `pass` when the classifier already
- * answered for it or never will (a `classifier` or an `unscreened` row),
- * `pending` for every other source, so the screener still sees it.
+ * Where Approve leaves an entry photo: `pass` when a person approved it
+ * and the classifier already answered for it or never will (a
+ * `classifier` or an `unscreened` row); `pending` for every other source,
+ * and for any row a burst release approves, so the screener still sees it.
  */
 function approvedPhotoStatus(
   source: ReviewSource,
-): typeof publicPhotoStatus | "pending" {
-  return publishedOnApprove.has(source) ? publicPhotoStatus : "pending";
+  isRelease: boolean,
+): ApprovedPhotoStatus {
+  return !isRelease && publishedOnApprove.has(source)
+    ? publicPhotoStatus
+    : "pending";
 }
 
 /**
