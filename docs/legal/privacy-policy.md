@@ -79,8 +79,10 @@ Questions about this policy or your data: hello@dialed.run.
   you leave, and whether we invited you or declined. If Cloudflare places
   your connection in Mississippi or Tennessee, we also note that state,
   because we cannot open sign-up there yet (see the [terms](/terms)).
-  Signing up makes the same check and keeps nothing. We delete it 90 days after we
-  answer; a request we have not answered yet is kept until we do.
+  Signing up makes the same check and keeps nothing. A request counts once
+  you confirm your address from the email we send; an unconfirmed request is
+  deleted within three days. We delete a confirmed one 90 days after we
+  answer; one we have not answered yet is kept until we do.
 - **Your password, hashed.** We store a scrypt hash, never the password
   itself. When you set a password we check it against Have I Been Pwned's
   list of leaked passwords. Only the first five characters of the
@@ -610,7 +612,7 @@ any differently.
 | Anonymous totals                                                              | A published report stays as published; it names no one. A guide is remade from current data each time we update it                |
 | Your data export                                                              | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
 | Removal requests (`/takedown`)                                                | 3 years after we decide them                                                                                                      |
-| Requests for access                                                           | 90 days after we answer them                                                                                                      |
+| Requests for access                                                           | 90 days after we answer them. An unconfirmed request: within 3 days                                                               |
 | Session records                                                               | Expire after 7 days, and are deleted 30 days after they expire. A copy kept with suspected child sexual abuse material: as below  |
 | Strava refresh token                                                          | Until you disconnect, then until Strava confirms revocation                                                                       |
 | Strava activity ids                                                           | 7 days                                                                                                                            |
