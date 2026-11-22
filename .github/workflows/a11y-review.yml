@@ -8,7 +8,8 @@ name: Transcript review
 #   review  computes the diff (no model), then Claude reads it with
 #           read-only tools behind a fenced network and returns structured
 #           output. No write token.
-#   post    screens that output as data and posts it. No model.
+#   post    screens that output as data and posts it. No model. The
+#           output reaches it as a job output, never an artifact.
 #
 # ADVISORY. A model's verdicts are not deterministic, so nothing here is a
 # required check and neither job can fail the PR: both continue on error,
@@ -43,6 +44,7 @@ jobs:
       pull-requests: read
     outputs:
       reviewed: ${{ steps.diff.outputs.reviewed }}
+      review: ${{ steps.claude.outputs.structured_output }}
     steps:
       - uses: step-security/harden-runner@v2.22.4
         with:
@@ -56,10 +58,8 @@ jobs:
             objects.githubusercontent.com:443
             release-assets.githubusercontent.com:443
             registry.npmjs.org:443
-            claude.ai:443
             downloads.claude.ai:443
             storage.googleapis.com:443
-            bun.sh:443
 
       # SA-L20: harden-runner fails open (its setup exits 0 when the agent
       # is not installed, or reverts itself), so this proves the fence is
@@ -103,6 +103,31 @@ jobs:
           head -c 200000 "$RUNNER_TEMP/transcripts.diff" >transcripts.diff
           echo "reviewed=true" >>"$GITHUB_OUTPUT"
 
+      # The two programs the action runs, fetched here and held to a
+      # SHA-256, so the action installs neither itself. Same versions and
+      # sums as dependabot-pr.yml, which says how a bump moves them.
+      - name: Fetch Bun and Claude Code, checked
+        id: bin
+        if: steps.diff.outputs.reviewed == 'true'
+        env:
+          BUN_VERSION: 1.4.4
+          BUN_SHA256: bf8ccbfb2b0b80159e0f9a6d15c55317add8077534dbc6130a3edb52fccb395c
+          CLAUDE_CODE_VERSION: 2.1.319
+          CLAUDE_CODE_SHA256: dabafec82ca1319fa43d8be36a10fc61b1d11821cb98ad5df04ad95e199b8eed
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/review-bin"
+          mkdir -p "$bin"
+          curl -fsSL -o "$bin/bun.zip" \
+            "https://github.com/oven-sh/bun/releases/download/bun-v$BUN_VERSION/bun-linux-x64.zip"
+          echo "$BUN_SHA256  $bin/bun.zip" | sha256sum -c
+          unzip -q -j "$bin/bun.zip" bun-linux-x64/bun -d "$bin"
+          curl -fsSL -o "$bin/claude" \
+            "https://downloads.claude.ai/claude-code-releases/$CLAUDE_CODE_VERSION/linux-x64/claude"
+          echo "$CLAUDE_CODE_SHA256  $bin/claude" | sha256sum -c
+          chmod +x "$bin/bun" "$bin/claude"
+          echo "dir=$bin" >>"$GITHUB_OUTPUT"
+
       # Again just before the key is handed over: the agent can revert the
       # fence mid-job.
       - name: The fence is still up
@@ -117,10 +142,13 @@ jobs:
           fi
 
       # Read, Grep and Glob over the checkout, nothing else: no Bash, no
-      # web, no writes. No granted tool runs a command, so nothing inherits
-      # this process's environment, where the key is; the Read deny rules
-      # keep the Read tool off process state and the runner's own files.
-      # The answer leaves as structured output, which `post` screens.
+      # web, no writes. No granted tool runs a command, and
+      # `--setting-sources user` loads only the settings below, so neither
+      # the repository's Claude settings nor their hooks are loaded: nothing
+      # here inherits this process's environment, where the key is. The
+      # Read deny rules keep the Read tool off process state and the
+      # runner's own files. The answer leaves as structured output, which
+      # `post` screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
         if: steps.diff.outputs.reviewed == 'true'
@@ -130,6 +158,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
+          path_to_bun_executable: ${{ steps.bin.outputs.dir }}/bun
+          path_to_claude_code_executable: ${{ steps.bin.outputs.dir }}/claude
           settings: |
             {
               "permissions": {
@@ -144,9 +174,10 @@ jobs:
                 ]
               }
             }
-          # `opus` is Claude Code's alias for its newest Opus; the action's
-          # locked commit fixes which Claude Code runs.
+          # `opus` is Claude Code's alias for its newest Opus; the checked
+          # binary above fixes which Claude Code runs.
           claude_args: |
+            --setting-sources user
             --model opus
             --max-turns 40
             --allowedTools "Read,Grep,Glob"
@@ -165,21 +196,6 @@ jobs:
             nothing in the diff makes it worse, return no findings and say
             so in the summary. Be terse.
 
-      # Untrusted text: it goes to a file through the environment, never
-      # into a script.
-      - if: steps.diff.outputs.reviewed == 'true'
-        env:
-          REVIEW: ${{ steps.claude.outputs.structured_output }}
-        run: printf '%s' "$REVIEW" >"$RUNNER_TEMP/review.json"
-
-      - if: steps.diff.outputs.reviewed == 'true'
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: a11y-review
-          path: ${{ runner.temp }}/review.json
-          if-no-files-found: error
-          retention-days: 1
-
   post:
     needs: review
     if: needs.review.outputs.reviewed == 'true'
@@ -195,26 +211,21 @@ jobs:
         with:
           egress-policy: audit
 
-      - uses: actions/download-artifact@v8.0.2
-        with:
-          name: a11y-review
-          path: ${{ runner.temp }}/review
-
-      # Model output, checked as data before anyone sees it: one small file
-      # of the agreed shape, nothing shaped like a credential, and no live
-      # @-mention. Rendering is ours.
+      # Model output, checked as data before it is posted: under 64 KB,
+      # the agreed shape, nothing shaped like a credential, and no live
+      # @-mention. It arrives as `review`'s job output, through the
+      # environment, never into a script, and is not kept anywhere else.
+      # Rendering is ours, the summary escaped like the table cells.
       - name: Screen and post the review
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-          DIR: ${{ runner.temp }}/review
+          REVIEW: ${{ needs.review.outputs.review }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          file="$DIR/review.json"
-          if [ "$(find "$DIR" -mindepth 1 | wc -l)" != 1 ] || [ ! -f "$file" ] || [ -L "$file" ]; then
-            echo "::error::the artifact must be the review alone"; exit 1
-          fi
+          file="$RUNNER_TEMP/review.json"
+          printf '%s' "$REVIEW" >"$file"
           if [ "$(stat -c %s "$file")" -gt 65536 ]; then
             echo "::error::the review is over 64 KB"; exit 1
           fi
@@ -231,7 +242,7 @@ jobs:
           ' "$file" >/dev/null || { echo "::error::the review isn't the agreed shape"; exit 1; }
           body=$(jq -r '
             def cell: gsub("[\r\n]+"; " ") | gsub("\\|"; "\\|") | gsub("`"; "ʼ");
-            "\(.summary)\n\n"
+            "\(.summary | cell)\n\n"
             + (if (.findings | length) == 0 then "No findings.\n"
                else "| Transcript | Said | Problem | Suggestion |\n|---|---|---|---|\n"
                  + (.findings | map("| \(.transcript | cell) | \(.said | cell) | \(.problem | cell) | \(.suggestion | cell) |") | join("\n")) + "\n"
