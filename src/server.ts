@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-start/server";
 
 import { handleQueueBatch, handleScheduled } from "./modules/dispatch";
-import { captureException } from "./modules/ops";
+import { captureException, captureRequestException } from "./modules/ops";
 import {
   boundedRequest,
   isServerFnWithoutId,
@@ -102,7 +102,7 @@ export default {
         context.marker,
       );
     } catch (error) {
-      captureException(error, { surface: "fetch" });
+      captureRequestException(error);
       throw error;
     }
   },

@@ -4,6 +4,8 @@ import { env, waitUntil } from "../../../env";
 import { PUBLIC_ORIGIN } from "../../../lib/public-origin";
 import { withoutBoundValues } from "../../../lib/statement-error";
 
+import { errorKind, repeatGate, type RepeatGate } from "./repeats";
+
 /**
  * Keeps the invocation alive until a promise settles.
  *
@@ -141,6 +143,38 @@ export function captureException(
 ): void {
   reportException(workerTarget(), waitUntil, error, { context, tags: {} });
 }
+
+/**
+ * The reporter for requests that threw out of the Worker, over a gate and
+ * a send handed in: one issue per kind of error (`./repeats`), and a kind
+ * the gate has seen within its window is not sent again.
+ */
+export function requestReporter(
+  isDue: RepeatGate,
+  send: (error: unknown, report: SentryReport) => void,
+  now: () => number = Date.now,
+): (error: unknown) => void {
+  return (error) => {
+    const kind = errorKind(error);
+    if (!isDue(kind, now())) return;
+    send(error, {
+      context: { surface: "fetch" },
+      tags: {},
+      fingerprint: ["fetch", kind],
+    });
+  };
+}
+
+/**
+ * What `server.ts` reports a request that threw with: `requestReporter`
+ * over this isolate's gate and the Worker's own target.
+ */
+export const captureRequestException = requestReporter(
+  repeatGate(),
+  (error, report) => {
+    reportException(workerTarget(), waitUntil, error, report);
+  },
+);
 
 /**
 A cron as Sentry Crons sees it: a slug and the schedule it should keep.
