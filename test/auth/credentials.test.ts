@@ -14,6 +14,8 @@ import {
 } from "../../src/lib/contracts/access";
 import {
   AUTH_COPY,
+  AUTH_KICKER,
+  GOOGLE_BUSY,
   NOT_LOGGED_IN,
   AccessRefused,
   AccountClosedRefusal,
@@ -535,6 +537,20 @@ describe("googleConsentUrl", () => {
     expect(thrown).toMatchObject({
       kicker: "Not created",
       message: INVITE_COPY.invalid,
+      retry: false,
+    });
+  });
+
+  it("says the hour's Google sign-ins are taken in the Google band, with no retry", async () => {
+    client.social.mockResolvedValue({
+      data: undefined,
+      error: { code: GOOGLE_BUSY, status: 429 },
+    });
+    const thrown = await caught(googleConsentUrl("/", "/auth/login"));
+    expect(thrown).toBeInstanceOf(AccessRefused);
+    expect(thrown).toMatchObject({
+      kicker: AUTH_KICKER,
+      message: AUTH_COPY.googleBusy,
       retry: false,
     });
   });

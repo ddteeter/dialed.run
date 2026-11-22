@@ -1,16 +1,27 @@
 import { APIError } from "better-auth/api";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { verification } from "../../src/db/schema-auth";
+import { rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { GLOBAL_SUBJECT } from "../../src/lib/contracts/rate-limits";
+import { nowSeconds } from "../../src/lib/now";
+import { GOOGLE_BUSY } from "../../src/modules/auth/auth-copy";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import {
+  countSocialStart,
   holdSocialBody,
   RETURN_PATH_MAX,
   SOCIAL_BODY_REFUSED,
 } from "../../src/modules/auth/social-body";
+import {
+  GOOGLE_STARTS_PER_HOUR,
+  SEND_WINDOW_S,
+} from "../../src/modules/email/rate-limit";
+import { countRow } from "../rate-limit-rows";
 import { recordingMail } from "./mail-recorder";
 import { OPEN_ACCESS } from "./open-access";
 
@@ -134,15 +145,114 @@ describe("a Google press's body", () => {
   });
 });
 
+const startCount = eq(rateLimits.kind, "google-start");
+
+/**
+The hour's count of Google starts, or none.
+*/
+async function starts(): Promise<number | undefined> {
+  const [row] = await db
+    .select({ count: rateLimits.count })
+    .from(rateLimits)
+    .where(startCount);
+  return row?.count;
+}
+
+describe("the hour's Google sign-in starts", () => {
+  beforeEach(async () => {
+    await db.delete(rateLimits).where(startCount);
+  });
+
+  it(`are ${String(GOOGLE_STARTS_PER_HOUR)} an hour, across everyone`, () => {
+    expect(GOOGLE_STARTS_PER_HOUR).toBe(500);
+    expect(SEND_WINDOW_S).toBe(3600);
+  });
+
+  it("count each press that starts a sign-in, under one subject", async () => {
+    await pressed(OWN_PRESS);
+    await pressed(OWN_PRESS);
+    const [row] = await db
+      .select({ subject: rateLimits.subject, count: rateLimits.count })
+      .from(rateLimits)
+      .where(startCount);
+    expect(row).toStrictEqual({ subject: GLOBAL_SUBJECT, count: 2 });
+  });
+
+  it(`let the ${String(GOOGLE_STARTS_PER_HOUR)}th start through and refuse the next, with no row written, until the hour is over`, async () => {
+    const now = nowSeconds();
+    await db
+      .insert(rateLimits)
+      .values(
+        countRow(
+          "google-start",
+          GLOBAL_SUBJECT,
+          GOOGLE_STARTS_PER_HOUR - 1,
+          now,
+        ),
+      );
+
+    const last = await pressed(OWN_PRESS);
+    expect(last.status).toBe(200);
+    expect(last.added).toBe(1);
+
+    const refused = await pressed(OWN_PRESS);
+    expect(refused.status).toBe(429);
+    expect(refused.body).toMatchObject({ code: GOOGLE_BUSY });
+    expect(refused.added).toBe(0);
+
+    // The window began an hour ago: it is over, and the count starts again.
+    await db
+      .update(rateLimits)
+      .set({ windowStartedAt: now - SEND_WINDOW_S })
+      .where(startCount);
+    const next = await pressed(OWN_PRESS);
+    expect(next.status).toBe(200);
+    expect(next.added).toBe(1);
+    expect(await starts()).toBe(1);
+  });
+
+  // Called directly: Better Auth's 404 for a provider it lacks floats a
+  // second rejection out of its dispatch.
+  it("count nothing for a press naming a provider the instance does not have", async () => {
+    await countSocialStart(db, [{ id: "google" }], {
+      ...OWN_PRESS,
+      provider: "github",
+    });
+    await countSocialStart(db, [], OWN_PRESS);
+    expect(await starts()).toBeUndefined();
+
+    await countSocialStart(db, [{ id: "github" }, { id: "google" }], OWN_PRESS);
+    expect(await starts()).toBe(1);
+  });
+
+  it("count nothing for a refused body, or for another path", async () => {
+    await pressed({ ...OWN_PRESS, loginHint: "runner@example.com" });
+    await auth.handler(
+      new Request(`${ORIGIN}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: ORIGIN },
+        body: JSON.stringify({ email: "a@example.test", password: "x" }),
+      }),
+    );
+    expect(await starts()).toBeUndefined();
+  });
+});
+
 describe("holdSocialBody", () => {
   it("says the request is not one the app sends", () => {
     expect(SOCIAL_BODY_REFUSED).toBe("Unexpected sign-in request");
   });
 
-  it("lets any other path's body pass", () => {
-    expect(() => {
-      holdSocialBody({ path: "/sign-in/email", body: { anything: 1 } });
-    }).not.toThrow();
+  it("lets any other path's body pass, with no press", () => {
+    expect(
+      holdSocialBody({ path: "/sign-in/email", body: { anything: 1 } }),
+    ).toBeUndefined();
+  });
+
+  it("hands back the press it lets through", () => {
+    expect(
+      holdSocialBody({ path: "/sign-in/social", body: OWN_PRESS }),
+    ).toStrictEqual(OWN_PRESS);
   });
 
   it("refuses with Better Auth's 400", () => {

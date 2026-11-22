@@ -28,7 +28,7 @@ import { AUTH_COPY } from "./auth-copy";
 import { CLOSED_AUTH_PATHS } from "./closed-paths";
 import { clearSignInTries, countSignInTry } from "./sign-in-limit";
 import { cutUserAgent, endOldestSessions } from "./session-cap";
-import { holdSocialBody } from "./social-body";
+import { countSocialStart, holdSocialBody } from "./social-body";
 import {
   BREACHED_CODE,
   newPasswordIn,
@@ -454,13 +454,15 @@ export function createAuth({
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         // A Google press carries only what the app's own press sends.
-        holdSocialBody(ctx);
+        const press = holdSocialBody(ctx);
         // The password first: a breached one is the form's to fix
         // whatever the code says. Then the way in.
         await screenPassword(passwordScreen, ctx);
         await admitSignUp(access, ctx);
         await withdrawChangeOnSignOutEverywhere(db, ctx);
         await countSignInTry(db, ctx);
+        // Last, so a press the way in refused is not counted as a start.
+        await countSocialStart(db, ctx.context.socialProviders, press);
       }),
       after: createAuthMiddleware(async (ctx) => {
         await clearSignInTries(db, ctx);

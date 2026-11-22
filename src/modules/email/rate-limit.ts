@@ -308,14 +308,22 @@ export const ACCESS_ASKS_PER_ADDRESS_PER_DAY = 3;
 export const ACCESS_CONFIRMS_PER_ADDRESS_PER_DAY =
   ACCESS_ASKS_PER_ADDRESS_PER_DAY;
 
+/**
+ * How many Google sign-ins may start in an hour, across everyone; past it
+ * Continue with Google is refused before Better Auth writes its state row
+ * (owner, 2026-11-21).
+ */
+export const GOOGLE_STARTS_PER_HOUR = 500;
+
 const DAY_S = 24 * 60 * 60;
 
 /**
  * The counts a caller claims by kind alone, each with its limit and its
  * window: Resend per visitor (its IP), a runner's photo uploads (their
  * id), `/takedown`'s receipts per address (lowercased, as the request
- * is), a runner's "delete scheduled" emails (their id), and Au5's
- * confirmed asks and confirm links per address (lowercased).
+ * is), a runner's "delete scheduled" emails (their id), Au5's
+ * confirmed asks and confirm links per address (lowercased), and the
+ * Google sign-ins started across everyone (`GLOBAL_SUBJECT`).
  */
 const LIMIT_OF = {
   "resend-visitor": {
@@ -330,6 +338,7 @@ const LIMIT_OF = {
     limit: ACCESS_CONFIRMS_PER_ADDRESS_PER_DAY,
     windowS: DAY_S,
   },
+  "google-start": { limit: GOOGLE_STARTS_PER_HOUR, windowS: SEND_WINDOW_S },
 } as const satisfies Partial<
   Record<RateLimitKind, Readonly<{ limit: number; windowS: number }>>
 >;
