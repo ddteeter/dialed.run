@@ -30,7 +30,13 @@
  */
 import { and, eq, gte, inArray, or, sql, type SQL } from "drizzle-orm";
 
-import { takedownBlocks, takedownRequests } from "../../../db/schema-core";
+import {
+  entryPhotos,
+  takedownBlocks,
+  takedownRequests,
+} from "../../../db/schema-core";
+import type { TakedownSubject } from "../../../lib/contracts/takedown";
+import { qualified } from "../../../lib/sql/qualified";
 
 /**
 Open requests one requester may have before a new one waits for a confirm.
@@ -95,20 +101,55 @@ export function counted(rows: readonly { n: number }[]): number {
  * `hold_state`: `held` means it may hide and alert; the caller hides only
  * when its link names something a hold moves.
  */
-export function holdStateSql(keys: RequesterKeys, now: number): SQL {
+export function holdStateSql(
+  keys: RequesterKeys,
+  now: number,
+  subject: TakedownSubject | undefined,
+): SQL {
   const blocked = sql`exists (select 1 from ${takedownBlocks} where ${inArray(takedownBlocks.key, keysOf(keys))})`;
   const open = sql`(select count(*) from ${takedownRequests} where ${and(requesterMatches(keys), eq(takedownRequests.status, "pending"))})`;
-  return sql`(case when ${blocked} then 'blocked' when ${valveShutSql(now)} then 'valve' when ${open} >= ${TAKEDOWN_CAP} then 'confirm' else 'held' end)`;
+  return sql`(case when ${blocked} then 'blocked' when ${valveShutSql(now, subject)} then 'valve' when ${open} >= ${TAKEDOWN_CAP} then 'confirm' else 'held' end)`;
 }
 
 /**
- * Whether the valve is shut as this statement runs: as many subjects were
- * newly hidden by a request in the hour before `now` as the valve allows,
- * by `hid_at`'s index. A request naming a subject already out of public
- * view hides nothing new and takes no place.
+ * Whether the valve is shut, as this statement runs, for a request naming
+ * `subject`: the valve counts kits, the distinct kits that something a
+ * request newly hid (`hid_at`, by its index) in the hour before `now` is
+ * on, so a kit and its photos take one place between them. It is shut
+ * once they are as many as the valve allows, and then only for a request
+ * whose subject is on none of them.
  */
-export function valveShutSql(now: number): SQL {
-  return sql`(select count(*) from ${takedownRequests} where ${gte(takedownRequests.hidAt, now - HOUR_S)}) >= ${TAKEDOWN_VALVE_PER_HOUR}`;
+export function valveShutSql(
+  now: number,
+  subject: TakedownSubject | undefined,
+): SQL {
+  const inHour = gte(takedownRequests.hidAt, now - HOUR_S);
+  const kit = hiddenKitOf();
+  const places = sql`(select count(distinct ${kit}) from ${takedownRequests} where ${inHour})`;
+  const sharesAPlace = sql`exists (select 1 from ${takedownRequests} where ${inHour} and ${kit} = ${subjectKitOf(subject)})`;
+  return sql`(${places} >= ${TAKEDOWN_VALVE_PER_HOUR} and not ${sharesAPlace})`;
+}
+
+/**
+ * The kit a counted request's subject is on: a photo's own kit, read from
+ * the photo (a photo gone since takes a place of its own), and a kit
+ * itself otherwise.
+ */
+function hiddenKitOf(): SQL {
+  const subjectId = qualified(takedownRequests, takedownRequests.subjectId);
+  const subjectType = qualified(takedownRequests, takedownRequests.subjectType);
+  return sql`coalesce((select ${qualified(entryPhotos, entryPhotos.entryId)} from ${entryPhotos} where ${subjectType} = 'photo' and ${qualified(entryPhotos, entryPhotos.id)} = ${subjectId}), ${subjectId})`;
+}
+
+/**
+ * The kit a new request's subject is on, read the same way: a photo's
+ * kit from the photo, never the link's word for it. NULL for a link that
+ * is not ours, which shares a place with nothing.
+ */
+function subjectKitOf(subject: TakedownSubject | undefined): SQL {
+  return subject === undefined
+    ? sql`null`
+    : sql`coalesce((select ${entryPhotos.entryId} from ${entryPhotos} where ${subject.subjectType} = 'photo' and ${eq(entryPhotos.id, subject.subjectId)}), ${subject.subjectId})`;
 }
 
 /**

@@ -195,7 +195,7 @@ export async function fileTakedownRequest<Attempt>(
         idempotencyKey: input.idempotencyKey,
         requesterKey: keys.requesterKey,
         ipKey: keys.ipKey,
-        holdState: sql`${holdStateSql(keys, now)}`,
+        holdState: sql`${holdStateSql(keys, now, subject)}`,
         posterUsername: input.posterUsername,
       })
       .onConflictDoNothing(),
@@ -808,7 +808,7 @@ export async function confirmTakedownRequest(
   // past them answers as an unknown link (owner, 2026-11-16).
   if (now > request.dueAt) return "not_found";
   const subject = await requestSubjectOf(db, request);
-  const state = sql<HoldState>`(case when ${valveShutSql(now)} then 'valve' else 'held' end)`;
+  const state = sql<HoldState>`(case when ${valveShutSql(now, subject)} then 'valve' else 'held' end)`;
   const row = rowOf(request.id, eq(takedownRequests.confirmedAt, now));
   const hid = holds(row.hid(now));
   const told = subject === undefined ? [] : await holdNotice(db, subject, hid);

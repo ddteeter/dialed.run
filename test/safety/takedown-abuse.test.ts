@@ -474,7 +474,7 @@ describe("the confirm", () => {
 });
 
 /**
-`count` requests that newly hid something just before `at`, from strangers.
+`count` requests that newly hid something just before `at`, from strangers, each on a kit of its own.
 */
 async function heldThisHour(count: number, at: number): Promise<void> {
   for (let index = 0; index < count; index += 1) {
@@ -485,6 +485,8 @@ async function heldThisHour(count: number, at: number): Promise<void> {
         requesterEmail: `flood${String(index)}@example.com`,
         signature: "x",
         location: "x",
+        subjectType: "entry",
+        subjectId: newUlid(),
         dueAt: at,
         createdAt: at - 60,
         idempotencyKey: newUlid(),
@@ -560,6 +562,91 @@ describe("the valve", () => {
     await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 1, NOW);
     const a = await sharedEntry();
     expect(await stateOf("one@example.com", entryLink(a))).toBe("held");
+  });
+});
+
+describe("the valve, counting kits", () => {
+  it("gives a kit and its photos one place between them", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 2, NOW);
+    const kit = await sharedEntry();
+    const photos = await Promise.all(
+      [0, 1, 2, 3].map((position) => photoOn(kit, "pass", position)),
+    );
+    await file("kit@example.com", entryLink(kit), { ip: "198.51.100.30" });
+    for (const [index, photoId] of photos.entries()) {
+      const row = await file(
+        `photo${String(index)}@example.com`,
+        photoLink(kit, photoId),
+        {
+          ip: `198.51.100.${String(31 + index)}`,
+        },
+      );
+      expect(row).toMatchObject({ holdState: "held", hidAt: NOW });
+    }
+
+    const next = await sharedEntry();
+    const row = await file("next@example.com", entryLink(next), {
+      ip: "198.51.100.40",
+    });
+    expect(row).toMatchObject({ holdState: "held", hidAt: NOW });
+  });
+
+  it("shuts for a new kit, and still lets a photo on a kit it counted hide", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 1, NOW);
+    const kit = await sharedEntry();
+    const photoId = await photoOn(kit, "pass");
+    await file("kit@example.com", entryLink(kit), { ip: "198.51.100.30" });
+
+    const other = await sharedEntry();
+    const otherPhoto = await photoOn(other, "pass");
+    const shut = await file("other@example.com", photoLink(other, otherPhoto), {
+      ip: "198.51.100.31",
+    });
+    expect(shut).toMatchObject({ holdState: "valve", hidAt: NOT_SET });
+
+    const same = await file("same@example.com", photoLink(kit, photoId), {
+      ip: "198.51.100.32",
+    });
+    expect(same).toMatchObject({ holdState: "held", hidAt: NOW });
+  });
+
+  it("reads a photo's kit from the photo, never from its link", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 1, NOW);
+    const kit = await sharedEntry();
+    await file("kit@example.com", entryLink(kit), { ip: "198.51.100.30" });
+    const other = await sharedEntry();
+    const otherPhoto = await photoOn(other, "pass");
+
+    const row = await file("liar@example.com", photoLink(kit, otherPhoto), {
+      ip: "198.51.100.31",
+    });
+
+    expect(row).toMatchObject({ holdState: "valve", hidAt: NOT_SET });
+  });
+
+  it("gives a photo gone since a place of its own", async () => {
+    for (let index = 0; index < TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await core()
+        .insert(takedownRequests)
+        .values({
+          id: newUlid(),
+          requesterEmail: `gone${String(index)}@example.com`,
+          signature: "x",
+          location: `gone${String(index)}`,
+          subjectType: "photo",
+          subjectId: newUlid(),
+          dueAt: NOW,
+          createdAt: NOW - 60,
+          idempotencyKey: newUlid(),
+          requesterKey: `gone${String(index)}@example.com`,
+          holdState: "held",
+          heldAt: NOW - 60,
+          hidAt: NOW - 60,
+          status: "declined",
+        });
+    }
+    const kit = await sharedEntry();
+    expect(await stateOf("one@example.com", entryLink(kit))).toBe("valve");
   });
 });
 
