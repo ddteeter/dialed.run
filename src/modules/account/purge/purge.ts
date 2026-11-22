@@ -632,6 +632,7 @@ async function deleteAccountRows(
     forgetRateLimit(db, "purge-runner", userId),
     forgetRateLimit(db, "deletion-notice", userId),
     forgetRateLimit(db, "correction-runner", userId),
+    forgetRateLimit(db, "strava-connect-runner", userId),
     forgetRunnerEnrichmentLimit(db, userId),
     ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post
