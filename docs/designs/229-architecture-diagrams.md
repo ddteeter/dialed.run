@@ -460,6 +460,34 @@ now). The moves had already regenerated the structure, so this PR has no
   The data export, account deletion's purge, photo screening and the
   outbox moved to #932, under #799.
 
+## #936 as built: one module map
+
+Supersedes step 2's "a view a module".
+
+- **The generator writes no views.** The 48 `<module>Imports` views are
+  gone from `structure.generated.c4` (owner, 2026-11-21: they added
+  little, and they recorded as "Changed" with nothing visible different
+  whenever an entry point nested in a module moved its grouping, as three
+  did in #797's video). dependency-cruiser in the commit gate holds the
+  same edges.
+- **The site already does what they did.** Hover a module in any view,
+  "Browse relationships", scope Global: the module's imports both ways,
+  wiring included, plus the flows' arrows, from the whole model. Checked
+  in the built site.
+- **`modules` is legible by predicate, not by layout.** At 14 modules it
+  drew 60 arrows. Four modules meet nearly every other one: `dispatch`
+  (11 out: the queue and cron handlers import the modules whose work they
+  run), `email` (11 in), `safety` (7 in) and `ops` (6 in). The view now
+  excludes `dispatch` and `email`, and the arrows into `ops` and `safety`,
+  which leaves 12 modules and 28 arrows in a layered graph; its
+  description names what is left out and how to see it. Tried and
+  rejected: a left-to-right layout (worse), and the hub arrows drawn
+  muted (an `include … with` on them pulls the sub-modules in as boxes).
+- **The hub list is a choice in `overview.c4`, not derived.** A module
+  that becomes a hub later makes the map noisier, not wrong. The
+  generator could tag modules above a fan-in threshold instead; not done,
+  since the list is four names and changes rarely.
+
 ## Open questions
 
 1. **Auth and trust boundaries are not drawn** while the security audit's

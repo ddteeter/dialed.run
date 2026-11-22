@@ -167,12 +167,15 @@ is generated from the imports themselves, as dependency-cruiser resolves
 them (`npm run diagrams:generate`; `npm run diagrams:check` fails when it
 is stale), so it is the graph as it is, not as someone last drew it.
 
-Each module also has a view of its own ([`runsImports`](https://ddteeter.github.io/dialed.run/#/view/runsImports/), [`feedImports`](https://ddteeter.github.io/dialed.run/#/view/feedImports/) and
-so on): the module, what it imports and what imports it. Click a module in
-`modules` to open it. Those views add the dotted arrows the map leaves
-out: a pair where only a module's wiring (its `functions.ts` and its
-components) imports from the other, which is mostly the auth gates, the
-error reporter and another module's component.
+To stay readable, the map leaves out four modules' arrows: `dispatch`,
+the queue and cron handlers, which imports the modules whose work it runs;
+`email`, which every module that sends mail imports; and the arrows into
+`ops` and `safety`, which most modules import. For all of one module's
+arrows, hover it, choose "Browse relationships" and set the scope to
+Global. That also shows the dotted arrows the map never draws: a pair
+where only a module's wiring (its `functions.ts` and its components)
+imports from the other, which is mostly the auth gates, the error reporter
+and another module's component.
 
 The graph draws modules only. Route files import modules and are imported
 by nothing, and `src/server.ts` hands the scheduled handler and the queue

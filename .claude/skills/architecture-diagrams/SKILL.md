@@ -40,9 +40,14 @@ It holds:
   imports from the other: `-[imports]->` when its service code does,
   `-[wiring]->` when only its `functions.ts` and components do. The arrows
   carry no names, so the file changes when a pair appears or goes, not
-  with every import. Each module has a view of its imports
-  (`runsImports`), and `modules` in `overview.c4` is the map of the
-  `imports` arrows alone.
+  with every import.
+
+It holds no views. `modules` in `overview.c4` is the one map of the
+modules: the `imports` arrows alone, without the four modules that meet
+nearly every other one (its description names them). For one module's
+arrows, both ways and wiring included, the site's "Browse relationships"
+with the scope set to Global reads the whole model; do not add a view per
+module.
 
 You never write these by hand, and never write an `-[imports]->` or
 `-[wiring]->` arrow.
