@@ -62,10 +62,12 @@ type Db = DrizzleD1Database & { $client: D1Database };
  * the row goes to `failed` and the message is acked (law 6: the failure is
  * on the row, where the closet can show it). So is an `UnreadableAnswerError`,
  * a model answer that is not an object at all: one try on the product, and
- * the hourly sweep's re-drive is the next one. Anything else — a network
- * throw, a timeout, a write-back conflict — is thrown, so the queue's own
- * retry machinery owns it (law 3) and the DLQ handler below marks the row
- * when it gives up.
+ * the hourly sweep's re-drive is the next one. So is anything thrown
+ * before the page is stored — a network throw, a timeout, a D1 or R2
+ * error — which `beforeStored` makes a `PageFetchError`, so each try is
+ * one counted fetch. Anything else — a write-back conflict, a model
+ * outage — is thrown, so the queue's own retry machinery owns it (law 3)
+ * and the DLQ handler below marks the row when it gives up.
  */
 
 const REUSE_WINDOW_MS = 60 * 60 * 1000;
@@ -257,6 +259,20 @@ async function dropDeniedSource(db: Db, productId: string): Promise<void> {
 }
 
 /**
+ * `work`, with whatever it throws made a `PageFetchError` that names it
+ * and keeps it as its cause: a try that fails before the page is stored
+ * is a failed try, so each costs one counted fetch.
+ */
+async function beforeStored<T>(work: () => Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof PageFetchError) throw error;
+    throw new PageFetchError(String(error), { cause: error });
+  }
+}
+
+/**
  * Fetch, store, record, extract, write back — the bytes go to R2 before
  * anything tries to understand them (D-31), and the row is written before
  * the ladder reads them (SA-M32), as `none` until `extractFrom` records
@@ -272,23 +288,11 @@ async function fetchAndExtract(
   productId: string,
   sourceUrl: string,
 ): Promise<"deferred" | undefined> {
-  const page = await fetchProductPage(sourceUrl, deps.fetchImpl ?? fetch, {
-    proxyApiKey: deps.proxyApiKey,
-    claimProxy: () => canSpendProxyFor(deps.db, productId),
-  });
-  if (await deps.isLandingDenied(sourceUrl, page.finalUrl)) {
-    await dropDeniedSource(deps.db, productId);
-    return undefined;
-  }
-  const fetchedAt = Date.now();
-  const r2Key = await putSnapshot(productId, page.html, fetchedAt);
-  const id = await recordSnapshot(deps.db, {
-    productId,
-    url: page.finalUrl,
-    r2Key,
-    rung: "none",
-    fetchedAt,
-  });
+  const stored = await beforeStored(() =>
+    fetchAndStore(deps, productId, sourceUrl),
+  );
+  if (stored === undefined) return undefined;
+  const { page, id } = stored;
   // After the page is stored, so the sweep's next try reads it again
   // rather than fetching it again: its rung is still `none`, which keeps
   // it reusable at any age.
@@ -303,6 +307,37 @@ async function fetchAndExtract(
     result,
   );
   return undefined;
+}
+
+/**
+ * The fetch and the stored page, or nothing when the page landed
+ * somewhere denied.
+ */
+async function fetchAndStore(
+  deps: EnrichmentDeps,
+  productId: string,
+  sourceUrl: string,
+): Promise<
+  { page: Awaited<ReturnType<typeof fetchProductPage>>; id: string } | undefined
+> {
+  const page = await fetchProductPage(sourceUrl, deps.fetchImpl ?? fetch, {
+    proxyApiKey: deps.proxyApiKey,
+    claimProxy: () => canSpendProxyFor(deps.db, productId),
+  });
+  if (await deps.isLandingDenied(sourceUrl, page.finalUrl)) {
+    await dropDeniedSource(deps.db, productId);
+    return;
+  }
+  const fetchedAt = Date.now();
+  const r2Key = await putSnapshot(productId, page.html, fetchedAt);
+  const id = await recordSnapshot(deps.db, {
+    productId,
+    url: page.finalUrl,
+    r2Key,
+    rung: "none",
+    fetchedAt,
+  });
+  return { page, id };
 }
 
 /**

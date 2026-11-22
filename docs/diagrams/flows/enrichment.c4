@@ -106,12 +106,12 @@ views {
         description 'The products row is the durable marker'
       }
 
-    // source: src/modules/enrichment/fetch-page.ts fetchProductPage, TIMEOUT_MS, MAX_REDIRECTS, assertFetchable, assertShortEnough; src/modules/enrichment/meta-refresh.ts refreshTarget; src/modules/enrichment/bounds.ts MAX_BYTES; src/lib/contracts/common.ts MAX_PRODUCT_LINK_LENGTH; src/modules/enrichment/html.ts readPage, MAX_OPEN_TAGS
+    // source: src/modules/enrichment/consume.ts beforeStored, fetchAndStore; src/modules/enrichment/fetch-page.ts fetchProductPage, TIMEOUT_MS, MAX_REDIRECTS, assertFetchable, assertShortEnough; src/modules/enrichment/meta-refresh.ts refreshTarget; src/modules/enrichment/bounds.ts MAX_BYTES; src/lib/contracts/common.ts MAX_PRODUCT_LINK_LENGTH; src/modules/enrichment/html.ts readPage, MAX_OPEN_TAGS
     cf.app.enrichment.consumer -> shop 'fetches the page, one hop at a time' {
       notes '''
         **Bounded.** 10 seconds a hop, at most 5 redirects (a meta refresh counts as one), at most 6 MB of page. Every hop is checked before it is fetched, and no address, the proxy\'s included, may be longer than 2,048 characters. A page with more than 512 tags open at once is refused.
 
-        **If it fails:** a refusal by the page is terminal (`failed`, acked). A network error or a timeout throws, and the queue retries.
+        **If it fails:** the try is failed (`failed`, acked), whether the page refused or the fetch threw: a network error, a timeout, or an error before the page is stored. The hourly sweep\'s re-drive is the next try, so each try is one counted fetch.
       '''
     }
     opt 'the shop refuses a Worker (401, 403, 429 or 503), a proxy key is set, and neither the product\'s nor the day\'s proxy calls are spent' {
@@ -218,7 +218,7 @@ views {
       // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, failedAndOwed; src/modules/enrichment/abandon.ts sweepOwed, ENRICHMENT_RETRY_WINDOW_S, ENRICHMENT_SWEEP_TRIES (6)
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'claims failed products back to pending' {
         notes '''
-          A claim, not just a send: the consumer ignores a product that is not `pending`. Hourly inside the product\'s first day, while it has fewer than 6 tries: a dead letter counts 4 (one for each delivery), a refused page or an unreadable answer 1. Past the cap it waits out its day `failed`.
+          A claim, not just a send: the consumer ignores a product that is not `pending`. Hourly inside the product\'s first day, while it has fewer than 6 tries: a dead letter counts 4 (one for each delivery), a failed fetch or an unreadable answer 1. Past the cap it waits out its day `failed`.
 
           The closet\'s link line says "retrying" by the same rule.
         '''

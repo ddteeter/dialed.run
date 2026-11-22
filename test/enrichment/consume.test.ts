@@ -151,14 +151,6 @@ const refusingWithProxy: typeof fetch = (input) =>
   );
 
 /**
-Serves the tee page and nothing else — every other URL is a network error.
-*/
-const servingOnlyTee: typeof fetch = (input) =>
-  urlOf(input).includes("tee")
-    ? Promise.resolve(new Response(PAGE))
-    : Promise.reject(new TypeError("down"));
-
-/**
 Serves the page that advertises an image, at any URL.
 */
 const servingPageWithImage: typeof fetch = () =>
@@ -573,22 +565,48 @@ describe("handleEnrichmentBatch: failures", () => {
     );
   });
 
-  it("retries and leaves the row pending when the network throws", async () => {
-    // Not the page refusing — the fetch itself failing. The queue owns
-    // the retry (law 3), so the message is retried and the row untouched.
+  it("fails the try and acks when the network throws before the page is stored", async () => {
+    // Not the page refusing — the fetch itself failing. It is one try on
+    // the product, like a refusal, and the hourly sweep's re-drive is the
+    // next: the queue does not fetch again.
     const productId = await pendingProduct();
     const deps = depsWith(vi.fn(networkDown));
     const message = jobFor(productId);
 
     await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), deps);
 
-    expect(message.retry).toHaveBeenCalledTimes(1);
-    expect(message.ack).not.toHaveBeenCalled();
-    expect(await statusOf(productId)).toBe("pending");
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(message.retry).not.toHaveBeenCalled();
+    expect(await rowOf(productId)).toMatchObject({
+      extractionStatus: "failed",
+      extractionError: "TypeError: network down",
+      extractionTries: 1,
+    });
     expect(deps.captureException).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "network down" }),
-      { queue: "dialed-enrichment", messageId: "m1", productId },
+      expect.objectContaining({ name: "PageFetchError" }),
+      { surface: "enrichment-fetch", productId },
     );
+    expect(deps.captureException.mock.calls[0]?.[0]).toHaveProperty(
+      "cause.message",
+      "network down",
+    );
+  });
+
+  it("fails the try when storing the page throws", async () => {
+    const productId = await pendingProduct();
+    const message = jobFor(productId);
+
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", [message]), {
+      ...depsWith(serving(PAGE)),
+      isLandingDenied: () => Promise.reject(new Error("D1 unavailable")),
+    });
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(await rowOf(productId)).toMatchObject({
+      extractionStatus: "failed",
+      extractionError: "Error: D1 unavailable",
+    });
+    expect(await snapshotsOf(productId)).toEqual([]);
   });
 
   it("keeps going after one bad message so the rest of the batch is served", async () => {
@@ -599,11 +617,19 @@ describe("handleEnrichmentBatch: failures", () => {
       .set({ sourceUrl: "https://shop.example.com/products/broken" })
       .where(eq(products.id, bad));
     const messages = [jobFor(bad, "bad"), jobFor(good, "good")];
+    // The model fails on the broken page only: an error the queue retries.
+    const model = {
+      extract: vi.fn((_text: string, hint: { url: string }) =>
+        hint.url.includes("broken")
+          ? Promise.reject(new Error("upstream"))
+          : Promise.resolve({ fabricComposition: { verbatim: COMPOSITION } }),
+      ),
+    };
 
-    await handleEnrichmentBatch(
-      batchOf("dialed-enrichment", messages),
-      depsWith(vi.fn(servingOnlyTee)),
-    );
+    await handleEnrichmentBatch(batchOf("dialed-enrichment", messages), {
+      ...depsWith(serving(PAGE)),
+      model,
+    });
 
     expect(messages[0]?.retry).toHaveBeenCalledTimes(1);
     expect(messages[1]?.ack).toHaveBeenCalledTimes(1);
