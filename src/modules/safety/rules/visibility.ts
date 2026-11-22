@@ -19,6 +19,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
   blocks,
+  entryPhotos,
   outfitEntries,
   reports,
   sharedAudience,
@@ -66,7 +67,7 @@ export function publiclyVisibleEntry(viewerId?: string): SQL | undefined {
       ? []
       : [
           notBlockedEitherWay(viewerId, outfitEntries.userId),
-          notReportedBy(viewerId),
+          ...notReportedBy(viewerId),
         ]),
   );
 }
@@ -143,9 +144,17 @@ export function notBlockedEitherWay(
  * decide." The report row is the hide, and only for the person who filed
  * it — `reports_one_per_reporter` is (reporter, type, subject), exactly
  * this probe.
+ *
+ * A report of one of the entry's photos hides the whole kit from its
+ * reporter too, as a report of the kit does (owner, 2026-11-21, #933).
+ * That probe walks the viewer's photo reports on the same index and
+ * reads each photo by its primary key.
  */
-function notReportedBy(viewerId: string): SQL {
-  return sql`not exists (select 1 from ${reports} where ${reports.reporterId} = ${viewerId} and ${reports.subjectType} = 'entry' and ${reports.subjectId} = ${outfitEntries.id})`;
+function notReportedBy(viewerId: string): SQL[] {
+  return [
+    sql`not exists (select 1 from ${reports} where ${reports.reporterId} = ${viewerId} and ${reports.subjectType} = 'entry' and ${reports.subjectId} = ${outfitEntries.id})`,
+    sql`not exists (select 1 from ${reports} inner join ${entryPhotos} on ${entryPhotos.id} = ${reports.subjectId} where ${reports.reporterId} = ${viewerId} and ${reports.subjectType} = 'photo' and ${entryPhotos.entryId} = ${outfitEntries.id})`,
+  ];
 }
 
 /**

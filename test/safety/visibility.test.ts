@@ -68,6 +68,7 @@ A public entry by a fresh author, with one screened photo.
 async function postedEntry(): Promise<{
   author: string;
   entryId: string;
+  photoId: string;
   photoKey: string;
 }> {
   const author = await makeVerifiedUser();
@@ -82,7 +83,7 @@ async function postedEntry(): Promise<{
     position: 0,
     screenStatus: "pass",
   });
-  return { author, entryId, photoKey };
+  return { author, entryId, photoId, photoKey };
 }
 
 /**
@@ -381,6 +382,74 @@ describe("a reporter's own hide (SAF-13)", () => {
       UNSEEN,
     );
     expect(await sightings(bystander, posted.entryId, posted.photoKey)).toEqual(
+      SEEN,
+    );
+  });
+
+  it("hides the whole kit from the reporter of one of its photos, and from nobody else", async () => {
+    const posted = await postedEntry();
+    const reporter = await makeUser();
+    const bystander = await makeUser();
+    await follow(reporter, posted.author);
+    await follow(bystander, posted.author);
+
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "photo",
+        subjectId: posted.photoId,
+        reason: "spam",
+      },
+      oweInCore,
+      noPurge,
+    );
+
+    expect(await sightings(reporter, posted.entryId, posted.photoKey)).toEqual(
+      UNSEEN,
+    );
+    expect(await sightings(bystander, posted.entryId, posted.photoKey)).toEqual(
+      SEEN,
+    );
+  });
+
+  it("hides only the kit whose photo was reported", async () => {
+    const reported = await postedEntry();
+    const other = await postedEntry();
+    const reporter = await makeUser();
+    await follow(reporter, reported.author);
+    await follow(reporter, other.author);
+
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "photo",
+        subjectId: reported.photoId,
+        reason: "spam",
+      },
+      oweInCore,
+      noPurge,
+    );
+
+    expect(await sightings(reporter, other.entryId, other.photoKey)).toEqual(
+      SEEN,
+    );
+  });
+
+  it("is about this kit's photos: a photo report naming the entry's id hides nothing", async () => {
+    const posted = await postedEntry();
+    const reporter = await makeUser();
+    await follow(reporter, posted.author);
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "photo",
+        subjectId: posted.entryId,
+        reason: "spam",
+      },
+      oweInCore,
+      noPurge,
+    );
+    expect(await sightings(reporter, posted.entryId, posted.photoKey)).toEqual(
       SEEN,
     );
   });
