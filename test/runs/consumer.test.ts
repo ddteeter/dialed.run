@@ -20,6 +20,7 @@ import {
   importFailureReason,
 } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
+import { heldToTheClock } from "../../src/modules/runs/consumer";
 import type { StravaApi } from "../../src/modules/runs/strava/api";
 import {
   NO_TRACK_MESSAGE,
@@ -2015,6 +2016,29 @@ describe("a read file goes once its run is in the log (D-116)", () => {
     });
     expect(await env.IMPORTS.head(key)).toBeNull();
     expect(await owedDeleteOf(userId, key)).toBeUndefined();
+  });
+});
+
+describe("heldToTheClock", () => {
+  const draft = {
+    startedAt: 1_000_000,
+    durationS: 1800,
+    distanceM: 5000,
+    indoor: true,
+    title: "Imported run",
+  };
+
+  it("keeps a run that starts a day past the clock, and refuses one a second later", () => {
+    const now = draft.startedAt - MAX_START_AHEAD_SECONDS;
+    expect(heldToTheClock(draft, now)).toBe(draft);
+    const tooFar = () => heldToTheClock(draft, now - 1);
+    expect(tooFar).toThrow(RunParseError);
+    expect(tooFar).toThrow(
+      expect.objectContaining({
+        reason: "import: the run starts more than a day ahead",
+        message: PARSE_FAILURE_MESSAGE,
+      }),
+    );
   });
 });
 

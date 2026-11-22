@@ -21,7 +21,7 @@ import {
   stravaConnections,
   stravaRevocations,
 } from "../../db/schema-core";
-import { effortFromWatch } from "../../lib/contracts";
+import { effortFromWatch, type RunDraft } from "../../lib/contracts";
 import { GARMIN_DEVICE_NAME } from "./garmin";
 import { didClaim } from "../../lib/sql/claim";
 import { newUlid, type Ulid } from "../../lib/ids";
@@ -264,6 +264,18 @@ export function importFailureReason(error: unknown): string {
 }
 
 /**
+ * A parsed run, refused when it starts more than `MAX_START_AHEAD_SECONDS`
+ * past `now`: the bound a manual run has, so a file is held to it too.
+ * Refused as a file that could not be read.
+ */
+export function heldToTheClock(draft: RunDraft, now = nowSeconds()): RunDraft {
+  if (draft.startedAt > now + MAX_START_AHEAD_SECONDS) {
+    throw new RunParseError("import: the run starts more than a day ahead");
+  }
+  return draft;
+}
+
+/**
 The import a job points at, or nothing when the row is gone.
 */
 function importById(db: CoreDb, importId: string) {
@@ -327,10 +339,7 @@ async function parseAndSave(
   try {
     const extension = extensionFromKey(importRow.r2Key);
     const bytes = await object.arrayBuffer();
-    draft = await sourceFor(extension).parse(bytes);
-    if (draft.startedAt > nowSeconds() + MAX_START_AHEAD_SECONDS) {
-      throw new RunParseError("import: the run starts more than a day ahead");
-    }
+    draft = heldToTheClock(await sourceFor(extension).parse(bytes));
   } catch (error) {
     if (!(error instanceof RunParseError)) {
       deps.captureException(error, {

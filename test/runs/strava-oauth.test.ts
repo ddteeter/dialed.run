@@ -1,7 +1,11 @@
 import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
-import { stravaConnections, stravaRevocations } from "../../src/db/schema-core";
+import {
+  rateLimits,
+  stravaConnections,
+  stravaRevocations,
+} from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
 import { coreDb } from "../../src/modules/runs/core-db";
@@ -641,6 +645,25 @@ describe("connectFromCallback (the callback, as one decision)", () => {
       spy.captureException,
     );
     expect(other).toStrictEqual({ ok: true });
+  });
+
+  it("keeps the count under the runner's id, as strava-connect-runner", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    await connectFromCallback(
+      db,
+      fakeApi(),
+      userId,
+      GOOD,
+      captureExceptionSpy().captureException,
+    );
+    const counted = await db
+      .select({ kind: rateLimits.kind, count: rateLimits.count })
+      .from(rateLimits)
+      .where(eq(rateLimits.subject, userId));
+    expect(counted).toStrictEqual([
+      { kind: "strava-connect-runner", count: 1 },
+    ]);
   });
 
   it("counts no exchange for a callback refused before it", async () => {
