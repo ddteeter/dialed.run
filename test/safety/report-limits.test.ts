@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   accountDeletions,
@@ -494,6 +494,13 @@ async function approvedAfterOneReport(reporter: string): Promise<string> {
 describe("a repeat of a report (design 232)", () => {
   it("leaves a kit a person approved up, its row decided, and owes nothing", async () => {
     Reflect.set(env, "ADMIN_USER_IDS", "op-one");
+    // One second throughout: the report, its Approve and the repeat. A
+    // report filed in the Approve's own second still counts, so the one
+    // reporter is counted.
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now());
+    onTestFinished(() => {
+      clock.mockRestore();
+    });
     const reporter = await makeUser();
     const subject = await approvedAfterOneReport(reporter);
 
