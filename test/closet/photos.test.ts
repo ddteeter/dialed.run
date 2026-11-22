@@ -21,9 +21,12 @@ import { outbox, rateLimits, wardrobeItems } from "../../src/db/schema-core";
 import {
   PHOTO_LIMIT_REACHED,
   PHOTO_UPLOADS_PER_DAY,
+  PHOTOS_HELD_AT_ONCE,
+  PHOTOS_STILL_HELD,
   maxPhotoBytes,
 } from "../../src/lib/photo-constraints";
-import { countRow } from "../rate-limit-rows";
+import { countedKeys, countRow } from "../rate-limit-rows";
+import { heldGarmentPhotos } from "../held-photo-rows";
 import {
   getItemPhotoObject,
   isPhotoSize,
@@ -1024,6 +1027,54 @@ describe("the runner's day's photo uploads (SA-M14)", () => {
       ),
     ).rejects.toThrow(new PhotoValidationError(PHOTO_LIMIT_REACHED));
     expect(await storedKeys(photoKeyFor(userId, item.id))).toStrictEqual([]);
+  });
+
+  it("refuses a garment photo while the runner's held photos are at the limit, storing and counting nothing", async () => {
+    const client = db();
+    const userId = newUlid();
+    const item = await createItem(client, userId, {
+      category: "top",
+      name: "Held limit shirt",
+    });
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE);
+
+    await expect(
+      uploadItemPhoto(
+        client,
+        userId,
+        item.id,
+        new Uint8Array(samplePhotoBytes),
+        "image/jpeg",
+      ),
+    ).rejects.toThrow(new PhotoValidationError(PHOTOS_STILL_HELD));
+    expect(await storedKeys(photoKeyFor(userId, item.id))).toStrictEqual([]);
+    const [row] = await client
+      .select({ photoKey: wardrobeItems.photoKey })
+      .from(wardrobeItems)
+      .where(eq(wardrobeItems.id, item.id));
+    expect(row?.photoKey).toBeNull();
+    expect(await countedKeys(client)).not.toContain(`photo-runner:${userId}`);
+  });
+
+  it("takes a garment photo while the runner's held photos are one short of the limit", async () => {
+    const client = db();
+    const userId = newUlid();
+    const item = await createItem(client, userId, {
+      category: "top",
+      name: "Nearly held shirt",
+    });
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
+    await import("@cf-wasm/photon/workerd");
+
+    const { photoKey } = await uploadItemPhoto(
+      client,
+      userId,
+      item.id,
+      new Uint8Array(samplePhotoBytes),
+      "image/jpeg",
+    );
+
+    expect(photoKey.startsWith(photoKeyFor(userId, item.id))).toBe(true);
   });
 
   it("counts a garment photo against the runner's day", async () => {

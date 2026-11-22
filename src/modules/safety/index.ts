@@ -49,6 +49,7 @@ export {
   openRow as openReviewRow,
   openSubject,
   pendingReviewCount,
+  hasPhotosHeldAtLimit,
   releaseStaleClaims,
   resolveReview,
   reviewResolution,

@@ -23,8 +23,11 @@ import { nowSeconds } from "../../src/lib/now";
 import {
   PHOTO_LIMIT_REACHED,
   PHOTO_UPLOADS_PER_DAY,
+  PHOTOS_HELD_AT_ONCE,
+  PHOTOS_STILL_HELD,
 } from "../../src/lib/photo-constraints";
-import { countRow } from "../rate-limit-rows";
+import { countedKeys, countRow } from "../rate-limit-rows";
+import { heldGarmentPhotos } from "../held-photo-rows";
 import { imageDimensions } from "../../src/lib/photo-pipeline";
 import {
   InvalidPhotoError,
@@ -702,6 +705,50 @@ describe("bounds on what one runner stores (SA-M14)", () => {
       prefix: entryPhotoPrefix(userId, entryId),
     });
     expect(listed.objects).toHaveLength(0);
+  });
+
+  it("refuses a photo while the runner's held photos are at the limit, storing and counting nothing", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE);
+
+    await expect(
+      uploadPhoto({
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      }),
+    ).rejects.toThrow(new InvalidPhotoError(PHOTOS_STILL_HELD));
+    const listed = await env.MEDIA.list({
+      prefix: entryPhotoPrefix(userId, entryId),
+    });
+    expect(listed.objects).toHaveLength(0);
+    const stored = await drizzle(env.DIALED_CORE)
+      .select({ id: entryPhotos.id })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.entryId, entryId));
+    expect(stored).toStrictEqual([]);
+    expect(await countedKeys(drizzle(env.DIALED_CORE))).not.toContain(
+      `photo-runner:${userId}`,
+    );
+  });
+
+  it("takes a photo while the runner's held photos are one short of the limit", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
+
+    const key = await uploadPhoto({
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    });
+
+    expect(key.startsWith(entryPhotoPrefix(userId, entryId))).toBe(true);
   });
 
   it("counts each upload once, and a repeat of one submission not again", async () => {

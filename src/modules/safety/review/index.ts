@@ -1,3 +1,4 @@
+export { hasPhotosHeldAtLimit } from "./held-photos";
 export { type OtherPhotos, otherPhotosOf } from "./other-photos";
 export { type PhotoMatches, photoMatchesOf } from "./photo-matches";
 export {

@@ -434,7 +434,7 @@ function waitingOnReview(): SQL | undefined {
  * garment's photo, and NULL for a product. Every column is named with its
  * table, so none binds to the reports joined beside the queue.
  */
-function subjectOwner(): SQL {
+export function subjectOwner(): SQL {
   const type = qualified(reviewQueue, reviewQueue.subjectType);
   const id = qualified(reviewQueue, reviewQueue.subjectId);
   const kitAuthor = qualified(outfitEntries, outfitEntries.userId);

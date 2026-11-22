@@ -15,6 +15,7 @@ import { wardrobeItems } from "../../db/schema-core";
 import { newUlid, ulidSchema } from "../../lib/ids";
 import {
   PHOTO_LIMIT_REACHED,
+  PHOTOS_STILL_HELD,
   isAllowedPhotoType,
   maxPhotoBytes,
 } from "../../lib/photo-constraints";
@@ -43,6 +44,7 @@ import {
   garmentPhotoForgotten,
   withdrawnGarmentUnderReview,
   isHeldAsRemovedCopy,
+  hasPhotosHeldAtLimit,
   screenPhoto,
   type Classify,
 } from "../safety";
@@ -109,6 +111,11 @@ export async function uploadItemPhoto(
   const refusal = photoRefusal(bytes);
   if (refusal !== undefined) throw new PhotoValidationError(refusal);
   await getOwnedItem(db, userId, itemId);
+  // Refused while the classifier's holds on the runner's photos are at
+  // their limit, before the day's count, so the refusal spends none of it.
+  if (await hasPhotosHeldAtLimit(userId)) {
+    throw new PhotoValidationError(PHOTOS_STILL_HELD);
+  }
   // One of the runner's day's photo uploads (SA-M14), counted before
   // anything is decoded or stored.
   const claim = await claimLimit(db, "photo-runner", userId);
