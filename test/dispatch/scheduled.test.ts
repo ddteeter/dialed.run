@@ -426,6 +426,65 @@ describe("the cron heartbeat", () => {
     expect(row?.status).toBe("pending");
   });
 
+  it("hides a subject over the report threshold even when the screening retry throws", async () => {
+    // Three reports written directly on a visible entry, as a
+    // half-finished `fileReport` leaves them.
+    const author = newUlid();
+    const reportedRun = await insertRun({ userId: author });
+    const reportedId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: reportedId,
+      userId: author,
+      runId: reportedRun,
+      verdict: 0,
+      audience: "runners",
+      createdAt: nowSeconds(),
+    });
+    for (let n = 0; n < 3; n += 1) {
+      await coreDb().insert(reports).values({
+        id: newUlid(),
+        reporterId: newUlid(),
+        subjectType: "entry",
+        subjectId: reportedId,
+        reason: "explicit",
+        createdAt: nowSeconds(),
+      });
+    }
+    // A photo to screen, whose read from storage fails.
+    const userId = newUlid();
+    const runId = await insertRun({ userId });
+    const entryId = newUlid();
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId,
+      runId,
+      verdict: 0,
+      audience: "runners",
+      createdAt: nowSeconds(),
+    });
+    await coreDb()
+      .insert(entryPhotos)
+      .values({
+        id: newUlid(),
+        entryId,
+        photoKey: `entries/${userId}/${entryId}/p`,
+        position: 0,
+      });
+    const failure = new Error("storage is down");
+    vi.spyOn(env.MEDIA, "get").mockRejectedValue(failure);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    await expect(
+      handleScheduled({ cron: "15 * * * *" } as ScheduledController),
+    ).rejects.toBe(failure);
+
+    const [row] = await coreDb()
+      .select({ status: outfitEntries.moderationStatus })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, reportedId));
+    expect(row?.status).toBe("hidden_pending_review");
+  });
+
   it("says so when it takes a stale review claim back", async () => {
     // A claim stamped long enough ago that its lease has run out. Written
     // directly because the only other way to reach this state is to wait

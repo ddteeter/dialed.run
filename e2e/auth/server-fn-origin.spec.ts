@@ -8,8 +8,10 @@ import type {
   Response,
 } from "@playwright/test";
 
+import { newUlid } from "../../src/lib/ids";
 import { expect, test } from "../support/a11y";
 import { storageStateFor } from "../support/accounts";
+import { isServerFnCall } from "../support/server-fn";
 
 /**
  * Covers: a server function answers only this app's own pages, of every
@@ -320,4 +322,58 @@ test("a server-function path with no function id is answered with a 404", async 
     // The Worker's own answer: it carries the security headers.
     expect(response.headers()["x-content-type-options"], path).toBe("nosniff");
   }
+});
+
+/**
+What a reply says that the edge would keep: its status, type, cache and body.
+*/
+async function storedShape(
+  request: APIRequestContext,
+  url: string,
+  headers: Record<string, string>,
+): Promise<{
+  status: number;
+  type: string | undefined;
+  cache: string | undefined;
+  body: string;
+}> {
+  const response = await request.get(url, { headers });
+  return {
+    status: response.status(),
+    type: response.headers()["content-type"],
+    cache: response.headers()["cache-control"],
+    body: await response.text(),
+  };
+}
+
+test("a public query answers the same with and without the framework's header", async ({
+  page,
+}) => {
+  // The kit page's query, as the app's own client sends it: its loader,
+  // run again in the browser once the page has hydrated.
+  await page.goto(`/kit/${newUlid()}`);
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
+  const sent = page.waitForRequest(
+    (request) =>
+      isServerFnCall(request.url(), "publicKitQuery") &&
+      request.method() === "GET",
+  );
+  // The router TanStack puts on the page's window, as an expression the
+  // page evaluates: a function handed to `evaluate` cannot name it.
+  await page.evaluate("window.__TSR_ROUTER__.invalidate()");
+  const call = await sent;
+  expect(call.headers()["x-tsr-serverfn"]).toBe("true");
+
+  const sameOrigin = { "sec-fetch-site": "same-origin" };
+  const fromClient = await storedShape(page.request, call.url(), {
+    ...sameOrigin,
+    "x-tsr-serverfn": "true",
+  });
+  const bare = await storedShape(page.request, call.url(), sameOrigin);
+
+  expect(fromClient.status).toBe(200);
+  expect(fromClient.cache).toContain("public");
+  expect(bare).toStrictEqual(fromClient);
 });
