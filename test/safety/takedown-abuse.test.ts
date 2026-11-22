@@ -1772,6 +1772,59 @@ describe("a confirm that lands after a decision", () => {
   });
 });
 
+describe("what a request that held something already out of view tells", () => {
+  it("tells the author once when two requests for one kit land together", async () => {
+    const entryId = await sharedEntry();
+    await core().delete(notifications);
+
+    await fileTakedownRequest(
+      landingFirst(async () => {
+        await file("first@example.com", entryLink(entryId), {
+          ip: "198.51.100.71",
+        });
+        // The author reads the first notice before the second lands.
+        await core().update(notifications).set({ read: true });
+      }),
+      {
+        email: "second@example.com",
+        signature: "Sam Runner",
+        location: `${entryLink(entryId)}?again`,
+        description: "",
+        isAttested: true,
+        idempotencyKey: newUlid(),
+        attempt: "token",
+        remoteIp: "198.51.100.72",
+        isLimited: false,
+      },
+      deps,
+      NOW,
+    );
+
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+    const notices = await core().select().from(notifications);
+    expect(notices.map((notice) => notice.read)).toStrictEqual([true]);
+  });
+
+  it("tells the requester about a removed kit that it is hidden", async () => {
+    const entryId = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, entryId));
+
+    const row = await file("me@example.com", entryLink(entryId));
+
+    const [receipt] = await owedWhere(
+      (email) => email.dedupeKey === `removal_request_received:${row.id}`,
+    );
+    expect(receipt?.email.template).toStrictEqual({
+      kind: "removal_request_received",
+      dueAt: row.dueAt,
+      isHidden: true,
+    });
+  });
+});
+
 describe("Block and decline all, on a shared address", () => {
   it("declines only the requester's own, and still blocks the address", async () => {
     const a = await sharedEntry();

@@ -177,7 +177,7 @@ export async function fileTakedownRequest<Attempt>(
   const dueAt = now + REMOVAL_DUE_SECONDS;
   const subject = await filedSubjectOf(db, input.location);
   const row = rowOf(id);
-  const hid = holds(row.hid(now));
+  const hid = holds(row.newlyHid(now));
   const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
   await db.batch([
     db
@@ -301,6 +301,10 @@ function rowOf(id: string, also: SQL = sql`1`) {
     It hid its subject at `now`.
     */
     hid: (now: number) => row(sql`${takedownRequests.heldAt} = ${now}`),
+    /**
+    It is the request that took its subject out of public view at `now`.
+    */
+    newlyHid: (now: number) => row(sql`${takedownRequests.hidAt} = ${now}`),
     /**
     It hid nothing at `now` (`is not`, so an unset `held_at` answers true).
     */
@@ -605,25 +609,18 @@ function holdWrites(
  * The author's notice that a request hid their kit or photo (R-163; owner,
  * 2026-10-24): the hide notice a report's hide sends (D-145), unchanged,
  * raised where the row says it hid (`onlyIf`). The author is read before
- * the batch, which cannot branch, and only while the subject is in a
- * state the hold moves — so a subject a report already hid, or a removal
- * already took, is not told it was hidden again. Suspected CSAM is not
- * known yet when a request lands; the quarantine that may follow tells
- * nobody anything more (D-70).
+ * the batch, which cannot branch. `hid_at` is stamped only where the
+ * subject was still public in the same batch, so a subject a report
+ * already hid, or a removal already took, is not told it was hidden
+ * again. Suspected CSAM is not known yet when a request lands; the
+ * quarantine that may follow tells nobody anything more (D-70).
  */
-async function holdNotice(
+function holdNotice(
   db: Db,
   subject: TakedownSubject,
   onlyIf: SQL,
 ): Promise<BatchItem<"sqlite">[]> {
-  const { table, where } = holdable(subject);
-  const [row] = await db
-    .select({ one: sql`1` })
-    .from(table)
-    .where(where);
-  return row === undefined
-    ? []
-    : hiddenNotice(db, subject.subjectType, subject.subjectId, onlyIf);
+  return hiddenNotice(db, subject.subjectType, subject.subjectId, onlyIf);
 }
 
 /**
@@ -815,7 +812,7 @@ export async function confirmTakedownRequest(
     request.id,
     sql`(${eq(takedownRequests.confirmedAt, now)} and ${eq(takedownRequests.status, "pending")})`,
   );
-  const hid = holds(row.hid(now));
+  const hid = holds(row.newlyHid(now));
   const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
   const claim = and(
     eq(takedownRequests.id, request.id),
