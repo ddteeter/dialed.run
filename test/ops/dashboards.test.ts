@@ -123,12 +123,15 @@ describe("the queries read the layout vitals.ts writes", () => {
     expect(server.blobs?.[2]).toBe("5xx");
     expect(server.doubles?.[0]).toBe(80);
 
-    for (const query of [dailyRollupQuery("2026-10-30"), versionQuery(0)]) {
+    for (const query of [
+      dailyRollupQuery("2026-10-30", []),
+      versionQuery(0, []),
+    ]) {
       expect(query).toContain(
         "index1 AS route, blob1 AS metric, blob3 AS device",
       );
     }
-    expect(versionQuery(0)).toContain("blob4 AS version");
+    expect(versionQuery(0, [])).toContain("blob4 AS version");
     expect(DASHBOARD_PANELS[4].query).toContain("blob4 AS version");
   });
 });

@@ -9,13 +9,10 @@
  */
 import { SERVER_FN_ROUTE } from "../../../lib/query-report";
 
+import { SERVER_FN_PREFIX } from "../edge";
 import { captureException } from "../sentry";
 import { recordServerTiming } from "./vitals";
-
-/**
-TanStack Start's prefix for a server function call.
-*/
-const SERVER_FN_PREFIX = "/_serverFn/";
+import { knownRouteClause, UNMATCHED } from "./vitals-queries";
 
 /**
  * What a request is called in the log. A server function goes by its id,
@@ -24,8 +21,6 @@ const SERVER_FN_PREFIX = "/_serverFn/";
  * value rather than a thousand.
  */
 export type RequestNamer = (pathname: string) => string;
-
-const UNMATCHED = "unmatched";
 
 const FAILED_SERVER_FN = `${SERVER_FN_ROUTE}failed`;
 
@@ -62,8 +57,22 @@ export interface RouteFinder {
  * written: a route of the tree, a server function's name, or `unmatched`.
  * A beacon names its route itself, so the speed checks and the rollup keep
  * only these (SA-M34).
+ *
+ * `sqlFilter` is the same rule as lines of a query's `WHERE`, so a query
+ * filters before its cut and rows of names nobody wrote cannot crowd the
+ * real ones out of it. No lines when every name is kept.
  */
-export type RouteKnown = (route: string) => boolean;
+export interface RouteKnown {
+  (route: string): boolean;
+  readonly sqlFilter: () => readonly string[];
+}
+
+/**
+Every route name kept, with no filter: what `knownRoutes` falls back to.
+*/
+export const isAnyRoute: RouteKnown = Object.assign(() => true, {
+  sqlFilter: () => [],
+});
 
 /**
  * `RouteKnown` over the router `makeRouter` builds, on the first question.
@@ -76,22 +85,42 @@ export function knownRoutes(
     captureException(error, { surface: "timing" });
   },
 ): RouteKnown {
-  let known: RouteKnown | undefined;
-  return (route) => {
-    if (known === undefined) {
+  let tree: object | undefined;
+  let isBuilt = false;
+  const routesById = (): object | undefined => {
+    if (!isBuilt) {
+      isBuilt = true;
       try {
-        const { routesById } = makeRouter();
-        known = (name) =>
-          name === UNMATCHED ||
-          name.startsWith(SERVER_FN_ROUTE) ||
-          Object.hasOwn(routesById, name);
+        tree = makeRouter().routesById;
       } catch (error) {
         report(error);
-        known = () => true;
       }
     }
-    return known(route);
+    return tree;
   };
+  const isKnown = (name: string): boolean => {
+    const ids = routesById();
+    return (
+      ids === undefined ||
+      name === UNMATCHED ||
+      name.startsWith(SERVER_FN_ROUTE) ||
+      Object.hasOwn(ids, name)
+    );
+  };
+  return Object.assign(isKnown, {
+    sqlFilter: () => {
+      const ids = routesById();
+      return ids === undefined ? [] : knownRouteClause(Object.keys(ids));
+    },
+  });
+}
+
+/**
+ * The first segment after the prefix: the id TanStack Start calls, so a
+ * path with anything after the id is named by the id alone.
+ */
+function serverFnSegment(pathname: string): string {
+  return pathname.slice(SERVER_FN_PREFIX.length).split("/", 1)[0] ?? "";
 }
 
 /**
@@ -121,7 +150,7 @@ export function requestNamer(
   };
   return (pathname) =>
     pathname.startsWith(SERVER_FN_PREFIX)
-      ? `${SERVER_FN_ROUTE}${pathname.slice(SERVER_FN_PREFIX.length)}`
+      ? `${SERVER_FN_ROUTE}${serverFnSegment(pathname)}`
       : namePage()(pathname);
 }
 

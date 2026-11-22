@@ -51,9 +51,8 @@ export async function checkDeployRegressions(
   query: SpeedQuery,
   known: RouteKnown,
 ): Promise<SpeedFinding[]> {
-  const answer = answerSchema(versionRowSchema).parse(
-    await query(versionQuery(now - VERSION_DAYS * 24 * HOUR)),
-  );
+  const sql = versionQuery(now - VERSION_DAYS * 24 * HOUR, known.sqlFilter());
+  const answer = answerSchema(versionRowSchema).parse(await query(sql));
   return deployRegressions(
     answer.data.filter((row) => known(row.route)),
     now - WINDOW_HOURS * HOUR,
@@ -71,12 +70,12 @@ async function windowWeeks(
   known: RouteKnown,
 ): Promise<WindowWeeks> {
   const start = hour - hoursBack * HOUR;
+  const filter = known.sqlFilter();
   return Promise.all(
     Array.from({ length: DRIFT_WEEKS + 1 }, async (_, weeksAgo) => {
       const from = start - weeksAgo * WEEK;
-      const answer = answerSchema(measuredRowSchema).parse(
-        await query(windowQuery(from, from + WINDOW_HOURS * HOUR)),
-      );
+      const sql = windowQuery(from, from + WINDOW_HOURS * HOUR, filter);
+      const answer = answerSchema(measuredRowSchema).parse(await query(sql));
       return answer.data.filter((row) => known(row.route));
     }),
   );

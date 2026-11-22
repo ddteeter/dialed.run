@@ -7,6 +7,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  isAnyRoute,
   knownRoutes,
   requestNamer,
   timedName,
@@ -64,6 +65,13 @@ describe("requestNamer", () => {
     expect(requestNamer(() => testRouter())("/_serverFn/abc123")).toBe(
       "serverFn:abc123",
     );
+  });
+
+  it("names a server function by its id alone, whatever follows it", () => {
+    const name = requestNamer(() => testRouter());
+    expect(name("/_serverFn/abc123/x")).toBe("serverFn:abc123");
+    expect(name("/_serverFn/abc123/y/z")).toBe("serverFn:abc123");
+    expect(name("/_serverFn/abc123/")).toBe("serverFn:abc123");
   });
 
   it("names every path no route covers alike", () => {
@@ -281,6 +289,34 @@ describe("knownRoutes (SA-M34)", () => {
     expect(isKnown("toString")).toBe(false);
   });
 
+  it("filters a query to the tree's route ids", () => {
+    const [filter] = knownRoutes(() => testRouter()).sqlFilter();
+    expect(filter).toContain("'/runs/$runId'");
+    expect(filter).toContain("'/desk/'");
+    expect(filter).toContain("startsWith(index1, 'serverFn:')");
+    expect(filter).toContain("index1 = 'unmatched'");
+  });
+
+  it("filters nothing, and reports once, when the router will not build", () => {
+    const report = vi.fn();
+    const isKnown = knownRoutes(() => {
+      throw new Error("no tree");
+    }, report);
+    expect(isKnown.sqlFilter()).toStrictEqual([]);
+    expect(isKnown("/x")).toBe(true);
+    expect(report).toHaveBeenCalledOnce();
+  });
+
+  it("builds the router once, whichever is asked first", () => {
+    const makeRouter = vi.fn(() => testRouter());
+    const isKnown = knownRoutes(makeRouter);
+    expect(makeRouter).not.toHaveBeenCalled();
+    isKnown.sqlFilter();
+    isKnown("/");
+    isKnown.sqlFilter();
+    expect(makeRouter).toHaveBeenCalledTimes(1);
+  });
+
   it("builds the router on the first question, and once", () => {
     const makeRouter = vi.fn(() => testRouter());
     const isKnown = knownRoutes(makeRouter);
@@ -300,6 +336,13 @@ describe("knownRoutes (SA-M34)", () => {
     expect(isKnown("/y")).toBe(true);
     expect(report).toHaveBeenCalledTimes(1);
     expect(report).toHaveBeenCalledWith(failure);
+  });
+});
+
+describe("isAnyRoute", () => {
+  it("keeps every name and filters no query", () => {
+    expect(isAnyRoute("/x/0001")).toBe(true);
+    expect(isAnyRoute.sqlFilter()).toStrictEqual([]);
   });
 });
 

@@ -165,7 +165,8 @@ export async function rollupVitals(
   }
   for (const day of daysBefore(today, ROLLUP_DAYS)) {
     try {
-      const parsed = responseSchema.parse(await query(dailyRollupQuery(day)));
+      const sql = dailyRollupQuery(day, deps.known.sqlFilter());
+      const parsed = responseSchema.parse(await query(sql));
       const kept = parsed.data.filter((row) => deps.known(row.route));
       await replaceDay(deps.db, day, kept);
     } catch (error) {

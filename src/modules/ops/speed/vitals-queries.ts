@@ -10,6 +10,8 @@
  */
 import { z } from "zod";
 
+import { SERVER_FN_ROUTE } from "../../../lib/query-report";
+
 /**
  * The dataset's name in `wrangler.jsonc`, which is the table's name in
  * SQL. `bindings-conformance` pins the binding to it.
@@ -41,6 +43,39 @@ export function nextDay(day: string): string {
 }
 
 /**
+ * A route id as the SQL text may hold it: the characters route ids are
+ * made of, and never a quote or a backslash. An id outside it is left out
+ * of the list rather than escaped.
+ */
+const SQL_SAFE_ROUTE = /^[\w$@{}./-]+$/u;
+
+/**
+ * What `timing.ts` names a page no route matches.
+ */
+export const UNMATCHED = "unmatched";
+
+/**
+ * `knownRoutes`' rule (`timing.ts`) in SQL, so a query keeps only names
+ * this Worker could have written before its `LIMIT` cuts: `unmatched`, a
+ * server function's name, or one of `routes`. A query given no lines
+ * keeps every name.
+ */
+export function knownRouteClause(routes: readonly string[]): string[] {
+  const listed = routes
+    .filter((route) => SQL_SAFE_ROUTE.test(route))
+    .map((route) => `'${route}'`);
+  const inTree =
+    listed.length === 0 ? [] : [`index1 IN (${listed.join(", ")})`];
+  return [
+    `AND (${[
+      `index1 = '${UNMATCHED}'`,
+      `startsWith(index1, '${SERVER_FN_ROUTE}')`,
+      ...inTree,
+    ].join(" OR ")})`,
+  ];
+}
+
+/**
  * The most rows the rollup reads for one day. Routes × metrics × devices
  * is under a thousand today; a day past this is not ours, and the cut is
  * safer than an unbounded read.
@@ -53,7 +88,10 @@ export const MAX_ROLLUP_ROWS = 10_000;
  * for a `server` point, which is why the rollup can store both in one
  * column.
  */
-export function dailyRollupQuery(day: string): string {
+export function dailyRollupQuery(
+  day: string,
+  routeFilter: readonly string[],
+): string {
   const end = nextDay(day);
   return [
     "SELECT index1 AS route, blob1 AS metric, blob3 AS device,",
@@ -64,6 +102,7 @@ export function dailyRollupQuery(day: string): string {
     `FROM ${VITALS_DATASET}`,
     `WHERE timestamp >= toDateTime('${day} 00:00:00', 'Etc/UTC')`,
     `AND timestamp < toDateTime('${end} 00:00:00', 'Etc/UTC')`,
+    ...routeFilter,
     "GROUP BY index1, blob1, blob3",
     // The busiest first, so the cut keeps the routes people use (SA-M34).
     "ORDER BY n DESC",
@@ -138,7 +177,11 @@ const since = (start: number): string =>
  * p75, p95 and the weighted count per route, metric and device, between
  * two times (unix seconds, end excluded): one window of the drift check.
  */
-export function windowQuery(start: number, end: number): string {
+export function windowQuery(
+  start: number,
+  end: number,
+  routeFilter: readonly string[],
+): string {
   return [
     "SELECT index1 AS route, blob1 AS metric, blob3 AS device,",
     "quantileExactWeighted(0.75)(double1, _sample_interval) AS p75,",
@@ -147,6 +190,7 @@ export function windowQuery(start: number, end: number): string {
     `FROM ${VITALS_DATASET}`,
     `WHERE ${since(start)}`,
     `AND timestamp < toDateTime('${sqlTime(end)}', 'Etc/UTC')`,
+    ...routeFilter,
     "GROUP BY index1, blob1, blob3",
     // The busiest first, so the cut keeps the routes people use (SA-M34).
     "ORDER BY n DESC",
@@ -159,7 +203,10 @@ export function windowQuery(start: number, end: number): string {
  * The same figures per deploy (blob4) since `start`, with when each was
  * first measured: the deploy-regression check's input.
  */
-export function versionQuery(start: number): string {
+export function versionQuery(
+  start: number,
+  routeFilter: readonly string[],
+): string {
   return [
     "SELECT index1 AS route, blob1 AS metric, blob3 AS device, blob4 AS version,",
     "quantileExactWeighted(0.75)(double1, _sample_interval) AS p75,",
@@ -169,6 +216,7 @@ export function versionQuery(start: number): string {
     "toUnixTimestamp(max(timestamp)) AS lastSeen",
     `FROM ${VITALS_DATASET}`,
     `WHERE ${since(start)}`,
+    ...routeFilter,
     "GROUP BY index1, blob1, blob3, blob4",
     // The busiest first, so the cut keeps the routes people use (SA-M34).
     "ORDER BY n DESC",

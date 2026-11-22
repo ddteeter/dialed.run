@@ -20,16 +20,23 @@ import {
   WINDOW_HOURS,
 } from "../../src/modules/ops/speed/speed-hourly";
 import {
+  knownRouteClause,
   versionQuery,
   windowQuery,
 } from "../../src/modules/ops/speed/vitals-queries";
+import {
+  isAnyRoute,
+  type RouteKnown,
+} from "../../src/modules/ops/speed/timing";
 
 /**
-Every route name kept, as before the known-route check.
+A route check that keeps the names `isKnown` keeps and asks no SQL filter.
 */
-const isAnyRoute = (): boolean => true;
+function keeping(isKnown: (route: string) => boolean): RouteKnown {
+  return Object.assign(isKnown, { sqlFilter: () => [] });
+}
 
-const isNotTheCloset = (route: string): boolean => route !== "/closet/";
+const isNotTheCloset = keeping((route) => route !== "/closet/");
 
 /**
  * The hourly speed checks (design 165, step 8): synthetic series for a
@@ -318,7 +325,7 @@ describe("checkDrift", () => {
     const expected = [3, 4].flatMap((back) =>
       [0, 1, 2, 3, 4].map((weeksAgo) => {
         const from = thirteen - back * HOUR - weeksAgo * WEEK;
-        return windowQuery(from, from + 3 * HOUR);
+        return windowQuery(from, from + 3 * HOUR, []);
       }),
     );
     expect(asked.toSorted((a, b) => a.localeCompare(b))).toStrictEqual(
@@ -346,10 +353,10 @@ describe("checkDrift", () => {
       },
     ]);
     const asked: string[] = [];
-    const isKnown = (route: string): boolean => {
+    const isKnown = keeping((route) => {
       asked.push(route);
       return false;
-    };
+    });
     expect(await checkDrift(NOW, query, isKnown)).toStrictEqual([]);
     expect(new Set(asked)).toStrictEqual(new Set(["/closet/"]));
   });
@@ -368,8 +375,24 @@ describe("checkDeployRegressions", () => {
 
     const findings = await checkDeployRegressions(NOW, query, isAnyRoute);
 
-    expect(asked).toStrictEqual([versionQuery(NOW - 7 * 24 * HOUR)]);
+    expect(asked).toStrictEqual([versionQuery(NOW - 7 * 24 * HOUR, [])]);
     expect(findings).toHaveLength(1);
+  });
+
+  it("asks for the known routes' rows only", async () => {
+    const { query, asked } = api(() => []);
+    const isKnown = Object.assign(() => true, {
+      sqlFilter: () => knownRouteClause(["/closet/"]),
+    });
+    await checkDeployRegressions(NOW, query, isKnown);
+    await checkDrift(NOW, query, isKnown);
+    expect(asked[0]).toBe(
+      versionQuery(NOW - 7 * 24 * HOUR, knownRouteClause(["/closet/"])),
+    );
+    expect(asked).toHaveLength(11);
+    for (const sql of asked) {
+      expect(sql).toContain("index1 IN ('/closet/')");
+    }
   });
 
   it("judges only the route names `known` keeps (SA-M34)", async () => {
@@ -409,7 +432,7 @@ describe("checkDeployRegressions", () => {
 
 describe("the hourly queries", () => {
   it("read p75, p95 and the weighted count per screen between two times", () => {
-    expect(windowQuery(NOW - 1800, NOW + 1800)).toBe(
+    expect(windowQuery(NOW - 1800, NOW + 1800, [])).toBe(
       [
         "SELECT index1 AS route, blob1 AS metric, blob3 AS device,",
         "quantileExactWeighted(0.75)(double1, _sample_interval) AS p75,",
@@ -427,7 +450,7 @@ describe("the hourly queries", () => {
   });
 
   it("read the same per deploy, with when each was first and last measured", () => {
-    expect(versionQuery(NOW)).toBe(
+    expect(versionQuery(NOW, [])).toBe(
       [
         "SELECT index1 AS route, blob1 AS metric, blob3 AS device, blob4 AS version,",
         "quantileExactWeighted(0.75)(double1, _sample_interval) AS p75,",
