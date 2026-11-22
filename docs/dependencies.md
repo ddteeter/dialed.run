@@ -29,22 +29,32 @@ file explains them and does not restate them.
    that commit with the App's open-source list on top. The list can land
    while the job waits for a runner, and the run it starts doesn't
    classify again, so the job follows the head, but only past commits
-   that are all the App's and change the list alone.
+   that are all the App's and change the list alone. Every later push by
+   Dependabot is classified again; when the answer is not a yes (a hold,
+   or a classify that failed), the `disarm` job turns auto-merge off and
+   comments on the PR why it no longer merges itself.
 4. **Anything else waits for you**: majors, 0.x minors, 0.0.x updates, a
    version under seven days old (a security update skips Dependabot's
    cooldown, not this one), a new publisher, and every GitHub Actions bump (Actions run with this repo's
    secrets). Claude posts an impact review on the PR: a verdict, the
    breaking changes, whether each touches this repo (with file and line),
    and its sources. It is advisory. Read the sources before trusting it.
-   It runs Claude Code's `opus` alias, so a new Opus model arrives with the
-   claude-code-action bump that ships it, as a PR you review. The review
+   It runs Claude Code's `opus` alias on the Claude Code version the
+   workflow pins, so a new Opus model arrives with a reviewed bump of that
+   pin. A claude-code-action bump moves the Bun and Claude Code versions
+   and their SHA-256 sums in `dependabot-pr.yml` and `a11y-review.yml` by
+   hand, as their comments say. The review
    runs once, when the PR opens; a push to the branch does not rerun it.
    A review that failed (before the key existed, say) needs its failed
    job re-run.
 
 The checks that carry an unattended merge are the required set:
-`Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails` and
-`Mutation`. `e2e (build)` exists because the dev server never runs the
+`Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails`,
+`Mutation` and `Protected paths`. `Protected paths` runs from main and
+passes a PR that changes the checks' own inputs (the gate and Stryker
+configs, workflows, hooks, lint and build configs, the Claude settings,
+the guardrails-core pin) only with the `owner-approved` label, which the
+owner sets; `protected-paths.yml` lists the files. `e2e (build)` exists because the dev server never runs the
 production bundle, and the updates most likely to break the app
 (Vite, the Cloudflare plugin, TanStack Start, React) can break the build's
 server rendering while dev stays green.
@@ -138,7 +148,8 @@ So the review job is built on the assumption that a prompt injection
 succeeds, and limits what one can do:
 
 - **No write access**: its token is read-only, and the answer leaves as
-  structured output that a separate job, with no model, posts.
+  structured output, handed as a job output to a separate job, with no
+  model, that posts it.
 - **No outbound network but a short list**: `harden-runner` blocks
   everything except the hosts the action installs from and Claude reads
   from (GitHub and the npm registry), none of which shows a stranger what
@@ -146,6 +157,11 @@ succeeds, and limits what one can do:
   fence before the key reaches any step, and again just before Claude
   runs: two hosts off the list must be unreachable and `sudo` gone, or the
   job stops (SA-L20).
+- **Checked programs, the workflow's settings only**: the job fetches the
+  Bun and Claude Code the action runs, checks each against a SHA-256 in
+  the workflow, and hands them to the action. Claude starts with
+  `--setting-sources user`, so only the settings the workflow writes are
+  loaded.
 - **Narrow tools**: Read, Grep and Glob over the repo; web reads from
   GitHub and the npm registry only, releases included. No shell at all:
   a command runs with the process's environment, where the key is
@@ -155,8 +171,8 @@ succeeds, and limits what one can do:
   limit, not an account login.
 - **A screened comment**: the post job checks the review's shape and size,
   refuses anything shaped like a credential, defuses every `@`-mention (one
-  could summon `@dependabot` or page a person), renders the table itself,
-  and labels the comment advisory.
+  could summon `@dependabot` or page a person), renders the table and the
+  summary itself, escaped, and labels the comment advisory.
 - **Main only**: the job checks out main, so no file a PR controls
   (`.claude/`, `CLAUDE.md`, hooks) is in its workspace.
 - `show_full_output` stays off, since these logs are public. No workflow

@@ -1,0 +1,100 @@
+name: Protected paths
+
+# A pull request that changes what the checks themselves run on needs the
+# owner's `owner-approved` label before this check passes. The files: the
+# guardrails config and its grants, the Stryker config, the workflows and
+# the git hooks, the ESLint, dependency-cruiser, lockfile-lint, knip,
+# fallow, Vite and Vitest configs, the Claude settings, and the
+# guardrails-core pin (its line in package.json, its entry in
+# package-lock.json). A rename or a deletion counts as a change. The
+# ruleset requires this check as "Protected paths".
+#
+# FROM MAIN. pull_request_target runs this file from main, so a pull
+# request cannot change the list it is checked against. It checks nothing
+# out and runs no code from the PR: it reads the PR's changed file names,
+# and the two manifests at the merge-base and the head, through the API,
+# as data, with a token that can only read.
+#
+# THE LABEL. Labels are set by people with triage access or more. A fork's
+# PR cannot set it; for a branch pushed with write access, it makes a
+# change to these files visible on the PR before it can merge.
+#
+# PINS. Every `uses:` is a full version tag, locked to a commit in
+# `actions.lock` (D-182).
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
+    types: [opened, reopened, synchronize, edited, labeled, unlabeled]
+
+permissions: {}
+
+concurrency:
+  group: protected-paths-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  protected-paths:
+    name: Protected paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@v2.22.4
+        with:
+          egress-policy: audit
+
+      # Every value reaches the script through `env`, never into it.
+      - name: Check the protected paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          LABEL: owner-approved
+          PROTECTED: >-
+            ^(guardrails\.config\.json|stryker\.conf\.json|\.github/.+|\.githooks/.+|eslint\.config\.js|\.dependency-cruiser\.cjs|lockfile-lint\.config\.mjs|knip\.json|\.fallowrc\.jsonc|vite\.config\.ts|vitest\.config\.ts|\.claude/settings\.json)$
+        run: |
+          set -euo pipefail
+
+          # The API lists at most 3000 files; past that the list is not
+          # the whole change, so the PR needs the label.
+          count=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .changed_files)
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" \
+            --jq '.[] | .filename, (.previous_filename // empty)')
+          touched=$(printf '%s\n' "$files" | grep -E "$PROTECTED" | sort -u || true)
+          if [ "$count" -ge 3000 ]; then
+            touched=$(printf '%s\n%s' "$touched" "(more than 3000 files: the list is incomplete)")
+          fi
+
+          # The guardrails-core pin, read at the merge-base and the head.
+          # A file that cannot be read or parsed counts as changed.
+          raw() {
+            gh api -H "Accept: application/vnd.github.raw" "repos/$REPO/contents/$1?ref=$2"
+          }
+          pin() {
+            raw package.json "$1" | jq -ce '.devDependencies["guardrails-core"]' &&
+              raw package-lock.json "$1" |
+              jq -ce '.packages["node_modules/guardrails-core"] | [.resolved, .integrity]'
+          }
+          merge_base=$(gh api "repos/$REPO/compare/$BASE_SHA...$HEAD_SHA" --jq .merge_base_commit.sha)
+          if ! before=$(pin "$merge_base") || ! after=$(pin "$HEAD_SHA") || [ "$before" != "$after" ]; then
+            touched=$(printf '%s\n%s' "$touched" "the guardrails-core pin in package.json or package-lock.json")
+          fi
+
+          touched=$(printf '%s\n' "$touched" | sed '/^$/d')
+          if [ -z "$touched" ]; then
+            echo "No protected path changes."
+            exit 0
+          fi
+          echo "This PR changes:"
+          printf '%s\n' "$touched" | sed 's/^/  /'
+          if gh api "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name' | grep -qxF "$LABEL"; then
+            echo "The PR has the $LABEL label."
+            exit 0
+          fi
+          echo "::error::This PR changes protected paths; it needs the $LABEL label to pass."
+          exit 1

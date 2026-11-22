@@ -201,8 +201,8 @@ describe("the workflow lockfile (D-182)", () => {
 });
 
 describe("zizmor's ignores", () => {
-  it("are the four reviewed lines and no more, each naming its rule", () => {
-    // An ignore is a finding someone decided to keep. A fifth needs the
+  it("are the five reviewed lines and no more, each naming its rule", () => {
+    // An ignore is a finding someone decided to keep. A sixth needs the
     // owner's say-so and a reason beside it, as these have.
     const ignores = Object.entries(workflows).flatMap(([path, source]) =>
       Array.from(source.matchAll(/ # zizmor: ignore\[([\w-]+)\]$/gm), (match) =>
@@ -215,9 +215,10 @@ describe("zizmor's ignores", () => {
         "dependabot-pr.yml dangerous-triggers",
         "oss-list-commit.yml artipacked",
         "oss-list-commit.yml dangerous-triggers",
+        "protected-paths.yml dangerous-triggers",
       ]),
     );
-    expect(ignores).toHaveLength(4);
+    expect(ignores).toHaveLength(5);
     const mentions = Object.values(workflows)
       .join("\n")
       .split("zizmor: ignore[").length;
@@ -497,6 +498,57 @@ describe("a PR's mutation shard", () => {
     );
     expect(mutate).toContain("            reports/stryker-deps.txt\n");
     expect(mutate).toContain("          retention-days: 7\n");
+  });
+});
+
+describe("the protected-paths check", () => {
+  const source = workflowNamed("protected-paths.yml");
+  const job = codeOf(jobIn(source, "protected-paths"));
+
+  it("is the job the ruleset requires, found", () => {
+    expect(job).toContain("    name: Protected paths\n");
+  });
+
+  it("runs from main on every change to the PR or its labels, reading only", () => {
+    expect(source).toContain(
+      "types: [opened, reopened, synchronize, edited, labeled, unlabeled]",
+    );
+    expect(source).toContain("pull_request_target:");
+    expect(source).not.toContain("actions/checkout@");
+    expect(job).toContain(
+      "    permissions:\n      contents: read\n      pull-requests: read\n    steps:",
+    );
+  });
+
+  it.each([
+    "guardrails\\.config\\.json",
+    "stryker\\.conf\\.json",
+    "\\.github/.+",
+    "\\.githooks/.+",
+    "eslint\\.config\\.js",
+    "\\.dependency-cruiser\\.cjs",
+    "lockfile-lint\\.config\\.mjs",
+    "knip\\.json",
+    "\\.fallowrc\\.jsonc",
+    "vite\\.config\\.ts",
+    "vitest\\.config\\.ts",
+    "\\.claude/settings\\.json",
+  ])("protects %s", (pattern) => {
+    const protectedPaths = /\n {12}(\^\(.*\)\$)\n/u.exec(job)?.[1] ?? "";
+    expect(protectedPaths.slice(2, -2).split("|")).toContain(pattern);
+  });
+
+  it("compares the guardrails-core pin at the merge-base and the head", () => {
+    expect(job).toContain(`jq -ce '.devDependencies["guardrails-core"]'`);
+    expect(job).toContain(
+      `jq -ce '.packages["node_modules/guardrails-core"] | [.resolved, .integrity]'`,
+    );
+    expect(job).toContain(".merge_base_commit.sha");
+  });
+
+  it("passes a protected change only with the owner's label", () => {
+    expect(job).toContain("LABEL: owner-approved");
+    expect(job).toContain('grep -qxF "$LABEL"');
   });
 });
 
