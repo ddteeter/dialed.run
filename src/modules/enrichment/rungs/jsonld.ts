@@ -34,11 +34,14 @@ const LINKED = z.union([
   z.object({ url: z.string() }).transform((value) => value.url),
 ]);
 
+/**
+ * The value, or a list's first entry: only that one is parsed, so a list
+ * costs one entry's read however long it is, and a bad entry later in it
+ * does not cost the first.
+ */
 function firstOf<T>(schema: z.ZodType<T>, value: unknown): T | undefined {
-  const one = schema.safeParse(value);
-  if (one.success) return one.data;
-  const many = z.array(schema).nonempty().safeParse(value);
-  return many.success ? many.data[0] : undefined;
+  const first: unknown = Array.isArray(value) ? value[0] : value;
+  return schema.safeParse(first).data;
 }
 
 /**

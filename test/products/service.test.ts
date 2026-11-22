@@ -441,6 +441,21 @@ describe("productsForBrand", () => {
     );
     expect(real.reads()).toBeGreaterThan(0);
   });
+
+  it("reads each product as its id and name and nothing else", async () => {
+    const client = db();
+    const brandName = `Brand${newUlid()}`;
+    const brand = await createOrGetBrand(client, brandName);
+    const made = await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Rover",
+      createdBy: newUlid(),
+    });
+
+    expect(await productsForBrand(client, brandName)).toStrictEqual([
+      { id: made.id, name: "Rover" },
+    ]);
+  });
 });
 
 /**
