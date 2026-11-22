@@ -203,7 +203,7 @@ export async function fileTakedownRequest<Attempt>(
     ...holdWrites(db, subject, hid),
     ...told,
     ...operatorAlerts(deps.oweWhere, { id, dueAt, subject }, row.alerts(now)),
-    ...valveAlerts(deps.oweWhere, now, row.is("valve")),
+    ...valveAlerts(deps.oweWhere, now, row.owesSummary(now)),
     ...receipts(deps.oweWhere, { id, email, dueAt }, row, now),
   ]);
   await purgeIfHeld(db, { id, subject }, now, deps.purge);
@@ -219,10 +219,12 @@ export async function fileTakedownRequest<Attempt>(
  *    moves or one already out of public view; and `hid_at` beside it
  *    where the subject is still public, so this request is the one that
  *    hides it (the hold runs after these, in the same batch);
- * 2. `alerted_at`, where it may act but hid nothing and the hour's
+ * 2. `alerted_at`, where it may act but newly hid nothing (it held a
+ *    subject already out of public view, or nothing) and the hour's
  *    one-by-one alerts have room;
- * 3. the state `valve` for one that hid nothing past that room — the
- *    valve's hourly alert is what it owes;
+ * 3. the state `valve` for one that held nothing past that room. One that
+ *    holds its subject keeps `held` and `held_at`; both owe the valve's
+ *    hourly alert (`row.owesSummary`);
  * 4. no state for a link that is not ours, which holds nothing.
  *
  * One statement each, so each counts what the one before it wrote.
@@ -234,7 +236,7 @@ function decisionWrites(
   now: number,
 ): BatchItem<"sqlite">[] {
   const mayAct = and(row, eq(takedownRequests.holdState, "held"));
-  const hidNothing = and(mayAct, isNull(takedownRequests.heldAt));
+  const heldNothing = and(mayAct, isNull(takedownRequests.heldAt));
   return [
     ...(subject === undefined
       ? []
@@ -251,11 +253,11 @@ function decisionWrites(
     db
       .update(takedownRequests)
       .set({ alertedAt: now })
-      .where(and(hidNothing, alertRoomSql(now))),
+      .where(and(mayAct, isNull(takedownRequests.hidAt), alertRoomSql(now))),
     db
       .update(takedownRequests)
       .set({ holdState: "valve" })
-      .where(and(hidNothing, isNull(takedownRequests.alertedAt))),
+      .where(and(heldNothing, isNull(takedownRequests.alertedAt))),
     ...(subject === undefined
       ? [
           db
@@ -292,11 +294,19 @@ function rowOf(id: string, also: SQL = sql`1`) {
     hidNothing: (now: number) =>
       row(sql`${takedownRequests.heldAt} is not ${now}`),
     /**
-    It alerts every operator one by one: it hid, or it may alert though it hid nothing.
+    It alerts every operator one by one: it newly hid its subject, or the hour's allowance had room.
     */
     alerts: (now: number) =>
       row(
-        sql`(${takedownRequests.heldAt} = ${now} or ${takedownRequests.alertedAt} = ${now})`,
+        sql`(${takedownRequests.hidAt} = ${now} or ${takedownRequests.alertedAt} = ${now})`,
+      ),
+    /**
+     * It owes the valve's hourly alert instead: quieted by the valve, or
+     * holding a subject already out of view past the hour's allowance.
+     */
+    owesSummary: (now: number) =>
+      row(
+        sql`(${takedownRequests.holdState} = 'valve' or (${takedownRequests.heldAt} = ${now} and ${takedownRequests.hidAt} is null and ${takedownRequests.alertedAt} is null))`,
       ),
     /**
     Its recorded state is `state`; `isNot` answers true of an unset one.
@@ -800,7 +810,7 @@ export async function confirmTakedownRequest(
       { id: request.id, dueAt: request.dueAt, subject },
       row.alerts(now),
     ),
-    ...valveAlerts(effects.oweWhere, now, row.is("valve")),
+    ...valveAlerts(effects.oweWhere, now, row.owesSummary(now)),
   ]);
   await purgeIfHeld(db, { id: request.id, subject }, now, effects.purge);
   return "confirmed";

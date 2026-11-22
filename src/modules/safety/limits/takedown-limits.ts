@@ -20,12 +20,13 @@
  * transaction run after the one before it, so requests sent together are
  * counted one after another: the eleventh sees the ten before it.
  *
- * **Alerts have their own allowance.** A request that hid nothing — a
- * link that is not ours, or one naming nothing a hold could move —
- * alerts every operator one by one only while fewer than
- * `TAKEDOWN_ALERTS_PER_HOUR` such alerts went out in the hour, site-wide;
- * past that it owes the valve's hourly alert. Such requests never count
- * toward the valve, which counts hides.
+ * **Alerts have their own allowance.** A request that newly hid nothing —
+ * a link that is not ours, one naming nothing a hold could move, or one
+ * holding a subject already out of public view — alerts every operator
+ * one by one only while fewer than `TAKEDOWN_ALERTS_PER_HOUR` such alerts
+ * went out in the hour, site-wide; past that it owes the valve's hourly
+ * alert, and one that holds its subject still holds it. Such requests
+ * never count toward the valve, which counts hides.
  */
 import { and, eq, gte, inArray, or, sql, type SQL } from "drizzle-orm";
 

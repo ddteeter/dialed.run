@@ -80,6 +80,15 @@ async function sharedEntry(): Promise<string> {
   return makeEntry({ userId: author, runId, audience: "runners" });
 }
 
+async function hiddenKit(): Promise<string> {
+  const entryId = await sharedEntry();
+  await core()
+    .update(outfitEntries)
+    .set({ moderationStatus: "hidden_pending_review" })
+    .where(eq(outfitEntries.id, entryId));
+  return entryId;
+}
+
 const entryLink = (entryId: string) =>
   `https://dialed.run/feed/entry/${entryId}`;
 
@@ -1282,7 +1291,7 @@ describe("a request that names nothing a hold moves", () => {
       holdState: "held",
       heldAt: NOW,
       hidAt: NOT_SET,
-      alertedAt: NOT_SET,
+      alertedAt: NOW,
       subjectId: entryId,
     });
     expect(await entryStatus(entryId)).toBe("removed");
@@ -1333,11 +1342,132 @@ describe("a request that names nothing a hold moves", () => {
 
     expect(row.heldAt).toBe(NOW);
     expect(row.hidAt).toBeNull();
-    expect(row.alertedAt).toBeNull();
+    expect(row.alertedAt).toBe(NOW);
     // Nothing newly hidden, so nothing to purge.
     expect(spy.calls).toStrictEqual([]);
     // A report already told the author; the request does not again.
     expect(await core().select().from(notifications)).toStrictEqual([]);
+  });
+});
+
+describe("a request that holds a subject already out of view", () => {
+  it("takes one of the hour's one-by-one alerts, and past them keeps its hold and owes the hourly alert", async () => {
+    const entryId = await hiddenKit();
+    for (let index = 0; index <= TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await file(`held${String(index)}@example.com`, entryLink(entryId), {
+        ip: `198.51.100.${String(index + 1)}`,
+      });
+    }
+    const rows = await core().select().from(takedownRequests);
+    const filedBy = (index: number) =>
+      rows.find(
+        (row) => row.requesterEmail === `held${String(index)}@example.com`,
+      );
+
+    expect(filedBy(TAKEDOWN_VALVE_PER_HOUR - 1)).toMatchObject({
+      holdState: "held",
+      heldAt: NOW,
+      alertedAt: NOW,
+    });
+    expect(filedBy(TAKEDOWN_VALVE_PER_HOUR)).toMatchObject({
+      holdState: "held",
+      heldAt: NOW,
+      hidAt: NOT_SET,
+      alertedAt: NOT_SET,
+    });
+    expect(
+      await owedWhere(
+        (email) => email.email.template.kind === "removal_requested",
+      ),
+    ).toHaveLength(2 * TAKEDOWN_VALVE_PER_HOUR);
+    const valveAlerts = await owedWhere(
+      (email) => email.email.template.kind === "takedown_valve",
+    );
+    expect(valveAlerts.map((email) => email.dedupeKey)).toStrictEqual([
+      `takedown_valve:${String(valveHour(NOW))}:op-one`,
+      `takedown_valve:${String(valveHour(NOW))}:op-two`,
+    ]);
+  });
+
+  it("owes no hourly alert while the allowance has room", async () => {
+    const entryId = await hiddenKit();
+    await file("held@example.com", entryLink(entryId));
+    expect(
+      await owedWhere(
+        (email) => email.email.template.kind === "takedown_valve",
+      ),
+    ).toStrictEqual([]);
+  });
+
+  it("spends the allowance links that are not ours share", async () => {
+    for (let index = 0; index < TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await fileAlone(index, elsewhere(index));
+    }
+    const row = await file("held@example.com", entryLink(await hiddenKit()), {
+      ip: "198.51.100.90",
+    });
+    expect(row).toMatchObject({ holdState: "held", alertedAt: NOT_SET });
+    expect(
+      await owedWhere((email) =>
+        email.dedupeKey.startsWith(`removal_requested:${row.id}`),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  it("leaves the allowance to requests that hide nothing when it hides something new", async () => {
+    const hider = await file(
+      "hider@example.com",
+      entryLink(await sharedEntry()),
+    );
+    expect(hider).toMatchObject({ hidAt: NOW, alertedAt: NOT_SET });
+    expect(
+      await owedWhere((email) =>
+        email.dedupeKey.startsWith(`removal_requested:${hider.id}`),
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("owes the hourly alert at its confirm past the allowance", async () => {
+    const entryId = await hiddenKit();
+    const a = await sharedEntry();
+    const b = await sharedEntry();
+    await file("me@example.com", entryLink(a));
+    await file("me@example.com", entryLink(b));
+    const waiting = await file("me@example.com", entryLink(entryId));
+    expect(waiting.holdState).toBe("confirm");
+    // Others' addresses, none of them this requester's.
+    for (let index = 20; index < 20 + TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await fileAlone(index, elsewhere(index));
+    }
+
+    await confirmTakedownRequest(
+      core(),
+      await confirmTokenFor(waiting.id),
+      { oweWhere: oweInCoreWhere, purge: noPurge },
+      NOW + 60,
+    );
+
+    const [row] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, waiting.id));
+    expect(row).toMatchObject({
+      holdState: "held",
+      heldAt: NOW + 60,
+      alertedAt: NOT_SET,
+    });
+    expect(
+      await owedWhere((email) =>
+        email.dedupeKey.startsWith(`removal_requested:${waiting.id}`),
+      ),
+    ).toStrictEqual([]);
+    expect(
+      await owedWhere((email) =>
+        email.dedupeKey.startsWith(
+          `takedown_valve:${String(valveHour(NOW + 60))}:`,
+        ),
+      ),
+    ).toHaveLength(2);
   });
 });
 
