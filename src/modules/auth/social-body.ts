@@ -1,7 +1,7 @@
 /**
  * The body a Google press may send to `/sign-in/social`: the five fields
  * the app's own press posts (`googleConsentUrl`, `./credentials`), with
- * both return paths at most `RETURN_PATH_MAX` characters. Any other field,
+ * both return paths at most `MAX_RETURN_PATH` characters. Any other field,
  * or a longer path, is refused 400 before Better Auth's endpoint runs.
  *
  * And how many presses may start a sign-in: each one names a provider the
@@ -13,6 +13,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { GLOBAL_SUBJECT } from "../../lib/contracts/rate-limits";
+import { MAX_RETURN_PATH } from "../../lib/return-path";
 import { claimLimit } from "../email";
 import { GOOGLE_BUSY } from "./auth-copy";
 
@@ -22,12 +23,10 @@ The path whose body this holds.
 const SOCIAL_SIGN_IN_PATH = "/sign-in/social";
 
 /**
- * The longest return path a press may name: room for any path and query
- * the app builds.
+ * The longest return path a press may name: the longest way back the
+ * page accepts, which `googleReturn` keeps both of its paths within.
  */
-export const RETURN_PATH_MAX = 2048;
-
-const returnPath = z.string().max(RETURN_PATH_MAX).optional();
+const returnPath = z.string().max(MAX_RETURN_PATH).optional();
 
 const socialBody = z.strictObject({
   provider: z.string(),

@@ -3,7 +3,11 @@ import { z } from "zod";
 
 import { carriedFormSchema } from "../../lib/carried-form";
 import type { CarriedForm } from "../../lib/carried-form";
-import { landingAfterSignIn, returnPathSchema } from "../../lib/return-path";
+import {
+  landingAfterSignIn,
+  MAX_RETURN_PATH,
+  returnPathSchema,
+} from "../../lib/return-path";
 
 /**
  * What the log-in page can be handed in its URL: Au7's arrival.
@@ -106,17 +110,12 @@ export function didGoogleFail(error: string | undefined): boolean {
 }
 
 /**
- * Where Google's round trip lands, both ways.
- *
- * Success goes where the log-in would have (`redirect`, or home). Failure
- * comes back to *the page it left from* — sign-up stays sign-up — carrying
- * the same `redirect` and `carried`, so a failed Google attempt from Au7
- * is still Au7, with its notice and its way back.
+ * The page a refused Google attempt comes back to, with what it carried.
  */
-export function googleReturn(
+function failedReturn(
   page: "/auth/login" | "/auth/signup",
   search: SignInSearch,
-): { callbackURL: string; errorCallbackURL: string } {
+): string {
   const back = new URLSearchParams();
   if (search.redirect !== undefined) back.set("redirect", search.redirect);
   if (search.carried !== undefined) back.set("carried", search.carried);
@@ -124,10 +123,34 @@ export function googleReturn(
   // the field.
   if (search.code !== undefined) back.set("code", search.code);
   const query = back.toString();
+  return query === "" ? page : `${page}?${query}`;
+}
+
+/**
+ * Where Google's round trip lands, both ways.
+ *
+ * Success goes where the log-in would have (`redirect`, or home). Failure
+ * comes back to *the page it left from* — sign-up stays sign-up — carrying
+ * the same `redirect` and `carried`, so a failed Google attempt from Au7
+ * is still Au7, with its notice and its way back.
+ *
+ * **Both stay within `MAX_RETURN_PATH`**, the most a press may name. The
+ * way back is at most that long, but encoded into the failure's search it
+ * can grow past it; then the failure comes back without it, and success
+ * still goes there.
+ */
+export function googleReturn(
+  page: "/auth/login" | "/auth/signup",
+  search: SignInSearch,
+): { callbackURL: string; errorCallbackURL: string } {
+  const errorCallbackURL = failedReturn(page, search);
   return {
     // Validated again here, at the point of use, rather than trusted
     // because `parseSignInSearch` ran: this is where the runner is sent.
     callbackURL: landingAfterSignIn(search.redirect),
-    errorCallbackURL: query === "" ? page : `${page}?${query}`,
+    errorCallbackURL:
+      errorCallbackURL.length <= MAX_RETURN_PATH
+        ? errorCallbackURL
+        : failedReturn(page, { ...search, redirect: undefined }),
   };
 }

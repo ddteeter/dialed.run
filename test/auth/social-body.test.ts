@@ -9,12 +9,12 @@ import { rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { GLOBAL_SUBJECT } from "../../src/lib/contracts/rate-limits";
 import { nowSeconds } from "../../src/lib/now";
+import { MAX_RETURN_PATH } from "../../src/lib/return-path";
 import { GOOGLE_BUSY } from "../../src/modules/auth/auth-copy";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import {
   countSocialStart,
   holdSocialBody,
-  RETURN_PATH_MAX,
   SOCIAL_BODY_REFUSED,
 } from "../../src/modules/auth/social-body";
 import {
@@ -22,6 +22,10 @@ import {
   SEND_WINDOW_S,
 } from "../../src/modules/email/rate-limit";
 import { countRow } from "../rate-limit-rows";
+import {
+  googleReturn,
+  parseSignInSearch,
+} from "../../src/modules/auth/sign-in-search";
 import { recordingMail } from "./mail-recorder";
 import { OPEN_ACCESS } from "./open-access";
 
@@ -115,9 +119,9 @@ describe("a Google press's body", () => {
   );
 
   it.each(["callbackURL", "errorCallbackURL"])(
-    `takes a %s of ${String(RETURN_PATH_MAX)} characters and refuses a longer one`,
+    `takes a %s of ${String(MAX_RETURN_PATH)} characters and refuses a longer one`,
     async (field) => {
-      const longest = `/${"a".repeat(RETURN_PATH_MAX - 1)}`;
+      const longest = `/${"a".repeat(MAX_RETURN_PATH - 1)}`;
       const taken = await pressed({ ...OWN_PRESS, [field]: longest });
       expect(taken.status).toBe(200);
       expect(taken.added).toBe(1);
@@ -127,6 +131,16 @@ describe("a Google press's body", () => {
       expect(refused.added).toBe(0);
     },
   );
+
+  it("passes the press the page builds for the longest way back it accepts", async () => {
+    const search = parseSignInSearch({ redirect: "/a".repeat(1024) });
+    const answer = await pressed({
+      ...OWN_PRESS,
+      ...googleReturn("/auth/login", search),
+    });
+    expect(answer.status).toBe(200);
+    expect(answer.added).toBe(1);
+  });
 
   it.each([
     ["no provider", { callbackURL: "/", disableRedirect: true }],
