@@ -7,6 +7,7 @@ import {
 } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { chunked, IN_LIST_CHUNK } from "../../../lib/chunked";
+import { inJsonList } from "../../../lib/sql/json-list";
 import { verdictedEntriesInBand } from "./entries";
 
 /**
@@ -45,8 +46,10 @@ function db() {
 }
 
 /**
-The kit garments worn on any of these entries.
-*/
+ * The kit garments worn on any of these entries. The kit is bound as one
+ * JSON list, so the statement stays under D1's parameter cap with a full
+ * chunk of entries and a full kit together.
+ */
 function garmentsWornIn(entryIds: string[], itemIds: readonly string[]) {
   return db()
     .select({
@@ -57,7 +60,7 @@ function garmentsWornIn(entryIds: string[], itemIds: readonly string[]) {
     .where(
       and(
         inArray(outfitEntryItems.entryId, entryIds),
-        inArray(outfitEntryItems.itemId, [...itemIds]),
+        inJsonList(outfitEntryItems.itemId, itemIds),
       ),
     );
 }

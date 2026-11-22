@@ -232,6 +232,43 @@ describe("bandSignals", () => {
   });
 });
 
+describe("a full band for a full kit", () => {
+  it("reads 80 entries and 40 pieces in one chunk", async () => {
+    const userId = await makeUser();
+    const kit: string[] = [];
+    for (let index = 0; index < 40; index += 1) {
+      kit.push(await makeItem({ userId, name: `Piece ${String(index)}` }));
+    }
+    await makeObservation({
+      lat: 45.2,
+      lng: -87.7,
+      startedAt: NOW,
+      tempC: IN_BAND,
+      feelsLikeC: IN_BAND,
+    });
+    for (let index = 0; index < 80; index += 1) {
+      const runId = await makeRun({ userId, lat: 45.2, lng: -87.7 });
+      await makeEntry({
+        userId,
+        runId,
+        verdict: index % 2 === 0 ? -1 : 1,
+        itemIds: kit,
+        createdAt: NOW + index,
+      });
+    }
+
+    const signals = await bandSignals(userId, BAND, kit);
+
+    expect(Object.keys(signals.garments)).toHaveLength(40);
+    expect(signals.garments[kit[39] ?? ""]).toEqual({
+      total: 80,
+      dialed: 0,
+      colder: 40,
+      warmer: 40,
+    });
+  });
+});
+
 describe("bandSignalsForEntry", () => {
   it("reads the entry's own kit, and leaves the entry out of its record", async () => {
     const userId = await makeUser();
