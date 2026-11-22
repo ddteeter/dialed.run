@@ -384,36 +384,56 @@ async function reportsCeilingFor(
 
 /**
  * The reports' ceiling from the baseline weeks before `until`: four
- * times their busiest honest hour (`honestBusiest`), so the hours the
- * breaker itself spent at its ceiling never raise it.
+ * times their busiest honest hour, rising at most twofold an hour
+ * (`honestCeiling`), so the hours the breaker itself spent at its
+ * ceiling never raise it.
  */
 async function reportsCeilingBefore(db: Db, until: number): Promise<number> {
   const from = until - REPORT_BASELINE_S;
   const opened = reviewQueue.openedAt;
-  const hour = sql`${opened} / ${HOUR_S}`;
+  const hour = sql<number>`${opened} / ${HOUR_S}`.mapWith(Number);
   const hours = await db
-    .select({ n: count() })
+    .select({ hour, n: count() })
     .from(reviewQueue)
     .where(openedIn("reports", from, until))
     .groupBy(hour)
     .orderBy(hour);
-  return reportCeiling(honestBusiest(hours));
+  return honestCeiling(hours, Math.floor(until / HOUR_S));
 }
 
 /**
- * The busiest of these hours, oldest first, leaving out every hour whose
- * count reached the ceiling in force then — the ceiling the hours kept
- * before it set (owner, 2026-11-21). An hour at the ceiling is one the
- * breaker held back, not a measure of how busy the site honestly is.
- * Hours before the baseline's first are not read, so an early hour's
- * ceiling errs low, which only leaves more hours out.
+How far the reports' ceiling may rise from one hour to the next.
+*/
+const REPORT_CEILING_RISE_PER_HOUR = 2;
+
+/**
+ * The reports' ceiling in force at clock hour `atHour`, from these hours'
+ * counts, oldest first. Each hour's ceiling is four times the busiest
+ * honest hour before it, but never more than twice the ceiling of the
+ * hour before (owner, 2026-11-22); an hour whose count reached the
+ * ceiling in force then is not honest, since the breaker held it back
+ * (owner, 2026-11-21). An hour with no rows changes no count, so the
+ * ceiling may still double across it. Hours before the baseline's first
+ * are not read: the first starts at the floor, which errs low.
  */
-export function honestBusiest(hours: readonly { n: number }[]): number {
+export function honestCeiling(
+  hours: readonly { hour: number; n: number }[],
+  atHour: number,
+): number {
   let busiest = 0;
-  for (const { n } of hours) {
-    if (n < reportCeiling(busiest)) busiest = Math.max(busiest, n);
+  let ceiling = REPORT_HIDES_FLOOR;
+  let since = hours[0]?.hour ?? atHour;
+  const inForceAt = (hour: number) =>
+    Math.min(
+      reportCeiling(busiest),
+      ceiling * REPORT_CEILING_RISE_PER_HOUR ** (hour - since),
+    );
+  for (const { hour, n } of hours) {
+    ceiling = inForceAt(hour);
+    since = hour;
+    if (n < ceiling) busiest = Math.max(busiest, n);
   }
-  return busiest;
+  return inForceAt(atHour);
 }
 
 /**

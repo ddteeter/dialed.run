@@ -100,6 +100,7 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
   reopenOnlyIf: SQL = sql`1`,
 ) {
   const now = nowSeconds();
+  const stillCountedHide = sql`(${reviewQueue.status} in ('pending', 'reviewing') and ${reviewQueue.hid} = 1)`;
   return (
     database
       .insert(reviewQueue)
@@ -123,14 +124,16 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
           status: "pending",
           source: input.source,
           // Reopened now, though created when it first was: the hold
-          // breakers count this as a hold (design 164).
-          openedAt: now,
+          // breakers count this as a hold (design 164). A row still open
+          // on a hide the reports breaker counted keeps its hour, so a
+          // later report never moves a counted hide into a later one.
+          openedAt: sql`(case when ${stillCountedHide} then ${reviewQueue.openedAt} else ${now} end)`,
           // This opening's own: whether it hid, or null when the caller
           // does not say (only a report's opening does) — except that a
           // row still open on a hide the reports breaker counted keeps it
           // (`hid` 1), so a later report can bring a row into its count
           // and never take one out.
-          hid: sql`(case when ${reviewQueue.status} in ('pending', 'reviewing') and ${reviewQueue.hid} = 1 then 1 else ${orSqlNull(input.hid)} end)`,
+          hid: sql`(case when ${stillCountedHide} then 1 else ${orSqlNull(input.hid)} end)`,
           // Cleared, not left alone: this row is being re-opened, and a
           // stale reviewer stamped on a pending decision would read as
           // "someone already looked at this". An `undefined` here would

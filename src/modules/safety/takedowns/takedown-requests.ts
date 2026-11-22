@@ -809,7 +809,12 @@ export async function confirmTakedownRequest(
   if (now > request.dueAt) return "not_found";
   const subject = await requestSubjectOf(db, request);
   const state = sql<HoldState>`(case when ${valveShutSql(now, subject)} then 'valve' else 'held' end)`;
-  const row = rowOf(request.id, eq(takedownRequests.confirmedAt, now));
+  // This claim's moment, on a request still pending: a second press in
+  // the same second whose batch lands after a decision acts on nothing.
+  const row = rowOf(
+    request.id,
+    sql`(${eq(takedownRequests.confirmedAt, now)} and ${eq(takedownRequests.status, "pending")})`,
+  );
   const hid = holds(row.hid(now));
   const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
   const claim = and(

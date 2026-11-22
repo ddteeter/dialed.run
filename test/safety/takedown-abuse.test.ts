@@ -1746,6 +1746,30 @@ describe("a confirm that lands after a decision", () => {
       ),
     ).toHaveLength(before.length);
   });
+
+  it("hides nothing again when a second press in the same second lands after the Decline", async () => {
+    const { entryId, request } = await pastTheCap();
+    const token = await confirmTokenFor(request.id);
+    const effects = { oweWhere: oweInCoreWhere, purge: noPurge };
+
+    await confirmTakedownRequest(
+      landingFirst(async () => {
+        await confirmTakedownRequest(core(), token, effects, NOW + 60);
+        await decideRemovalRequest(
+          core(),
+          "op-one",
+          request.id,
+          { outcome: "declined", reason: "Not what it says." },
+          NOW + 60,
+        );
+      }),
+      token,
+      effects,
+      NOW + 60,
+    );
+
+    expect(await entryStatus(entryId)).toBe("ok");
+  });
 });
 
 describe("Block and decline all, on a shared address", () => {
