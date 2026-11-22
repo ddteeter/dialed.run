@@ -17,8 +17,16 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
-import { REGION_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
-import type { AccessRequestResult } from "../../src/modules/account/access/access";
+import {
+  ACCESS_CONFIRM_HOURS,
+  REGION_COPY,
+  TURNSTILE_REFUSED,
+} from "../../src/lib/contracts/access";
+import type {
+  AccessConfirmResult,
+  AccessRequestResult,
+} from "../../src/modules/account/access/access";
+import { AccessConfirm } from "../../src/modules/account/access/components/AccessConfirm";
 import { DeskAccess } from "../../src/modules/account/access/components/DeskAccess";
 import {
   DeskCodes,
@@ -255,18 +263,16 @@ describe("Au5 · Request access", () => {
     expect(withCounter(field, 119)).toBe(field);
   });
 
-  it("sends the request with Turnstile's answer and shows the one receipt", async () => {
+  it("sends the request with Turnstile's answer and asks for the link it sent", async () => {
     answeringTurnstile("answer");
-    const request = vi
-      .fn<RequestFn>()
-      .mockResolvedValue({ status: "received", isFromBlockedRegion: false });
+    const request = vi.fn<RequestFn>().mockResolvedValue({ status: "sent" });
     await renderWithRouter(<RequestAccess siteKey="site" request={request} />);
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email"), "sam@example.com");
     await user.type(screen.getByLabelText("Note · optional"), "Duluth.");
     await user.click(screen.getByRole("button", { name: "Send request" }));
-    const receipt = await waitFor(() => {
-      const found = part("receipt");
+    const sent = await waitFor(() => {
+      const found = part("check-email");
       expect(found).not.toBeNull();
       return found;
     });
@@ -277,31 +283,21 @@ describe("Au5 · Request access", () => {
         turnstileToken: "answer",
       },
     });
-    const inReceipt = within(receipt ?? document.body);
-    // The receipt takes the title (R55·181): a teal MONO.xs kicker, then
-    // its title as the page's one display heading.
-    expect(screen.getByText("On the list")).toHaveClass(
-      "text-dialed-text",
-      "text-mono-xs",
-    );
     const title = screen.getByRole("heading", { level: 1 });
-    expect(title).toHaveTextContent("You're on the list");
-    expect(title).toHaveClass("font-display", "text-display");
+    expect(title).toHaveTextContent("Check your email");
     expect(screen.getAllByRole("heading")).toHaveLength(1);
-    expect(receipt).toHaveTextContent(
-      "When there's room, we'll email a code to sam@example.com. There's nothing else to do until then.",
+    expect(sent?.textContent).toBe(
+      `We sent a link to sam@example.com. Open it to hold your place on the list; it lasts ${String(ACCESS_CONFIRM_HOURS)} hours.`,
     );
-    expect(inReceipt.getByText(/Have a code after all\?/)).toBeVisible();
-    // The question and its link read as one sentence, a space between.
-    expect(inReceipt.getByText(/Have a code after all\?/).textContent).toBe(
-      "Have a code after all? Create an account",
-    );
-    const receiptLink = inReceipt.getByRole("link", {
-      name: "Create an account",
-    });
-    expect(receiptLink).toHaveAttribute("href", "/auth/signup");
-    expect(receiptLink).toHaveClass("font-bold", "text-ink", "underline");
+    expect(
+      within(sent ?? document.body).getByText("sam@example.com").tagName,
+    ).toBe("STRONG");
+    expect(part("receipt")).toBeNull();
     expect(part("form")).toBeNull();
+    // Only the form's back link offered an account; the answer has none.
+    expect(
+      screen.queryByRole("link", { name: "Create an account" }),
+    ).toBeNull();
   });
 
   it("names both fields by their labels in the summary when both are wrong", async () => {
@@ -322,11 +318,9 @@ describe("Au5 · Request access", () => {
     expect(request).not.toHaveBeenCalled();
   });
 
-  it("announces the request was sent before it swaps to the receipt", async () => {
+  it("announces the request was sent before it swaps to Check your email", async () => {
     vi.useFakeTimers();
-    const request = vi
-      .fn<RequestFn>()
-      .mockResolvedValue({ status: "received", isFromBlockedRegion: false });
+    const request = vi.fn<RequestFn>().mockResolvedValue({ status: "sent" });
     await renderWithRouter(
       <RequestAccess siteKey={undefined} request={request} />,
     );
@@ -341,17 +335,16 @@ describe("Au5 · Request access", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
     });
-    expect(screen.getByText("On the list")).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Check your email",
+    );
   });
 
   it("says a Turnstile refusal as NOT SENT, and tries again from the band", async () => {
     const request = vi
       .fn<RequestFn>()
       .mockResolvedValueOnce({ status: "refused" })
-      .mockResolvedValueOnce({
-        status: "received",
-        isFromBlockedRegion: false,
-      });
+      .mockResolvedValueOnce({ status: "sent" });
     await renderWithRouter(
       <RequestAccess siteKey={undefined} request={request} />,
     );
@@ -370,37 +363,9 @@ describe("Au5 · Request access", () => {
     });
     await user.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expect(part("receipt")).not.toBeNull();
+      expect(part("check-email")).not.toBeNull();
     });
     expect(request).toHaveBeenCalledTimes(2);
-  });
-
-  it("takes a request from a blocked state, and says sign-up isn't open there yet", async () => {
-    const request = vi
-      .fn<RequestFn>()
-      .mockResolvedValue({ status: "received", isFromBlockedRegion: true });
-    await renderWithRouter(
-      <RequestAccess siteKey={undefined} request={request} />,
-    );
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText("Email"), "sam@example.com");
-    await user.click(screen.getByRole("button", { name: "Send request" }));
-    const receipt = await waitFor(() => {
-      const found = part("receipt");
-      expect(found).not.toBeNull();
-      return found;
-    });
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "You're on the list",
-    );
-    expect(receipt).toHaveTextContent(REGION_COPY.waitlist);
-    // No way on to an account that would be refused, and no promise of a
-    // code by email.
-    expect(
-      screen.queryByRole("link", { name: "Create an account" }),
-    ).toBeNull();
-    expect(receipt).not.toHaveTextContent("sam@example.com");
-    expect(part("failure-band")).toBeNull();
   });
 
   it("refuses a bad address on its field, before any round trip", async () => {
@@ -415,25 +380,6 @@ describe("Au5 · Request access", () => {
       await screen.findByText("That does not look like an email address."),
     ).toBeVisible();
     expect(request).not.toHaveBeenCalled();
-  });
-
-  it("leaves the back link off the receipt", async () => {
-    const request = vi
-      .fn<RequestFn>()
-      .mockResolvedValue({ status: "received", isFromBlockedRegion: false });
-    await renderWithRouter(
-      <RequestAccess siteKey={undefined} request={request} />,
-    );
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText("Email"), "sam@example.com");
-    await user.click(screen.getByRole("button", { name: "Send request" }));
-    await waitFor(() => {
-      expect(part("receipt")).not.toBeNull();
-    });
-    // The receipt's own "Create an account" is the only one.
-    expect(
-      screen.getAllByRole("link", { name: "Create an account" }),
-    ).toHaveLength(1);
   });
 
   it.each([
@@ -456,6 +402,127 @@ describe("Au5 · Request access", () => {
       );
     },
   );
+});
+
+type ConfirmFn = (input: {
+  data: { token: string };
+}) => Promise<AccessConfirmResult>;
+
+/**
+The landing, opened on a link, with its one button pressed.
+*/
+async function confirmed(result: AccessConfirmResult) {
+  const confirm = vi.fn<ConfirmFn>().mockResolvedValue(result);
+  await renderWithRouter(<AccessConfirm token="tok" confirm={confirm} />);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Confirm the request" }));
+  return confirm;
+}
+
+describe("Au5 · the confirm link's landing", () => {
+  it("asks before it confirms, and confirms nothing on arrival", async () => {
+    const confirm = vi.fn<ConfirmFn>();
+    await renderWithRouter(<AccessConfirm token="tok" confirm={confirm} />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Confirm your request",
+    );
+    expect(part("form")).toHaveTextContent(
+      "Confirm that you asked to join dialed.run. Then you're on the list.",
+    );
+    expect(
+      screen.getByRole("button", { name: "Confirm the request" }),
+    ).toBeVisible();
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("confirms the link's token and shows the one receipt", async () => {
+    const confirm = await confirmed({
+      status: "confirmed",
+      email: "sam@example.com",
+      isFromBlockedRegion: false,
+    });
+    const receipt = await waitFor(() => {
+      const found = part("receipt");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(confirm).toHaveBeenCalledWith({ data: { token: "tok" } });
+    const inReceipt = within(receipt ?? document.body);
+    // The receipt takes the title (R55·181): a teal MONO.xs kicker, then
+    // its title as the page's one display heading.
+    expect(screen.getByText("On the list")).toHaveClass(
+      "text-dialed-text",
+      "text-mono-xs",
+    );
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title).toHaveTextContent("You're on the list");
+    expect(title).toHaveClass("font-display", "text-display");
+    expect(screen.getAllByRole("heading")).toHaveLength(1);
+    expect(receipt).toHaveTextContent(
+      "When there's room, we'll email a code to sam@example.com. There's nothing else to do until then.",
+    );
+    // The question and its link read as one sentence, a space between.
+    expect(inReceipt.getByText(/Have a code after all\?/).textContent).toBe(
+      "Have a code after all? Create an account",
+    );
+    const receiptLink = inReceipt.getByRole("link", {
+      name: "Create an account",
+    });
+    expect(receiptLink).toHaveAttribute("href", "/auth/signup");
+    expect(receiptLink).toHaveClass("font-bold", "text-ink", "underline");
+    expect(part("form")).toBeNull();
+  });
+
+  it("says sign-up isn't open there yet for an ask placed in a blocked state", async () => {
+    await confirmed({
+      status: "confirmed",
+      email: "sam@example.com",
+      isFromBlockedRegion: true,
+    });
+    const receipt = await waitFor(() => {
+      const found = part("receipt");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "You're on the list",
+    );
+    expect(receipt).toHaveTextContent(REGION_COPY.waitlist);
+    // No way on to an account that would be refused, and no promise of a
+    // code by email.
+    expect(
+      screen.queryByRole("link", { name: "Create an account" }),
+    ).toBeNull();
+    expect(receipt).not.toHaveTextContent("sam@example.com");
+  });
+
+  it("says a link that matches no ask, whether unknown or run out", async () => {
+    await confirmed({ status: "not_found" });
+    expect(
+      await screen.findByText(
+        "This link doesn't match a request. Use the link in the email we sent, or make the request again.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Confirm your request",
+    );
+    expect(part("receipt")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("says the same of a link with no token, asking nothing", async () => {
+    const confirm = vi.fn<ConfirmFn>();
+    await renderWithRouter(
+      <AccessConfirm token={undefined} confirm={confirm} />,
+    );
+    expect(
+      screen.getByText(
+        "This link doesn't match a request. Use the link in the email we sent, or make the request again.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(confirm).not.toHaveBeenCalled();
+  });
 });
 
 function code(overrides: Partial<DeskCode> = {}): DeskCode {

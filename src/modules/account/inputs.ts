@@ -28,6 +28,15 @@ export { tokenSearch as confirmInput } from "./route-decisions";
  */
 export const confirmLinkForm = z.object({});
 
+/**
+ * An access request's confirm (owner, 2026-11-21): the link's token, which
+ * the landing's one button sends. A token is 64 hex characters; anything
+ * else matches no ask.
+ */
+export const accessConfirmInput = z.object({
+  token: z.string().min(1).max(128),
+});
+
 export { changeEmailSchema as changeEmailInput } from "../../lib/contracts";
 
 /**

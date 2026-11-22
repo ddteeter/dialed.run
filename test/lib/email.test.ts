@@ -22,6 +22,7 @@ describe("emailTemplateSchema", () => {
       { kind: "existing_account" },
       { kind: "reset_password", url: link },
       { kind: "email_change", url: link, newEmail: "new@example.com" },
+      { kind: "access_confirm", url: link },
       { kind: "email_changed", newEmail: "new@example.com" },
       { kind: "run_reminder", landedAt: "6:58 AM", runs: 3 },
       { kind: "content_removed", subject: "photo", reason: "it's spam" },

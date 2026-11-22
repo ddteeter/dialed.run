@@ -341,6 +341,15 @@ const CONTENT: {
       foot: `${ONCE_FOR_A_DAY} Didn't ask for it? Ignore this and nothing changes.`,
     };
   },
+  access_confirm: (template) => {
+    // The owner's words (2026-11-21).
+    return {
+      subject: "Confirm your place on the dialed.run list",
+      body: "Someone asked to join dialed.run with this address. If it was you, confirm it here:",
+      button: { label: "Confirm my email", href: template.url },
+      foot: "If it wasn't, ignore this email and nothing happens.",
+    };
+  },
   email_changed: (template, { origin }) => {
     return {
       subject: "Your dialed.run email changed",

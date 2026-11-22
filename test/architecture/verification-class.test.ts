@@ -127,6 +127,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Round 39 #69: where the request is placed, read before any account.
   "account/functions.ts signUpPlaceQuery": "sessionless",
   "account/functions.ts requestAccessFn": "sessionless",
+  // The ask's confirm link, with no account, as `/takedown`'s confirm:
+  // the token is the proof.
+  "account/functions.ts confirmAccessFn": "sessionless",
   "account/functions.ts accessDeskQuery": "admin",
   "account/functions.ts createInviteCodeFn": "admin",
   "account/functions.ts inviteFromRequestFn": "admin",

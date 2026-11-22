@@ -108,6 +108,12 @@ export const ACCESS_NOTE_MAX = 140;
 export const ACCESS_NOTE_COUNT_FROM = 120;
 
 /**
+ * How long an access request's confirm link works (owner, 2026-11-21):
+ * an ask counts only once its address is confirmed by it.
+ */
+export const ACCESS_CONFIRM_HOURS = 48;
+
+/**
  * Round 27 #12: what Au2 and Au5 say when Turnstile refused the browser.
  * The kicker is `NOT SENT` on both.
  */

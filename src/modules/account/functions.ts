@@ -34,7 +34,11 @@ import {
 } from "../ops";
 import { settleOwedEmail } from "../ops/owed-email";
 import { requireAdmin } from "../safety";
-import { requestAccess, turnstileAttempt } from "./access/access";
+import {
+  confirmAccessAsk,
+  requestAccess,
+  turnstileAttempt,
+} from "./access/access";
 import { accountPage, accountView, ownAddressView } from "./data/account-view";
 import { requestExport } from "./data/data-exports";
 import {
@@ -45,6 +49,7 @@ import {
 } from "./data/deletion";
 import {
   acceptTermsInput,
+  accessConfirmInput,
   changeEmailInput,
   confirmInput,
   deskRowInput,
@@ -274,7 +279,25 @@ export const requestAccessFn = createServerFn({ method: "POST" })
         blockedRegion: blockedRegionOf(getRequest()),
       },
       verifyTurnstileToken,
+      {
+        deps: emailDepsFromEnv(),
+        background: { keepAlive: waitUntil, report: captureException },
+      },
     ),
+  );
+
+/**
+ * An access request's confirm link (owner, 2026-11-21): no session, as
+ * the ask had none; the token is the proof, and only its hash is stored.
+ * Primary: the address's limit gates the write.
+ */
+export const confirmAccessFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => accessConfirmInput.parse(data))
+  .handler(async ({ data }) =>
+    confirmAccessAsk(primaryCoreDb(), {
+      token: data.token,
+      isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
+    }),
   );
 
 /**

@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { JSX } from "react";
 
 import {
+  ACCESS_CONFIRM_HOURS,
   ACCESS_NOTE_COUNT_FROM,
   ACCESS_NOTE_MAX,
   REGION_COPY,
@@ -32,13 +33,14 @@ const INLINE_LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 
 /**
  * Au5's receipt (round 26 #20): "You're on the list", the same for a new,
- * a repeated and a registered address — it reveals nothing.
+ * a repeated and a registered address — it reveals nothing. Shown once
+ * the ask's confirm link is opened (`AccessConfirm`).
  *
  * From a blocked state (owner, 2026-10-18; design-deltas item 69) the
  * request is kept all the same, and the receipt says only that sign-up is
  * not open there yet: no "Create an account", which would be refused.
  */
-function Receipt({
+export function OnTheList({
   email,
   isFromBlockedRegion,
 }: Readonly<{ email: string; isFromBlockedRegion: boolean }>): JSX.Element {
@@ -66,6 +68,25 @@ function Receipt({
         </Link>
       </p>
     </SignedOutReceipt>
+  );
+}
+
+/**
+ * What the form answers once it is sent (owner, 2026-11-21): the ask
+ * waits on the link sent to the address, and counts once it is opened.
+ * The same for every address, so it reveals nothing. Au4's frame, until
+ * Design draws it (design deltas).
+ */
+function CheckYourEmail({ email }: Readonly<{ email: string }>): JSX.Element {
+  return (
+    <SignedOutPanel heading="Check your email">
+      <div data-part="check-email" className="flex flex-col gap-5">
+        <p className="m-0 text-lead">
+          We sent a link to <strong>{email}</strong>. Open it to hold your place
+          on the list; it lasts {ACCESS_CONFIRM_HOURS} hours.
+        </p>
+      </div>
+    </SignedOutPanel>
   );
 }
 
@@ -180,15 +201,7 @@ export function RequestAccess({
     onSuccess: setOutcome,
   });
 
-  // The receipt takes the panel's title (R55·181).
-  if (outcome?.status === "received") {
-    return (
-      <Receipt
-        email={email}
-        isFromBlockedRegion={outcome.isFromBlockedRegion}
-      />
-    );
-  }
+  if (outcome?.status === "sent") return <CheckYourEmail email={email} />;
   return (
     <SignedOutPanel heading="Request access" notice={<BackToSignUp />}>
       <FormElement

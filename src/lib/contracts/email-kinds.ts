@@ -66,6 +66,14 @@ export const emailChange = emailKind("email_change", {
 });
 
 /**
+ * An access request's confirm link (owner, 2026-11-21), sent to the
+ * address the ask named: the request counts only once it is confirmed. Sent
+ * now, never through the outbox, as `verify_email` is: it carries a live
+ * token.
+ */
+export const accessConfirm = emailKind("access_confirm", { url: link });
+
+/**
  * ACC-8: the notice to the old address once the change is done, so a
  * change the runner did not make is seen by the one inbox that can say
  * so. Secondary to the change, so it rides the outbox.

@@ -5,6 +5,7 @@ import { countRow, countedKeys } from "../rate-limit-rows";
 
 import { account, session, user, verification } from "../../src/db/schema-auth";
 import {
+  accessAsks,
   accessRequests,
   accountDeletions,
   blocks,
@@ -336,6 +337,15 @@ async function seedAccount(): Promise<Seeded> {
     core
       .insert(passwordAttempts)
       .values({ userId, windowStartedAt: NOW, attempts: 2 }),
+    // An ask waiting on its link under every address they are known by.
+    core.insert(accessAsks).values(
+      [email, redeemedAs, movingTo(email)].map((address) => ({
+        id: newUlid(),
+        email: address.toLowerCase(),
+        tokenHash: newUlid(),
+        createdAt: NOW,
+      })),
+    ),
     // An access request under every address they are known by.
     core.insert(accessRequests).values(
       [email, redeemedAs, movingTo(email)].map((address) => ({
@@ -374,10 +384,16 @@ async function seedAccount(): Promise<Seeded> {
         countRow("photo-runner", userId, 1, NOW),
         countRow("purge-runner", userId, 1, NOW),
         countRow("deletion-notice", userId, 1, NOW),
-        ...addressesOf(email).flatMap((address) =>
+      ]),
+    // The counts kept by address, in their own statement: with the
+    // runner's above, one insert binds more parameters than D1 takes.
+    core
+      .insert(rateLimits)
+      .values(
+        addressesOf(email).flatMap((address) =>
           ADDRESS_SENDS.map((kind) => countRow(kind, address, 1, NOW)),
         ),
-      ]),
+      ),
     // Its own statement: one more row in the insert above binds more
     // parameters than D1 takes.
     core
@@ -521,6 +537,7 @@ const ADDRESS_SENDS = [
   "sign-in",
   "takedown-to",
   "access-to",
+  "access-confirm-to",
 ] as const;
 
 /**
@@ -733,6 +750,10 @@ async function footprint(seeded: Seeded) {
       .select()
       .from(accessRequests)
       .where(inArray(accessRequests.email, provedOf(seeded.email))),
+    accessAsks: await core
+      .select({ email: accessAsks.email })
+      .from(accessAsks)
+      .where(inArray(accessAsks.email, provedOf(seeded.email))),
     inviteLabels: await core
       .select({ label: inviteCodes.label })
       .from(inviteCodes)
@@ -823,6 +844,7 @@ const GONE = {
   verifications: [],
   passwordAttempts: [],
   accessRequests: [],
+  accessAsks: [],
   inviteLabels: [],
   sendLimits: [],
   spendLimits: [],

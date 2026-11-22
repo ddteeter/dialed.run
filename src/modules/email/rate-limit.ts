@@ -36,8 +36,8 @@ export const SEND_WINDOW_S = 60 * 60;
 
 /**
  * The counts kept by email address: the three sends, sign-in's tries,
- * `/takedown`'s receipts and Au5's asks per address. `access`, `takedown` and `resend-visitor` are
- * counted by IP.
+ * `/takedown`'s receipts, and Au5's confirm links and confirmed asks per
+ * address. `access`, `takedown` and `resend-visitor` are counted by IP.
  */
 const ADDRESS_COUNTS = [
   "verify",
@@ -46,6 +46,7 @@ const ADDRESS_COUNTS = [
   "sign-in",
   "takedown-to",
   "access-to",
+  "access-confirm-to",
 ] as const satisfies readonly RateLimitKind[];
 
 export type SendClaim =
@@ -111,7 +112,7 @@ const RATE_LIMIT_KEPT_S = 24 * 60 * 60;
  * **Nothing reads such a row but to start it over.** Every write is
  * `countRate`'s upsert, whose `windowedCountSet` restarts an ended window
  * at one — exactly the row an insert makes once this one is gone.
- * `sendAllowed` reads the row `countSend` just wrote in the same batch,
+ * `limitAllowed` reads the row its count just wrote in the same batch,
  * never an old one; the forgets only delete. So the sweep cannot change a
  * verdict, and the margin is there only so a row is never deleted near
  * the moment it could still count.
@@ -129,8 +130,8 @@ export async function sweepRateLimits(
 
 /**
  * Count one send — the statement, unsent, so a caller can put it in a
- * `db.batch()` with the write it allows (`sendAllowed` reads the verdict
- * inside the same batch). `sendClaimOf` reads its answer.
+ * `db.batch()` with the write it allows. `sendClaimOf` reads its
+ * answer.
  */
 export function countSend(
   db: Db,
@@ -228,15 +229,6 @@ export function sendClaimOf(rows: CountRows): SendClaim {
 }
 
 /**
- * The same verdict as SQL, for a write in the batch after `countSend`:
- * true while the count it just made is within the limit
- * (`windowedCountWithin`, the limit `sendClaimOf` applies).
- */
-export function sendAllowed(kind: SendLimitKind, address: string): SQL {
-  return sql`EXISTS (SELECT 1 FROM ${rateLimits} WHERE ${rateLimits.kind} = ${kind} AND ${rateLimits.subject} = ${keyOf(kind, sendSubject(address))} AND ${windowedCountWithin(rateLimits.count, SENDS_PER_WINDOW)})`;
-}
-
-/**
 Count one send, and say whether it may go.
 */
 export async function claimEmailSend(
@@ -302,11 +294,19 @@ export const TAKEDOWN_RECEIPTS_PER_HOUR = 5;
 export const DELETION_NOTICES_PER_DAY = 3;
 
 /**
- * How many times one address may be asked for on Au5 in a day, whoever
- * asks; past it the ask writes nothing and answers the same receipt
- * (owner, 2026-11-21).
+ * How many confirmed asks one address's access request takes in a day;
+ * past it a confirm changes nothing and answers the same receipt (owner,
+ * 2026-11-21).
  */
 export const ACCESS_ASKS_PER_ADDRESS_PER_DAY = 3;
+
+/**
+ * How many confirm links Au5's asks may send one address in a day,
+ * whoever asks: the same three a day the address's confirmed asks take.
+ * Past it the ask writes nothing, sends nothing, and answers the same.
+ */
+export const ACCESS_CONFIRMS_PER_ADDRESS_PER_DAY =
+  ACCESS_ASKS_PER_ADDRESS_PER_DAY;
 
 const DAY_S = 24 * 60 * 60;
 
@@ -314,8 +314,8 @@ const DAY_S = 24 * 60 * 60;
  * The counts a caller claims by kind alone, each with its limit and its
  * window: Resend per visitor (its IP), a runner's photo uploads (their
  * id), `/takedown`'s receipts per address (lowercased, as the request
- * is), a runner's "delete scheduled" emails (their id), and Au5's asks
- * per address (lowercased).
+ * is), a runner's "delete scheduled" emails (their id), and Au5's
+ * confirmed asks and confirm links per address (lowercased).
  */
 const LIMIT_OF = {
   "resend-visitor": {
@@ -326,6 +326,10 @@ const LIMIT_OF = {
   "takedown-to": { limit: TAKEDOWN_RECEIPTS_PER_HOUR, windowS: SEND_WINDOW_S },
   "deletion-notice": { limit: DELETION_NOTICES_PER_DAY, windowS: DAY_S },
   "access-to": { limit: ACCESS_ASKS_PER_ADDRESS_PER_DAY, windowS: DAY_S },
+  "access-confirm-to": {
+    limit: ACCESS_CONFIRMS_PER_ADDRESS_PER_DAY,
+    windowS: DAY_S,
+  },
 } as const satisfies Partial<
   Record<RateLimitKind, Readonly<{ limit: number; windowS: number }>>
 >;

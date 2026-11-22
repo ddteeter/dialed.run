@@ -43,6 +43,7 @@ import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { account, session, user, verification } from "../../../db/schema-auth";
 import {
+  accessAsks,
   accessRequests,
   accountDeletions,
   blocks,
@@ -514,7 +515,8 @@ async function provedAddressesOf(db: Db, userId: string): Promise<string[]> {
 }
 
 /**
- * What is kept by one address: an access request, the send counters, and
+ * What is kept by one address: an access request and its asks, the send
+ * counters, and
  * an invite code's label that names it — which D7 no longer writes
  * (`invites.ts`' `requestLabelOr`), but a code made before that did, and
  * an operator may type one. `instr` rather than `LIKE`, so an address's
@@ -523,7 +525,9 @@ async function provedAddressesOf(db: Db, userId: string): Promise<string[]> {
  */
 function forgetAddress(db: Db, address: string) {
   return [
-    db.delete(accessRequests).where(eq(accessRequests.email, address)),
+    ...[accessRequests, accessAsks].map((table) =>
+      db.delete(table).where(eq(table.email, address)),
+    ),
     forgetSendLimits(db, address),
     db
       .update(inviteCodes)

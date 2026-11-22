@@ -2,18 +2,18 @@
  * Covers: `POST /api/access-requests` (round 31, design 187), the
  * marketing site's request-access form, on the real Worker: Turnstile
  * verified by the server on the test keys, the 303s round 31 names, and
- * the request written where Desk D7 reads it. A raw route through the real
- * handler, which a vitest cannot reach. D7 drawing a request is the auth
- * journey's (Au5 → D7).
+ * the ask kept, waiting on its confirm link before Desk D7 sees it. A raw
+ * route through the real handler, which a vitest cannot reach. D7 drawing
+ * a request is the auth journey's (Au5 → D7).
  */
 import { eq } from "drizzle-orm";
 
-import { accessRequests } from "../../src/db/schema-core";
+import { accessAsks, accessRequests } from "../../src/db/schema-core";
 import { expect, test } from "../support/a11y";
 import { TURNSTILE_TEST_TOKEN } from "../support/invites";
 import { withLocalDb } from "../support/local-db";
 
-test("a request from the marketing site waits for D7, and the visitor goes to /invite/sent", async ({
+test("a request from the marketing site waits on its confirm link, and the visitor goes to /invite/sent", async ({
   request,
 }) => {
   const email = `marketing-${String(Date.now())}@example.com`;
@@ -28,15 +28,24 @@ test("a request from the marketing site waits for D7, and the visitor goes to /i
   expect(response.status()).toBe(303);
   expect(response.headers().location).toBe("https://dialed.run/invite/sent");
 
-  const rows = await withLocalDb(async ({ core }) =>
-    core
-      .select({ note: accessRequests.note, status: accessRequests.status })
-      .from(accessRequests)
-      .where(eq(accessRequests.email, email)),
+  const [asks, requests] = await withLocalDb(async ({ core }) =>
+    Promise.all([
+      core
+        .select({
+          note: accessAsks.note,
+          confirmedAt: accessAsks.confirmedAt,
+        })
+        .from(accessAsks)
+        .where(eq(accessAsks.email, email)),
+      core
+        .select({ id: accessRequests.id })
+        .from(accessRequests)
+        .where(eq(accessRequests.email, email)),
+    ]),
   );
-  expect(rows).toEqual([
-    { note: "From the marketing site.", status: "pending" },
-  ]);
+  expect(asks).toMatchObject([{ note: "From the marketing site." }]);
+  expect(asks[0]?.confirmedAt).toBeNull();
+  expect(requests).toEqual([]);
 });
 
 test("a malformed address goes back to /invite with error=invalid_email", async ({

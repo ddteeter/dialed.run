@@ -18,6 +18,7 @@ export {
 } from "./verification";
 export type {
   AuthMail,
+  Background,
   ChangeResult,
   Landing,
   OwedMail,

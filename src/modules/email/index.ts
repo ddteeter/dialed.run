@@ -29,7 +29,6 @@ export {
   isWithinRateLimit,
   limitAllowed,
   limitClaimOf,
-  sendAllowed,
   sendClaimOf,
   sweepRateLimits,
 } from "./rate-limit";

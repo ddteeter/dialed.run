@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { env, primaryCoreDb } from "../../env";
+import { env, primaryCoreDb, waitUntil } from "../../env";
 import { receiveAccessRequest } from "../../modules/account";
 import { deploymentPosture } from "../../modules/auth";
-import { verifyTurnstileToken } from "../../modules/ops";
+import { emailDepsFromEnv } from "../../modules/email";
+import { captureException, verifyTurnstileToken } from "../../modules/ops";
 
 /**
  * The marketing site's request-access form (round 31, design 187). The
@@ -17,6 +18,10 @@ export const Route = createFileRoute("/api/access-requests")({
           db: primaryCoreDb(),
           verify: verifyTurnstileToken,
           isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
+          mail: {
+            deps: emailDepsFromEnv(),
+            background: { keepAlive: waitUntil, report: captureException },
+          },
         }),
     },
   },

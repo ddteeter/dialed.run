@@ -235,6 +235,17 @@ describe("the sweep reads by index, not by scanning (D1 bills rows scanned)", ()
     expect(countsPlan).toMatch(/password_attempts_window/u);
     expect(countsPlan).not.toMatch(/SCAN\s+password_attempts\b/iu);
   });
+
+  it("finds expired verification rows through verification_expires_at", async () => {
+    const states = db
+      .delete(verification)
+      .where(lt(verification.expiresAt, new Date(NOW * 1000)))
+      .toSQL();
+
+    const statesPlan = await planOf(states.sql, states.params);
+    expect(statesPlan).toMatch(/verification_expires_at/u);
+    expect(statesPlan).not.toMatch(/SCAN\s+verification\b/iu);
+  });
 });
 
 /**

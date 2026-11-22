@@ -6,6 +6,7 @@ import { countedKeys } from "../rate-limit-rows";
 
 import { user } from "../../src/db/schema-auth";
 import {
+  accessAsks,
   accessRequests,
   rateLimits,
   inviteCodes,
@@ -18,8 +19,11 @@ import { env } from "../../src/env";
 import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
+import { confirmTokenHash } from "../../src/lib/confirm-token";
 import {
+  ACCESS_CONFIRM_S,
   accessGate,
+  confirmAccessAsk,
   requestAccess,
   turnstileAttempt,
 } from "../../src/modules/account/access/access";
@@ -38,7 +42,7 @@ import {
 } from "../../src/modules/account/access/invites";
 import type { InviteAnswer } from "../../src/modules/account/access/invites";
 import type { TurnstileAttempt } from "../../src/modules/ops";
-import { fakeMail, owedTo } from "../email/helpers";
+import { fakeMail, ORIGIN, owedTo } from "../email/helpers";
 
 /**
 Send invite's code, parsed out of its answer: a refusal or nothing fails the test here.
@@ -70,6 +74,7 @@ beforeEach(async () => {
     db.delete(inviteCodes),
     db.delete(inviteRedemptions),
     db.delete(accessRequests),
+    db.delete(accessAsks),
     db.delete(rateLimits),
     db.delete(outbox),
   ]);
@@ -723,71 +728,399 @@ async function visitorKeys(): Promise<string[]> {
   return keys.filter((key) => key.startsWith("access:"));
 }
 
+/**
+ * Where an ask's confirm link goes: the fake sender, the work held until
+ * the test lets it go, and what a failed send reported.
+ */
+function askMail() {
+  const mail = fakeMail();
+  const work: Promise<unknown>[] = [];
+  const reports: Record<string, string>[] = [];
+  return {
+    mail,
+    reports,
+    sending: {
+      deps: mail,
+      background: {
+        keepAlive: (promise: Promise<unknown>) => {
+          work.push(promise);
+        },
+        report: (_error: unknown, context: Record<string, string>) => {
+          reports.push(context);
+        },
+      },
+    },
+    settled: () => Promise.all(work),
+  };
+}
+
+/**
+The token each confirm link sent carried, in order.
+*/
+function tokensSent(mail: ReturnType<typeof fakeMail>): string[] {
+  return mail.sent.map(
+    (message) =>
+      /confirm-access\?token=(?<token>[0-9a-f]{64})/u.exec(String(message.text))
+        ?.groups?.token ?? "",
+  );
+}
+
+type Asking = ReturnType<typeof askMail>;
+
+/**
+One ask, as Au5's form sends it, and the links it sent.
+*/
+async function askAs(
+  asking: Asking,
+  input: Readonly<{
+    email?: string;
+    note?: string;
+    blockedRegion?: "MS" | "TN";
+    isLimited?: boolean;
+    attempt?: TurnstileAttempt;
+  }>,
+  now: number,
+) {
+  const result = await requestAccess(
+    db,
+    {
+      email: input.email ?? "sam@x.test",
+      note: input.note ?? "",
+      attempt: input.attempt ?? ATTEMPT,
+      isLimited: input.isLimited ?? false,
+      blockedRegion: input.blockedRegion,
+    },
+    verifyAs(true).verify,
+    asking.sending,
+    now,
+  );
+  await asking.settled();
+  return result;
+}
+
+/**
+The ask's link opened, on a deployment that limits or not.
+*/
+function confirmAt(token: string, now: number, isLimited = false) {
+  return confirmAccessAsk(db, { token, isLimited }, now);
+}
+
 describe("requestAccess (Au5)", () => {
-  it("keeps the request, address lowercased, and answers with the one receipt", async () => {
-    const { verify } = verifyAs(true);
+  it("keeps the ask unconfirmed, address lowercased, sends its address the link, and puts nothing on D7", async () => {
+    const asking = askMail();
+    expect(
+      await askAs(asking, { email: "Sam@X.test", note: "Winter runner." }, 5),
+    ).toStrictEqual({ status: "sent" });
+    const [token = ""] = tokensSent(asking.mail);
+    expect(await db.select().from(accessAsks)).toStrictEqual([
+      {
+        id: ANY_STRING,
+        email: "sam@x.test",
+        note: "Winter runner.",
+        blockedRegion: NOTHING,
+        tokenHash: await confirmTokenHash(token),
+        createdAt: 5,
+        confirmedAt: NOTHING,
+      },
+    ]);
+    expect(await db.select().from(accessRequests)).toStrictEqual([]);
+    const desk = await accessDesk(db);
+    expect(desk.requests).toStrictEqual([]);
+    expect(asking.mail.sent).toHaveLength(1);
+    const [sent] = asking.mail.sent;
+    expect(sent?.to).toBe("sam@x.test");
+    expect(sent?.subject).toBe("Confirm your place on the dialed.run list");
+    // The plain text, its lines joined back up.
+    const text = String(sent?.text).replaceAll(/\s+/gu, " ");
+    expect(text).toContain(
+      "Someone asked to join dialed.run with this address. If it was you, confirm it here:",
+    );
+    expect(text).toContain("Confirm my email");
+    expect(text).toContain(`${ORIGIN}/account/confirm-access?token=${token}`);
+    expect(text).toContain(
+      "If it wasn't, ignore this email and nothing happens.",
+    );
+  });
+
+  it("keeps no note for an empty one, and the place the ask was made from", async () => {
+    await askAs(askMail(), { note: "", blockedRegion: "TN" }, 5);
+    expect(await db.select().from(accessAsks)).toMatchObject([
+      { note: NOTHING, blockedRegion: "TN" },
+    ]);
+  });
+
+  it("refuses what Turnstile refuses, keeping and sending nothing", async () => {
+    const asking = askMail();
+    const { seen, verify } = verifyAs(false);
     expect(
       await requestAccess(
         db,
         {
-          email: "Sam@X.test",
-          note: "Winter runner.",
+          email: "sam@x.test",
+          note: "",
           attempt: ATTEMPT,
-          isLimited: false,
+          isLimited: true,
           blockedRegion: undefined,
         },
         verify,
-        5,
+        asking.sending,
       ),
-    ).toStrictEqual({ status: "received", isFromBlockedRegion: false });
+    ).toStrictEqual({ status: "refused" });
+    await asking.settled();
+    expect(seen).toStrictEqual([ATTEMPT]);
+    expect(await db.select().from(accessAsks)).toStrictEqual([]);
+    expect(await db.select().from(rateLimits)).toStrictEqual([]);
+    expect(asking.mail.sent).toStrictEqual([]);
+  });
+
+  it("limits a visitor to five an hour on a real deployment, keyed by their address, and counts nothing for an address past it", async () => {
+    const asking = askMail();
+    const ask = (email: string, attempt: TurnstileAttempt) =>
+      askAs(asking, { email, attempt, isLimited: true }, 1000);
+    for (const n of [1, 2, 3, 4, 5]) {
+      expect(await ask(`${String(n)}@x.test`, ATTEMPT)).toStrictEqual({
+        status: "sent",
+      });
+    }
+    expect(await ask("6@x.test", ATTEMPT)).toStrictEqual({
+      status: "limited",
+      until: 1000 + 3600,
+    });
+    expect(await db.select().from(accessAsks)).toHaveLength(5);
+    expect(asking.mail.sent).toHaveLength(5);
+    expect(await visitorKeys()).toStrictEqual(["access:203.0.113.9"]);
+    expect(await countedKeys(db)).not.toContain("access-confirm-to:6@x.test");
+    // Another visitor is not held up by the first.
+    expect(
+      await ask("7@x.test", { ...ATTEMPT, remoteIp: undefined }),
+    ).toStrictEqual({ status: "sent" });
+    expect(await visitorKeys()).toStrictEqual([
+      "access:203.0.113.9",
+      "access:unknown",
+    ]);
+  });
+
+  it("counts every address in one IPv6 /64 as one visitor, and keeps nothing past the limit (SA-M11)", async () => {
+    const asking = askMail();
+    const ask = (n: number, remoteIp: string) =>
+      askAs(
+        asking,
+        {
+          email: `asker-${String(n)}@x.test`,
+          attempt: { ...ATTEMPT, remoteIp },
+          isLimited: true,
+        },
+        1000,
+      );
+    const results = [];
+    for (let n = 0; n <= EMAIL_SENDS_PER_HOUR; n += 1) {
+      results.push(await ask(n, `2001:db8:1:2::${(n + 1).toString(16)}`));
+    }
+    expect(results.at(-1)).toStrictEqual({
+      status: "limited",
+      until: 1000 + 3600,
+    });
+    expect(await db.select().from(accessAsks)).toHaveLength(
+      EMAIL_SENDS_PER_HOUR,
+    );
+    expect(await visitorKeys()).toStrictEqual(["access:2001:db8:1:2::/64"]);
+    expect(await ask(99, "2001:db8:1:3::1")).toStrictEqual({ status: "sent" });
+  });
+
+  it("sends one address three links a day on a real deployment, whoever asks, and answers the same past them, keeping and sending nothing", async () => {
+    const asking = askMail();
+    const ask = (n: number, now: number) =>
+      askAs(
+        asking,
+        {
+          email: "Sam@X.test",
+          note: `Ask ${String(n)}.`,
+          attempt: { ...ATTEMPT, remoteIp: `198.51.100.${String(n)}` },
+          isLimited: true,
+        },
+        now,
+      );
+    for (const n of [1, 2, 3]) await ask(n, 1000);
+    expect(await ask(4, 1000)).toStrictEqual({ status: "sent" });
+    expect(asking.mail.sent).toHaveLength(3);
+    const notes = async () => {
+      const rows = await db
+        .select({ note: accessAsks.note })
+        .from(accessAsks)
+        .orderBy(accessAsks.createdAt, accessAsks.note);
+      return rows.map((row) => row.note);
+    };
+    expect(await notes()).toStrictEqual(["Ask 1.", "Ask 2.", "Ask 3."]);
+    // Asks spend the address's links, never its confirmed asks.
+    expect(await countedKeys(db)).not.toContain("access-to:sam@x.test");
+    expect(await ask(5, 1000 + 86_400)).toStrictEqual({ status: "sent" });
+    expect(asking.mail.sent).toHaveLength(4);
+    expect(await notes()).toStrictEqual([
+      "Ask 1.",
+      "Ask 2.",
+      "Ask 3.",
+      "Ask 5.",
+    ]);
+  });
+
+  it("does not limit where the deployment does not", async () => {
+    const asking = askMail();
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      await askAs(asking, { email: "sam@x.test", note: String(n) }, 1000);
+    }
+    expect(await db.select().from(accessAsks)).toHaveLength(6);
+    expect(asking.mail.sent).toHaveLength(6);
+    expect(await db.select().from(rateLimits)).toStrictEqual([]);
+  });
+
+  it("reports a link that did not send by its surface alone, and answers the same", async () => {
+    const asking = askMail();
+    asking.mail.failing(true);
+    expect(await askAs(asking, { email: "sam@x.test" }, 5)).toStrictEqual({
+      status: "sent",
+    });
+    expect(asking.reports).toStrictEqual([{ surface: "access-confirm-link" }]);
+  });
+});
+
+describe("confirmAccessAsk (Au5's link)", () => {
+  it("puts the ask on D7 with its note and place once its link is opened, and answers the receipt", async () => {
+    const asking = askMail();
+    await askAs(asking, { email: "Sam@X.test", note: "Winter runner." }, 5);
+    const [token = ""] = tokensSent(asking.mail);
+    expect(await confirmAt(token, 50)).toStrictEqual({
+      status: "confirmed",
+      email: "sam@x.test",
+      isFromBlockedRegion: false,
+    });
     expect(await db.select().from(accessRequests)).toMatchObject([
       {
         email: "sam@x.test",
         note: "Winter runner.",
         status: "pending",
-        createdAt: 5,
-        updatedAt: 5,
+        blockedRegion: NOTHING,
+        createdAt: 50,
+        updatedAt: 50,
       },
+    ]);
+    const desk = await accessDesk(db);
+    expect(desk.requests).toMatchObject([
+      { email: "sam@x.test", note: "Winter runner." },
+    ]);
+    expect(await db.select().from(accessAsks)).toMatchObject([
+      { confirmedAt: 50 },
     ]);
   });
 
-  it("keeps a pending request's first note, place and time on a repeat", async () => {
-    const { verify } = verifyAs(true);
-    const ask = (note: string, blockedRegion: "MS" | undefined, now: number) =>
-      requestAccess(
-        db,
-        {
-          email: "sam@x.test",
-          note,
-          attempt: ATTEMPT,
-          isLimited: false,
-          blockedRegion,
-        },
-        verify,
-        now,
-      );
-    expect(await ask("First.", undefined, 1)).toStrictEqual({
-      status: "received",
+  it.each([true, false])(
+    "answers a blocked state's receipt for an ask placed there, and tags its request (limited: %s)",
+    async (isLimited) => {
+      const asking = askMail();
+      await askAs(asking, { blockedRegion: "MS", isLimited }, 5);
+      const [token = ""] = tokensSent(asking.mail);
+      expect(await confirmAt(token, 6, isLimited)).toStrictEqual({
+        status: "confirmed",
+        email: "sam@x.test",
+        isFromBlockedRegion: true,
+      });
+      expect(await db.select().from(accessRequests)).toMatchObject([
+        { status: "pending", blockedRegion: "MS" },
+      ]);
+    },
+  );
+
+  it("answers a second open with the same receipt and writes nothing", async () => {
+    const asking = askMail();
+    await askAs(asking, { isLimited: true }, 5);
+    const [token = ""] = tokensSent(asking.mail);
+    await confirmAt(token, 6, true);
+    const before = await db.select().from(accessRequests);
+    expect(await confirmAt(token, 7, true)).toStrictEqual({
+      status: "confirmed",
+      email: "sam@x.test",
       isFromBlockedRegion: false,
     });
-    expect(await ask("Second.", "MS", 2)).toStrictEqual({
-      status: "received",
+    expect(await db.select().from(accessRequests)).toStrictEqual(before);
+    expect(await db.select().from(accessAsks)).toMatchObject([
+      { confirmedAt: 6 },
+    ]);
+    const counts = await db
+      .select({ count: rateLimits.count })
+      .from(rateLimits)
+      .where(eq(rateLimits.kind, "access-to"));
+    expect(counts).toStrictEqual([{ count: 1 }]);
+  });
+
+  it("works for 48 hours from the ask, and past them answers as an unknown link, writing nothing", async () => {
+    const asking = askMail();
+    await askAs(asking, { email: "a@x.test" }, 1000);
+    await askAs(asking, { email: "b@x.test" }, 1000);
+    const [onTime = "", late = ""] = tokensSent(asking.mail);
+    expect(ACCESS_CONFIRM_S).toBe(48 * 3600);
+    expect(await confirmAt(onTime, 1000 + ACCESS_CONFIRM_S)).toMatchObject({
+      status: "confirmed",
+    });
+    expect(await confirmAt(late, 1000 + ACCESS_CONFIRM_S + 1)).toStrictEqual({
+      status: "not_found",
+    });
+    const requests = await db.select().from(accessRequests);
+    expect(requests.map((row) => row.email)).toStrictEqual(["a@x.test"]);
+  });
+
+  it("answers a token that matches no ask as unknown, writing nothing", async () => {
+    await askAs(askMail(), {}, 5);
+    expect(await confirmAt("0".repeat(64), 6)).toStrictEqual({
+      status: "not_found",
+    });
+    expect(await db.select().from(accessRequests)).toStrictEqual([]);
+    expect(await db.select().from(accessAsks)).toMatchObject([
+      { confirmedAt: NOTHING },
+    ]);
+  });
+
+  it("confirms only the ask its link was sent for", async () => {
+    const asking = askMail();
+    await askAs(asking, { note: "Stranger." }, 5);
+    await askAs(asking, { note: "Mine." }, 6);
+    const [, mine = ""] = tokensSent(asking.mail);
+    await confirmAt(mine, 7);
+    const asks = await db
+      .select({ note: accessAsks.note, confirmedAt: accessAsks.confirmedAt })
+      .from(accessAsks)
+      .orderBy(accessAsks.createdAt);
+    expect(asks).toStrictEqual([
+      { note: "Stranger.", confirmedAt: NOTHING },
+      { note: "Mine.", confirmedAt: 7 },
+    ]);
+    // An ask nobody confirmed set nothing: the confirmed one's note stands.
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { note: "Mine.", status: "pending" },
+    ]);
+  });
+
+  it("keeps a pending request's first confirmed note, place and time when a later ask is confirmed", async () => {
+    const asking = askMail();
+    await askAs(asking, { note: "First." }, 1);
+    await askAs(asking, { note: "Second.", blockedRegion: "MS" }, 2);
+    const [first = "", second = ""] = tokensSent(asking.mail);
+    await confirmAt(first, 3);
+    expect(await confirmAt(second, 4)).toStrictEqual({
+      status: "confirmed",
+      email: "sam@x.test",
       isFromBlockedRegion: true,
     });
-    await ask("", undefined, 3);
     expect(await db.select().from(accessRequests)).toMatchObject([
       {
         note: "First.",
         blockedRegion: NOTHING,
         status: "pending",
-        createdAt: 1,
-        updatedAt: 1,
+        createdAt: 3,
+        updatedAt: 3,
       },
     ]);
   });
 
-  it("puts a declined address back on the list with the new ask's note, place and time, and leaves an invited one as it was", async () => {
-    const { verify } = verifyAs(true);
+  it("puts a declined address back on the list with the confirmed ask's note, place and time, and leaves an invited one as it was", async () => {
     await db.insert(accessRequests).values([
       {
         id: newUlid(),
@@ -815,20 +1148,15 @@ describe("requestAccess (Au5)", () => {
         updatedAt: 1,
       },
     ]);
-    const ask = (
-      email: string,
-      note: string,
-      blockedRegion: "TN" | undefined,
-    ) =>
-      requestAccess(
-        db,
-        { email, note, attempt: ATTEMPT, isLimited: false, blockedRegion },
-        verify,
-        9,
-      );
-    await ask("no@x.test", "New.", undefined);
-    await ask("yes@x.test", "New.", "TN");
-    await ask("quiet@x.test", "", "TN");
+    const asking = askMail();
+    await askAs(asking, { email: "no@x.test", note: "New." }, 8);
+    await askAs(
+      asking,
+      { email: "yes@x.test", note: "New.", blockedRegion: "TN" },
+      8,
+    );
+    await askAs(asking, { email: "quiet@x.test", blockedRegion: "TN" }, 8);
+    for (const token of tokensSent(asking.mail)) await confirmAt(token, 9);
     const rows = await db
       .select({
         email: accessRequests.email,
@@ -864,30 +1192,49 @@ describe("requestAccess (Au5)", () => {
     ]);
   });
 
-  it.each([true, false])(
-    "takes a request from a blocked state and tags it (limited: %s)",
-    async (isLimited) => {
-      const { seen, verify } = verifyAs(true);
-      expect(
-        await requestAccess(
-          db,
-          {
-            email: "sam@x.test",
-            note: "",
-            attempt: ATTEMPT,
-            isLimited,
-            blockedRegion: "TN",
-          },
-          verify,
-        ),
-      ).toStrictEqual({ status: "received", isFromBlockedRegion: true });
-      expect(seen).toStrictEqual([ATTEMPT]);
-      expect(await db.select().from(accessRequests)).toMatchObject([
-        { email: "sam@x.test", status: "pending", blockedRegion: "TN" },
-      ]);
-    },
-  );
+  it("takes three confirmed asks a day for one address on a real deployment, and answers the same receipt past them", async () => {
+    const asking = askMail();
+    const ask = (n: number, now: number) =>
+      askAs(
+        asking,
+        {
+          note: `Ask ${String(n)}.`,
+          attempt: { ...ATTEMPT, remoteIp: `198.51.100.${String(n)}` },
+          isLimited: true,
+        },
+        now,
+      );
+    for (const n of [1, 2, 3]) await ask(n, 1000);
+    for (const token of tokensSent(asking.mail)) {
+      await confirmAt(token, 1001, true);
+    }
+    await db.update(accessRequests).set({ status: "declined" });
+    // A fourth confirm inside the day: the same receipt, nothing re-opened.
+    await ask(4, 1000 + 86_400);
+    expect(
+      await confirmAt(tokensSent(asking.mail)[3] ?? "", 1000 + 86_400, true),
+    ).toMatchObject({ status: "confirmed" });
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { note: "Ask 1.", status: "declined", updatedAt: 1001 },
+    ]);
+    // The next day's confirm re-opens it.
+    await ask(5, 1001 + 86_400);
+    await confirmAt(tokensSent(asking.mail)[4] ?? "", 1001 + 86_400, true);
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { note: "Ask 5.", status: "pending", updatedAt: 1001 + 86_400 },
+    ]);
+  });
 
+  it("counts no confirmed ask where the deployment does not limit", async () => {
+    const asking = askMail();
+    await askAs(asking, {}, 5);
+    const [token = ""] = tokensSent(asking.mail);
+    await confirmAt(token, 6);
+    expect(await db.select().from(rateLimits)).toStrictEqual([]);
+  });
+});
+
+describe("D7 and a request's tag", () => {
   it("shows D7 the tag, and refuses Send invite for it, minting and sending nothing", async () => {
     const requestId = newUlid();
     await db.insert(accessRequests).values({
@@ -964,147 +1311,6 @@ describe("requestAccess (Au5)", () => {
       expect.objectContaining({ dedupeKey: "invite", template: "invite" }),
     ]);
     expect(JSON.stringify(reports)).not.toContain(code);
-  });
-
-  it("refuses what Turnstile refuses, keeping nothing", async () => {
-    const { seen, verify } = verifyAs(false);
-    expect(
-      await requestAccess(
-        db,
-        {
-          email: "sam@x.test",
-          note: "",
-          attempt: ATTEMPT,
-          isLimited: false,
-          blockedRegion: undefined,
-        },
-        verify,
-      ),
-    ).toStrictEqual({ status: "refused" });
-    expect(seen).toStrictEqual([ATTEMPT]);
-    expect(await db.select().from(accessRequests)).toStrictEqual([]);
-  });
-
-  it("limits a visitor to five an hour on a real deployment, keyed by their address", async () => {
-    const { verify } = verifyAs(true);
-    const ask = (email: string, attempt: TurnstileAttempt) =>
-      requestAccess(
-        db,
-        {
-          email,
-          note: "",
-          attempt,
-          isLimited: true,
-          blockedRegion: undefined,
-        },
-        verify,
-        1000,
-      );
-    for (const n of [1, 2, 3, 4, 5]) {
-      expect(await ask(`${String(n)}@x.test`, ATTEMPT)).toStrictEqual({
-        status: "received",
-        isFromBlockedRegion: false,
-      });
-    }
-    expect(await ask("6@x.test", ATTEMPT)).toStrictEqual({
-      status: "limited",
-      until: 1000 + 3600,
-    });
-    expect(await db.select().from(accessRequests)).toHaveLength(5);
-    expect(await visitorKeys()).toStrictEqual(["access:203.0.113.9"]);
-    // Another visitor is not held up by the first.
-    expect(
-      await ask("7@x.test", { ...ATTEMPT, remoteIp: undefined }),
-    ).toStrictEqual({ status: "received", isFromBlockedRegion: false });
-    expect(await visitorKeys()).toStrictEqual([
-      "access:203.0.113.9",
-      "access:unknown",
-    ]);
-  });
-
-  it("counts every address in one IPv6 /64 as one visitor, and keeps nothing past the limit (SA-M11)", async () => {
-    const { verify } = verifyAs(true);
-    const ask = (n: number, remoteIp: string) =>
-      requestAccess(
-        db,
-        {
-          email: `asker-${String(n)}@x.test`,
-          note: "",
-          attempt: { ...ATTEMPT, remoteIp },
-          isLimited: true,
-          blockedRegion: undefined,
-        },
-        verify,
-        1000,
-      );
-    const results = [];
-    for (let n = 0; n <= EMAIL_SENDS_PER_HOUR; n += 1) {
-      results.push(await ask(n, `2001:db8:1:2::${(n + 1).toString(16)}`));
-    }
-    expect(results.at(-1)).toStrictEqual({
-      status: "limited",
-      until: 1000 + 3600,
-    });
-    expect(await db.select().from(accessRequests)).toHaveLength(
-      EMAIL_SENDS_PER_HOUR,
-    );
-    expect(await visitorKeys()).toStrictEqual(["access:2001:db8:1:2::/64"]);
-    expect(await ask(99, "2001:db8:1:3::1")).toStrictEqual({
-      status: "received",
-      isFromBlockedRegion: false,
-    });
-  });
-
-  it("takes three asks a day for one address on a real deployment, whoever asks, and answers the same receipt past them", async () => {
-    const { verify } = verifyAs(true);
-    const ask = (n: number, now: number) =>
-      requestAccess(
-        db,
-        {
-          email: "Sam@X.test",
-          note: `Ask ${String(n)}.`,
-          attempt: { ...ATTEMPT, remoteIp: `198.51.100.${String(n)}` },
-          isLimited: true,
-          blockedRegion: undefined,
-        },
-        verify,
-        now,
-      );
-    for (const n of [1, 2, 3]) await ask(n, 1000);
-    await db.update(accessRequests).set({ status: "declined" });
-    expect(await ask(4, 1000)).toStrictEqual({
-      status: "received",
-      isFromBlockedRegion: false,
-    });
-    expect(await db.select().from(accessRequests)).toMatchObject([
-      { note: "Ask 1.", status: "declined", updatedAt: 1000 },
-    ]);
-    expect(await ask(5, 1000 + 86_400)).toStrictEqual({
-      status: "received",
-      isFromBlockedRegion: false,
-    });
-    expect(await db.select().from(accessRequests)).toMatchObject([
-      { note: "Ask 5.", status: "pending", updatedAt: 1000 + 86_400 },
-    ]);
-  });
-
-  it("does not limit where the deployment does not", async () => {
-    const { verify } = verifyAs(true);
-    for (const n of [1, 2, 3, 4, 5, 6]) {
-      await requestAccess(
-        db,
-        {
-          email: `${String(n)}@x.test`,
-          note: "",
-          attempt: ATTEMPT,
-          isLimited: false,
-          blockedRegion: undefined,
-        },
-        verify,
-      );
-    }
-    expect(await db.select().from(accessRequests)).toHaveLength(6);
-    expect(await db.select().from(rateLimits)).toStrictEqual([]);
   });
 });
 
