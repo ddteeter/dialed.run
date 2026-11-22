@@ -38,7 +38,7 @@ function linkProblem(
   if (isOwnHost(url.hostname)) {
     return "That's a dialed.run page. Paste the address of the shop's page.";
   }
-  return schemes.has(url.protocol)
+  return schemes.has(url.protocol) && SCHEME_THEN_SLASHES.test(value)
     ? undefined
     : "Use a link that starts with https://.";
 }
@@ -57,6 +57,13 @@ function isOutsizedHost(hostname: string): boolean {
     hostname.split(".").length > MAX_HOST_LABELS
   );
 }
+
+/**
+ * A web scheme followed by exactly `//`, as typed. A link is read the same
+ * way on its own and as an `href` on one of our pages only when both
+ * slashes are there, so nothing else is taken.
+ */
+const SCHEME_THEN_SLASHES = /^https?:\/\/(?!\/)/iu;
 
 const HTTPS_ONLY: ReadonlySet<string> = new Set(["https:"]);
 const WEB_SCHEMES: ReadonlySet<string> = new Set(["https:", "http:"]);

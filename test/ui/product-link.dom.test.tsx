@@ -52,6 +52,24 @@ describe("a link a stranger typed", () => {
   });
 });
 
+describe("where a link opens", () => {
+  it("opens the domain it prints, whatever spelling was stored", () => {
+    render(<ProductLink url="https:nike.com/../../x" label="Pegasus" />);
+
+    const link = screen.getByRole("link", { name: "Pegasus" });
+    expect(link.getAttribute("href")).toBe("https://nike.com/x");
+    expect(screen.getByText("nike.com")).toBeInTheDocument();
+  });
+
+  it("opens an ordinary link as the parser spells it", () => {
+    render(<ProductLink url="https://janji.com" label="Tee" />);
+
+    expect(screen.getByRole("link", { name: "Tee" }).getAttribute("href")).toBe(
+      "https://janji.com/",
+    );
+  });
+});
+
 describe("a link we cannot read", () => {
   it("renders no anchor at all", () => {
     render(<ProductLink url="javascript:alert(1)" label="Looks fine" />);

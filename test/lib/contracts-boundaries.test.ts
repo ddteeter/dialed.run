@@ -293,6 +293,28 @@ describe("productLinkSchema (D-166)", () => {
     );
   });
 
+  it.each([
+    "https:nike.com/../../onboarding/done",
+    "https:/nike.com/../onboarding/done",
+    "http:nike.com/x",
+    "HTTPS:/nike.com/x",
+    "https:///nike.com/x",
+    " https://nike.com/x",
+    "https:nike.com/go/https://x.example",
+  ])("refuses %s, which is not a scheme and then exactly //", (value) => {
+    expect(productLinkSchema.safeParse(value).error?.issues).toEqual([
+      expect.objectContaining({
+        message: "Use a link that starts with https://.",
+      }),
+    ]);
+  });
+
+  it("takes either case of the scheme before its //", () => {
+    expect(productLinkSchema.parse("HTTPS://janji.com/x")).toBe(
+      "HTTPS://janji.com/x",
+    );
+  });
+
   it("still refuses a non-link and a scheme that is not the web's", () => {
     const notALink = "That isn't a link. Paste the address of the shop's page.";
     for (const value of ["not a url", "https://janji", "javascript:alert(1)"]) {

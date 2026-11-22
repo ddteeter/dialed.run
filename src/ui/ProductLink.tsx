@@ -62,11 +62,15 @@ export function ProductLink({
     return <span>{label}</span>;
   }
 
+  // The anchor opens what was parsed for the printed domain, so it can
+  // never print one place and open another.
+  const href = URL.parse(String(url))?.href;
+
   return (
     <span className="inline-flex flex-wrap items-baseline gap-2">
       <a
         data-target="inline"
-        href={url}
+        href={href}
         rel="ugc nofollow"
         className="underline underline-offset-4"
       >
