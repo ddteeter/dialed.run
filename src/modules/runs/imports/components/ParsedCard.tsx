@@ -41,7 +41,7 @@ import { ConditionsRow } from "../../components/ConditionsBlock";
  * The server function that moves a run's start, in its own shape.
  */
 export type Retime = (input: {
-  data: { runId: string; startedAt: number; timeZone?: string | undefined };
+  data: { runId: string; startedAt: number };
 }) => Promise<"moved" | "no-weather" | "refused">;
 
 /**
@@ -367,7 +367,7 @@ function useRetimeForm({
     action: async (values) => {
       const startedAt = startAtTimeOfDay(run.startedAt, zone, values.time);
       const outcome = await retime({
-        data: { runId: run.id, startedAt, timeZone: zone },
+        data: { runId: run.id, startedAt },
       });
       // Refused is the server saying no to a run this card should not be
       // able to ask about — another day, or not this runner's. A failure

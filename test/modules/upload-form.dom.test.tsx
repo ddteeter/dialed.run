@@ -1204,7 +1204,6 @@ describe("A1: the parsed card", () => {
         data: {
           runId: RUN_ID,
           startedAt: SAT_MORNING + 90 * 60,
-          timeZone: "America/Chicago",
         },
       });
     });
@@ -1549,7 +1548,6 @@ describe("A1: the parsed card", () => {
         data: {
           runId: RUN_ID,
           startedAt: SAT_MORNING + 3600,
-          timeZone: "America/Los_Angeles",
         },
       });
     });
