@@ -129,9 +129,11 @@ const storedFieldSchemas: Readonly<Record<string, z.ZodType>> = {
 
 /**
  * What a page gave, keeping only the fields that pass their own schema
- * (SA-L17): a bad image costs the image, not the name beside it. Every
- * rung's answer passes through here, and so does the ledger a product
- * stores, so nothing is stored that its reader would refuse.
+ * (SA-L17): a bad image costs the image, not the name beside it. Each
+ * field is kept as its schema parsed it, so a key the schema does not
+ * name, inside a composition or a part, is dropped. Every rung's answer
+ * passes through here, and so does the ledger a product stores, so
+ * nothing is stored that its reader would refuse.
  */
 export function validExtracted(
   candidate: Readonly<Partial<Record<keyof ExtractedProduct, unknown>>>,
@@ -139,9 +141,9 @@ export function validExtracted(
   const valid: ExtractedProduct = {};
   for (const [key, schema] of Object.entries(storedFieldSchemas)) {
     const value: unknown = Reflect.get(candidate, key);
-    if (value !== undefined && schema.safeParse(value).success) {
-      Reflect.set(valid, key, value);
-    }
+    if (value === undefined) continue;
+    const parsed = schema.safeParse(value);
+    if (parsed.success) Reflect.set(valid, key, parsed.data);
   }
   return valid;
 }
