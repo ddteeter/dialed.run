@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { UpstreamError } from "../../../lib/errors";
+import { readCappedText } from "../../../lib/read-capped";
 import {
   extractedProductSchema,
   garmentCategories,
@@ -8,6 +9,7 @@ import {
   type ExtractionModel,
   validExtracted,
 } from "../../../lib/contracts";
+import { MAX_BYTES } from "../bounds";
 import { knownFibres } from "../fibres";
 import { parseJson } from "../html";
 import { isRecord, strictSchemaFor, withoutNulls } from "./json-schema";
@@ -49,8 +51,8 @@ const MAX_ERROR_CHARS = 400;
 /**
  * The most the model may write, its reasoning included: about ten times
  * the longest answer the eval corpus produced (owner, 2026-11-21). An
- * answer cut off here is not JSON, so it is a failed try like any other
- * answer the contract refuses.
+ * answer cut off here is not JSON, so it is an `UnreadableAnswerError`:
+ * one failed try on the product, not retried by the queue.
  */
 export const MAX_ANSWER_TOKENS = 4000;
 
@@ -88,15 +90,42 @@ const modelOutputSchema = extractedProductSchema.omit({ extras: true });
  * Thrown for any adapter failure — network, timeout, non-2xx, a body that
  * is not what the API documents, or output the contract rejects.
  *
- * **All of it is retryable**, which is the packet's wording: "a malformed
- * model response is a retryable failure, not a crash". A model is a
- * non-deterministic upstream, so the same prompt really can succeed on the
- * next delivery, and the queue is the retry mechanism (law 3).
+ * **All of it is retryable but one**, which is the packet's wording: "a
+ * malformed model response is a retryable failure, not a crash". A model
+ * is a non-deterministic upstream, so the same prompt really can succeed
+ * on the next delivery, and the queue is the retry mechanism (law 3). The
+ * one is `UnreadableAnswerError` below.
  */
 export class ModelUnavailableError extends UpstreamError {
   constructor(message: string, options?: { cause?: unknown }) {
     super("ModelUnavailableError", message, options);
   }
+}
+
+/**
+ * An answer that is not an object at all: cut off at `MAX_ANSWER_TOKENS`,
+ * a list, a string. The consumer fails the try on it, as it does a page
+ * that refuses, and acks: the hourly sweep's re-drive is the next try, so
+ * each try is one model call.
+ */
+export class UnreadableAnswerError extends ModelUnavailableError {
+  constructor(message: string) {
+    super(message);
+    this.name = "UnreadableAnswerError";
+  }
+}
+
+/**
+ * The response's body, at most `MAX_BYTES` of it, a page's own cap: past
+ * it the read stops and the call fails like every other failure here, and
+ * the queue retries.
+ */
+async function bodyOf(response: Response): Promise<string> {
+  return await readCappedText(
+    response,
+    MAX_BYTES,
+    (detail) => new ModelUnavailableError(`Model response ${detail}`),
+  );
 }
 
 /**
@@ -242,14 +271,14 @@ async function askModel(
     // is not permitted" — which is the difference between a fix and a week
     // of guessing. It carries no secret; the key is a request header, never
     // echoed.
-    const complaint = await response.text();
+    const complaint = await bodyOf(response);
     const detail = complaint.slice(0, MAX_ERROR_CHARS);
     throw new ModelUnavailableError(
       `Model returned ${String(response.status)}: ${detail}`,
     );
   }
 
-  const body = await response.text();
+  const body = await bodyOf(response);
   // `parseJson` rather than a second copy of it: a body that is not JSON
   // and a body of the wrong shape are the same failure to the caller, which
   // is exactly what that helper already exists to say (`html.ts`).
@@ -272,7 +301,7 @@ async function askModel(
   // beside it. Only an answer that is not an object at all is a failure.
   const answer = withoutNulls(parseJson(content));
   if (!isRecord(answer)) {
-    throw new ModelUnavailableError("Model output did not match the contract");
+    throw new UnreadableAnswerError("Model output did not match the contract");
   }
   return withoutSaidNull(validExtracted({ ...answer, extras: undefined }));
 }

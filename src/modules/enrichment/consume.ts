@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, or, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
@@ -16,6 +16,7 @@ import { abandonedBefore } from "./abandon";
 import { PageFetchError, pageFailureReason } from "./bounds";
 import { fetchProductPage } from "./fetch-page";
 import { runLadder, type LadderResult } from "./ladder";
+import { UnreadableAnswerError } from "./model/chat-completions";
 import { modelPass } from "./model/rung";
 import { enrichJobSchema } from "./queue-messages";
 import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
@@ -24,6 +25,7 @@ import {
   canSpendPageFetch,
   canSpendProductProxyCall,
   canSpendProxyCall,
+  forgetProductProxyCall,
 } from "./spend-limit";
 
 /**
@@ -44,7 +46,10 @@ type Db = DrizzleD1Database & { $client: D1Database };
  * must resume from the snapshot it already has. A snapshot fetched inside
  * `REUSE_WINDOW_MS` is therefore reused rather than refetched, which is the
  * idempotency the packet asks for ("dedupe on productId + snapshot") and
- * also what makes a duplicate message from the sweep cost nothing.
+ * also what makes a duplicate message from the sweep cost nothing. A
+ * snapshot no rung has read yet (`rung` still `none`) is reused whatever
+ * its age, so a job put off with its page stored reads that page when it
+ * next runs, however long it waited.
  *
  * **Only a `pending` row is work.** `requestEnrichment` flips the row to
  * `pending` before sending, so `pending` is the claim: a message for a
@@ -55,10 +60,14 @@ type Db = DrizzleD1Database & { $client: D1Database };
  * `PageFetchError` is the page itself refusing — a 403 with no proxy, a
  * private host, an oversized body, a 404 — and no retry changes that, so
  * the row goes to `failed` and the message is acked (law 6: the failure is
- * on the row, where the closet can show it). Anything else — a network
- * throw, a timeout, a write-back conflict — is thrown, so the queue's own
- * retry machinery owns it (law 3) and the DLQ handler below marks the row
- * when it gives up.
+ * on the row, where the closet can show it). So is an `UnreadableAnswerError`,
+ * a model answer that is not an object at all: one try on the product, and
+ * the hourly sweep's re-drive is the next one. So is anything thrown
+ * before the page is stored — a network throw, a timeout, a D1 or R2
+ * error — which `beforeStored` makes a `PageFetchError`, so each try is
+ * one counted fetch. Anything else — a write-back conflict, a model
+ * outage — is thrown, so the queue's own retry machinery owns it (law 3)
+ * and the DLQ handler below marks the row when it gives up.
  */
 
 const REUSE_WINDOW_MS = 60 * 60 * 1000;
@@ -112,7 +121,7 @@ export interface EnrichmentDeps {
 async function markFailed(
   db: Db,
   product: { id: string; createdAt: number },
-  error: PageFetchError,
+  error: PageFetchError | UnreadableAnswerError,
 ): Promise<void> {
   const failed = eq(products.id, product.id);
   if (product.createdAt > abandonedBefore()) {
@@ -139,18 +148,18 @@ async function markFailed(
 }
 
 /**
-The newest snapshot of a product fetched after `since` (epoch ms), if any.
-*/
+ * The newest snapshot of a product fetched after `since` (epoch ms) or not
+ * yet read by any rung, if any.
+ */
 async function latestSnapshot(db: Db, productId: string, since: number) {
+  const reusable = or(
+    gt(productSnapshots.fetchedAt, since),
+    eq(productSnapshots.rung, "none"),
+  );
   const [row] = await db
     .select()
     .from(productSnapshots)
-    .where(
-      and(
-        eq(productSnapshots.productId, productId),
-        gt(productSnapshots.fetchedAt, since),
-      ),
-    )
+    .where(and(eq(productSnapshots.productId, productId), reusable))
     .orderBy(desc(productSnapshots.fetchedAt))
     .limit(1);
   return row;
@@ -250,6 +259,20 @@ async function dropDeniedSource(db: Db, productId: string): Promise<void> {
 }
 
 /**
+ * `work`, with whatever it throws made a `PageFetchError` that names it
+ * and keeps it as its cause: a try that fails before the page is stored
+ * is a failed try, so each costs one counted fetch.
+ */
+async function beforeStored<T>(work: () => Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof PageFetchError) throw error;
+    throw new PageFetchError(String(error), { cause: error });
+  }
+}
+
+/**
  * Fetch, store, record, extract, write back — the bytes go to R2 before
  * anything tries to understand them (D-31), and the row is written before
  * the ladder reads them (SA-M32), as `none` until `extractFrom` records
@@ -265,25 +288,14 @@ async function fetchAndExtract(
   productId: string,
   sourceUrl: string,
 ): Promise<"deferred" | undefined> {
-  const page = await fetchProductPage(sourceUrl, deps.fetchImpl ?? fetch, {
-    proxyApiKey: deps.proxyApiKey,
-    claimProxy: () => canSpendProxyFor(deps.db, productId),
-  });
-  if (await deps.isLandingDenied(sourceUrl, page.finalUrl)) {
-    await dropDeniedSource(deps.db, productId);
-    return undefined;
-  }
-  const fetchedAt = Date.now();
-  const r2Key = await putSnapshot(productId, page.html, fetchedAt);
-  const id = await recordSnapshot(deps.db, {
-    productId,
-    url: page.finalUrl,
-    r2Key,
-    rung: "none",
-    fetchedAt,
-  });
+  const stored = await beforeStored(() =>
+    fetchAndStore(deps, productId, sourceUrl),
+  );
+  if (stored === undefined) return undefined;
+  const { page, id } = stored;
   // After the page is stored, so the sweep's next try reads it again
-  // rather than fetching it again.
+  // rather than fetching it again: its rung is still `none`, which keeps
+  // it reusable at any age.
   if (await isModelCallSpent(deps)) return "deferred";
   const ladder = deps.ladder ?? runLadder;
   const result = ladder(new URL(page.finalUrl), page.html);
@@ -295,6 +307,37 @@ async function fetchAndExtract(
     result,
   );
   return undefined;
+}
+
+/**
+ * The fetch and the stored page, or nothing when the page landed
+ * somewhere denied.
+ */
+async function fetchAndStore(
+  deps: EnrichmentDeps,
+  productId: string,
+  sourceUrl: string,
+): Promise<
+  { page: Awaited<ReturnType<typeof fetchProductPage>>; id: string } | undefined
+> {
+  const page = await fetchProductPage(sourceUrl, deps.fetchImpl ?? fetch, {
+    proxyApiKey: deps.proxyApiKey,
+    claimProxy: () => canSpendProxyFor(deps.db, productId),
+  });
+  if (await deps.isLandingDenied(sourceUrl, page.finalUrl)) {
+    await dropDeniedSource(deps.db, productId);
+    return;
+  }
+  const fetchedAt = Date.now();
+  const r2Key = await putSnapshot(productId, page.html, fetchedAt);
+  const id = await recordSnapshot(deps.db, {
+    productId,
+    url: page.finalUrl,
+    r2Key,
+    rung: "none",
+    fetchedAt,
+  });
+  return { page, id };
 }
 
 /**
@@ -312,19 +355,22 @@ async function isModelCallSpent(deps: EnrichmentDeps): Promise<boolean> {
 /**
  * One proxy call for this product: the product's own count for the day
  * first, so a product that has had its call spends nothing shared, then
- * the day's count across everyone.
+ * the day's count across everyone. When the day's count refuses, the
+ * product's count is forgotten, so the product has its call still when
+ * the day's count has room again.
  */
 async function canSpendProxyFor(db: Db, productId: string): Promise<boolean> {
-  return (
-    (await canSpendProductProxyCall(db, productId)) && canSpendProxyCall(db)
-  );
+  if (!(await canSpendProductProxyCall(db, productId))) return false;
+  if (await canSpendProxyCall(db)) return true;
+  await forgetProductProxyCall(db, productId);
+  return false;
 }
 
 /**
  * The work for a `pending` product: the page stored within the reuse
- * window, or a fresh fetch — `deferred` when the hour's fetches or model
- * calls are spent (`spend-limit.ts`), and the row stays `pending` for the
- * hourly sweep.
+ * window or not yet read by any rung, or a fresh fetch — `deferred` when
+ * the hour's fetches or model calls are spent (`spend-limit.ts`), and the
+ * row stays `pending` for the hourly sweep.
  */
 async function extractPending(
   deps: EnrichmentDeps,
@@ -373,7 +419,11 @@ async function processEnrichJob(
     );
     if (outcome === "deferred") return;
   } catch (error) {
-    if (!(error instanceof PageFetchError)) throw error;
+    if (
+      !(error instanceof PageFetchError) &&
+      !(error instanceof UnreadableAnswerError)
+    )
+      throw error;
     deps.captureException(error, { surface: "enrichment-fetch", productId });
     await markFailed(deps.db, row, error);
     return;
@@ -471,7 +521,8 @@ export async function handleEnrichmentDlqBatch(
  * Re-run the ladder over the latest stored page without refetching — the
  * mechanism that makes a better parser or a promoted fibre retroactive
  * (D-31, packet §6). Nothing when the product has never been snapshotted,
- * or when the snapshot row points at an object that is not there.
+ * when the snapshot row points at an object that is not there, or when
+ * the stored page is one the ladder refuses to read (a `PageFetchError`).
  *
  * The operator's own press, so its model call is not counted against the
  * hour's (owner, 2026-11-21).
@@ -483,7 +534,11 @@ export async function reextract(
   const latest = await latestSnapshot(deps.db, productId, 0);
   if (latest === undefined) return undefined;
   const html = await readSnapshot(latest.r2Key);
-  return html === undefined
-    ? undefined
-    : extractStored(deps, productId, latest, html);
+  if (html === undefined) return undefined;
+  try {
+    return await extractStored(deps, productId, latest, html);
+  } catch (error) {
+    if (error instanceof PageFetchError) return undefined;
+    throw error;
+  }
 }

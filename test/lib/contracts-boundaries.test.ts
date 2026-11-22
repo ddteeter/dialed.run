@@ -411,6 +411,23 @@ describe("validExtracted keeps each field that passes its own schema (SA-L17)", 
     ).toStrictEqual({ imageUrl: "https://shop.example/x.jpg" });
     expect(Object.keys(validExtracted({ name: undefined }))).toStrictEqual([]);
   });
+
+  it("keeps a field as its schema parsed it, without keys the schema does not name", () => {
+    expect(
+      validExtracted({
+        fabricComposition: {
+          verbatim: "100% merino",
+          note: "x",
+          parts: [{ materials: [{ material: "merino", pct: 100, note: "y" }] }],
+        },
+      }),
+    ).toStrictEqual({
+      fabricComposition: {
+        verbatim: "100% merino",
+        parts: [{ materials: [{ material: "merino", pct: 100 }] }],
+      },
+    });
+  });
 });
 
 /**

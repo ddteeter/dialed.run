@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 
 import {
   cronCheckpoints,
@@ -717,7 +717,8 @@ const IMPORT_STALL_GRACE_S = 15 * 60;
  * reads it through the partial index `products_extraction_pending`, which
  * the planner matches only against the index's own literal
  * (`extractionPending`), where `imports` has no index on `status` and a
- * bound `eq` does.
+ * bound `eq` does. `order` is which hundred a firing takes when more are
+ * waiting.
  */
 async function stalledPending(
   marker: {
@@ -725,6 +726,7 @@ async function stalledPending(
     id: typeof imports.id | typeof products.id;
     pending: SQL;
     createdAt: typeof imports.createdAt | typeof products.createdAt;
+    order: SQL | typeof imports.createdAt;
   },
   graceSeconds: number,
 ): Promise<{ id: string }[]> {
@@ -734,6 +736,7 @@ async function stalledPending(
     .select({ id: marker.id })
     .from(marker.table)
     .where(and(marker.pending, lt(marker.createdAt, staleBefore)))
+    .orderBy(marker.order)
     .limit(100);
 }
 
@@ -744,6 +747,7 @@ async function redispatchStalledImports(anomalies: string[]): Promise<void> {
       id: imports.id,
       pending: eq(imports.status, "pending"),
       createdAt: imports.createdAt,
+      order: imports.createdAt,
     },
     IMPORT_STALL_GRACE_S,
   );
@@ -932,6 +936,9 @@ async function redispatchStalledEnrichments(
       id: products.id,
       pending: extractionPending(),
       createdAt: products.createdAt,
+      // In no fixed order, so past a hundred waiting each firing takes a
+      // different hundred and every product is sent in turn.
+      order: sql`random()`,
     },
     ENRICHMENT_STALL_GRACE_S,
   );

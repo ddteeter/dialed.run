@@ -216,6 +216,33 @@ describe("a denied link never becomes a product's source", () => {
     expect(product?.sourceUrl).toBeNull();
     expect(send).not.toHaveBeenCalled();
   });
+
+  it("links a garment saved before its link was denied without the link, once the runner confirms", async () => {
+    const userId = await runner(false);
+    const brand = unique("Brand");
+    const name = unique("Tee");
+    const domain = `${unique("shop").toLowerCase()}.example`;
+    const productUrl = `https://${domain}/p`;
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name,
+      brand,
+      productUrl,
+    });
+    await denyDomain(domain, userId);
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+
+    await confirm(userId);
+    await linkTypedGarments(db(), userId);
+
+    const [product] = await productRows(name);
+    expect(product?.sourceUrl).toBeNull();
+    expect(product?.extractionStatus).toBe("none");
+    expect(send).not.toHaveBeenCalled();
+    const linked = await getOwnedItem(db(), userId, item.id);
+    expect(linked.productId).toBe(product?.id);
+    expect(linked.productUrl).toBe(productUrl);
+  });
 });
 
 describe("nameItem for an unconfirmed runner", () => {

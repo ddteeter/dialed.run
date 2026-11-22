@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { garmentCategories } from "../../../src/lib/contracts";
+import { MAX_BYTES } from "../../../src/modules/enrichment/bounds";
 import { knownFibres } from "../../../src/modules/enrichment/fibres";
 
 import {
@@ -12,6 +13,7 @@ import {
   OPENAI_ENDPOINT,
   OPENROUTER_ENDPOINT,
   promptAddress,
+  UnreadableAnswerError,
 } from "../../../src/modules/enrichment/model/chat-completions";
 
 /**
@@ -380,6 +382,18 @@ describe("createChatCompletionsModel: every way it can fail", () => {
     expect(String(error)).toContain("500");
   });
 
+  it.each([200, 500])(
+    "stops reading a %i body past a page's cap, and fails as retryable",
+    async (status) => {
+      const error = await refuses(raw("x".repeat(MAX_BYTES + 1), status));
+      expect(error).toBeInstanceOf(ModelUnavailableError);
+      expect(error).not.toBeInstanceOf(UnreadableAnswerError);
+      expect(String(error)).toContain(
+        `Model response exceeded ${String(MAX_BYTES)} bytes`,
+      );
+    },
+  );
+
   it("fails on a body that is not JSON at all", async () => {
     const error = await refuses(raw("<html>gateway timeout</html>"));
     expect(error).toBeInstanceOf(ModelUnavailableError);
@@ -431,9 +445,17 @@ describe("createChatCompletionsModel: every way it can fail", () => {
     ["a string", JSON.stringify("Rover Tee")],
     ["an answer cut off partway", '{"name": "Rover'],
   ])("fails on %s where an object was asked for", async (_, content) => {
+    // Unreadable, which the consumer fails the try on rather than retrying.
     const error = await refuses(answering(content));
+    expect(error).toBeInstanceOf(UnreadableAnswerError);
     expect(error).toBeInstanceOf(ModelUnavailableError);
+    expect(error).toMatchObject({ name: "UnreadableAnswerError" });
     expect(String(error)).toContain("output did not match the contract");
+  });
+
+  it("fails as retryable, not unreadable, on an envelope it cannot read", async () => {
+    const error = await refuses(raw("<html>gateway timeout</html>"));
+    expect(error).not.toBeInstanceOf(UnreadableAnswerError);
   });
 
   it("lets a network failure through as itself", async () => {
