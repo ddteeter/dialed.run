@@ -76,6 +76,25 @@ describe("placeNameOf: the provider's address as a place name", () => {
     );
   });
 
+  it("drops a street part that holds a house number whole", () => {
+    expect(placeNameOf("10 Downing Street, London")).toBe("London");
+    expect(placeNameOf("Hauptstraße 5, 10115 Berlin, Germany")).toBe(
+      "Berlin, Germany",
+    );
+  });
+
+  it("keeps a street part with no digit in it", () => {
+    expect(placeNameOf("Downing Street, London")).toBe(
+      "Downing Street, London",
+    );
+  });
+
+  it("strips only the digit words from a later part", () => {
+    expect(placeNameOf("Madison, 2nd Ward East, United States")).toBe(
+      "Madison, Ward East, United States",
+    );
+  });
+
   it("keeps an answer of fewer parts whole", () => {
     expect(placeNameOf("Iceland")).toBe("Iceland");
     expect(placeNameOf("Paris,  France")).toBe("Paris, France");
