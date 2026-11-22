@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { MAX_PRODUCT_LINK_LENGTH } from "../../src/lib/contracts";
 import { PageFetchError } from "../../src/modules/enrichment/bounds";
+import { MAX_OPEN_TAGS } from "../../src/modules/enrichment/html";
 import {
   fetchProductPage,
   isBlockedHost,
@@ -952,5 +954,110 @@ describe("fetchProductPage: a meta refresh is one more hop (R-176)", () => {
     );
     expect(page.finalUrl).toBe("https://landed.example/real");
     expect(canProxy).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+An https address of exactly `length` characters on shop.example.com.
+*/
+function addressOf(length: number): string {
+  return "https://shop.example.com/".padEnd(length, "a");
+}
+
+const TOO_LONG = `Refusing a URL longer than ${String(MAX_PRODUCT_LINK_LENGTH)} characters`;
+const PAGE_URL = "https://shop.example.com/p";
+
+/**
+What fetching the page through `fetchImpl` failed with, or the page.
+*/
+async function failureOf(
+  fetchImpl: typeof fetch,
+  options: { proxyApiKey?: string } = {},
+): Promise<unknown> {
+  try {
+    return await fetchProductPage(PAGE_URL, fetchImpl, options);
+  } catch (error) {
+    return error;
+  }
+}
+
+/**
+The page refreshing to `target`.
+*/
+function refreshingTo(target: string) {
+  return pages({ [PAGE_URL]: refreshPage(target) });
+}
+
+const OVER_THE_BOUND = addressOf(MAX_PRODUCT_LINK_LENGTH + 1);
+
+/**
+A shop that refuses, and a proxy that reports landing on an address over the bound.
+*/
+const proxyLandingTooFar: typeof fetch = (input) =>
+  Promise.resolve(
+    isProxyCall(input)
+      ? Response.json({
+          success: true,
+          data: {
+            rawHtml: "<p>via proxy</p>",
+            metadata: { statusCode: 200, url: OVER_THE_BOUND },
+          },
+        })
+      : new Response("blocked", { status: 403 }),
+  );
+
+describe("fetchProductPage: no address longer than a pasted link", () => {
+  it("refuses a refresh to an address one character over, naming only the rule", async () => {
+    const failure = await failureOf(refreshingTo(OVER_THE_BOUND));
+
+    expect(failure).toBeInstanceOf(PageFetchError);
+    expect(failure).toHaveProperty("message", TOO_LONG);
+  });
+
+  it("follows a refresh to an address exactly as long as a pasted link may be", async () => {
+    const target = addressOf(MAX_PRODUCT_LINK_LENGTH);
+    const landed = new Response("<p>here</p>", { status: 200 });
+    const fetchImpl = pages({
+      [PAGE_URL]: refreshPage(target),
+      [target]: landed,
+    });
+
+    const page = await fetchProductPage(PAGE_URL, fetchImpl);
+
+    expect(page.finalUrl).toBe(target);
+  });
+
+  it("refuses a refresh whose scheme is a megabyte, without repeating it", async () => {
+    const scheme = "a".repeat(1_900_000);
+
+    const failure = await failureOf(refreshingTo(`${scheme}:x`));
+
+    expect(failure).toBeInstanceOf(PageFetchError);
+    expect(failure).toHaveProperty("message", TOO_LONG);
+  });
+
+  it("refuses a redirect to an address over the bound", async () => {
+    const redirect = new Response(undefined, {
+      status: 302,
+      headers: { location: OVER_THE_BOUND },
+    });
+
+    const failure = await failureOf(pages({ [PAGE_URL]: redirect }));
+
+    expect(failure).toHaveProperty("message", TOO_LONG);
+  });
+
+  it("refuses a proxied page whose reported address is over the bound", async () => {
+    const failure = await failureOf(proxyLandingTooFar, { proxyApiKey: "key" });
+
+    expect(failure).toHaveProperty("message", TOO_LONG);
+  });
+
+  it("refuses a page with more tags open than the cap", async () => {
+    const deep = "<b>".repeat(MAX_OPEN_TAGS + 2);
+
+    const failure = await failureOf(htmlOnce(deep));
+
+    expect(failure).toBeInstanceOf(PageFetchError);
   });
 });

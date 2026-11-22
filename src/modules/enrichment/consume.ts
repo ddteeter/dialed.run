@@ -1,7 +1,12 @@
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
-import { dlqBatchHandler, gaveUpClear, gaveUpUpsert } from "../../db/gave-up";
+import {
+  dlqBatchHandler,
+  gaveUpClear,
+  gaveUpUpsert,
+  shortRawError,
+} from "../../db/gave-up";
 import { products, productSnapshots } from "../../db/schema-core";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { consumeEach } from "../../lib/sql/queue-batch";
@@ -110,7 +115,7 @@ async function markFailed(
       .update(products)
       .set({
         extractionStatus: "failed",
-        extractionError: error.message,
+        extractionError: shortRawError(error.message),
         extractionTries: sql`coalesce(${products.extractionTries}, 0) + 1`,
       })
       .where(failed);

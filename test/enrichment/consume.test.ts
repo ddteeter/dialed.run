@@ -22,8 +22,12 @@ import {
   createOrGetBrand,
   createOrGetProduct,
 } from "../../src/modules/products";
-import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
-import { listAbandonedEnrichments } from "../../src/modules/enrichment/abandon";
+import { DEAD_LETTER_REASON, MAX_RAW_ERROR_LENGTH } from "../../src/db/gave-up";
+import {
+  ABANDONED_PER_FIRING,
+  listAbandonedEnrichments,
+} from "../../src/modules/enrichment/abandon";
+import { MAX_OPEN_TAGS } from "../../src/modules/enrichment/html";
 import { pageFailureReason } from "../../src/modules/enrichment/bounds";
 import {
   PAGE_FETCHES_PER_HOUR,
@@ -33,7 +37,7 @@ import { isDeniedLink, isDeniedOnLanding } from "../../src/modules/safety";
 import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import { nowSeconds } from "../../src/lib/now";
 import { gaveUpRow } from "../gave-up-rows";
-import { batchOf, fakeMessage } from "../queue-fakes";
+import { batchOf, fakeMessage, type SpiedMessage } from "../queue-fakes";
 
 /**
  * The consumer against a real D1 and a real R2, with only the network
@@ -1372,5 +1376,92 @@ describe("handleEnrichmentBatch: the spend ceilings", () => {
     const row = await rowOf(productId);
     expect(row.extractionStatus).toBe("failed");
     expect(row.extractionError).toBe("Page returned 403");
+  });
+});
+
+/**
+A page whose refresh names a host of 2,000 letters and no dot, which the
+fetch refuses with the host in its message.
+*/
+const LONG_HOST = "a".repeat(2000);
+const REFRESH_TO_LONG_HOST = `<meta http-equiv="refresh" content="0;url=https://${LONG_HOST}/">`;
+const LONG_HOST_FAILURE = `Refusing a private or local host: ${LONG_HOST}`;
+
+/**
+One enrichment message for the product, through the consumer.
+*/
+async function consumeOne(
+  productId: string,
+  fetchImpl: typeof fetch,
+): Promise<SpiedMessage> {
+  const message = jobFor(productId);
+  await handleEnrichmentBatch(
+    batchOf("dialed-enrichment", [message]),
+    depsWith(fetchImpl),
+  );
+  return message;
+}
+
+describe("a failure's message is kept short wherever it is stored", () => {
+  it("parks no more than MAX_RAW_ERROR_LENGTH of it inside the product's day", async () => {
+    const productId = await pendingProduct();
+
+    await consumeOne(productId, serving(REFRESH_TO_LONG_HOST));
+
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("failed");
+    expect(row.extractionError).toBe(
+      LONG_HOST_FAILURE.slice(0, MAX_RAW_ERROR_LENGTH),
+    );
+  });
+
+  it("lists no more than MAX_RAW_ERROR_LENGTH of it past the day", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
+
+    await consumeOne(productId, serving(REFRESH_TO_LONG_HOST));
+
+    const row = await gaveUpRow("enrichment", productId);
+    expect(row?.rawError).toBe(
+      LONG_HOST_FAILURE.slice(0, MAX_RAW_ERROR_LENGTH),
+    );
+  });
+});
+
+describe("a page with more tags open than the cap", () => {
+  it("fails the product and acks the message", async () => {
+    const productId = await pendingProduct();
+
+    const message = await consumeOne(
+      productId,
+      serving("<b>".repeat(MAX_OPEN_TAGS + 2)),
+    );
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(message.retry).not.toHaveBeenCalled();
+    expect(await rowOf(productId)).toMatchObject({
+      extractionStatus: "failed",
+      extractionError: `Page nests more than ${String(MAX_OPEN_TAGS)} tags`,
+    });
+  });
+});
+
+describe("listAbandonedEnrichments: one firing's share", () => {
+  it("lists the oldest ABANDONED_PER_FIRING and leaves the rest for the next firing", async () => {
+    const oldest = await parked(DAY + 600, { extractionTries: 6 });
+    for (let index = 1; index < ABANDONED_PER_FIRING; index += 1) {
+      await parked(DAY + 60, { extractionTries: 6 });
+    }
+    const newest = await parked(DAY + 30, { extractionTries: 6 });
+
+    await listAbandonedEnrichments(db());
+
+    expect(await gaveUpRow("enrichment", oldest)).toBeDefined();
+    expect(await gaveUpRow("enrichment", newest)).toBeUndefined();
+    const waiting = await rowOf(newest);
+    expect(waiting.extractionTries).toBe(6);
+
+    await listAbandonedEnrichments(db());
+
+    expect(await gaveUpRow("enrichment", newest)).toBeDefined();
   });
 });
