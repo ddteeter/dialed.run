@@ -196,12 +196,12 @@ describe("following feed (E1)", () => {
     const { sql, params } = statement.toSQL();
     // The viewer three times (the follows lookup, and their two own author
     // rows — D-67), the under-review arm's status, the visibility rule's
-    // status, the viewer three more times for the viewer rule (a block from
-    // either end, and their own reports — SAF-12/13), the three cursor
-    // values and the limit twice (per author, and the page): thirteen, at
-    // one follow or a thousand. The shared audiences are literals, not
+    // status, the viewer four more times for the viewer rule (a block from
+    // either end, their own reports of the kit and of its photos —
+    // SAF-12/13, #933), the three cursor values and the limit twice (per
+    // author, and the page): fourteen, at one follow or a thousand. The shared audiences are literals, not
     // parameters, so the partial index applies (`sharedAudience`).
-    expect(params).toHaveLength(13);
+    expect(params).toHaveLength(14);
     // The followees arm's status discriminator: raw `'ok'` aliased to
     // `"status"` so the outer `eq(outfitEntries.moderationStatus,
     // authors.status)` can name it. Every later reference to `authors.status`
@@ -234,5 +234,11 @@ describe("following feed (E1)", () => {
     expect(details).not.toMatch(/entries_(?:public|shared)_created/u);
     expect(details).not.toMatch(/entries_user_public_created/u);
     expect(details).not.toMatch(/SCAN\s+(?:outfit_entries|page|follows)/iu);
+    // The photo-report probe walks the viewer's own reports on their
+    // unique index and reads each photo by its key.
+    expect(details).not.toMatch(/SCAN\s+(?:reports|entry_photos)/iu);
+    expect(details).toMatch(
+      /SEARCH entry_photos USING (?:INTEGER PRIMARY KEY|INDEX sqlite_autoindex_entry_photos_1) \(id=\?\)/u,
+    );
   });
 });

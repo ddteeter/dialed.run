@@ -302,7 +302,11 @@ async function runCron(
     }
     case "screening-retry": {
       return runHourly(cronName, reporter, (anomalies) => [
+        // Three reconciliations, each its own step, so one that throws
+        // costs neither of the others.
         () => runScreeningRetry(anomalies),
+        () => reconcileReportHides(anomalies),
+        () => releaseAbandonedClaims(anomalies),
         // After the screening retry, so a photo it just passed on a
         // PUBLIC kit is copied this hour (design 163 step 8).
         () => sweepPublicPhotoCopies(anomalies),
@@ -606,13 +610,18 @@ async function runScreeningRetry(anomalies: string[]): Promise<void> {
   // `pending` is the durable marker, so this is reconciliation and the
   // path needs no queue.
   await retryPendingScreenings(classifierFromEnv(), anomalies);
-  // Two more reconciliations share this firing, both raised on PR #73
-  // and both the same shape as the screening retry: a durable marker
-  // exists, so something has to re-read it.
-  //
-  // The hide that `fileReport` does in a third statement, if the
-  // worker died before reaching it — the reports are written, the
-  // entry is still visible, and nothing else would ever notice.
+}
+
+/**
+ * Two more reconciliations share this firing, both raised on PR #73 and
+ * both the same shape as the screening retry: a durable marker exists, so
+ * something has to re-read it.
+ *
+ * The hide that `fileReport` does in a third statement, if the worker
+ * died before reaching it — the reports are written, the entry is still
+ * visible, and nothing else would ever notice.
+ */
+async function reconcileReportHides(anomalies: string[]): Promise<void> {
   const reconciled = await reconcileUnhiddenReports(
     oweInCore,
     purgePublicPages,
@@ -622,8 +631,13 @@ async function runScreeningRetry(anomalies: string[]): Promise<void> {
       `${String(reconciled.hidden)} reported subjects were over the threshold and had not been hidden`,
     );
   }
-  // And review claims whose reviewer never came back, which otherwise
-  // hold a subject out of the queue permanently.
+}
+
+/**
+ * Review claims whose reviewer never came back, which otherwise hold a
+ * subject out of the queue permanently.
+ */
+async function releaseAbandonedClaims(anomalies: string[]): Promise<void> {
   const released = await releaseStaleClaims();
   if (released.released > 0) {
     anomalies.push(

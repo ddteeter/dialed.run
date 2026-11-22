@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { ACCESS_NOTE_MAX, IS_INVITE_ONLY, inviteCodeField } from "./access";
 import { birthDateField } from "./age";
-import { productLinkSchema } from "./common";
+import { productLinkSchema, withoutHiddenControls } from "./common";
 
 // ---- Garments: discriminated union on category ----------------------------
 
@@ -182,9 +182,14 @@ export const fabricSchema = z.enum(garmentFabrics);
 const garmentBase = z.strictObject({
   name: z
     .string()
+    .overwrite(withoutHiddenControls)
     .min(1, "Give it a name.")
     .max(80, "Keep the name under 80 characters."),
-  brand: z.string().max(60, "Keep the brand under 60 characters.").optional(),
+  brand: z
+    .string()
+    .overwrite(withoutHiddenControls)
+    .max(60, "Keep the brand under 60 characters.")
+    .optional(),
   size: z.string().max(20, "Keep the size under 20 characters.").optional(),
   color: z.string().max(30, "Keep the color under 30 characters.").optional(),
   /**

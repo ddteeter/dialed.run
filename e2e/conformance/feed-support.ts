@@ -22,6 +22,8 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { withLocalDb } from "../support/local-db";
 import { isServerFnCall } from "../support/server-fn";
+import { devVar } from "../support/dev-vars";
+import { placeStamps } from "../../src/modules/onboarding/place-stamp";
 import { userIdOf } from "./logging-fixtures";
 import type { Audience } from "../../src/lib/contracts";
 import {
@@ -431,6 +433,15 @@ export async function answerFind(
     | { kind: "not-found" }
     | { kind: "unavailable" },
 ): Promise<void> {
+  // A found place carries the stamp the server would give it, so Use
+  // this saves it through the real server function.
+  const result =
+    answer.kind === "found"
+      ? {
+          ...answer,
+          stamp: await placeStamps(devVar("BETTER_AUTH_SECRET")).stamp(answer),
+        }
+      : answer;
   await page.route("**/_serverFn/**", async (route) => {
     if (!isServerFnCall(route.request().url(), "lookUpCity")) {
       await route.fallback();
@@ -438,7 +449,7 @@ export async function answerFind(
     }
     await route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify({ result: answer, context: {} }),
+      body: JSON.stringify({ result, context: {} }),
     });
   });
 }

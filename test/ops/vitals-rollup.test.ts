@@ -6,6 +6,9 @@ import { opsDb } from "../../src/env";
 import {
   BadDayError,
   dailyRollupQuery,
+  knownRouteClause,
+  versionQuery,
+  windowQuery,
   MAX_ROLLUP_ROWS,
   nextDay,
   VITALS_DATASET,
@@ -17,13 +20,19 @@ import {
   rollupVitals,
   type RollupDeps,
 } from "../../src/modules/ops/speed/vitals-rollup";
+import {
+  isAnyRoute,
+  type RouteKnown,
+} from "../../src/modules/ops/speed/timing";
 
 /**
-Every route name kept, as before the known-route check.
+A route check that keeps the names `isKnown` keeps and asks no SQL filter.
 */
-const isAnyRoute = (): boolean => true;
+function keeping(isKnown: (route: string) => boolean): RouteKnown {
+  return Object.assign(isKnown, { sqlFilter: () => [] });
+}
 
-const isRoot = (route: string): boolean => route === "/";
+const isRoot = keeping((route) => route === "/");
 
 /**
  * The daily speed rollup (design 165, step 6), against the real ops
@@ -89,9 +98,46 @@ function answering(status: number, body: unknown) {
   return fetchImpl;
 }
 
+describe("knownRouteClause", () => {
+  it("keeps unmatched, server functions and the listed routes", () => {
+    expect(
+      knownRouteClause(["/", "/runs/$runId", "/@{$handle}"]),
+    ).toStrictEqual([
+      "AND (index1 = 'unmatched' OR startsWith(index1, 'serverFn:') OR index1 IN ('/', '/runs/$runId', '/@{$handle}'))",
+    ]);
+  });
+
+  it("leaves out an id the SQL text could not hold as it is", () => {
+    expect(knownRouteClause(["/a", "/b'c", "/d\\e", ""])).toStrictEqual([
+      "AND (index1 = 'unmatched' OR startsWith(index1, 'serverFn:') OR index1 IN ('/a'))",
+    ]);
+  });
+
+  it("keeps only unmatched and server functions when no id is listed", () => {
+    expect(knownRouteClause([])).toStrictEqual([
+      "AND (index1 = 'unmatched' OR startsWith(index1, 'serverFn:'))",
+    ]);
+  });
+
+  it("is in each query, before the cut", () => {
+    const clause = knownRouteClause(["/a"])[0] ?? "";
+    for (const query of [
+      dailyRollupQuery("2026-10-30", knownRouteClause(["/a"])),
+      windowQuery(0, 3600, knownRouteClause(["/a"])),
+      versionQuery(0, knownRouteClause(["/a"])),
+    ]) {
+      const lines = query.split("\n");
+      expect(lines.indexOf(clause)).toBeGreaterThan(-1);
+      expect(lines.indexOf(clause)).toBeLessThan(
+        lines.findIndex((line) => line.startsWith("GROUP BY")),
+      );
+    }
+  });
+});
+
 describe("dailyRollupQuery", () => {
   it("reads one UTC day's weighted percentiles and count per route, metric and device", () => {
-    expect(dailyRollupQuery("2026-10-30")).toBe(
+    expect(dailyRollupQuery("2026-10-30", [])).toBe(
       [
         "SELECT index1 AS route, blob1 AS metric, blob3 AS device,",
         "quantileExactWeighted(0.5)(double1, _sample_interval) AS p50,",
@@ -118,7 +164,7 @@ describe("dailyRollupQuery", () => {
       "",
       "x2026-10-30",
     ]) {
-      expect(() => dailyRollupQuery(bad)).toThrow(BadDayError);
+      expect(() => dailyRollupQuery(bad, [])).toThrow(BadDayError);
     }
     expect(() => nextDay("2026-10-30\n")).toThrow(
       String.raw`not a UTC day: "2026-10-30\n"`,
@@ -161,9 +207,9 @@ describe("rollupVitals", () => {
 
     expect(anomalies).toStrictEqual([]);
     expect(asked).toStrictEqual([
-      dailyRollupQuery("2026-10-30"),
-      dailyRollupQuery("2026-10-29"),
-      dailyRollupQuery("2026-10-28"),
+      dailyRollupQuery("2026-10-30", []),
+      dailyRollupQuery("2026-10-29", []),
+      dailyRollupQuery("2026-10-28", []),
     ]);
     expect(await stored()).toStrictEqual([
       { day: "2026-10-28", ...apiRow("/runs/$runId", { device: "wide" }) },
@@ -175,13 +221,26 @@ describe("rollupVitals", () => {
     ]);
   });
 
+  it("asks for the known routes' rows only", async () => {
+    const { deps, asked } = fakeApi({});
+    await rollupVitals("2026-10-31", [], {
+      ...deps,
+      known: Object.assign(() => true, {
+        sqlFilter: () => knownRouteClause(["/closet/"]),
+      }),
+    });
+    expect(asked[0]).toBe(
+      dailyRollupQuery("2026-10-30", knownRouteClause(["/closet/"])),
+    );
+  });
+
   it("stores only the route names `known` keeps (SA-M34)", async () => {
     const { deps } = fakeApi({
       "2026-10-30": { data: [apiRow("/closet/"), apiRow("/x/0001")] },
     });
     await rollupVitals("2026-10-31", [], {
       ...deps,
-      known: (route) => route === "/closet/",
+      known: keeping((route) => route === "/closet/"),
     });
     expect(await storedColumn("route")).toStrictEqual(["/closet/"]);
   });

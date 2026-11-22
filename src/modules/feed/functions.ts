@@ -85,7 +85,11 @@ import {
 import { unitsFor } from "./conditions";
 import { publicKitForPage, publicProfileForPage } from "./public-web";
 import { nowSeconds } from "../../lib/now";
-import { placeInput, savePlace } from "../onboarding";
+import {
+  placeInput,
+  placeStampsFromEnv,
+  saveFoundPlace,
+} from "../onboarding";
 import { captureException, purgePublicPagesFor } from "../ops";
 import { timeZoneAtFor } from "../weather";
 
@@ -295,10 +299,13 @@ export const saveConditionsCityAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => placeInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return savePlace(coreDb(), userId, data, {
-      zoneAt: timeZoneAtFor(userId),
-      report: captureException,
-      keepAlive: waitUntil,
+    return saveFoundPlace(coreDb(), userId, data, {
+      verifyStamp: placeStampsFromEnv().verifyStamp,
+      zones: {
+        zoneAt: timeZoneAtFor(userId),
+        report: captureException,
+        keepAlive: waitUntil,
+      },
     });
   });
 

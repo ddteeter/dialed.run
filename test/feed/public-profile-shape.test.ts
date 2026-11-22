@@ -56,13 +56,13 @@ describe("publicProfileHead", () => {
 
 describe("profileOrNotFound", () => {
   it("hands a public profile through", () => {
-    expect(profileOrNotFound(PROFILE)).toBe(PROFILE);
+    expect(profileOrNotFound({ profile: PROFILE })).toBe(PROFILE);
   });
 
   it("is the router's 404 for anything else, one answer for every reason", () => {
     let thrown: unknown;
     try {
-      profileOrNotFound(undefined);
+      profileOrNotFound({ profile: undefined });
     } catch (error: unknown) {
       thrown = error;
     }

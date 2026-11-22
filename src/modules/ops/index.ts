@@ -20,7 +20,7 @@ export {
   syncPublicPhotosLater,
   type EntryCardData,
 } from "./public-web";
-export { captureException } from "./sentry";
+export { captureException, captureRequestException } from "./sentry";
 export {
   turnstileSiteKey,
   verifyTurnstileToken,

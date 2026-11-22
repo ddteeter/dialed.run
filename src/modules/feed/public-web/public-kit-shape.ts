@@ -163,7 +163,15 @@ export function publicKitHead(
  * status and its head are the same whatever the reason. A real Error with
  * the marker the router duck-types on (`lib/errors`).
  */
-export function kitOrNotFound(kit: PublicKit | undefined): PublicKit {
+export function kitOrNotFound({ kit }: PublicKitAnswer): PublicKit {
   if (kit === undefined) throw new NotFoundError("not a public kit");
   return kit;
+}
+
+/**
+ * What the page's server function answers: the kit, or none when it is
+ * not public.
+ */
+export interface PublicKitAnswer {
+  readonly kit: PublicKit | undefined;
 }

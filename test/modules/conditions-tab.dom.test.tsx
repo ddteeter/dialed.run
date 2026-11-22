@@ -27,11 +27,13 @@ const FOUND: CityLookup = {
   kind: "found",
   address: "Portland, OR, United States",
   ...PORTLAND,
+  stamp: "a-stamp",
 };
-// What Use this saves, and the save answers with.
+// What Use this saves: the found place, with the stamp Find gave it.
 const SAVED: Place = {
   ...PORTLAND,
   cityLabel: "Portland, OR, United States",
+  stamp: "a-stamp",
 };
 const NOWHERE: ConditionsHome = { coords: undefined, cityLabel: undefined };
 // 6.7 °C feels like 44 °F, the frames' own example.
@@ -301,6 +303,7 @@ describe("ConditionsTab: location denied", () => {
             kind: "found",
             address: "Portland, ME, United States",
             ...maine,
+            stamp: "a-stamp",
           }),
         saveCity: ({ data }) => Promise.resolve(data),
       }),
@@ -331,7 +334,13 @@ describe("ConditionsTab: location denied", () => {
       tab({
         locate: () => Promise.resolve(undefined),
         lookUpCity: () =>
-          Promise.resolve({ kind: "found", address, lat: 44.98, lng: -93.27 }),
+          Promise.resolve({
+            kind: "found",
+            address,
+            lat: 44.98,
+            lng: -93.27,
+            stamp: "minneapolis-stamp",
+          }),
         saveCity,
       }),
     );
@@ -351,7 +360,12 @@ describe("ConditionsTab: location denied", () => {
       /^Saved\. Weather for Minneapolis, MN, United States\.$/u,
     );
     expect(saveCity).toHaveBeenCalledWith({
-      data: { cityLabel: address, lat: 44.98, lng: -93.27 },
+      data: {
+        cityLabel: address,
+        lat: 44.98,
+        lng: -93.27,
+        stamp: "minneapolis-stamp",
+      },
     });
   });
 

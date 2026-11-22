@@ -8,7 +8,8 @@
  * (design 142): the one read of it, and the hourly fill `ops` runs.
  */
 export { placeInput, type Place } from "./inputs";
-export { savePlace } from "./profile";
+export { savePlace, saveFoundPlace } from "./profile";
+export { placeStampsFromEnv } from "./place-stamp-env";
 export {
   fillMissingTimeZones,
   runnerTimeZone,

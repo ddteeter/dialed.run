@@ -60,7 +60,11 @@ import {
   unitsFor,
 } from "../conditions";
 import { judgedFeelsLikeC } from "../judged-conditions";
-import type { PublicKit, PublicPiece } from "./public-kit-shape";
+import type {
+  PublicKit,
+  PublicKitAnswer,
+  PublicPiece,
+} from "./public-kit-shape";
 
 type Database = ReturnType<typeof coreDb>;
 type Run = typeof runs.$inferSelect;
@@ -308,14 +312,17 @@ export function publicKitHeaders(
  * The page's read, for its server function: the kit or nothing, with the
  * headers the page must leave with handed to `setHeaders` (the framework's
  * `setResponseHeaders`, passed in so this stays testable).
+ *
+ * Always an object, so the framework serializes the answer the same way
+ * for every caller, whatever headers the request carried.
  */
 export async function publicKitForPage(
   entryId: string,
   setHeaders: (headers: Record<string, string>) => void,
-): Promise<PublicKit | undefined> {
+): Promise<PublicKitAnswer> {
   const read = await publicKitRead(entryId);
   setHeaders(publicKitHeaders(entryId, read));
-  return read?.kit;
+  return { kit: read?.kit };
 }
 
 /**

@@ -17,11 +17,7 @@ import {
   dailySpeed,
   speedDigestDepsFromEnv,
 } from "../../src/modules/ops/speed/speed-digest";
-
-/**
-Every route name kept, as before the known-route check.
-*/
-const isAnyRoute = (): boolean => true;
+import { isAnyRoute } from "../../src/modules/ops/speed/timing";
 
 /**
  * The daily speed checks (design 165, step 7).

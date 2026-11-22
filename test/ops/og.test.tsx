@@ -221,6 +221,31 @@ describe("the rendered cards", () => {
     );
   });
 
+  it.each([
+    ["another script", "ジャケット"],
+    ["an emoji", "Shell 🏃"],
+  ])(
+    "draws a kit whose model holds %s without asking the network",
+    async (_what, model) => {
+      const asked: string[] = [];
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation((input: RequestInfo | URL) => {
+          asked.push(input instanceof Request ? input.url : String(input));
+          return Promise.reject(new Error("no network in a card render"));
+        });
+      try {
+        const svg = await renderCardSvg(
+          <EntryCard entry={{ ...ENTRY, kit: [model] }} />,
+        );
+        expect(svg.status).toBe(200);
+        expect(asked).toStrictEqual([]);
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    },
+  );
+
   it("serves a 1200×630 PNG by default, which every social preview accepts", async () => {
     const response = await renderCard(<DefaultCard />);
 

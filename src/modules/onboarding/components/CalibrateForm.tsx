@@ -64,6 +64,10 @@ interface Place {
   label?: string | undefined;
   lat: number;
   lng: number;
+  /**
+  Find's stamp on a found city, handed back with it.
+  */
+  stamp?: string | undefined;
 }
 
 type Coordinates = { lat: number; lng: number } | undefined;
@@ -136,6 +140,7 @@ export function CalibrateForm({
           cityLabel: place === undefined ? typedCity(typed) : place.label,
           lat: place?.lat,
           lng: place?.lng,
+          stamp: place?.stamp,
           tempUnit,
           distanceUnit,
         });
@@ -321,7 +326,12 @@ function WhereYouRun({
           return answer;
         }}
         onUse={(found) => {
-          onPlace({ label: found.address, lat: found.lat, lng: found.lng });
+          onPlace({
+            label: found.address,
+            lat: found.lat,
+            lng: found.lng,
+            stamp: found.stamp,
+          });
         }}
         announce={announce}
       />

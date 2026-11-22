@@ -17,10 +17,11 @@ import { withSecurityHeaders } from "./security-headers";
  * request's `marker` are hashed (SA-L08).
  */
 export async function secureResponse(
-  response: Response,
+  answered: Response,
   nonce: string | undefined,
   marker: string | undefined,
 ): Promise<Response> {
+  const response = failureNeverStored(answered);
   // SA-L19: reports go to our own collector, never straight to Sentry.
   const reportUri = CSP_REPORT_PATH;
   if (nonce !== undefined && !isPubliclyStorable(response)) {
@@ -42,6 +43,17 @@ export async function secureResponse(
  */
 function isHtml(response: Response): boolean {
   return String(response.headers.get("Content-Type")).includes("text/html");
+}
+
+/**
+ * A failure is never left for the edge to store: a 5xx leaves as
+ * `private, no-store`, whatever cache headers a handler set before it
+ * failed. The open web's own not-found pages are 404s and keep theirs.
+ */
+function failureNeverStored(response: Response): Response {
+  return response.status >= 500 && isPubliclyStorable(response)
+    ? neverStored(response)
+    : response;
 }
 
 function neverStored(response: Response): Response {

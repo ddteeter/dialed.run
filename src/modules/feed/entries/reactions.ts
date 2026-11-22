@@ -92,7 +92,12 @@ export async function setUsefulReaction(
     eq(reactions.entryId, entryId),
     eq(reactions.userId, userId),
   );
-  const counted = countedUsefulOf(eq(reactions.entryId, entryId));
+  // The count comes back only for an entry the runner may see: a
+  // take-back on any other entry answers zero.
+  const counted = and(
+    countedUsefulOf(eq(reactions.entryId, entryId)),
+    entrySeenBy(entryId, userId),
+  );
   const write = isUseful
     ? database
         .insert(reactions)
@@ -105,6 +110,14 @@ export async function setUsefulReaction(
     database.select({ n: count() }).from(reactions).where(mine),
   ]);
   return { status: "set", useful: countOf(own) > 0, count: countOf(all) };
+}
+
+/**
+ * The entry exists and `viewerId` may see it, by the one rule
+ * (`entryVisibleTo`), as a clause of a read on another table.
+ */
+function entrySeenBy(entryId: string, viewerId: string): SQL {
+  return sql`exists (select 1 from ${outfitEntries} where ${and(eq(outfitEntries.id, entryId), entryVisibleTo(viewerId))})`;
 }
 
 export async function hasReacted(
