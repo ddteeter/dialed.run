@@ -423,7 +423,8 @@ describe.each(["a11y-review.yml", "dependabot-pr.yml"])(
 
     it("is found, so an empty result cannot pass for a clean one", () => {
       expect(review).toContain("- id: claude");
-      expect(post).toContain("name: Screen and post the review");
+      expect(review).toContain("- name: Screen the review");
+      expect(post).toContain("- name: Post the review");
     });
 
     it("starts Claude with only the settings the workflow writes", () => {
@@ -454,18 +455,27 @@ describe.each(["a11y-review.yml", "dependabot-pr.yml"])(
       expect(lines).toContain("downloads.claude.ai:443");
     });
 
-    it("passes the review to post as a job output, never an artifact", () => {
+    it("screens the review in its own job, from the run's file, and passes on only the screened comment", () => {
       expect(source).not.toContain("actions/upload-artifact@");
       expect(source).not.toContain("actions/download-artifact@");
+      expect(source).not.toContain("structured_output }}");
       expect(review).toContain(
-        "review: ${{ steps.claude.outputs.structured_output }}",
+        "EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}",
       );
-      expect(post).toContain("REVIEW: ${{ needs.review.outputs.review }}");
+      expect(review).toContain("comment: ${{ steps.screen.outputs.comment }}");
+      expect(post).toContain("COMMENT: ${{ needs.review.outputs.comment }}");
+      expect(post).not.toMatch(/jq|grep/u);
+    });
+
+    it("screens in a step that holds no key", () => {
+      const screen = review.slice(review.indexOf("- name: Screen the review"));
+      expect(screen).not.toContain("secrets.");
+      expect(screen).not.toContain("uses:");
     });
 
     it("escapes the summary as it escapes the table cells", () => {
-      expect(post).toContain("\\(.summary | cell)");
-      expect(post).not.toContain("\\(.summary)");
+      expect(review).toContain("\\(.summary | cell)");
+      expect(review).not.toContain("\\(.summary)");
     });
   },
 );
