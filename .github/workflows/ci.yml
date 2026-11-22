@@ -339,6 +339,22 @@ jobs:
           name: worker-bundle
           path: .
 
+      # The download is the build's output and nothing else: every path
+      # that now differs from the commit, ignored files and every file in
+      # an ignored directory included, must be under dist/ or be the deploy
+      # config, or the job stops here, before any step that holds the
+      # token. Names are printed indented.
+      - name: Check the download holds only the build
+        run: |
+          set -euo pipefail
+          extra=$(git status --porcelain=v1 -z --untracked-files=all --ignored=traditional |
+            tr '\0' '\n' | cut -c4- | grep -vxE 'dist/.+|\.wrangler/deploy/config\.json' || true)
+          if [ -n "$extra" ]; then
+            echo "::error::the downloaded bundle holds paths outside dist/ and the deploy config"
+            printf '%s\n' "$extra" | sed 's/^/  /'
+            exit 1
+          fi
+
       # This job runs no build. The deploy config must be exactly the
       # redirect the Cloudflare plugin writes, and the Worker config it
       # names must declare no `build`, or the job stops here, before any

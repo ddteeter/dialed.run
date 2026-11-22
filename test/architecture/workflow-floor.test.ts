@@ -645,6 +645,7 @@ describe("the deploy (SA-L10)", () => {
     expect(deploy).toContain("name: worker-bundle");
     expect(runsOf(deploy)).toStrictEqual([
       "|",
+      "|",
       "npm ci --ignore-scripts",
       "|",
       "npx wrangler deploy",
@@ -654,12 +655,16 @@ describe("the deploy (SA-L10)", () => {
 
   it("checks the downloaded deploy config before any step that holds the token", () => {
     const steps = stepLinesOf(job("deploy"));
+    const tree = steps.indexOf(
+      "      - name: Check the download holds only the build",
+    );
     const check = steps.indexOf("      - name: Check the deploy config");
     const download = steps.findIndex((line) =>
       line.includes("actions/download-artifact@"),
     );
     const migrations = steps.indexOf("      - name: Apply migrations");
-    expect(check).toBeGreaterThan(download);
+    expect(tree).toBe(download + 1);
+    expect(check).toBeGreaterThan(tree);
     expect(download).toBeGreaterThan(-1);
     expect(check).toBeLessThan(migrations);
     const deploy = job("deploy");
