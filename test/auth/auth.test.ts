@@ -105,6 +105,7 @@ describe("auth (better-auth on real D1)", () => {
     const authWithGoogle = createAuth({
       db: drizzle(env.DIALED_CORE),
       secret: "test-secret-not-for-production",
+      baseUrl: "http://localhost",
       passwordScreen: CLEAN_SCREEN,
       mail: recordingMail(),
       access: OPEN_ACCESS,

@@ -156,6 +156,7 @@ describe("a banned runner signing in (SAF-4)", () => {
     const gated = createAuth({
       db: core(),
       secret: "test-secret-not-for-production",
+      baseUrl: "http://localhost",
       passwordScreen: CLEAN_SCREEN,
       mail: recordingMail(),
       access: OPEN_ACCESS,
