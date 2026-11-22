@@ -1623,8 +1623,6 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     // The cap: this requester's open requests, by either key.
     index("takedown_requests_requester_status").on(t.requesterKey, t.status),
     index("takedown_requests_ip_status").on(t.ipKey, t.status),
-    // What held a subject, by when.
-    index("takedown_requests_held_at").on(t.heldAt),
     // The valve: what newly hid a subject in the last hour.
     index("takedown_requests_hid_at").on(t.hidAt),
     // The alerts of requests that hid nothing, in the last hour.
@@ -2018,8 +2016,6 @@ export const heldTakeDowns = /*#__PURE__*/ sqliteTable(
     // The give-back's check: is this subject, or this photo's kit, taken
     // down.
     index("held_take_downs_subject").on(t.subjectType, t.subjectId),
-    // By kit.
-    index("held_take_downs_entry").on(t.entryId),
   ],
 );
 
