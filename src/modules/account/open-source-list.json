@@ -22,35 +22,35 @@
   "packages": [
     {
       "name": "@better-auth/core",
-      "version": "1.7.18",
+      "version": "1.7.25",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/drizzle-adapter",
-      "version": "1.7.18",
+      "version": "1.7.25",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/drizzle"
     },
     {
       "name": "@better-auth/kysely-adapter",
-      "version": "1.7.18",
+      "version": "1.7.25",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/kysely"
     },
     {
       "name": "@better-auth/memory-adapter",
-      "version": "1.7.18",
+      "version": "1.7.25",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/telemetry",
-      "version": "1.7.18",
+      "version": "1.7.25",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
@@ -119,7 +119,7 @@
     },
     {
       "name": "@mediapipe/tasks-vision",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "licence": "Apache-2.0"
     },
     {
@@ -333,7 +333,7 @@
     },
     {
       "name": "better-auth",
-      "version": "1.7.18",
+      "version": "1.7.25",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://better-auth.com"
@@ -549,7 +549,7 @@
     },
     {
       "name": "jose",
-      "version": "6.2.15",
+      "version": "6.2.17",
       "licence": "MIT",
       "copyright": "2018 Filip Skokan",
       "project": "https://github.com/panva/jose"
