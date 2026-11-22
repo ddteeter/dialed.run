@@ -43,6 +43,7 @@ import {
   FIRST_KITS,
   type PublicKitRow,
   type PublicProfile,
+  type PublicProfileAnswer,
 } from "./public-profile-shape";
 
 type Database = DrizzleD1Database;
@@ -214,13 +215,16 @@ export function publicProfileHeaders(
  * The page's read, for its server function: the profile or nothing, with
  * the headers the page must leave with handed to `setHeaders` (the
  * framework's `setResponseHeaders`, passed in so this stays testable).
+ *
+ * Always an object, so the framework serializes the answer the same way
+ * for every caller, whatever headers the request carried.
  */
 export async function publicProfileForPage(
   handle: string,
   isAll: boolean,
   setHeaders: (headers: Record<string, string>) => void,
-): Promise<PublicProfile | undefined> {
+): Promise<PublicProfileAnswer> {
   const read = await publicProfileRead(handle, isAll);
   setHeaders(publicProfileHeaders(handle, read));
-  return read?.profile;
+  return { profile: read?.profile };
 }

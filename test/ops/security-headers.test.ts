@@ -291,6 +291,77 @@ describe("secureResponse, for a page the edge may store (design 163)", () => {
     expect(secured.headers.get("Cache-Control")).toBe("public");
   });
 
+  it("never leaves a server function's public 500 for the edge", async () => {
+    const failed = new Response('{"error":"x"}', {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=60, must-revalidate",
+        "Cache-Tag": "entry:01JABCDEFGHJKMNPQRSTVWXYZ0",
+      },
+    });
+
+    const secured = await secureResponse(failed, "n0nce", undefined);
+
+    expect(secured.status).toBe(500);
+    expect(secured.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(
+      directives(secured.headers.get(CSP_HEADER) ?? "").get("script-src"),
+    ).toContain("'nonce-n0nce'");
+  });
+
+  it("never leaves a public 5xx for the edge on an open-web path either", async () => {
+    const failed = new Response("<!doctype html><title>x</title>", {
+      status: 503,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+      },
+    });
+
+    const secured = await secureResponse(failed, undefined, "a-marker");
+
+    expect(secured.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("leaves a 5xx that was never storable with the headers it named", async () => {
+    const failed = new Response("x", {
+      status: 500,
+      headers: { "Content-Type": "text/plain", "Cache-Control": "no-cache" },
+    });
+
+    const secured = await secureResponse(failed, "n0nce", undefined);
+
+    expect(secured.headers.get("Cache-Control")).toBe("no-cache");
+  });
+
+  it("leaves the open web's public 404 storable", async () => {
+    const notPublic = new Response("<!doctype html><title>x</title>", {
+      status: 404,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60, must-revalidate",
+      },
+    });
+
+    const secured = await secureResponse(notPublic, undefined, "a-marker");
+
+    expect(secured.headers.get("Cache-Control")).toBe(
+      "public, max-age=60, must-revalidate",
+    );
+  });
+
+  it("leaves a public reply one short of a server failure storable", async () => {
+    const card = new Response("x", {
+      status: 499,
+      headers: { "Content-Type": "image/png", "Cache-Control": "public" },
+    });
+
+    const secured = await secureResponse(card, "n0nce", undefined);
+
+    expect(secured.headers.get("Cache-Control")).toBe("public");
+  });
+
   it("keeps the nonce for a page that is not stored", async () => {
     const secured = await secureResponse(page(), "n0nce", undefined);
 

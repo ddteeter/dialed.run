@@ -79,9 +79,17 @@ export function publicProfileHead(profile: PublicProfile | undefined): {
  * The route's loader answer: the profile, or the router's 404 — one
  * not-found for every reason a profile is not public (round 41 #86f).
  */
-export function profileOrNotFound(
-  profile: PublicProfile | undefined,
-): PublicProfile {
+export function profileOrNotFound({
+  profile,
+}: PublicProfileAnswer): PublicProfile {
   if (profile === undefined) throw new NotFoundError("not a public profile");
   return profile;
+}
+
+/**
+ * What the page's server function answers: the profile, or none when it
+ * is not public.
+ */
+export interface PublicProfileAnswer {
+  readonly profile: PublicProfile | undefined;
 }

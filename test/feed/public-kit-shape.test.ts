@@ -99,13 +99,13 @@ describe("publicKitHead", () => {
 
 describe("kitOrNotFound", () => {
   it("hands a public kit through", () => {
-    expect(kitOrNotFound(KIT)).toBe(KIT);
+    expect(kitOrNotFound({ kit: KIT })).toBe(KIT);
   });
 
   it("is the router's 404 for anything else, one answer for every reason", () => {
     let thrown: unknown;
     try {
-      kitOrNotFound(undefined);
+      kitOrNotFound({ kit: undefined });
     } catch (error: unknown) {
       thrown = error;
     }

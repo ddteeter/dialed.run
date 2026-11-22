@@ -526,9 +526,24 @@ async function setModeration(
  */
 async function pageFor(entryId: string) {
   const setHeaders = vi.fn();
-  const kit = await publicKitForPage(entryId, setHeaders);
+  const { kit } = await publicKitForPage(entryId, setHeaders);
   return { kit, headers: setHeaders.mock.calls };
 }
+
+describe("the page's answer", () => {
+  it("is an object whether or not the kit is public", async () => {
+    const { entryId } = await fullyPopulated();
+    const shown = await publicKitForPage(entryId, vi.fn());
+    expect(Object.keys(shown)).toStrictEqual(["kit"]);
+    expect(shown.kit).toBeDefined();
+
+    expect(
+      await publicKitForPage("01JZZZZZZZZZZZZZZZZZZZZZZZ", vi.fn()),
+    ).toStrictEqual({
+      kit: undefined,
+    });
+  });
+});
 
 describe("not public (round 41 #86f): one answer for every reason", () => {
   it.each(NOT_PUBLIC)("is nothing for a kit %s", async (_reason, make) => {

@@ -461,7 +461,7 @@ describe("publicProfileRead: a public profile", () => {
 
     // A kit row names no garment: the pieces are the kit page's, one tap
     // on. The rotation does name them, brand and model (R55·218d).
-    const profile = await publicProfileForPage(HANDLE, true, vi.fn());
+    const { profile } = await publicProfileForPage(HANDLE, true, vi.fn());
     const kits = JSON.stringify(profile?.kits);
     for (const garment of ["Nike", "Tracksmith", "Pegasus", "Brighton"]) {
       expect(kits, garment).not.toContain(garment);
@@ -570,9 +570,22 @@ const NOT_PUBLIC: readonly (readonly [
  */
 async function pageFor(handle: string) {
   const setHeaders = vi.fn();
-  const profile = await publicProfileForPage(handle, false, setHeaders);
+  const { profile } = await publicProfileForPage(handle, false, setHeaders);
   return { profile, headers: setHeaders.mock.calls };
 }
+
+describe("the page's answer", () => {
+  it("is an object whether or not the profile is public", async () => {
+    await fullyPopulated();
+    const shown = await publicProfileForPage(HANDLE, false, vi.fn());
+    expect(Object.keys(shown)).toStrictEqual(["profile"]);
+    expect(shown.profile).toBeDefined();
+
+    expect(
+      await publicProfileForPage("nobody_here", false, vi.fn()),
+    ).toStrictEqual({ profile: undefined });
+  });
+});
 
 describe("not public (round 41 #86f): one answer for every reason", () => {
   it.each(NOT_PUBLIC)("is nothing for a profile %s", async (_reason, make) => {
