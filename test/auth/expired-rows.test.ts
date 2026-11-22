@@ -13,6 +13,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
+  STATE_SWEEP_BATCH,
   sweepExpiredAuthRows,
   sweepExpiredStates,
 } from "../../src/modules/auth/expired-rows/expired-rows";
@@ -283,5 +284,20 @@ describe("sweepExpiredStates", () => {
     expect(await stateIds([expired, expiringNow, live])).toStrictEqual(
       [expiringNow, live].toSorted(byText),
     );
+  });
+
+  it("deletes every expired state in batches, however many there are", async () => {
+    const expired = await Promise.all(
+      [1, 2, 3, 4, 5].map((ago) => aState(NOW - ago)),
+    );
+    const live = await aState(NOW + 600);
+
+    await sweepExpiredStates(db, NOW, 2);
+
+    expect(await stateIds([...expired, live])).toStrictEqual([live]);
+  });
+
+  it("takes ten thousand rows a statement by default", () => {
+    expect(STATE_SWEEP_BATCH).toBe(10_000);
   });
 });

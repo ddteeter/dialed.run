@@ -7,7 +7,7 @@
  * sub-module's door, because `auth/index.ts` pulls the framework and no
  * test could import the dispatch through it (design 253).
  */
-import { lt } from "drizzle-orm";
+import { inArray, lt } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { rateLimit, session, verification } from "../../../db/schema-auth";
@@ -92,6 +92,13 @@ export async function sweepExpiredAuthRows(
 }
 
 /**
+ * The most expired `verification` rows one statement deletes. Each
+ * statement stays short however many rows a burst of presses left, well
+ * inside D1's limit on one query's time.
+ */
+export const STATE_SWEEP_BATCH = 10_000;
+
+/**
  * Delete Better Auth's `verification` rows whose expiry has passed: a
  * Google press's state (ten minutes) and a reset link (an hour). Run on
  * every hourly firing (owner, 2026-11-21), so at most about an hour of
@@ -100,15 +107,29 @@ export async function sweepExpiredAuthRows(
  * **An expired row is dead**, so no margin is kept: Better Auth refuses a
  * state or reset whose `expiresAt` has passed, and deletes expired rows
  * itself whenever it looks one up. The app's own writes to the table are
- * deletes only. Re-runnable (law 1). It scans the table, which an hourly
- * sweep keeps small.
+ * deletes only. Re-runnable (law 1).
+ *
+ * **In batches of `batch`**, one statement each, until a statement finds
+ * fewer: the cutoff is fixed for the run, so rows that expire meanwhile
+ * wait for the next firing and the run always ends.
  */
 export async function sweepExpiredStates(
   db: Db = coreDb(),
   now = nowSeconds(),
+  batch = STATE_SWEEP_BATCH,
 ): Promise<void> {
   // `expires_at` is a timestamp column: drizzle stores the Date in seconds.
-  await db
-    .delete(verification)
-    .where(lt(verification.expiresAt, new Date(now * 1000)));
+  const expired = lt(verification.expiresAt, new Date(now * 1000));
+  let deleted: number;
+  do {
+    const some = db
+      .select({ id: verification.id })
+      .from(verification)
+      .where(expired)
+      .limit(batch);
+    const result = await db
+      .delete(verification)
+      .where(inArray(verification.id, some));
+    deleted = result.meta.changes;
+  } while (deleted === batch);
 }
