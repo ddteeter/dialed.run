@@ -87,14 +87,13 @@ export function promptAddress(url: string): string {
 const modelOutputSchema = extractedProductSchema.omit({ extras: true });
 
 /**
- * Thrown for any adapter failure — network, timeout, non-2xx, a body that
- * is not what the API documents, or output the contract rejects.
+ * Thrown for an adapter failure the queue retries: a non-2xx, or a body
+ * that is not what the API documents. A network failure is let through as
+ * itself and is retried too.
  *
- * **All of it is retryable but one**, which is the packet's wording: "a
- * malformed model response is a retryable failure, not a crash". A model
- * is a non-deterministic upstream, so the same prompt really can succeed
- * on the next delivery, and the queue is the retry mechanism (law 3). The
- * one is `UnreadableAnswerError` below.
+ * A model is a non-deterministic upstream, so the same prompt really can
+ * succeed on the next delivery, and the queue is the retry mechanism
+ * (law 3). What the queue does not retry is `UnreadableAnswerError` below.
  */
 export class ModelUnavailableError extends UpstreamError {
   constructor(message: string, options?: { cause?: unknown }) {
@@ -103,14 +102,15 @@ export class ModelUnavailableError extends UpstreamError {
 }
 
 /**
- * An answer that is not an object at all: cut off at `MAX_ANSWER_TOKENS`,
- * a list, a string. The consumer fails the try on it, as it does a page
- * that refuses, and acks: the hourly sweep's re-drive is the next try, so
- * each try is one model call.
+ * No answer the consumer can read: one that is not an object at all (cut
+ * off at `MAX_ANSWER_TOKENS`, a list, a string), a completion with no
+ * choices or no content, or no answer inside the timeout. The consumer
+ * fails the try on it, as it does a page that refuses, and acks: the
+ * hourly sweep's re-drive is the next try, so each try is one model call.
  */
 export class UnreadableAnswerError extends ModelUnavailableError {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
     this.name = "UnreadableAnswerError";
   }
 }
@@ -133,8 +133,8 @@ async function bodyOf(response: Response): Promise<string> {
  * we do not act on, and parsing what we do not use is how a schema starts
  * failing on a field's harmless change.
  */
-const messageSchema = z.object({ content: z.string() });
-const choiceSchema = z.object({ message: messageSchema });
+const messageSchema = z.object({ content: z.string().nullish() });
+const choiceSchema = z.object({ message: messageSchema.optional() });
 const completionSchema = z.object({ choices: z.array(choiceSchema) });
 
 /**
@@ -226,9 +226,37 @@ async function askModel(
   pageText: string,
   url: string,
 ): Promise<ExtractedProduct> {
+  const signal = AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS);
+  try {
+    return answerOf(
+      await completionOf(apiKey, options, fetchImpl, pageText, url, signal),
+    );
+  } catch (error) {
+    // Whatever the fetch or the body read threw once the timeout fired,
+    // the call ran out of time: one try, not the queue's retries.
+    if (signal.aborted) {
+      throw new UnreadableAnswerError("Model did not answer in time", {
+        cause: error,
+      });
+    }
+    throw error;
+  }
+}
+
+/**
+The response's body as text, from a 2xx; anything else is thrown.
+*/
+async function completionOf(
+  apiKey: string,
+  options: ChatCompletionsOptions,
+  fetchImpl: typeof fetch,
+  pageText: string,
+  url: string,
+  signal: AbortSignal,
+): Promise<string> {
   const response = await fetchImpl(options.endpoint, {
     method: "POST",
-    signal: AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS),
+    signal,
     headers: {
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
@@ -277,8 +305,13 @@ async function askModel(
       `Model returned ${String(response.status)}: ${detail}`,
     );
   }
+  return bodyOf(response);
+}
 
-  const body = await bodyOf(response);
+/**
+The extraction a completion's body holds.
+*/
+function answerOf(body: string): ExtractedProduct {
   // `parseJson` rather than a second copy of it: a body that is not JSON
   // and a body of the wrong shape are the same failure to the caller, which
   // is exactly what that helper already exists to say (`html.ts`).
@@ -288,13 +321,12 @@ async function askModel(
       "Model response did not match its contract",
     );
   }
-  // Checked rather than defaulted. `.min(1)` on the schema would make the
-  // index safe and this line unreachable — a default nothing can observe —
-  // where a completion with no choices is a real answer a real provider
-  // gives, and one the caller should retry.
-  const content = envelope.data.choices[0]?.message.content;
-  if (content === undefined) {
-    throw new ModelUnavailableError("Model returned no completion");
+  // Checked rather than defaulted. A completion with no choices, a choice
+  // with no message, and a message whose content is null or missing are
+  // all answers a provider can give, and none of them is one to read.
+  const content = envelope.data.choices[0]?.message?.content;
+  if (typeof content !== "string") {
+    throw new UnreadableAnswerError("Model returned no completion");
   }
 
   // Field by field: a bad image costs the image, not the composition

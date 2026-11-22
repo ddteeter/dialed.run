@@ -151,7 +151,7 @@ views {
       notes '''
         **Bounded.** 200 model calls an hour, shared by everyone, counted before the ladder reads the stored page, a re-read of one included. Over that, the job is acked and the product stays `pending` for the sweep, with the page kept for it: a stored page no rung has read is read on the next try whatever its age. The Desk\'s re-run is not counted. The answer is capped at 4,000 tokens, and a field the contract refuses is dropped, keeping the rest.
 
-        **If it fails:** an answer that is not an object at all (cut off at the cap, a list, a string) fails the try: one try on the product, acked, with the page kept, and the sweep\'s re-drive is the next try. Any other error throws, the queue retries, and the product stays `pending`, because the model is the only source of composition and a `done` product would never be asked again. The call has 30 seconds.
+        **If it fails:** no answer to read fails the try: an answer that is not an object at all (cut off at the cap, a list, a string), a completion with no choices or no content, or no answer inside the call\'s 30 seconds. That is one try on the product, acked, with the page kept, and the sweep\'s re-drive is the next try. An HTTP error, a body that is not the documented envelope, or a network error throws, the queue retries, and the product stays `pending`, because the model is the only source of composition and a `done` product would never be asked again.
 
         With no model key, this step is skipped and the declared fields are the answer.
       '''

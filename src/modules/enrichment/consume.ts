@@ -60,13 +60,13 @@ type Db = DrizzleD1Database & { $client: D1Database };
  * `PageFetchError` is the page itself refusing — a 403 with no proxy, a
  * private host, an oversized body, a 404 — and no retry changes that, so
  * the row goes to `failed` and the message is acked (law 6: the failure is
- * on the row, where the closet can show it). So is an `UnreadableAnswerError`,
- * a model answer that is not an object at all: one try on the product, and
- * the hourly sweep's re-drive is the next one. So is anything thrown
+ * on the row, where the closet can show it). So is an `UnreadableAnswerError`:
+ * no model answer to read (not an object, no content, or none in time),
+ * one try on the product, and the hourly sweep's re-drive is the next one. So is anything thrown
  * before the page is stored — a network throw, a timeout, a D1 or R2
  * error — which `beforeStored` makes a `PageFetchError`, so each try is
  * one counted fetch. Anything else — a write-back conflict, a model
- * outage — is thrown, so the queue's own retry machinery owns it (law 3)
+ * HTTP or network error — is thrown, so the queue's own retry machinery owns it (law 3)
  * and the DLQ handler below marks the row when it gives up.
  */
 
