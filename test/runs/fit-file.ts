@@ -127,6 +127,59 @@ const UINT8 = 0x02;
 const UINT32 = 0x86;
 
 /**
+ * A FIT activity file around `body`, the bytes between the file header
+ * and a session of thirty minutes and five kilometres: the session's
+ * definition and data, the header and both CRCs are written here.
+ */
+function fitFileAround(body: Uint8Array): ArrayBuffer {
+  const startS = Math.floor(START.getTime() / 1000) - FIT_EPOCH_S;
+  // session (18), local type 3: start_time, total_elapsed_time,
+  // total_timer_time, total_distance.
+  const session = [
+    0x43,
+    0,
+    0,
+    18,
+    0,
+    4,
+    2,
+    4,
+    UINT32,
+    7,
+    4,
+    UINT32,
+    8,
+    4,
+    UINT32,
+    9,
+    4,
+    UINT32,
+  ];
+  const sessionData = new Uint8Array(1 + 16);
+  sessionData[0] = 0x03;
+  const sessionView = new DataView(sessionData.buffer);
+  sessionView.setUint32(1, startS, true);
+  sessionView.setUint32(5, 1800 * 1000, true);
+  sessionView.setUint32(9, 1800 * 1000, true);
+  sessionView.setUint32(13, 5000 * 100, true);
+
+  const dataSize = body.length + session.length + sessionData.length;
+  const out = new Uint8Array(14 + dataSize + 2);
+  const view = new DataView(out.buffer);
+  out.set([14, 0x20], 0);
+  view.setUint16(2, 21_218, true);
+  view.setUint32(4, dataSize, true);
+  out.set([0x2e, 0x46, 0x49, 0x54], 8);
+  view.setUint16(12, CrcCalculator.calculateCRC(out, 0, 12), true);
+  out.set(body, 14);
+  out.set(session, 14 + body.length);
+  out.set(sessionData, 14 + body.length + session.length);
+  const end = 14 + dataSize;
+  view.setUint16(end, CrcCalculator.calculateCRC(out, 0, end), true);
+  return out.buffer;
+}
+
+/**
  * A FIT activity file written byte by byte, for what the SDK's encoder
  * does not write: `descriptions` developer field descriptions, then
  * `messages` records that each carry `fields` one-byte developer fields,
@@ -141,8 +194,7 @@ export function fitFileOfDeveloperFields(shape: {
   type?: number;
 }): ArrayBuffer {
   const type = shape.type ?? 20;
-  const startS = Math.floor(START.getTime() / 1000) - FIT_EPOCH_S;
-  const body: number[] = [
+  const head: number[] = [
     // developer_data_id (207), local type 0: developer_data_index.
     0x40,
     0,
@@ -173,64 +225,29 @@ export function fitFileOfDeveloperFields(shape: {
     UINT8,
   ];
   for (let index = 0; index < shape.descriptions; index += 1) {
-    body.push(0x01, 0, index % 256, UINT8);
+    head.push(0x01, 0, index % 256, UINT8);
   }
   // `type`, local type 2, developer data flagged: no fields of its own,
   // `fields` developer fields of one byte each.
-  body.push(0x62, 0, 0, type & 0xff, type >> 8, 0, shape.fields);
-  for (let index = 0; index < shape.fields; index += 1) body.push(index, 1, 0);
-  // session (18), local type 3: start_time, total_elapsed_time,
-  // total_timer_time, total_distance. Thirty minutes, five kilometres.
-  const session = [
-    0x43,
-    0,
-    0,
-    18,
-    0,
-    4,
-    2,
-    4,
-    UINT32,
-    7,
-    4,
-    UINT32,
-    8,
-    4,
-    UINT32,
-    9,
-    4,
-    UINT32,
-  ];
-  const sessionData = new Uint8Array(1 + 16);
-  sessionData[0] = 0x03;
-  const sessionView = new DataView(sessionData.buffer);
-  sessionView.setUint32(1, startS, true);
-  sessionView.setUint32(5, 1800 * 1000, true);
-  sessionView.setUint32(9, 1800 * 1000, true);
-  sessionView.setUint32(13, 5000 * 100, true);
+  head.push(0x62, 0, 0, type & 0xff, type >> 8, 0, shape.fields);
+  for (let index = 0; index < shape.fields; index += 1) head.push(index, 1, 0);
 
   const recordSize = 1 + shape.fields;
-  const dataSize =
-    body.length +
-    shape.messages * recordSize +
-    session.length +
-    sessionData.length;
-  const out = new Uint8Array(14 + dataSize + 2);
-  const view = new DataView(out.buffer);
-  out.set([14, 0x20], 0);
-  view.setUint16(2, 21_218, true);
-  view.setUint32(4, dataSize, true);
-  out.set([0x2e, 0x46, 0x49, 0x54], 8);
-  view.setUint16(12, CrcCalculator.calculateCRC(out, 0, 12), true);
-  out.set(body, 14);
-  let at = 14 + body.length;
+  const body = new Uint8Array(head.length + shape.messages * recordSize);
+  body.set(head, 0);
   for (let index = 0; index < shape.messages; index += 1) {
-    out[at] = 0x02;
-    at += recordSize;
+    body[head.length + index * recordSize] = 0x02;
   }
-  out.set(session, at);
-  out.set(sessionData, at + session.length);
-  const end = 14 + dataSize;
-  view.setUint16(end, CrcCalculator.calculateCRC(out, 0, end), true);
-  return out.buffer;
+  return fitFileAround(body);
+}
+
+/**
+ * A FIT activity file whose definition of `type` (local type 2) declares
+ * one field of its own of size zero, followed by one message under it,
+ * which is its header byte alone.
+ */
+export function fitFileWithEmptyField(type: number): ArrayBuffer {
+  return fitFileAround(
+    new Uint8Array([0x42, 0, 0, type & 0xff, type >> 8, 1, 0, 0, UINT8, 0x02]),
+  );
 }

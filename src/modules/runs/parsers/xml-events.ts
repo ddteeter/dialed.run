@@ -32,12 +32,13 @@ export const MAX_XML_NODES = 2_000_000;
 export const MAX_XML_DEPTH = 64;
 
 /**
- * The most elements one kept element may hold, at any depth. A track
- * point with its time, elevation and a watch's extensions holds a dozen or
+ * The most elements and attributes one kept element may hold, at any
+ * depth, its own attributes included. A track point with its two
+ * coordinates, time, elevation and a watch's extensions holds a dozen or
  * two; past this the file is refused, so what a kept element builds stays
  * small whatever the file holds.
  */
-export const MAX_KEPT_ELEMENT_CHILDREN = 256;
+export const MAX_KEPT_ELEMENT_NODES = 256;
 
 /**
  * The most slips a document may have that the reader forgives (a bare
@@ -149,8 +150,8 @@ const BUFFER_OVERRUN = "Max buffer length exceeded";
 
 /**
  * What the reader keeps while it builds the elements a collector asked
- * for: the frames open now, and how many elements the outermost of them
- * holds so far.
+ * for: the frames open now, and how many elements and attributes the
+ * outermost of them holds so far.
  */
 interface Building {
   readonly frames: Frame[];
@@ -159,19 +160,21 @@ interface Building {
 
 /**
  * Opens a frame for an element inside a kept one, or for a kept one
- * itself. A kept element holding more than `MAX_KEPT_ELEMENT_CHILDREN`
- * elements is refused.
+ * itself. Each element inside counts one, and each attribute, the kept
+ * element's own too, counts one: a kept element holding more than
+ * `MAX_KEPT_ELEMENT_NODES` is refused.
  */
 function openFrame(
   building: Building,
   attributes: Readonly<AttributeMap>,
   kind: string,
 ): void {
-  if (building.frames.length === 0) building.held = 0;
-  else building.held += 1;
-  if (building.held > MAX_KEPT_ELEMENT_CHILDREN) {
+  const attributeCount = Object.keys(attributes).length;
+  if (building.frames.length === 0) building.held = attributeCount;
+  else building.held += 1 + attributeCount;
+  if (building.held > MAX_KEPT_ELEMENT_NODES) {
     throw new RunParseError(
-      `${kind}: an element holds more than ${String(MAX_KEPT_ELEMENT_CHILDREN)} elements`,
+      `${kind}: an element holds more than ${String(MAX_KEPT_ELEMENT_NODES)} elements and attributes`,
     );
   }
   building.frames.push({ attributes, children: new Map(), text: "" });
@@ -236,10 +239,7 @@ function parserFor(kind: string, collector: XmlCollector): sax.SAXParser {
         `${kind}: nested deeper than ${String(MAX_XML_DEPTH)} elements`,
       );
     }
-    if (
-      building.frames.length > 0 ||
-      collector.open(path, tag.attributes)
-    ) {
+    if (building.frames.length > 0 || collector.open(path, tag.attributes)) {
       openFrame(building, tag.attributes, kind);
     }
   };

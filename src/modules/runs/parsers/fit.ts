@@ -83,10 +83,10 @@ function isProfileMessage(globalMessageNumber: number): boolean {
 /**
  * The decoder's listeners that keep a file inside its budgets. A throw in
  * either lands in `read()`'s `errors`, which the parse turns into a
- * refusal. A definition may not declare a developer field of size zero,
- * so every developer field a message carries costs it at least a byte,
- * nor put developer fields on a type the profile does not name, since
- * only a named type's messages are counted.
+ * refusal. A definition may not declare a field of size zero, its own or
+ * a developer's, whatever its type, so every field a message carries
+ * costs it at least a byte. Nor may it put developer fields on a type the
+ * profile does not name, since only a named type's messages are counted.
  *
  * A message does not say which of its type's definitions it was written
  * under, so it is counted at the most fields and developer fields any
@@ -126,19 +126,16 @@ export function fitReadLimits(
     },
     mesgDefinitionListener: (definition) => {
       const developerFields = definition.developerFieldDefinitions;
-      if (developerFields.some((field) => field.size === 0)) {
-        throw new Error("fit: a developer field of size zero");
+      const fields = [...definition.fieldDefinitions, ...developerFields];
+      if (fields.some((field) => field.size === 0)) {
+        throw new Error("fit: a field of size zero");
       }
       const type = definition.globalMessageNumber;
       if (developerFields.length > 0 && !isProfileMessage(type)) {
         throw new Error("fit: developer fields on an unknown message type");
       }
       widest(developerFieldsOf, type, developerFields.length);
-      widest(
-        fieldsOf,
-        type,
-        definition.fieldDefinitions.length + developerFields.length,
-      );
+      widest(fieldsOf, type, fields.length);
     },
   };
 }
