@@ -1,0 +1,198 @@
+views {
+  dynamic view exportStory {
+    title 'A runner\'s data export is built and emailed'
+
+    include
+      runner with {
+        description 'Asks for a copy of their data'
+      }
+    include
+      cf.coreDb with {
+        description 'The data_exports row is the durable marker'
+      }
+    include
+      cf.importsBucket with {
+        description 'Run files under imports/, export ZIPs under exports/'
+      }
+
+    // source: src/modules/account/functions.ts requestExportFn; src/modules/account/data/data-exports.ts requestExport, canRequest; src/lib/contracts/data-export.ts EXPORT_EVERY_S
+    runner -> cf.app.account.request 'asks for a copy, with an idempotency key' {
+      notes '''
+        **Guard: the idempotency key.** A repeat of the key answers what the first request made.
+
+        One export a day: a new one is made after a failure at once, never while one is under way, and otherwise a day after the last.
+      '''
+    }
+    // source: src/modules/account/data/data-exports.ts requestExport, newLinkToken; src/db/schema-core.ts dataExports, data_exports_idempotency, data_exports_in_flight
+    cf.app.account.request -> cf.coreDb 'inserts the export row: pending, with its link token' {
+      notes '''
+        **Guard: two unique indexes**, the key and one export in flight a runner. Two requests that race past the reads make one row, and the second reads back the first\'s.
+
+        **This row is the recovery marker.** From here on, `pending` means the export is still owed.
+      '''
+    }
+    // source: src/modules/account/data/data-exports.ts requestExport (effects.queue.send, account-export-send); src/modules/account/data/export-queue.ts exportsQueueMessageSchema
+    cf.app.account.request -[async]-> cf.exportsQueue 'sends account_export, naming only the row' {
+      notes '''
+        **Not atomic with the row.** D1 and the queue are two systems.
+
+        **If the send fails:** it is reported, and the runner is still told the export is being prepared, which stays true. The hourly sweep sends it again.
+      '''
+      navigateTo exportRecovery
+    }
+    // source: src/modules/account/data/data-exports.ts requestExport, rowState
+    runner <- cf.app.account.request 'answers: preparing' {
+      notes '''
+        **Timing boundary: the request ends here.** One attempt, no retries inside it.
+      '''
+    }
+    // source: src/modules/dispatch/queues.ts handleQueueBatch; src/modules/account/data/export-queue.ts exportConsumers; src/lib/sql/queue-batch.ts consumeEach; wrangler.jsonc queues.consumers, max_batch_size (1), max_retries (3)
+    cf.exportsQueue -[async]-> cf.app.account.exportBuild.consumer 'delivers account_export' {
+      notes '''
+        **Timing boundary: seconds later, in a queue consumer.**
+
+        **At least once.** A build that throws is retried up to 3 times, then dead-lettered. One export a delivery, so a build has the invocation to itself.
+
+        A message whose body does not parse is reported and acknowledged, never retried.
+      '''
+      navigateTo exportRecovery
+    }
+    // source: src/modules/account/export-build/export-build.ts buildExport (claimId, IN_FLIGHT); src/modules/account/data/data-exports.ts IN_FLIGHT
+    cf.app.account.exportBuild.consumer -> cf.coreDb 'claims the row: building, under a fresh claim id' {
+      notes '''
+        **Guard: claim, then work.** Only a `pending` or `building` row is claimed. A job whose export is ready, failed or gone claims nothing and stops.
+
+        A `building` row is claimable again, so a redelivery after a crash rebuilds it. Every claim has its own id, and only the build still holding it can finish.
+      '''
+    }
+    // source: src/modules/account/export-build/export.ts exportData, conditionsFor; src/modules/weather/index.ts observationsForRuns, manualReadingsForRuns
+    cf.app.account.exportBuild.consumer -> cf.app.weather 'reads each run\'s conditions, as the app shows them' {
+      notes '''
+        With the runner\'s account, closet, runs, entries, uploads and accepted terms from the core database. The conditions are the derived reading only, never a raw provider row.
+      '''
+    }
+    // source: src/modules/account/export-build/export-build.ts buildExport, sizesUnder; src/lib/sql/r2-pages.ts listedPages
+    cf.app.account.exportBuild.consumer -> cf.mediaBucket 'lists the runner\'s photos, with their sizes' {
+      notes '''
+        And their run files under `imports/`. The sizes give the ZIP its length before a byte is written, which R2 needs to take a stream.
+      '''
+    }
+    // source: src/modules/account/export-build/export-build.ts writeZip, zeros, FixedLengthStream; src/modules/account/data/data-exports.ts exportKeyFor, exportPrefixFor
+    cf.app.account.exportBuild.consumer -> cf.importsBucket 'streams the ZIP to exports/, keyed by the claim' {
+      notes '''
+        **Bounded.** One file in memory at a time: each photo or run file is fetched only when the ZIP asks for it.
+
+        **Guard: the key carries the claim**, so two builds of one export never write the same object.
+
+        **If a file went missing since the listing:** its bytes are written as zeros so the upload ends at its promised length, then the ZIP is deleted and the build throws. The queue retries it.
+      '''
+    }
+    // source: src/modules/account/export-build/export-build.ts buildExport (mine, db.batch, readied); src/modules/ops/outbox/outbox.ts outboxInsertWhere; src/lib/contracts/data-export.ts EXPORT_LINK_TTL_S, EXPORT_LINK_DAYS (7)
+    cf.app.account.exportBuild.consumer -> cf.coreDb 'marks it ready for 7 days, and owes the email, in one batch' {
+      notes '''
+        **Guard: the claim, on both writes.** The row turns ready only under this build\'s claim, and the email is owed only if it did, so one export sends one email.
+
+        **If the claim was taken over,** or the row failed or went while this built: nothing is owed, and the build deletes the ZIP it wrote.
+      '''
+    }
+    // source: src/modules/account/export-build/export-build.ts buildExport (deps.settle), liveBuildDeps; src/modules/ops/owed-email/owed-email.ts settleOwedEmail; src/modules/ops/outbox/outbox.ts settleOutbox
+    cf.app.account.exportBuild.consumer -> cf.app.ops.owedEmail 'sends the email now, with the download link' {
+      notes '''
+        **Degrade, don\'t fail.** The export is ready whatever the send does.
+
+        **If it fails:** it is reported and the owed row stays. An hourly drain sends it.
+      '''
+      navigateTo exportRecovery
+    }
+    // source: src/routes/account/export.$token.ts Route; src/modules/account/data/data-exports.ts exportFileResponse, DEAD_LINK_PAGE
+    runner -> cf.app.account.data.download 'opens the email\'s download link' {
+      notes '''
+        Only its owner, signed in, gets the file, and only until it expires. Any other link goes to the export row in Settings, which says the link is dead and offers what there is.
+      '''
+    }
+    // source: src/modules/account/data/data-exports.ts exportFileResponse (bucket.get, private, no-store)
+    cf.app.account.data.download -> cf.importsBucket 'reads the ZIP and streams it back' {
+      notes '''
+        Never cached: the response is private and stored nowhere on the way.
+      '''
+    }
+  }
+
+  dynamic view exportRecovery {
+    title 'When a data export is lost or fails'
+
+    include
+      cf.coreDb with {
+        description 'The data_exports row is the durable marker'
+      }
+    include
+      cf.importsBucket with {
+        description 'Run files under imports/, export ZIPs under exports/'
+      }
+
+    try {
+      // source: src/modules/account/data/data-exports.ts requestExport
+      cf.app.account.request -[async]-> cf.exportsQueue 'sends account_export'
+      // source: src/modules/dispatch/queues.ts handleQueueBatch; src/modules/account/export-build/export-build.ts buildExport
+      cf.exportsQueue -[async]-> cf.app.account.exportBuild.consumer 'delivers it, and the build starts'
+    }
+    catch 'the send fails, or the Worker dies mid-build' {
+      // source: src/modules/dispatch/scheduled.ts runCron, sweepExports; src/modules/account/export-build/export-sweep.ts resendStalled, EXPORT_STALL_S, EXPORT_LEASE_S, EXPORT_SWEEP_CAP (50)
+      cf.app.cronHourly00 -[recovery]-> cf.coreDb 'finds exports pending past 15 minutes, or building past an hour' {
+        notes '''
+          Every hour on the hour. An hour is past any queue consumer\'s life, so a claim that old is a build that died. **Bounded.** At most 50 a firing, oldest first.
+        '''
+      }
+      // source: src/modules/account/export-build/export-sweep.ts resendStalled (account-export-resend)
+      cf.app.cronHourly00 -[recovery]-> cf.exportsQueue 'sends account_export again' {
+        notes '''
+          **Guard: the consumer claims before it works**, so a duplicate costs one delivery that does nothing. The firing\'s report counts what it re-sent.
+        '''
+      }
+    }
+    loop 'up to 3 retries' {
+      // source: src/lib/sql/queue-batch.ts consumeEach; src/modules/account/export-build/export-build.ts buildExport (account-export-build); wrangler.jsonc queues.consumers, max_retries (3)
+      cf.exportsQueue -[async]-> cf.app.account.exportBuild.consumer 'redelivers the job after a build throws' {
+        notes '''
+          The failure is reported with the export\'s and the runner\'s ids, never a file. The next build claims afresh and lists the files again.
+        '''
+      }
+    }
+    opt 'every retry fails' {
+      // source: wrangler.jsonc queues.consumers, dead_letter_queue (dialed-exports-dlq); src/modules/ops/desk/queues.ts queueRegistry
+      cf.exportsQueue -[recovery]-> cf.exportsDlq 'dead-letters the job'
+      // source: src/modules/dispatch/queues.ts handleQueueBatch; src/lib/sql/queue-batch.ts deadLetterEach; src/modules/account/data/export-queue.ts exportConsumers
+      cf.exportsDlq -[async]-> cf.app.account.exportBuild.deadLetter 'delivers the dead job'
+      // source: src/modules/account/data/data-exports.ts failExport, canRequest, rowState
+      cf.app.account.exportBuild.deadLetter -[recovery]-> cf.coreDb 'marks the export failed, only if still in flight' {
+        notes '''
+          The runner\'s export row says it did not work and offers to try again, which they can do at once. A redelivered dead letter for an export that did finish changes nothing.
+        '''
+      }
+      // source: src/modules/account/data/data-exports.ts failExport (account export dead-lettered)
+      cf.app.account.exportBuild.deadLetter -> sentry 'reports the export\'s and the runner\'s ids'
+    }
+    opt 'the email\'s fast path failed' {
+      // source: src/modules/dispatch/scheduled.ts drainOwedEmail, runCron; src/modules/ops/outbox/outbox.ts drainOutbox, OUTBOX_FAST_PATH_GRACE_S
+      cf.app.cronHourly00 -[recovery]-> cf.app.ops.owedEmail 'drains the owed email' {
+        notes '''
+          At quarter past, half past and on the hour, once the fast path\'s 15 minutes have passed. The outbox\'s own view walks the drain.
+        '''
+      }
+    }
+    opt 'a week passes' {
+      // source: src/modules/account/export-build/export-sweep.ts expireExports, forgetFailures; src/lib/contracts/data-export.ts EXPORT_LINK_TTL_S
+      cf.app.cronHourly00 -> cf.coreDb 'claims ready exports past their 7 days, and failures a week old' {
+        notes '''
+          A failed export can hold a whole ZIP: its last build\'s upload may have landed before its ready batch failed. So the claim\'s ZIP goes too.
+        '''
+      }
+      // source: src/modules/account/export-build/export-sweep.ts expireExports, forgetFailures (deps.bucket.delete, anomalies); wrangler.jsonc r2_buckets (prefix exports/, 8 days)
+      cf.app.cronHourly00 -> cf.importsBucket 'deletes each ZIP, then its row' {
+        notes '''
+          **If a delete fails:** the row stays, the firing\'s report says so, and the next hour tries again. Behind it, a bucket rule deletes anything under `exports/` after 8 days.
+        '''
+      }
+    }
+  }
+}

@@ -468,8 +468,9 @@ exception, the human never polls dashboards.
 
 What picks up a lost step is drawn per flow in the model in
 `docs/diagrams/`: [`importRecovery`](https://ddteeter.github.io/dialed.run/#/view/importRecovery/),
-[`enrichmentRecovery`](https://ddteeter.github.io/dialed.run/#/view/enrichmentRecovery/) and
-[`publicPhotosRecovery`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosRecovery/). The rest is below, in
+[`enrichmentRecovery`](https://ddteeter.github.io/dialed.run/#/view/enrichmentRecovery/),
+[`publicPhotosRecovery`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosRecovery/) and
+[`exportRecovery`](https://ddteeter.github.io/dialed.run/#/view/exportRecovery/). The rest is below, in
 words.
 
 - **Queues**: `max_retries: 3` with delayed retry; DLQ bound and consumed —
@@ -559,7 +560,9 @@ words.
   the Settings row shows. The sweep claims expired ZIPs (`expiring`),
   deletes each, then its row, and deletes a week-old failure's ZIP with
   its row; an R2 lifecycle rule on `exports/` (8 days, D-85) is the net
-  behind it.
+  behind it. Drawn as
+  [`exportStory`](https://ddteeter.github.io/dialed.run/#/view/exportStory/)
+  and [`exportRecovery`](https://ddteeter.github.io/dialed.run/#/view/exportRecovery/).
 - **Email** (task 126, decision D-42): `modules/email` is the only sender
   and the only reader of the `send_email` binding `EMAIL`
   (`test/bindings-conformance.test.ts` pins both). What the runner just
