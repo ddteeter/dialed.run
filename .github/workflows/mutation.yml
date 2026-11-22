@@ -29,7 +29,8 @@ name: Mutation
 #
 # Two different runs, deliberately:
 #
-#   pull_request  incremental, warm from cache. Fast, and what you wait on.
+#   pull_request  incremental, seeded from main's report. Fast, and what
+#                 you wait on.
 #   push to main  incremental report written from cold. Slow, nobody waits.
 #
 # The PR run reuses stryker's incremental report, which re-tests mutants in
@@ -49,9 +50,9 @@ permissions:
   contents: read
 
 # A newer push to a PR supersedes the run on its old head, so that run is
-# cancelled. A run on `main` is not, because it writes the cache every PR
-# restores from. Each shard saves its own report when it finishes, so a
-# cancelled `main` run still leaves the fast shards' caches. The slow ones
+# cancelled. A run on `main` is not, because it writes the report every PR
+# is seeded from. Each shard uploads its own report when it finishes, so a
+# cancelled `main` run would still leave the fast shards' reports. The slow ones
 # (`modules/safety` and `lib/contracts/email`, about 3 hours cold) were
 # cancelled by the next merge on every run, so they never stored a report.
 # After any dependency change to the cache key, every PR then ran those two
@@ -93,7 +94,7 @@ jobs:
       # carries 24 route negations and runs to ~900 characters, which is
       # unreadable in the checks list and — since a required context is
       # matched by exact string — would change every time a route is added
-      # or removed. `slug` is the same name made safe for a cache key.
+      # or removed. `slug` is the same name made safe for an artifact name.
       # Both are derived, not restated, so they cannot drift from the
       # scope they label.
       - id: read
@@ -194,6 +195,10 @@ jobs:
     # cancelled, the `Mutation` job counts that as a failure, and on main
     # `main-status` below opens the alert.
     timeout-minutes: 240
+    permissions:
+      contents: read
+      # To find main's runs and download a shard's report from one.
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -236,24 +241,46 @@ jobs:
       # model 404s and every browser test fails as "unavailable".
       - run: npm run stage:mediapipe
 
-      # Restore on PRs only. The run on `main` is deliberately cold: it is
+      # Seed on PRs only. The run on `main` is deliberately cold: it is
       # the measurement everything else is calibrated against, and a warm
       # one would inherit whatever the last warm one assumed.
       #
-      # Restore order is this branch first, then `main` — so pushing again
-      # to a PR reuses that PR's own report, and a fresh PR starts from the
-      # last honest full run rather than from nothing. Keyed on the
-      # lockfile because a stryker or vitest bump invalidates every stored
-      # result.
-      - name: Restore the incremental report
+      # The seed is this shard's report from the newest completed run on
+      # `main` in which this shard passed and whose dependency digest
+      # (`scopes` above, recorded beside the report) is this run's: a
+      # stryker or vitest bump invalidates every stored result, and a red
+      # shard's report would hand the PR main's survivor under `break: 100`.
+      # It is read from main's push runs only, never from a PR's own runs,
+      # so every push to a PR starts from main's report and re-tests what
+      # the PR changed. With no such run in reach, this shard runs cold.
+      # Every value reaches the script through `env`.
+      - name: Seed from main's report
         if: github.event_name == 'pull_request'
-        uses: actions/cache/restore@v6.1.0
-        with:
-          path: reports/stryker-incremental.json
-          key: stryker-v1-${{ matrix.slug }}-${{ needs.scopes.outputs.deps }}-${{ github.ref }}-${{ github.sha }}
-          restore-keys: |
-            stryker-v1-${{ matrix.slug }}-${{ needs.scopes.outputs.deps }}-${{ github.ref }}-
-            stryker-v1-${{ matrix.slug }}-${{ needs.scopes.outputs.deps }}-refs/heads/main-
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHARD: "Mutation score: ${{ matrix.name }}"
+          SLUG: ${{ matrix.slug }}
+          DEPS: ${{ needs.scopes.outputs.deps }}
+        run: |
+          set -euo pipefail
+          seed="$RUNNER_TEMP/seed"
+          runs=$(gh run list --workflow mutation.yml --branch main --event push \
+            --status completed --limit 20 --json databaseId --jq '.[].databaseId')
+          for run in $runs; do
+            passed=$(gh run view "$run" --json jobs |
+              jq --arg name "$SHARD" 'any(.jobs[]; .name == $name and .conclusion == "success")')
+            [ "$passed" = true ] || continue
+            rm -rf "$seed"
+            gh run download "$run" --name "stryker-incremental-$SLUG" --dir "$seed" 2>/dev/null || continue
+            [ "$(cat "$seed/stryker-deps.txt" 2>/dev/null)" = "$DEPS" ] || continue
+            [ -f "$seed/stryker-incremental.json" ] && [ ! -L "$seed/stryker-incremental.json" ] || continue
+            mkdir -p reports
+            cp "$seed/stryker-incremental.json" reports/stryker-incremental.json
+            echo "::notice::seeded from main's run $run"
+            exit 0
+          done
+          echo "::notice::no passing main run with this dependency digest has a report for this shard; running cold"
 
       # Sharded by scope because this is minutes, not seconds, and the
       # whole ratcheted set only gets bigger. `--mutate` narrows what is
@@ -274,16 +301,6 @@ jobs:
         env:
           MUTATE: ${{ matrix.mutate }}
 
-      # Only on success: a shard that failed recorded a survived mutant,
-      # and storing that would keep the survivor "known" instead of
-      # re-running it.
-      - name: Store the incremental report
-        if: success()
-        uses: actions/cache/save@v6.1.0
-        with:
-          path: reports/stryker-incremental.json
-          key: stryker-v1-${{ matrix.slug }}-${{ needs.scopes.outputs.deps }}-${{ github.ref }}-${{ github.sha }}
-
       # Local seeding (guardrails-core 0.14.0, #543). A fresh worktree's
       # gate fetches these through scripts/fetch-mutation-seed.sh
       # (guardrails.config.json `mutationCache.seedFrom`) instead of running
@@ -297,9 +314,9 @@ jobs:
       # Uploaded whether the shard passed or failed (owner, 2026-11-13).
       # A red shard's report is still a cold, honest measurement: its
       # survivors stay Survived, so a branch that changes that file still
-      # sees them, and its kills hold. The cache above stays success-only
-      # because a PR restores it under `break: 100` and would inherit the
-      # survivor. A local gate mutates only the branch's changed files,
+      # sees them, and its kills hold. A PR's seed above takes only a run
+      # where the shard passed, because under `break: 100` it would
+      # inherit the survivor. A local gate mutates only the branch's changed files,
       # where a kept survivor is a real one. When this was success-only,
       # one red shard on `main` left every lane's push gate running that
       # scope cold until `main` went green (#660: closet and safety tsx,
@@ -308,7 +325,17 @@ jobs:
         if: "!cancelled() && github.event_name == 'push' && hashFiles('reports/stryker-incremental.json') != ''"
         run: node ./node_modules/guardrails-core/dist/cli.mjs mutation-fingerprint
 
-      - name: Upload the report for local seeding
+      # The dependency digest the report was measured under, for a PR's
+      # seed above. Not `.json`, so the local seed reader passes over it.
+      - name: Record the dependency digest
+        if: "!cancelled() && github.event_name == 'push' && hashFiles('reports/stryker-incremental.json') != ''"
+        env:
+          DEPS: ${{ needs.scopes.outputs.deps }}
+        run: printf '%s\n' "$DEPS" >reports/stryker-deps.txt
+
+      # Seven days, so a PR opened after a quiet spell on main still finds
+      # a seed (owner, 2026-11-22).
+      - name: Upload the report for seeding
         if: "!cancelled() && github.event_name == 'push' && hashFiles('reports/stryker-incremental.json') != ''"
         uses: actions/upload-artifact@v7.0.2
         with:
@@ -316,7 +343,8 @@ jobs:
           path: |
             reports/stryker-incremental.json
             reports/stryker-incremental.fingerprint.json
-          retention-days: 2
+            reports/stryker-deps.txt
+          retention-days: 7
           if-no-files-found: error
 
   # The one context branch protection requires. Scopes come and go from

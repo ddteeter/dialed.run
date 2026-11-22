@@ -469,6 +469,37 @@ describe.each(["a11y-review.yml", "dependabot-pr.yml"])(
   },
 );
 
+describe("a PR's mutation shard", () => {
+  const mutate = codeOf(jobIn(workflowNamed("mutation.yml"), "mutate"));
+
+  it("is found, so an empty result cannot pass for a clean one", () => {
+    expect(mutate).toContain("npx stryker run --incremental");
+  });
+
+  it("keeps its report in no Actions cache", () => {
+    expect(mutate).not.toContain("actions/cache");
+  });
+
+  it("is seeded only from a passing shard of a push run on main, measured under its dependencies", () => {
+    expect(mutate).toContain("      actions: read");
+    expect(mutate).toContain(
+      "gh run list --workflow mutation.yml --branch main --event push",
+    );
+    expect(mutate).toContain('.name == $name and .conclusion == "success"');
+    expect(mutate).toContain(
+      '[ "$(cat "$seed/stryker-deps.txt" 2>/dev/null)" = "$DEPS" ] || continue',
+    );
+  });
+
+  it("uploads main's report with its digest, kept seven days", () => {
+    expect(mutate).toContain(
+      `printf '%s\\n' "$DEPS" >reports/stryker-deps.txt`,
+    );
+    expect(mutate).toContain("            reports/stryker-deps.txt\n");
+    expect(mutate).toContain("          retention-days: 7\n");
+  });
+});
+
 /**
 The `- ` step lines of a job's steps, in order, comments and blanks skipped.
 */

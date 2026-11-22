@@ -31,7 +31,6 @@ workflows:
         - 'actions/setup-node@v7.1.0'
         - 'step-security/harden-runner@v2.22.4'
     '.github/workflows/mutation.yml':
-        - 'actions/cache@v6.1.0'
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-node@v7.1.0'
         - 'actions/upload-artifact@v7.0.2'
@@ -53,11 +52,6 @@ workflows:
         - 'actions/dependency-review-action@v5.0.0'
         - 'step-security/harden-runner@v2.22.4'
 dependencies:
-    'actions/cache@v6.1.0':
-        ref: 'v6.1.0'
-        commit: 'sha1-55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
-        owner_id: 44036562
-        repo_id: 215566462
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'
         commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
