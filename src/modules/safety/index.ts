@@ -50,7 +50,7 @@ export {
   openSubject,
   pendingReviewCount,
   waitingBySource,
-  hasPhotosHeldAtLimit,
+  photosHeldBelowLimit,
   releaseStaleClaims,
   resolveReview,
   reviewResolution,

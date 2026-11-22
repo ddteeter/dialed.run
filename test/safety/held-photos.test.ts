@@ -1,16 +1,31 @@
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { entryPhotos, reviewQueue } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  reviewQueue,
+  wardrobeItems,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { PHOTOS_HELD_AT_ONCE } from "../../src/lib/photo-constraints";
-import { hasPhotosHeldAtLimit } from "../../src/modules/safety";
+import { doesConditionHold } from "../../src/lib/sql/condition";
+import { photosHeldBelowLimit } from "../../src/modules/safety";
 import { heldGarmentPhotos } from "../held-photo-rows";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
 function core() {
   return drizzle(env.DIALED_CORE);
+}
+
+/**
+Whether the runner's held photos are at their limit, as the upload paths read it.
+*/
+async function isAtLimit(userId: string): Promise<boolean> {
+  return !(await doesConditionHold(
+    core(),
+    photosHeldBelowLimit(core(), userId),
+  ));
 }
 
 /**
@@ -30,11 +45,37 @@ async function heldKitPhotos(userId: string, n: number): Promise<void> {
         entryId,
         photoKey: `entries/${userId}/${entryId}/${photoId}`,
         position: index,
+        screenStatus: "hidden_pending_review",
       });
     await queueAbout("photo", photoId);
   }
   // The kit itself held too: a row about the kit is not one of its photos.
   await queueAbout("entry", entryId);
+}
+
+/**
+Kit photos of the runner's, one in each screening state given.
+*/
+async function photosOn(
+  userId: string,
+  states: readonly (typeof entryPhotos.$inferInsert)["screenStatus"][],
+): Promise<void> {
+  const entryId = await makeEntry({
+    userId,
+    runId: await makeRun({ userId }),
+  });
+  for (const [index, screenStatus] of states.entries()) {
+    const photoId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: photoId,
+        entryId,
+        photoKey: `entries/${userId}/${entryId}/${photoId}`,
+        position: index,
+        screenStatus,
+      });
+  }
 }
 
 async function queueAbout(
@@ -52,7 +93,7 @@ async function queueAbout(
   });
 }
 
-describe("hasPhotosHeldAtLimit", () => {
+describe("photosHeldBelowLimit", () => {
   beforeEach(resetSafetyTables);
 
   it("is ten", () => {
@@ -63,14 +104,14 @@ describe("hasPhotosHeldAtLimit", () => {
     const userId = await makeUser();
     await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
 
-    expect(await hasPhotosHeldAtLimit(userId)).toBe(false);
+    expect(await isAtLimit(userId)).toBe(false);
   });
 
   it("is reached at the limit", async () => {
     const userId = await makeUser();
     await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE);
 
-    expect(await hasPhotosHeldAtLimit(userId)).toBe(true);
+    expect(await isAtLimit(userId)).toBe(true);
   });
 
   it("counts kit photos and garment photos together", async () => {
@@ -78,7 +119,7 @@ describe("hasPhotosHeldAtLimit", () => {
     await heldKitPhotos(userId, 5);
     await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 5);
 
-    expect(await hasPhotosHeldAtLimit(userId)).toBe(true);
+    expect(await isAtLimit(userId)).toBe(true);
   });
 
   it("does not count a row about the runner's kit or profile", async () => {
@@ -87,7 +128,7 @@ describe("hasPhotosHeldAtLimit", () => {
     await queueAbout("profile", userId);
     await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 2);
 
-    expect(await hasPhotosHeldAtLimit(userId)).toBe(false);
+    expect(await isAtLimit(userId)).toBe(false);
   });
 
   it("counts a row a reviewer has open", async () => {
@@ -95,7 +136,7 @@ describe("hasPhotosHeldAtLimit", () => {
     await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
     await heldGarmentPhotos(userId, 1, { status: "reviewing" });
 
-    expect(await hasPhotosHeldAtLimit(userId)).toBe(true);
+    expect(await isAtLimit(userId)).toBe(true);
   });
 
   it.each(["approved", "removed"] as const)(
@@ -105,7 +146,7 @@ describe("hasPhotosHeldAtLimit", () => {
       await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
       await heldGarmentPhotos(userId, 1, { status });
 
-      expect(await hasPhotosHeldAtLimit(userId)).toBe(false);
+      expect(await isAtLimit(userId)).toBe(false);
     },
   );
 
@@ -116,15 +157,55 @@ describe("hasPhotosHeldAtLimit", () => {
       await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
       await heldGarmentPhotos(userId, 1, { source });
 
-      expect(await hasPhotosHeldAtLimit(userId)).toBe(false);
+      expect(await isAtLimit(userId)).toBe(false);
     },
   );
+
+  it("counts the runner's photos still waiting to be screened", async () => {
+    const userId = await makeUser();
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 2);
+    await photosOn(userId, ["pending", "pass", "flagged"]);
+    await core()
+      .insert(wardrobeItems)
+      .values({
+        id: newUlid(),
+        userId,
+        category: "top",
+        type: "tee",
+        name: "Waiting tee",
+        photoKey: `items/${userId}/waiting`,
+        origin: "manual",
+        visibility: "pending",
+        createdAt: 1,
+      });
+
+    expect(await isAtLimit(userId)).toBe(true);
+  });
+
+  it("does not count a photo screened, a garment with no photo, or another runner's waiting photo", async () => {
+    const userId = await makeUser();
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
+    await photosOn(userId, ["pass", "flagged", "removed"]);
+    await photosOn(await makeUser(), ["pending"]);
+    await core().insert(wardrobeItems).values({
+      id: newUlid(),
+      userId,
+      category: "top",
+      type: "tee",
+      name: "No photo yet",
+      origin: "manual",
+      visibility: "pending",
+      createdAt: 1,
+    });
+
+    expect(await isAtLimit(userId)).toBe(false);
+  });
 
   it("does not count another runner's held photos", async () => {
     const userId = await makeUser();
     await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
     await heldGarmentPhotos(await makeUser(), 1);
 
-    expect(await hasPhotosHeldAtLimit(userId)).toBe(false);
+    expect(await isAtLimit(userId)).toBe(false);
   });
 });

@@ -29,6 +29,7 @@ import { garmentOriginalKey, photoKeyFor } from "../../lib/garment-photo-key";
 import { nowSeconds } from "../../lib/now";
 import { fingerprintOf } from "../../lib/photo-fingerprint";
 import { ownedBy } from "../../lib/sql/owned";
+import { doesConditionHold } from "../../lib/sql/condition";
 import { claimLimit } from "../email";
 import { getOwnedItem } from "./service";
 import {
@@ -44,7 +45,7 @@ import {
   garmentPhotoForgotten,
   withdrawnGarmentUnderReview,
   isHeldAsRemovedCopy,
-  hasPhotosHeldAtLimit,
+  photosHeldBelowLimit,
   screenPhoto,
   type Classify,
 } from "../safety";
@@ -113,7 +114,7 @@ export async function uploadItemPhoto(
   await getOwnedItem(db, userId, itemId);
   // Refused while the classifier's holds on the runner's photos are at
   // their limit, before the day's count, so the refusal spends none of it.
-  if (await hasPhotosHeldAtLimit(userId)) {
+  if (!(await hasHeldPhotoRoom(userId))) {
     throw new PhotoValidationError(PHOTOS_STILL_HELD);
   }
   // One of the runner's day's photo uploads (SA-M14), counted before
@@ -157,7 +158,7 @@ export async function uploadItemPhoto(
           resize(input, dims.width, dims.height, SamplingFilter.Lanczos3),
           async (resized) => {
             await env.MEDIA.put(
-              `${keyPrefix}/${size}.webp`,
+              sizeKey(keyPrefix, size),
               resized.get_bytes_webp(),
               {
                 httpMetadata: { contentType: "image/webp" },
@@ -199,32 +200,46 @@ export async function uploadItemPhoto(
     //
     // The fingerprint rides the same write, so a replaced photo's hash is
     // overwritten with the photo, never left describing it.
+    //
+    // The visibility is written only while the runner's photos held or
+    // waiting to be screened are under their limit, counted in this
+    // statement; with no room it is NULL, which the column refuses, and
+    // the whole batch with it.
     .set({
       photoKey: keyPrefix,
       photoFingerprint: fingerprint,
-      visibility: isCopyOfRemoved ? "hidden_pending_review" : "pending",
+      visibility: visibilityWhileRoom(db, userId, isCopyOfRemoved),
     })
     .where(ownedBy(wardrobeItems, { id: itemId, userId }));
   // Read before the batch (design 232): a photo replaced under review
   // keeps its fingerprint and its record.
   const kept = await withdrawnGarmentUnderReview(db, userId, itemId);
-  await db.batch([
-    // The replaced photo's verdicts and open review go with it (design
-    // 157), before the new photo's hold, if any, opens a review again.
-    ...garmentPhotoForgotten(db, userId, itemId),
-    ...kept,
-    pointAtNewVersion,
-    ...(isCopyOfRemoved
-      ? [
-          enqueueForReview(db, {
-            subjectType: "garment",
-            subjectId: itemId,
-            source: "fingerprint",
-          }),
-        ]
-      : []),
-    outboxInsert(db, debt),
-  ]);
+  try {
+    await db.batch([
+      // The replaced photo's verdicts and open review go with it (design
+      // 157), before the new photo's hold, if any, opens a review again.
+      ...garmentPhotoForgotten(db, userId, itemId),
+      ...kept,
+      pointAtNewVersion,
+      ...(isCopyOfRemoved
+        ? [
+            enqueueForReview(db, {
+              subjectType: "garment",
+              subjectId: itemId,
+              source: "fingerprint",
+            }),
+          ]
+        : []),
+      outboxInsert(db, debt),
+    ]);
+  } catch (error: unknown) {
+    if (!isHeldPhotosRefusal(error)) throw error;
+    // Another of the runner's uploads took the last of their held photos'
+    // room while this one was being stored: its objects go, and the
+    // garment keeps the photo it had.
+    await env.MEDIA.delete(versionKeys(keyPrefix));
+    throw new PhotoValidationError(PHOTOS_STILL_HELD);
+  }
   await settleOutbox(db, debt, storageHandlers, report);
   // A held photo waits for a person, not the classifier.
   if (isCopyOfRemoved) return { photoKey: keyPrefix };
@@ -245,6 +260,46 @@ export async function uploadItemPhoto(
   );
 
   return { photoKey: keyPrefix };
+}
+
+/**
+ * The new photo's screening state, held for a person when it is a copy of
+ * a removed image, or NULL when the runner's photos held or waiting to be
+ * screened are at their limit as the statement runs.
+ */
+function visibilityWhileRoom(db: Db, userId: string, isCopyOfRemoved: boolean) {
+  type Visibility = (typeof wardrobeItems.$inferSelect)["visibility"];
+  const state: Visibility = isCopyOfRemoved
+    ? "hidden_pending_review"
+    : "pending";
+  return sql<Visibility>`case when ${photosHeldBelowLimit(db, userId)} then ${state} else null end`;
+}
+
+/**
+ * Whether an error is the NOT NULL refusal of the garment's visibility
+ * that a held photos' limit with no room fails the upload's batch with.
+ * Only the parts SQLite's own text keeps are matched, wherever D1 or a
+ * wrapper puts them in the message.
+ */
+export function isHeldPhotosRefusal(error: unknown): boolean {
+  const text = String(error);
+  return (
+    text.includes("NOT NULL") && text.includes("wardrobe_items.visibility")
+  );
+}
+
+/**
+Every object one upload stores under its version's prefix.
+*/
+function versionKeys(keyPrefix: string): string[] {
+  return [
+    garmentOriginalKey(keyPrefix),
+    ...photoSizes.map((size) => sizeKey(keyPrefix, size)),
+  ];
+}
+
+function sizeKey(keyPrefix: string, size: PhotoSize): string {
+  return `${keyPrefix}/${size}.webp`;
 }
 
 /**
@@ -415,4 +470,14 @@ export async function getItemPhotoObject(
           onlyIf: { etagDoesNotMatch: conditionalEtag },
         });
   return object ?? undefined;
+}
+
+/**
+ * Whether the runner has room for one more photo held or waiting to be
+ * screened, read from the primary, since the answer decides whether an
+ * upload is written: the rule the photo's own write carries.
+ */
+async function hasHeldPhotoRoom(userId: string): Promise<boolean> {
+  const primary = primaryCoreDb();
+  return doesConditionHold(primary, photosHeldBelowLimit(primary, userId));
 }
