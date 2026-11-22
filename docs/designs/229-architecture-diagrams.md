@@ -488,6 +488,20 @@ Supersedes step 2's "a view a module".
   generator could tag modules above a fan-in threshold instead; not done,
   since the list is four names and changes rarely.
 
+## #932 as built: the remaining flows
+
+One PR a flow, each drawn as the code stands on `main` when it branched.
+
+- **`flows/export.c4`**: `exportStory` (13 steps, from Get a copy to the
+  download) and `exportRecovery` (a `try` for a lost send or a build that
+  died, the queue's `loop`, and `opt`s for the dead letter, the email's
+  drain and the week-old clean-up). New entry points
+  `cf.app.account.request`, `cf.app.account.data.download` and
+  `cf.app.account.exportBuild.{consumer, deadLetter}` replace the two
+  hand-drawn arrows between `account` and the queue. The download is a
+  route handler, not a server function; it is drawn in `account/data`,
+  which decides everything it answers.
+
 ## Open questions
 
 1. **Auth and trust boundaries are not drawn** while the security audit's

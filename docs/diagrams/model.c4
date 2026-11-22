@@ -87,6 +87,30 @@ model {
     }
   }
 
+  // The data export: a runner's rows and files, zipped and emailed.
+  extend cf.app.account {
+    request = inRequest 'requestExportFn' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Get a copy: makes the export row and sends its job'
+    }
+  }
+  extend cf.app.account.data {
+    download = inRequest 'GET /account/export/{token}' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'The email\'s download link: the ZIP, for its owner, until it expires'
+    }
+  }
+  extend cf.app.account.exportBuild {
+    consumer = offQueue 'export consumer' {
+      technology 'off the queue: seconds later, at least once'
+      description 'Builds the ZIP, marks the export ready and owes its email'
+    }
+    deadLetter = offQueue 'export dead-letter consumer' {
+      technology 'off the queue: after 3 failed retries'
+      description 'Marks an export failed whose job ran out of retries'
+    }
+  }
+
   // The systems we call and do not run.
   provider = external 'Visual Crossing' {
     description 'Weather provider, behind an adapter'
@@ -133,8 +157,6 @@ model {
   cf.app.ops -> cf.mediaBackupBucket 'copies new and changed photos daily'
   cf.app.safety -> openai 'screens photos'
   cf.app.email -> cf.emailSending 'sends every message'
-  cf.app.account -[async]-> cf.exportsQueue 'enqueues a data export'
-  cf.exportsQueue -[async]-> cf.app.account 'delivers the export job'
 
   runner -> cf.app.runs.upload 'uploads a run file'
   cf.app.runs.upload -> cf.importsBucket 'stores the raw file'
@@ -192,4 +214,20 @@ model {
   cf.app.ops.publicWeb.sync -> cf.publicPhotosBucket 'puts and deletes the copies'
   cf.app.cronHourly15 -[recovery]-> cf.app.ops.publicWeb.sync 'reconciles every kit, and deletes unnamed objects'
   cf.app.ops.publicWeb.sync -> sentry 'reports a failed copy or delete'
+
+  runner -> cf.app.account.request 'asks for a copy of their data'
+  cf.app.account.request -> cf.coreDb 'inserts the export row'
+  cf.app.account.request -[async]-> cf.exportsQueue 'sends account_export'
+  cf.exportsQueue -[async]-> cf.app.account.exportBuild.consumer 'delivers account_export'
+  cf.app.account.exportBuild.consumer -> cf.coreDb 'claims the export, marks it ready'
+  cf.app.account.exportBuild.consumer -> cf.app.weather 'reads each run\'s conditions'
+  cf.app.account.exportBuild.consumer -> cf.mediaBucket 'lists and reads the photos'
+  cf.app.account.exportBuild.consumer -> cf.importsBucket 'reads the run files, writes the ZIP'
+  cf.app.account.exportBuild.consumer -> cf.app.ops.owedEmail 'sends the email now'
+  cf.exportsDlq -[async]-> cf.app.account.exportBuild.deadLetter 'delivers the dead job'
+  cf.app.account.exportBuild.deadLetter -[recovery]-> cf.coreDb 'marks the export failed'
+  cf.app.cronHourly00 -[recovery]-> cf.exportsQueue 're-sends stalled exports'
+  cf.app.cronHourly00 -> cf.importsBucket 'deletes expired export ZIPs'
+  runner -> cf.app.account.data.download 'downloads the export'
+  cf.app.account.data.download -> cf.importsBucket 'reads the ZIP'
 }
