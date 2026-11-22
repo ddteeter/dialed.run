@@ -235,22 +235,11 @@ describe("generateStructure: modules and their imports", () => {
     expect(arrows).toHaveLength(5);
   });
 
-  it("gives every module with an arrow a view of both kinds of import", () => {
-    expect(out).toContain("view runsImports of cf.app.runs {");
-    expect(out).toContain("title 'runs: what it imports, and what imports it'");
-    expect(out).toContain(
-      "include cf.app.runs -> cf.app.** where kind is imports or kind is wiring",
-    );
-    expect(out).toContain(
-      "include cf.app.** -> cf.app.runs where kind is imports or kind is wiring",
-    );
-    expect(out).toContain("view runsParsersImports of cf.app.runs.parsers {");
-    expect(out).toContain(
-      "title 'runs/parsers: what it imports, and what imports it'",
-    );
-    expect(out.some((line) => line.startsWith("view publicPagesImports"))).toBe(
-      false,
-    );
+  it("writes no views: overview.c4's modules view is the one map", () => {
+    const text = generateStructure(inputs({}, MODULES));
+
+    expect(text).not.toContain("views {");
+    expect(text.endsWith("\n}\n")).toBe(true);
   });
 });
 

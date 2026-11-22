@@ -12,7 +12,13 @@ views {
 
   view modules of cf.app {
     title 'The modules and what each one\'s service code imports'
+    description '''
+      Four modules meet nearly every other one, and their arrows would bury the rest, so the map leaves them out: dispatch, the queue and cron handlers, which imports the modules whose work it runs; email, which every module that sends mail imports; and the arrows into ops and safety, which most modules import. For all of one module\'s arrows, hover it, browse its relationships and set the scope to Global.
+    '''
     include cf.app.* where kind is module
     exclude * -> * where kind is not imports
+    exclude cf.app.dispatch, cf.app.email
+    exclude * -> cf.app.ops
+    exclude * -> cf.app.safety
   }
 }
