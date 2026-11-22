@@ -171,7 +171,7 @@ views {
         notes '''
           Fifteen minutes of grace, so the sweep never races a dispatch still in flight.
 
-          **Bounded.** At most 100 imports a day.
+          **Bounded.** At most 100 imports a day, oldest first.
         '''
       }
       // source: src/modules/dispatch/scheduled.ts redispatchStalledImports, redispatchEach; src/modules/runs/queue-messages.ts importJob; src/modules/runs/consumer.ts didClaimImport

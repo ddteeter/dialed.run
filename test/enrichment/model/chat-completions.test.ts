@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { garmentCategories } from "../../../src/lib/contracts";
+import { MAX_BYTES } from "../../../src/modules/enrichment/bounds";
 import { knownFibres } from "../../../src/modules/enrichment/fibres";
 
 import {
@@ -380,6 +381,18 @@ describe("createChatCompletionsModel: every way it can fail", () => {
     expect(String(error).length).toBeLessThan(600);
     expect(String(error)).toContain("500");
   });
+
+  it.each([200, 500])(
+    "stops reading a %i body past a page's cap, and fails as retryable",
+    async (status) => {
+      const error = await refuses(raw("x".repeat(MAX_BYTES + 1), status));
+      expect(error).toBeInstanceOf(ModelUnavailableError);
+      expect(error).not.toBeInstanceOf(UnreadableAnswerError);
+      expect(String(error)).toContain(
+        `Model response exceeded ${String(MAX_BYTES)} bytes`,
+      );
+    },
+  );
 
   it("fails on a body that is not JSON at all", async () => {
     const error = await refuses(raw("<html>gateway timeout</html>"));

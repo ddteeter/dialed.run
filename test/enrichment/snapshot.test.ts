@@ -73,6 +73,26 @@ describe("recordSnapshot", () => {
     });
   });
 
+  it("keeps the page's origin and path, without its query or fragment", async () => {
+    const productId = newUlid();
+    const fetchedAt = 1_757_700_000_002;
+    const r2Key = await putSnapshot(productId, "<html></html>", fetchedAt);
+
+    const id = await recordSnapshot(db(), {
+      productId,
+      url: "https://shop.example.com/p/tee?ref=abc&utm_source=x#reviews",
+      r2Key,
+      rung: "none",
+      fetchedAt,
+    });
+
+    const [row] = await db()
+      .select({ url: productSnapshots.url })
+      .from(productSnapshots)
+      .where(eq(productSnapshots.id, id));
+    expect(row?.url).toBe("https://shop.example.com/p/tee");
+  });
+
   it("points at an object that is really there", async () => {
     // The reason R2 is written first: a row is a promise that the bytes
     // exist, and `reextract` reads the object rather than re-fetching. A row

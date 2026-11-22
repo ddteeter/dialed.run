@@ -24,6 +24,7 @@ import type { RateLimitKind } from "../../src/lib/contracts/rate-limits";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment";
+import { enrichJobSchema } from "../../src/modules/enrichment/queue-messages";
 import { handleScheduled } from "../../src/modules/dispatch";
 import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/reports/retention";
 import { gaveUpRow } from "../gave-up-rows";
@@ -1639,6 +1640,28 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
     expect(statuses.every((row) => row.status === "pending")).toBe(true);
   });
 
+  it("sends every product in turn when more than a firing's hundred are pending", async () => {
+    const waiting = new Set<string>();
+    for (let index = 0; index < 150; index += 1) {
+      waiting.add(await insertProduct("pending", HOUR));
+    }
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+
+    // Twenty firings: a product left out of every one of them by chance
+    // is about one in three to the twentieth.
+    for (let firing = 0; firing < 20; firing += 1) {
+      await handleScheduled(ENRICHMENT_RETRY);
+    }
+
+    const sent = new Set(
+      send.mock.calls.map(
+        ([message]) => enrichJobSchema.parse(message).productId,
+      ),
+    );
+    expect(send.mock.calls).toHaveLength(20 * 100);
+    expect([...waiting].filter((id) => !sent.has(id))).toStrictEqual([]);
+  });
+
   it("re-enqueues a product that has sat pending past the grace window", async () => {
     const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
     const productId = await insertProduct("pending", 20 * 60);
@@ -2009,9 +2032,11 @@ describe("the product sweeps read through their partial indexes", () => {
   it("finds stalled pending products through products_extraction_pending", async () => {
     const plans = await plansIssuedBy(ENRICHMENT_RETRY, `= 'pending'`);
 
+    // The sort is over the stalled pending rows the index found, no others.
     expect(plans).toStrictEqual([
       [
         "SEARCH products USING INDEX products_extraction_pending (created_at<?)",
+        "USE TEMP B-TREE FOR ORDER BY",
       ],
     ]);
   });

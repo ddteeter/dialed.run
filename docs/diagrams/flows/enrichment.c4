@@ -182,7 +182,7 @@ views {
       // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, stalledPending, ENRICHMENT_STALL_GRACE_S, runHourly, hourlyReport (limit 100); src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'finds products pending for 15+ minutes' {
         notes '''
-          Fifteen minutes of grace, counted from when the product was made, so the sweep rarely races a send still in flight. At most 100 a firing.
+          Fifteen minutes of grace, counted from when the product was made, so the sweep rarely races a send still in flight. At most 100 a firing, taken in no fixed order, so past 100 waiting each firing sends a different hundred.
 
           **No age or try ceiling on `pending`.** A product the consumer cannot finish (the page budget is spent, or the dead-letter mark throws) is sent again every hour, and each firing\'s report counts it, until the consumer runs. Then a failure past the first day goes straight to Gave up.
         '''

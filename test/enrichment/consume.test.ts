@@ -1654,17 +1654,18 @@ describe("handleEnrichmentBatch: the hour's model calls", () => {
 });
 
 /**
- * A snapshot of the tee page in R2 and its row, fetched `ageMs` ago and
- * recorded with `rung`.
+ * A snapshot of `html` (the tee page unless named) in R2 and its row,
+ * fetched `ageMs` ago and recorded with `rung`.
  */
 async function storedPage(
   productId: string,
   ageMs: number,
   rung: "none" | "text",
+  html = PAGE,
 ): Promise<void> {
   const fetchedAt = Date.now() - ageMs;
   const r2Key = `products/${productId}/snapshot-${String(fetchedAt)}.html`;
-  await env.MEDIA.put(r2Key, PAGE);
+  await env.MEDIA.put(r2Key, html);
   await db().insert(productSnapshots).values({
     id: newUlid(),
     productId,
@@ -1807,5 +1808,31 @@ describe("handleEnrichmentBatch: a proxy call the day's count refuses", () => {
     await consumeWith(productId, { ...deps, fetchImpl });
 
     expect(hasCalledTheProxy(fetchImpl)).toBe(false);
+  });
+});
+
+describe("reextract over a stored page the ladder refuses", () => {
+  it("answers that there is no page to read, and leaves the product as it was", async () => {
+    const productId = await pendingProduct();
+    await storedPage(productId, 0, "text", "<b>".repeat(MAX_OPEN_TAGS + 2));
+
+    const deps = depsWith(serving(PAGE));
+
+    expect(await reextract(deps, productId)).toBeUndefined();
+    expect(await statusOf(productId)).toBe("pending");
+  });
+
+  it("lets any other failure through", async () => {
+    const productId = await pendingProduct();
+    await storedPage(productId, 0, "text");
+    const model = {
+      extract: vi.fn(() => Promise.reject(new Error("upstream"))),
+    };
+
+    const deps = { ...depsWith(serving(PAGE)), model };
+
+    await expect(reextract(deps, productId)).rejects.toThrow(
+      new Error("upstream"),
+    );
   });
 });

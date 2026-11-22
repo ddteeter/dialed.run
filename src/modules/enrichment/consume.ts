@@ -521,7 +521,8 @@ export async function handleEnrichmentDlqBatch(
  * Re-run the ladder over the latest stored page without refetching — the
  * mechanism that makes a better parser or a promoted fibre retroactive
  * (D-31, packet §6). Nothing when the product has never been snapshotted,
- * or when the snapshot row points at an object that is not there.
+ * when the snapshot row points at an object that is not there, or when
+ * the stored page is one the ladder refuses to read (a `PageFetchError`).
  *
  * The operator's own press, so its model call is not counted against the
  * hour's (owner, 2026-11-21).
@@ -533,7 +534,11 @@ export async function reextract(
   const latest = await latestSnapshot(deps.db, productId, 0);
   if (latest === undefined) return undefined;
   const html = await readSnapshot(latest.r2Key);
-  return html === undefined
-    ? undefined
-    : extractStored(deps, productId, latest, html);
+  if (html === undefined) return undefined;
+  try {
+    return await extractStored(deps, productId, latest, html);
+  } catch (error) {
+    if (error instanceof PageFetchError) return undefined;
+    throw error;
+  }
 }

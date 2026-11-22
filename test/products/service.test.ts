@@ -88,7 +88,7 @@ describe("products: product create-if-missing", () => {
     const brandA = await createOrGetBrand(client, "Brand Alpha");
     const brandB = await createOrGetBrand(client, "Brand Beta");
     const userId = newUlid();
-    await createOrGetProduct(client, {
+    const ofBrandA = await createOrGetProduct(client, {
       brandId: brandA.id,
       name: "Speed Short",
       createdBy: userId,
@@ -99,8 +99,8 @@ describe("products: product create-if-missing", () => {
       createdBy: userId,
     });
     const results = await searchProducts(client, brandA.id, "speed");
-    expect(results).toHaveLength(1);
-    expect(results[0]?.brandId).toBe(brandA.id);
+    // Each product as its id and name, and nothing else.
+    expect(results).toStrictEqual([{ id: ofBrandA.id, name: "Speed Short" }]);
   });
 
   it("resolveProduct resolves brand + product together", async () => {

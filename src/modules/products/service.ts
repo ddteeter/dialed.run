@@ -215,19 +215,20 @@ export async function createOrGetProduct(
 
 /**
  * Prefix autocomplete scoped to one brand's active products (retired/hidden
- * products from 106 moderation never surface here).
+ * products from 106 moderation never surface here), each as its id and
+ * name.
  */
 export async function searchProducts(
   db: Db,
   brandId: string,
   prefix: string,
   limit = AUTOCOMPLETE_LIMIT,
-): Promise<ProductRow[]> {
+): Promise<{ id: string; name: string }[]> {
   const matches = prefixMatch(products.normalizedName, prefix);
   return matches === undefined
     ? []
     : db
-        .select()
+        .select({ id: products.id, name: products.name })
         .from(products)
         .where(
           and(

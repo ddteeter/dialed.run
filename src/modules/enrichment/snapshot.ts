@@ -73,8 +73,19 @@ export async function recordSnapshot(
   },
 ): Promise<string> {
   const id = newUlid();
-  await database.insert(productSnapshots).values({ id, ...input });
+  await database
+    .insert(productSnapshots)
+    .values({ id, ...input, url: snapshotAddress(input.url) });
   return id;
+}
+
+/**
+ * The page's address as the row keeps it: its origin and path, never its
+ * query or fragment. A rung reads the page, not its address.
+ */
+function snapshotAddress(url: string): string {
+  const parsed = new URL(url);
+  return parsed.origin + parsed.pathname;
 }
 
 /**

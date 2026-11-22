@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { UpstreamError } from "../../../lib/errors";
+import { readCappedText } from "../../../lib/read-capped";
 import {
   extractedProductSchema,
   garmentCategories,
@@ -8,6 +9,7 @@ import {
   type ExtractionModel,
   validExtracted,
 } from "../../../lib/contracts";
+import { MAX_BYTES } from "../bounds";
 import { knownFibres } from "../fibres";
 import { parseJson } from "../html";
 import { isRecord, strictSchemaFor, withoutNulls } from "./json-schema";
@@ -111,6 +113,19 @@ export class UnreadableAnswerError extends ModelUnavailableError {
     super(message);
     this.name = "UnreadableAnswerError";
   }
+}
+
+/**
+ * The response's body, at most `MAX_BYTES` of it, a page's own cap: past
+ * it the read stops and the call fails like every other failure here, and
+ * the queue retries.
+ */
+async function bodyOf(response: Response): Promise<string> {
+  return await readCappedText(
+    response,
+    MAX_BYTES,
+    (detail) => new ModelUnavailableError(`Model response ${detail}`),
+  );
 }
 
 /**
@@ -256,14 +271,14 @@ async function askModel(
     // is not permitted" — which is the difference between a fix and a week
     // of guessing. It carries no secret; the key is a request header, never
     // echoed.
-    const complaint = await response.text();
+    const complaint = await bodyOf(response);
     const detail = complaint.slice(0, MAX_ERROR_CHARS);
     throw new ModelUnavailableError(
       `Model returned ${String(response.status)}: ${detail}`,
     );
   }
 
-  const body = await response.text();
+  const body = await bodyOf(response);
   // `parseJson` rather than a second copy of it: a body that is not JSON
   // and a body of the wrong shape are the same failure to the caller, which
   // is exactly what that helper already exists to say (`html.ts`).
