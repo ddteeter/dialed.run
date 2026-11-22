@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 import {
-  MAX_KEPT_ELEMENT_CHILDREN,
+  MAX_KEPT_ELEMENT_NODES,
   MAX_XML_DEPTH,
   MAX_XML_FAULTS,
   MAX_XML_NODES,
@@ -54,6 +54,16 @@ function valueOfB(inner: string): unknown {
   const { values } = read(`<a>${inner}</a>`, ["a/b"]);
   expect(values).toHaveLength(1);
   return values[0]?.[1];
+}
+
+/**
+ * `count` distinct attributes, as written inside a start tag.
+ */
+function attributes(count: number): string {
+  return Array.from(
+    { length: count },
+    (_, index) => ` a${String(index)}=""`,
+  ).join("");
 }
 
 function failureOf(
@@ -274,7 +284,7 @@ describe("readXml: its budgets", () => {
 
   it("reads a kept element holding the budget's elements, and refuses one more", () => {
     // Half as children, half one level down, so every depth counts.
-    const half = MAX_KEPT_ELEMENT_CHILDREN / 2;
+    const half = MAX_KEPT_ELEMENT_NODES / 2;
     const within = `<r><k>${"<c><d/></c>".repeat(half)}</k></r>`;
     const [value] = read(within, ["r/k"]).values;
     expect(value?.[0]).toBe("r/k");
@@ -284,12 +294,42 @@ describe("readXml: its budgets", () => {
     expect(
       failureOf(`<r><k>${"<c><d/></c>".repeat(half)}<c/></k></r>`, ["r/k"])
         .reason,
-    ).toBe("xml: an element holds more than 256 elements");
+    ).toBe("xml: an element holds more than 256 elements and attributes");
+  });
+
+  it("counts a kept element's own attributes, and refuses one more than the budget", () => {
+    const own = attributes(MAX_KEPT_ELEMENT_NODES);
+    const [value] = read(`<r><k${own}/></r>`, ["r/k"]).values;
+    expect(Object.keys(value?.[1] ?? {})).toHaveLength(MAX_KEPT_ELEMENT_NODES);
+    const over = attributes(MAX_KEPT_ELEMENT_NODES + 1);
+    expect(failureOf(`<r><k${over}/></r>`, ["r/k"]).reason).toBe(
+      "xml: an element holds more than 256 elements and attributes",
+    );
+  });
+
+  it("counts the attributes of the elements inside a kept one, beside the elements", () => {
+    // Each child is one element and one attribute: two apiece.
+    const half = MAX_KEPT_ELEMENT_NODES / 2;
+    const within = `<r><k>${'<c x="1"/>'.repeat(half)}</k></r>`;
+    expect(read(within, ["r/k"]).values).toHaveLength(1);
+    expect(
+      failureOf(
+        `<r><k>${'<c x="1"/>'.repeat(half - 1)}<c x="1" y="2"/></k></r>`,
+        ["r/k"],
+      ).reason,
+    ).toBe("xml: an element holds more than 256 elements and attributes");
+    // The kept element's own attribute, beside its children.
+    expect(
+      failureOf(`<r><k a="1">${'<c x="1"/>'.repeat(half)}</k></r>`, ["r/k"])
+        .reason,
+    ).toBe("xml: an element holds more than 256 elements and attributes");
   });
 
   it("counts each kept element on its own, and nothing outside one", () => {
-    const kept = `<k>${"<c/>".repeat(MAX_KEPT_ELEMENT_CHILDREN)}</k>`;
-    const free = "<f/>".repeat(MAX_KEPT_ELEMENT_CHILDREN + 1);
+    const kept = `<k>${"<c/>".repeat(MAX_KEPT_ELEMENT_NODES)}</k>`;
+    const free = `<f${attributes(MAX_KEPT_ELEMENT_NODES + 1)}/>`.repeat(
+      MAX_KEPT_ELEMENT_NODES + 1,
+    );
     const { values } = read(`<r>${kept}${free}${kept}</r>`, ["r/k"]);
     expect(values).toHaveLength(2);
   });
@@ -317,7 +357,7 @@ describe("readXml: its budgets", () => {
   });
 
   it("holds 256 elements in a kept one and forgives a thousand faults", () => {
-    expect(MAX_KEPT_ELEMENT_CHILDREN).toBe(256);
+    expect(MAX_KEPT_ELEMENT_NODES).toBe(256);
     expect(MAX_XML_FAULTS).toBe(1000);
   });
 
