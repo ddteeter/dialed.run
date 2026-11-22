@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { anyShownRow, shownRowOf } from "../safety/helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +13,7 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, ulidSchema } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
 import { rescreenHandles } from "../../src/modules/account/handles/handle-rescreen";
 import { reviewFlaggedHandle } from "../../src/modules/account/handles/handle-review";
 import type { ScreenHandle } from "../../src/modules/account/handles/handle-screen";
@@ -394,6 +395,52 @@ describe("a decision on the row as the page showed it", () => {
     expect(told).toStrictEqual([{ kind: "report_kept" }]);
   });
 
+  it("restarts the report count from when the page was read, and tells only those who reported by then", async () => {
+    const { userId, queueId } = await flaggedRunner();
+    await db
+      .update(reviewQueue)
+      .set({ openedAt: nowSeconds() - 100 })
+      .where(eq(reviewQueue.id, queueId));
+    const shown = await shownRowOf(queueId);
+    const before = newUlid();
+    const after = newUlid();
+    for (const [reporterId, createdAt] of [
+      [before, shown.readAt - 5],
+      [after, shown.readAt + 5],
+    ] as const) {
+      await db.insert(reports).values({
+        id: newUlid(),
+        reporterId,
+        subjectType: "profile",
+        subjectId: userId,
+        reason: "impersonation",
+        createdAt,
+      });
+    }
+
+    await reviewFlaggedHandle(db, REVIEWER, {
+      queueId,
+      shown: { ...shown, readAt: shown.readAt - 1 },
+      action: "keep",
+    });
+
+    const [row] = await db
+      .select({ approvedAt: reviewQueue.approvedAt })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+    expect(row?.approvedAt).toBe(shown.readAt - 1);
+    const told = await db
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.kind, "report_kept"),
+          inArray(notifications.userId, [before, after]),
+        ),
+      );
+    expect(told).toStrictEqual([{ userId: before }]);
+  });
+
   it("keeps nothing on a row re-opened since the page showed it", async () => {
     const { userId, queueId } = await flaggedRunner();
     const shown = await shownRowOf(queueId);
@@ -492,6 +539,23 @@ describe("a decision on the row as the page showed it", () => {
       .from(usernameHistory)
       .where(own);
     expect(locked?.lockedAt).toEqual(expect.any(Number));
+    const audit = await db
+      .select({
+        actorId: moderationActions.actorId,
+        action: moderationActions.action,
+        subjectId: moderationActions.subjectId,
+        reason: moderationActions.reason,
+      })
+      .from(moderationActions);
+    expect(audit).toStrictEqual([
+      {
+        actorId: REVIEWER,
+        action: "rename",
+        subjectId: userId,
+        reason:
+          "Advertising (locked @quadzilla_69; the runner had already changed to @fine_one)",
+      },
+    ]);
     const back = await claimUsername(db, userId, "quadzilla_69", UNKNOWN);
     expect(back).not.toMatchObject({ kind: "claimed" });
     expect(await profileOf(userId)).toMatchObject({ username: "fine_one" });
@@ -516,6 +580,7 @@ describe("a decision on the row as the page showed it", () => {
       .from(usernameHistory)
       .where(eq(usernameHistory.username, "old_name"));
     expect(row?.lockedAt).toBeNull();
+    expect(await db.select().from(moderationActions)).toStrictEqual([]);
     expect(await profileOf(userId)).toMatchObject({
       username: "quadzilla_69",
     });

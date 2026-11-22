@@ -489,13 +489,13 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queued("product", removed, "reports"),
-      shown: { openedAt: 1, source: "reports" },
+      shown: { openedAt: 1, source: "reports", readAt: nowSeconds() },
       action: "remove",
       reason: "spam",
     });
     await decideReview(core(), "op", {
       queueId: await queued("product", kept, "reports"),
-      shown: { openedAt: 1, source: "reports" },
+      shown: { openedAt: 1, source: "reports", readAt: nowSeconds() },
       action: "approve",
     });
 
@@ -509,7 +509,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queued("profile", runner, "reports"),
-      shown: { openedAt: 1, source: "reports" },
+      shown: { openedAt: 1, source: "reports", readAt: nowSeconds() },
       action: "remove",
       reason: "harassment",
     });
@@ -523,7 +523,7 @@ describe("what a decision tells (D-132)", () => {
 
     await decideReview(core(), "op", {
       queueId: await queued("product", product, "reports"),
-      shown: { openedAt: 1, source: "reports" },
+      shown: { openedAt: 1, source: "reports", readAt: nowSeconds() },
       action: "quarantine",
       reason: "explicit",
     });

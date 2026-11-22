@@ -13,6 +13,7 @@ import { moderationThresholds, resolveReview } from "../../src/modules/safety";
 import {
   claimForReview,
   pendingReviewQueue,
+  releaseReview,
 } from "../../src/modules/safety/review/review";
 import {
   distinctReporterCount,
@@ -302,6 +303,10 @@ async function approvedEntry(): Promise<string> {
   return entryId;
 }
 
+function byId(one: string, other: string): number {
+  return one.localeCompare(other);
+}
+
 describe("after a person approved it", () => {
   beforeEach(resetSafetyTables);
 
@@ -330,6 +335,127 @@ describe("after a person approved it", () => {
       })
       .from(reviewQueue);
     expect(reopened).toStrictEqual({ status: "pending", approvedAt: 7 });
+  });
+
+  it("records the moment the page was read, and tells only those who reported by then", async () => {
+    const entryId = await reportableEntry();
+    const early = [];
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      const reporter = await makeUser();
+      early.push(reporter);
+      await report(entryId, reporter, "explicit");
+    }
+    const [row] = await pendingReviewQueue();
+    if (row === undefined) throw new Error("nothing queued");
+    const now = nowSeconds();
+    await core()
+      .update(reports)
+      .set({ createdAt: now - 100 });
+    await core()
+      .update(reviewQueue)
+      .set({ openedAt: now - 100 });
+    const late = await makeUser();
+    await report(entryId, late, "explicit");
+    await core()
+      .update(reports)
+      .set({ createdAt: now - 10 })
+      .where(eq(reports.reporterId, late));
+
+    expect(
+      await resolveReview(row.id, await makeUser(), "approve", {
+        openedAt: now - 100,
+        source: "reports",
+        readAt: now - 50,
+      }),
+    ).toBe("resolved");
+
+    const [approved] = await core()
+      .select({ approvedAt: reviewQueue.approvedAt })
+      .from(reviewQueue);
+    expect(approved?.approvedAt).toBe(now - 50);
+    const told = await core()
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(eq(notifications.kind, "report_kept"));
+    expect(told.map((notice) => notice.userId).toSorted(byId)).toStrictEqual(
+      early.toSorted(byId),
+    );
+  });
+
+  it("never records a read time later than now, nor earlier than the row's opening", async () => {
+    for (const [readAt, expected] of [
+      [nowSeconds() + 1000, "now"],
+      [5, "opened"],
+    ] as const) {
+      await resetSafetyTables();
+      const entryId = await reportableEntry();
+      for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+        await report(entryId, await makeUser(), "explicit");
+      }
+      const [row] = await pendingReviewQueue();
+      if (row === undefined) throw new Error("nothing queued");
+      const before = nowSeconds();
+
+      await resolveReview(row.id, await makeUser(), "approve", {
+        openedAt: row.openedAt,
+        source: row.source,
+        readAt,
+      });
+
+      const [approved] = await core()
+        .select({ approvedAt: reviewQueue.approvedAt })
+        .from(reviewQueue);
+      if (expected === "opened") {
+        expect(approved?.approvedAt).toBe(row.openedAt);
+      } else {
+        expect(approved?.approvedAt).toBeGreaterThanOrEqual(before);
+        expect(approved?.approvedAt).toBeLessThanOrEqual(nowSeconds());
+      }
+    }
+  });
+
+  it("lets a decision on a pending row land though a report re-opened it since the page was read", async () => {
+    const entryId = await reportableEntry();
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await report(entryId, await makeUser(), "explicit");
+    }
+    const [row] = await pendingReviewQueue();
+    if (row === undefined) throw new Error("nothing queued");
+    await core()
+      .update(reviewQueue)
+      .set({ openedAt: nowSeconds() - 100 });
+    const [page] = await pendingReviewQueue();
+    if (page === undefined) throw new Error("nothing listed");
+
+    await report(entryId, await makeUser(), "intimate");
+
+    expect(
+      await resolveReview(row.id, await makeUser(), "approve", {
+        openedAt: page.openedAt,
+        source: page.source,
+        readAt: page.readAt,
+      }),
+    ).toBe("resolved");
+  });
+
+  it("records no time for a burst release's Approve, which nobody opened", async () => {
+    const entryId = await reportableEntry();
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await report(entryId, await makeUser(), "explicit");
+    }
+    const [row] = await pendingReviewQueue();
+    if (row === undefined) throw new Error("nothing queued");
+
+    expect(await releaseReview(row.id, await makeUser())).toBe("resolved");
+
+    const [released] = await core()
+      .select({
+        status: reviewQueue.status,
+        approvedAt: reviewQueue.approvedAt,
+      })
+      .from(reviewQueue);
+    expect(released?.status).toBe("approved");
+    expect(released?.approvedAt).toBeNull();
   });
 
   it("keeps the Approve's time when the row is then removed", async () => {
@@ -507,6 +633,28 @@ describe("W1's block-with-report checkbox", () => {
     // request would be told the report worked while the block silently
     // did not.
     expect(await isBlocked(reporter, subject)).toBe(true);
+  });
+
+  it("answers a replay as the first call, though the block it made now hides the runner", async () => {
+    const reporter = await makeUser();
+    const subject = await makeVerifiedUser();
+    const input = {
+      reporterId: reporter,
+      subjectType: "profile",
+      subjectId: subject,
+      reason: "harassment",
+      alsoBlock: true,
+    } as const;
+
+    const first = await fileReport(input, oweInCore, noPurge);
+    const replay = await fileReport(input, oweInCore, noPurge);
+
+    expect(first).toMatchObject({ status: "filed", reporterCount: 1 });
+    expect(replay).toStrictEqual({
+      status: "filed",
+      reporterCount: 1,
+      hiddenPendingReview: false,
+    });
   });
 
   it("does not block when the box was not ticked", async () => {

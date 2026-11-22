@@ -442,7 +442,11 @@ describe("two decisions on one row (SA-L11)", () => {
 
   it("settles nothing on a row re-opened for another reason since the page showed it", async () => {
     const { entryId, queueId } = await queuedEntry();
-    const shown = { openedAt: 1, source: "classifier" } as const;
+    const shown = {
+      openedAt: 1,
+      source: "classifier",
+      readAt: nowSeconds(),
+    } as const;
 
     expect(
       await resolveReview(queueId, await makeUser(), "approve", shown),
@@ -466,18 +470,21 @@ describe("two decisions on one row (SA-L11)", () => {
       await resolveReview(queueId, await makeUser(), "approve", {
         openedAt: sameSecond,
         source: "classifier",
+        readAt: nowSeconds(),
       }),
     ).toBe("already_resolved");
     expect(
       await resolveReview(queueId, await makeUser(), "approve", {
         openedAt: sameSecond - 1,
         source: "reports",
+        readAt: nowSeconds(),
       }),
     ).toBe("already_resolved");
     expect(
       await resolveReview(queueId, await makeUser(), "approve", {
         openedAt: sameSecond,
         source: "reports",
+        readAt: nowSeconds(),
       }),
     ).toBe("resolved");
   });
@@ -1461,7 +1468,11 @@ async function heldTo() {
     createdAt: 1,
     openedAt: 1,
   });
-  const subject = await openSubject(id, { openedAt: 1, source: "reports" });
+  const subject = await openSubject(id, {
+    openedAt: 1,
+    source: "reports",
+    readAt: 1,
+  });
   if (subject === undefined) throw new Error("not open");
   return subject.heldTo;
 }

@@ -91,10 +91,13 @@ export interface RenameRecordInput {
 /**
  * The audit row for account's batch, given the handle that was taken away
  * and account's condition that the rename still happens (R-121): a rename
- * that lost a race records nothing.
+ * that lost a race records nothing. Given the handle the runner holds now
+ * as well (`current`), it records a lock of `previous` instead: the
+ * runner had changed handle since the Desk showed it, so the shown handle
+ * was locked and nothing renamed.
  */
 export function renameRecord(db: Db, input: RenameRecordInput) {
-  return (previous: string, onlyIf: SQL) =>
+  return (previous: string, onlyIf: SQL, current?: string) =>
     moderationActionInsertWhere(
       db,
       {
@@ -103,7 +106,10 @@ export function renameRecord(db: Db, input: RenameRecordInput) {
         subjectType: "profile",
         subjectId: input.userId,
         subjectOwnerId: input.userId,
-        reason: `${input.reason} (was @${previous})`,
+        reason:
+          current === undefined
+            ? `${input.reason} (was @${previous})`
+            : `${input.reason} (locked @${previous}; the runner had already changed to @${current})`,
       },
       onlyIf,
     );

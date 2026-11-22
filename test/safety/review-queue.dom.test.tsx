@@ -45,6 +45,7 @@ function row(overrides: Partial<QueueRow> = {}): QueueRow {
     source: "reports",
     createdAt: 1_755_000_000,
     openedAt: 1_755_000_000,
+    readAt: 1_755_000_000,
     reporterCount: 3,
     reasons: ["explicit"],
     subject: { photoKeys: [] },
@@ -243,7 +244,11 @@ describe("deciding", () => {
     expect(resolve).toHaveBeenCalledWith({
       data: {
         queueId: QUEUE_ID,
-        shown: { openedAt: 1_755_000_000, source: "reports" },
+        shown: {
+          openedAt: 1_755_000_000,
+          source: "reports",
+          readAt: 1_755_000_000,
+        },
         action: "approve",
       },
     });
@@ -288,7 +293,11 @@ describe("deciding", () => {
     expect(resolve).toHaveBeenCalledWith({
       data: {
         queueId: QUEUE_ID,
-        shown: { openedAt: 1_755_000_000, source: "reports" },
+        shown: {
+          openedAt: 1_755_000_000,
+          source: "reports",
+          readAt: 1_755_000_000,
+        },
         action: "remove",
         reason: "home",
       },
@@ -378,7 +387,11 @@ describe("deciding", () => {
     expect(resolve).toHaveBeenCalledExactlyOnceWith({
       data: {
         queueId: QUEUE_ID,
-        shown: { openedAt: 1_755_000_000, source: "reports" },
+        shown: {
+          openedAt: 1_755_000_000,
+          source: "reports",
+          readAt: 1_755_000_000,
+        },
         action: "quarantine",
         reason: "explicit",
       },
@@ -796,7 +809,11 @@ describe("deciding", () => {
     expect(resolve).toHaveBeenCalledWith({
       data: {
         queueId: "01HYYYYYYYYYYYYYYYYYYYYYYY",
-        shown: { openedAt: 1_755_000_000, source: "reports" },
+        shown: {
+          openedAt: 1_755_000_000,
+          source: "reports",
+          readAt: 1_755_000_000,
+        },
         action: "approve",
       },
     });
@@ -1467,7 +1484,11 @@ describe("a photo still pending a day after upload (D-157)", () => {
     expect(resolve).toHaveBeenCalledWith({
       data: {
         queueId: "01HZZZZZZZZZZZZZZZZZZZZZZZ",
-        shown: { openedAt: 1_755_000_000, source: "missing_file" },
+        shown: {
+          openedAt: 1_755_000_000,
+          source: "missing_file",
+          readAt: 1_755_000_000,
+        },
         action: "clear",
       },
     });
@@ -1661,7 +1682,11 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(reviewHandle).toHaveBeenCalledWith({
       data: {
         queueId: QUEUE_ID,
-        shown: { openedAt: 1_755_000_000, source: "classifier" },
+        shown: {
+          openedAt: 1_755_000_000,
+          source: "classifier",
+          readAt: 1_755_000_000,
+        },
         action: "keep",
       },
     });
@@ -1694,7 +1719,11 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(reviewHandle).toHaveBeenCalledWith({
       data: {
         queueId: QUEUE_ID,
-        shown: { openedAt: 1_755_000_000, source: "classifier" },
+        shown: {
+          openedAt: 1_755_000_000,
+          source: "classifier",
+          readAt: 1_755_000_000,
+        },
         handle: "quadzilla_69",
         action: "rename",
         nameReason: "Offensive or sexual",

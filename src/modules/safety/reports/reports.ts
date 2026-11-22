@@ -182,6 +182,8 @@ export async function fileReport(
   owe: OweEmail,
   purge: PurgeTags,
 ): Promise<FileReportResult> {
+  const repeat = await repeatOf(input);
+  if (repeat !== undefined) return repeat;
   const refused = await reportRefusalOf(db(), input, nowSeconds());
   if (refused !== undefined) return { status: refused };
   const database = db();
@@ -243,6 +245,34 @@ export async function fileReport(
     isAtOnce,
   });
   return { status: "filed", reporterCount, hiddenPendingReview: canHide };
+}
+
+/**
+ * A report this reporter already filed on this subject, answered as the
+ * first was answered, whatever has changed since: a replay of a report
+ * that also blocked its subject is not refused for the block it made,
+ * and nothing is counted, hidden or re-opened (law 8b).
+ */
+async function repeatOf(
+  input: FileReportInput,
+): Promise<FileReportResult | undefined> {
+  const isRepeat = await hasRowWhere(
+    db(),
+    reports,
+    reports.id,
+    and(
+      eq(reports.reporterId, input.reporterId),
+      eq(reports.subjectType, input.subjectType),
+      eq(reports.subjectId, input.subjectId),
+    ),
+  );
+  if (!isRepeat) return undefined;
+  const filed = await filedReasonsOf(input.subjectType, input.subjectId);
+  return {
+    status: "filed",
+    reporterCount: filed.length,
+    hiddenPendingReview: false,
+  };
 }
 
 export interface ReconcileReport {

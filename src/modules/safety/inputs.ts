@@ -14,10 +14,7 @@
 import { z } from "zod";
 
 import { isoDayOf } from "../../lib/contracts/age";
-import {
-  HOLD_CAUSES,
-  REVIEW_SOURCES,
-} from "../../lib/contracts/hold-causes";
+import { HOLD_CAUSES, REVIEW_SOURCES } from "../../lib/contracts/hold-causes";
 import { usernameSchema } from "../../lib/contracts/garments";
 import { takedownRequestSchema } from "../../lib/contracts/takedown";
 import { rowIdSchema, ulidSchema } from "../../lib/ids";
@@ -107,12 +104,16 @@ export const releaseHoldsInput = z.object({
  */
 /**
  * A Review row as the page showed it: when it last went in front of a
- * person, and why. A decision is held to it, and one on a row re-opened
- * since is answered as already decided.
+ * person, and why, and when the page was read. A decision is held to the
+ * first two, and one on a row re-opened since is answered as already
+ * decided.
  */
 export const shownRowSchema = z.object({
   openedAt: z.number().int().nullable(),
   source: z.enum(REVIEW_SOURCES),
+  // When the server read the page, in whole seconds: an Approve counts
+  // from it, and the server clamps it (`reviewResolution`).
+  readAt: z.number().int().nonnegative(),
 });
 
 export const reviewActionInput = z.discriminatedUnion("action", [

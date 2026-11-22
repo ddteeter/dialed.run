@@ -100,7 +100,12 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
   reopenOnlyIf: SQL = sql`1`,
 ) {
   const now = nowSeconds();
-  const stillCountedHide = sql`(${reviewQueue.status} in ('pending', 'reviewing') and ${reviewQueue.hid} = 1)`;
+  const stillOpen = sql`${reviewQueue.status} in ('pending', 'reviewing')`;
+  const stillCountedHide = sql`(${stillOpen} and ${reviewQueue.hid} = 1)`;
+  // An opening the reports breaker counts as a hide keeps the row's hour
+  // only when the row was already such a hide; any other keeps it while
+  // the row is open.
+  const keepsOpening = input.hid === 1 ? stillCountedHide : stillOpen;
   return (
     database
       .insert(reviewQueue)
@@ -125,9 +130,11 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
           source: input.source,
           // Reopened now, though created when it first was: the hold
           // breakers count this as a hold (design 164). A row still open
-          // on a hide the reports breaker counted keeps its hour, so a
-          // later report never moves a counted hide into a later one.
-          openedAt: sql`(case when ${stillCountedHide} then ${reviewQueue.openedAt} else ${now} end)`,
+          // keeps its opening, so a later report never refuses a decision
+          // pending on it, nor moves a counted hide into a later hour,
+          // unless this opening is the hide the reports breaker counts
+          // and the row was not yet one: that hide is counted in this hour.
+          openedAt: sql`(case when ${keepsOpening} then ${reviewQueue.openedAt} else ${now} end)`,
           // This opening's own: whether it hid, or null when the caller
           // does not say (only a report's opening does) — except that a
           // row still open on a hide the reports breaker counted keeps it
@@ -268,6 +275,11 @@ export interface QueueRow {
    */
   openedAt: number | null;
   /**
+   * When the server read this page, which a decision sends back with the
+   * row (`ShownRow`).
+   */
+  readAt: number;
+  /**
    * How many distinct people reported this subject, and what they said was
    * wrong with it.
    *
@@ -337,6 +349,8 @@ export function firstReportHidingAtOnce(): SQL<number | null> {
  * every pending row first.
  */
 export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
+  // Before the reads, so every report the page shows was filed by then.
+  const readAt = nowSeconds();
   const oldestFirst = asc(reviewQueue.createdAt);
   const mostPressingFirst = asc(firstReportHidingAtOnce());
   const [page, onTheClock] = await Promise.all([
@@ -372,6 +386,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     source: row.source,
     createdAt: row.createdAt,
     openedAt: row.openedAt,
+    readAt,
     reporterCount: row.reporterCount,
     reasons: reasonsFrom(row.reasons),
     ...removalClock(row.firstAtOnce, now),
@@ -892,7 +907,7 @@ export async function openRow(
  * between is left for a person rather than settled on what was read
  * before it. Account's Keep and Rename get it on the row they read.
  */
-function stillAsShown(row: ShownRow): SQL {
+function stillAsShown(row: AsShown): SQL {
   return sql`${reviewQueue.openedAt} is ${row.openedAt} and ${reviewQueue.source} = ${row.source}`;
 }
 
@@ -904,12 +919,22 @@ function stillAsShown(row: ShownRow): SQL {
 export interface ShownRow {
   readonly openedAt: number | null;
   readonly source: ReviewSource;
+  /**
+   * When the server read the page that showed it: an Approve counts the
+   * reports from then, and tells "kept" to those filed by then.
+   */
+  readonly readAt: number;
 }
+
+/**
+What a decision is held to of the row a page showed.
+*/
+type AsShown = Pick<ShownRow, "openedAt" | "source">;
 
 /**
 Whether a row is still the one a page showed.
 */
-function isAsShown(row: ShownRow, shown: ShownRow): boolean {
+function isAsShown(row: AsShown, shown: AsShown): boolean {
   return row.openedAt === shown.openedAt && row.source === shown.source;
 }
 
@@ -1054,7 +1079,14 @@ async function decide(
     at: nowSeconds(),
   } as const;
   const here = settledHere(queueId, settled);
-  const told = await decisionNotices(row, decision, here);
+  // A release tells every reporter, as it did; a person's Approve only
+  // those filed by the moment it records.
+  const told = await decisionNotices(
+    row,
+    decision,
+    here,
+    isRelease ? undefined : queueId,
+  );
   const [settle] = await db().batch([
     reviewResolution(
       db(),
@@ -1063,6 +1095,7 @@ async function decide(
       settled.status,
       row.unchanged,
       settled.at,
+      isRelease ? "release" : (shown?.readAt ?? settled.at),
     ).returning({ id: reviewQueue.id }),
     ...subjectWritesFor(row, decision, isRelease, here),
     ...told,
@@ -1090,6 +1123,10 @@ async function decisionNotices(
   row: Exclude<OpenRow, string>,
   decision: ReviewDecision,
   here: SQL,
+  /**
+  The row whose recorded Approve its "kept" counts to, when it has one.
+  */
+  approvedIn: string | undefined,
 ): Promise<BatchItem<"sqlite">[]> {
   const { subjectType, subjectId } = row;
   if (subjectType === "garment") return [];
@@ -1100,6 +1137,7 @@ async function decisionNotices(
       subjectId,
       "kept",
       here,
+      approvedIn,
     );
     // Not while a removal request still holds it (SA-M23; owner,
     // 2026-11-15): it stays hidden, and the request's own decision is
@@ -1186,6 +1224,12 @@ export function reviewResolution(
   status: "approved" | "removed",
   onlyIf?: SQL,
   at = nowSeconds(),
+  /**
+   * When the page the decision came from was read, which an Approve's
+   * `approved_at` takes; `release` for a burst release, which nobody read
+   * the reports to make and which records none.
+   */
+  readAt: number | "release" = at,
 ) {
   return database
     .update(reviewQueue)
@@ -1193,10 +1237,15 @@ export function reviewResolution(
       status,
       resolvedBy: reviewerId,
       resolvedAt: at,
-      // The last Approve, which a re-open keeps: only the reports filed
-      // after it count toward hiding the subject again. A Remove leaves
-      // it as it was.
-      ...(status === "approved" && { approvedAt: at }),
+      // The last Approve a person made, which a re-open keeps: only the
+      // reports filed after it count toward hiding the subject again. It
+      // is the moment the deciding page was read, never later than now
+      // nor earlier than the row's opening, whatever the page sent. A
+      // Remove leaves it as it was, and so does a burst release.
+      ...(status === "approved" &&
+        readAt !== "release" && {
+          approvedAt: sql<number>`min(${at}, max(${readAt}, coalesce(${reviewQueue.openedAt}, ${readAt})))`,
+        }),
       // Settled rows carry no claim. Left set, a resolved row would still
       // look claimed to anything reading the lease.
       claimedAt: orSqlNull(undefined),

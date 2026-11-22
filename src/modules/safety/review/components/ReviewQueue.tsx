@@ -328,7 +328,7 @@ function Decision({
 A row as this page shows it, which a decision on it sends back.
 */
 function shownOf(row: QueueRow): ShownRow {
-  return { openedAt: row.openedAt, source: row.source };
+  return { openedAt: row.openedAt, source: row.source, readAt: row.readAt };
 }
 
 export type ReviewHandle = (input: {

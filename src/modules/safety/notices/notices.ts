@@ -14,8 +14,14 @@ import { and, eq, ne, sql, type SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { entryPhotos, outfitEntries, reports } from "../../../db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  reports,
+  reviewQueue,
+} from "../../../db/schema-core";
 import { columnWhere } from "../../../lib/sql/keyed-read";
+import { qualified } from "../../../lib/sql/qualified";
 import {
   notificationInsert,
   notificationInsertWhere,
@@ -263,7 +269,10 @@ export function reporterIdsOf(
 /**
  * Each reporter's notice of the outcome (D-132, DSA Art. 16(5)). Inserted
  * once per reporter, outcome and subject: a retried decision tells nobody
- * twice.
+ * twice. Given the Review row an Approve settles (`approvedIn`), only a
+ * reporter whose report was filed by the Approve that row records, as the
+ * batch has just written it, is told: the notices and the count read one
+ * moment.
  */
 export async function reporterNotices(
   db: Db,
@@ -271,8 +280,14 @@ export async function reporterNotices(
   subjectId: string,
   outcome: ReportOutcome,
   onlyIf: SQL = ALWAYS,
+  approvedIn?: string,
 ): Promise<BatchItem<"sqlite">[]> {
   const reporters = await reporterIdsOf(db, subjectType, subjectId);
+  const approvedAt = sql`(select ${qualified(reviewQueue, reviewQueue.approvedAt)} from ${reviewQueue} where ${qualified(reviewQueue, reviewQueue.id)} = ${approvedIn})`;
+  const filedInTime = (userId: string) =>
+    approvedIn === undefined
+      ? onlyIf
+      : sql`${onlyIf} and exists (select 1 from ${reports} where ${and(eq(reports.reporterId, userId), eq(reports.subjectType, subjectType), eq(reports.subjectId, subjectId))} and ${reports.createdAt} <= ${approvedAt})`;
   return reporters.map((userId) =>
     notificationInsertWhere(
       db,
@@ -282,7 +297,7 @@ export async function reporterNotices(
         subjectId,
         body: REPORT_OUTCOME[outcome],
       },
-      onlyIf,
+      filedInTime(userId),
     ),
   );
 }
