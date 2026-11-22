@@ -103,36 +103,56 @@ function literalValue(
 
 const STUB = `
 const fs = require("node:fs");
+const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const args = process.argv.slice(2);
 const dir = process.env.STUB_DIR;
-if (args[0] !== "api") {
-  const file = args.indexOf("--body-file");
-  const body = file === -1 ? "" : " <<" + fs.readFileSync(args[file + 1], "utf8") + ">>";
-  fs.appendFileSync(dir + "/calls.log", (args.join(" ") + body).replace(/\\n/g, " ") + "\\n");
-  if (process.env.STUB_STDOUT !== undefined) process.stdout.write(process.env.STUB_STDOUT);
-  process.exit(Number(process.env.STUB_STATUS ?? 0));
-}
-let jq;
-let endpoint;
-for (let i = 1; i < args.length; i++) {
-  if (args[i] === "--jq") jq = args[++i];
-  else if (args[i] === "-H") i++;
-  else if (!args[i].startsWith("-")) endpoint = args[i];
-}
-fs.appendFileSync(dir + "/calls.log", "api " + endpoint + "\\n");
 const routes = JSON.parse(fs.readFileSync(dir + "/routes.json", "utf8"));
-if (!Object.hasOwn(routes, endpoint)) {
-  process.stderr.write("gh: Not Found (HTTP 404)\\n");
-  process.exit(1);
+const flag = (name) => {
+  const at = args.indexOf(name);
+  return at === -1 ? undefined : args[at + 1];
+};
+const answer = (body) => {
+  const text = typeof body === "string" ? body : JSON.stringify(body);
+  const jq = flag("--jq");
+  process.stdout.write(
+    jq === undefined
+      ? text
+      : execFileSync("jq", ["-r", jq], { input: text, encoding: "utf8", maxBuffer: 1 << 26 }),
+  );
+};
+if (args[0] === "api") {
+  let endpoint;
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === "--jq" || args[i] === "-H") i++;
+    else if (!args[i].startsWith("-")) endpoint = args[i];
+  }
+  fs.appendFileSync(dir + "/calls.log", "api " + endpoint + "\\n");
+  if (!Object.hasOwn(routes, endpoint)) {
+    process.stderr.write("gh: Not Found (HTTP 404)\\n");
+    process.exit(1);
+  }
+  answer(routes[endpoint]);
+} else {
+const bodyFile = flag("--body-file");
+const body = bodyFile === undefined ? "" : " <<" + fs.readFileSync(bodyFile, "utf8") + ">>";
+fs.appendFileSync(dir + "/calls.log", (args.join(" ") + body).replace(/\\n/g, " ") + "\\n");
+// A routed call is named by its words before the first flag:
+// "run list", "run view 42", "run download 42".
+const key = args.slice(0, args.findIndex((arg) => arg.startsWith("-")) >>> 0).join(" ");
+const route = Object.hasOwn(routes, key) ? routes[key] : undefined;
+if (route === null) process.exitCode = 1;
+else if (route !== undefined && typeof route === "object" && Object.hasOwn(route, "files")) {
+  const into = flag("--dir");
+  fs.mkdirSync(into, { recursive: true });
+  for (const [name, content] of Object.entries(route.files))
+    fs.writeFileSync(path.join(into, name), content);
+} else if (route !== undefined) answer(route);
+else {
+  if (process.env.STUB_STDOUT !== undefined) process.stdout.write(process.env.STUB_STDOUT);
+  process.exitCode = Number(process.env.STUB_STATUS ?? 0);
 }
-const body = routes[endpoint];
-const text = typeof body === "string" ? body : JSON.stringify(body);
-process.stdout.write(
-  jq === undefined
-    ? text
-    : execFileSync("jq", ["-r", jq], { input: text, encoding: "utf8", maxBuffer: 1 << 26 }),
-);
+}
 `;
 
 export interface StepRun {
@@ -159,6 +179,10 @@ export function runStep(
     readonly env: Readonly<Record<string, string>>;
     readonly routes?: Readonly<Record<string, unknown>>;
     readonly files?: Readonly<Record<string, string>>;
+    /**
+    Where the step runs; `$RUNNER_TEMP` when not given.
+    */
+    readonly cwd?: string;
   },
 ): StepRun {
   const directory = mkdtempSync(path.join(tmpdir(), "workflow-step-"));
@@ -179,6 +203,7 @@ export function runStep(
     for (const [name, content] of files)
       writeFileSync(path.join(temporary, name), content);
     const run = spawnSync("/bin/bash", ["-e", "-c", script], {
+      cwd: options.cwd ?? temporary,
       encoding: "utf8",
       maxBuffer: 1 << 26,
       env: {

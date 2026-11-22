@@ -484,7 +484,7 @@ describe("a PR's mutation shard", () => {
   it("is seeded only from a passing shard of a push run on main, measured under its dependencies", () => {
     expect(mutate).toContain("      actions: read");
     expect(mutate).toContain(
-      "gh run list --workflow mutation.yml --branch main --event push",
+      "runs=$(sh scripts/main-mutation-runs.sh refs/remotes/origin/main 20)",
     );
     expect(mutate).toContain('.name == $name and .conclusion == "success"');
     expect(mutate).toContain(

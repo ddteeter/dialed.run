@@ -252,7 +252,10 @@ jobs:
       # shard's report would hand the PR main's survivor under `break: 100`.
       # It is read from main's push runs only, never from a PR's own runs,
       # so every push to a PR starts from main's report and re-tests what
-      # the PR changed. With no such run in reach, this shard runs cold.
+      # the PR changed. A run counts only when its commit is in main's
+      # history, fetched here (commits only) and named by its full ref;
+      # scripts/main-mutation-runs.sh is the same list the local seed
+      # reads. With no such run in reach, this shard runs cold.
       # Every value reaches the script through `env`.
       - name: Seed from main's report
         if: github.event_name == 'pull_request'
@@ -265,8 +268,11 @@ jobs:
         run: |
           set -euo pipefail
           seed="$RUNNER_TEMP/seed"
-          runs=$(gh run list --workflow mutation.yml --branch main --event push \
-            --status completed --limit 20 --json databaseId --jq '.[].databaseId')
+          if ! git fetch --quiet --no-tags --filter=tree:0 origin +refs/heads/main:refs/remotes/origin/main; then
+            echo "::notice::could not fetch main's history; running cold"
+            exit 0
+          fi
+          runs=$(sh scripts/main-mutation-runs.sh refs/remotes/origin/main 20)
           for run in $runs; do
             passed=$(gh run view "$run" --json jobs |
               jq --arg name "$SHARD" 'any(.jobs[]; .name == $name and .conclusion == "success")')
