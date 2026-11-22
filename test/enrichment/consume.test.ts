@@ -30,6 +30,7 @@ import {
 import { MAX_OPEN_TAGS } from "../../src/modules/enrichment/html";
 import { pageFailureReason } from "../../src/modules/enrichment/bounds";
 import {
+  MODEL_CALLS_PER_HOUR,
   PAGE_FETCHES_PER_HOUR,
   PROXY_CALLS_PER_DAY,
 } from "../../src/modules/enrichment/spend-limit";
@@ -1255,7 +1256,7 @@ async function repend(productId: string): Promise<void> {
     .where(eq(products.id, productId));
 }
 
-type GlobalSpend = "page-fetch" | "proxy-call";
+type GlobalSpend = "page-fetch" | "proxy-call" | "model-call";
 
 async function spentAlready(kind: GlobalSpend, count: number) {
   await db()
@@ -1463,5 +1464,150 @@ describe("listAbandonedEnrichments: one firing's share", () => {
     await listAbandonedEnrichments(db());
 
     expect(await gaveUpRow("enrichment", newest)).toBeDefined();
+  });
+});
+
+/**
+Whether any of a fetch's calls went to the proxy.
+*/
+function hasCalledTheProxy(fetchImpl: ReturnType<typeof vi.fn<typeof fetch>>) {
+  return fetchImpl.mock.calls.some(([input]) =>
+    urlOf(input).startsWith("https://api.firecrawl.dev/"),
+  );
+}
+
+describe("handleEnrichmentBatch: one proxy call a product a day", () => {
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("goes direct only on a product's second try that day, and spends nothing shared", async () => {
+    const productId = await pendingProduct();
+    const deps = { ...depsWith(vi.fn(refusedThroughProxy)), proxyApiKey: "k" };
+    await consumeWith(productId, deps);
+    await repend(productId);
+    const again = vi.fn(refusedThroughProxy);
+
+    await consumeWith(productId, { ...deps, fetchImpl: again });
+
+    expect(hasCalledTheProxy(again)).toBe(false);
+    expect(await limitCountOf("proxy-call")).toBe(1);
+    const row = await rowOf(productId);
+    expect(row.extractionError).toBe("Page returned 403");
+  });
+
+  it("leaves another product its proxy call after one product's six tries", async () => {
+    const refused = await pendingProduct();
+    const deps = { ...depsWith(vi.fn(refusedThroughProxy)), proxyApiKey: "k" };
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      await consumeWith(refused, deps);
+      await repend(refused);
+    }
+    const honest = await pendingProduct();
+    const fetchImpl = vi.fn(refusingWithProxy);
+
+    await consumeWith(honest, { ...deps, fetchImpl });
+
+    expect(hasCalledTheProxy(fetchImpl)).toBe(true);
+    expect(await statusOf(honest)).toBe("done");
+    expect(await limitCountOf("proxy-call")).toBe(2);
+  });
+});
+
+/**
+One enrichment message for the product, through the consumer with `deps`.
+*/
+async function consumeWith(
+  productId: string,
+  deps: Parameters<typeof handleEnrichmentBatch>[1],
+): Promise<void> {
+  await handleEnrichmentBatch(
+    batchOf("dialed-enrichment", [jobFor(productId)]),
+    deps,
+  );
+}
+
+describe("handleEnrichmentBatch: the hour's model calls", () => {
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("counts the model call of a fresh fetch", async () => {
+    const productId = await pendingProduct();
+
+    await consumeWith(productId, depsWith(serving(PAGE)));
+
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("model-call")).toBe(1);
+  });
+
+  it("stores the page but asks no model once the hour's calls are spent, and leaves the row pending", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const productId = await pendingProduct();
+    const deps = depsWith(serving(PAGE));
+
+    await consumeWith(productId, deps);
+
+    expect(deps.model.extract).not.toHaveBeenCalled();
+    expect(await statusOf(productId)).toBe("pending");
+    expect(await snapshotsOf(productId)).toHaveLength(1);
+  });
+
+  it("reads the stored page again on the next try, counting a model call and no fetch", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const productId = await pendingProduct();
+    await consumeWith(productId, depsWith(serving(PAGE)));
+    await db().delete(rateLimits);
+    const fetchImpl = serving(PAGE);
+
+    await consumeWith(productId, depsWith(fetchImpl));
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("model-call")).toBe(1);
+  });
+
+  it("defers a stored page's re-read too once the hour's calls are spent", async () => {
+    const productId = await pendingProduct();
+    await consumeWith(productId, depsWith(serving(PAGE)));
+    await repend(productId);
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const deps = depsWith(serving(PAGE));
+
+    await consumeWith(productId, deps);
+
+    expect(deps.model.extract).not.toHaveBeenCalled();
+    expect(await statusOf(productId)).toBe("pending");
+  });
+
+  it("asks the model for the last call the hour allows", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR - 1);
+    const productId = await pendingProduct();
+
+    await consumeWith(productId, depsWith(serving(PAGE)));
+
+    expect(await statusOf(productId)).toBe("done");
+  });
+
+  it("counts nothing with no model configured", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const productId = await pendingProduct();
+
+    await consumeWith(productId, depsWithoutModel(serving(PAGE)));
+
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("model-call")).toBe(MODEL_CALLS_PER_HOUR);
+  });
+
+  it("lets the Desk's re-run ask the model whatever the hour's count", async () => {
+    const productId = await pendingProduct();
+    await consumeWith(productId, depsWith(serving(PAGE)));
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const deps = depsWith(serving(PAGE));
+
+    await reextract(deps, productId);
+
+    expect(deps.model.extract).toHaveBeenCalledTimes(1);
+    expect(await limitCountOf("model-call")).toBe(MODEL_CALLS_PER_HOUR);
   });
 });

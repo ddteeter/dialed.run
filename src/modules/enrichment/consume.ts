@@ -19,7 +19,12 @@ import { runLadder, type LadderResult } from "./ladder";
 import { modelPass } from "./model/rung";
 import { enrichJobSchema } from "./queue-messages";
 import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
-import { canSpendPageFetch, canSpendProxyCall } from "./spend-limit";
+import {
+  canSpendModelCall,
+  canSpendPageFetch,
+  canSpendProductProxyCall,
+  canSpendProxyCall,
+} from "./spend-limit";
 
 /**
  * The concrete handle `coreDb()` returns, spelled out:
@@ -259,14 +264,14 @@ async function fetchAndExtract(
   deps: EnrichmentDeps,
   productId: string,
   sourceUrl: string,
-): Promise<void> {
+): Promise<"deferred" | undefined> {
   const page = await fetchProductPage(sourceUrl, deps.fetchImpl ?? fetch, {
     proxyApiKey: deps.proxyApiKey,
-    claimProxy: () => canSpendProxyCall(deps.db),
+    claimProxy: () => canSpendProxyFor(deps.db, productId),
   });
   if (await deps.isLandingDenied(sourceUrl, page.finalUrl)) {
     await dropDeniedSource(deps.db, productId);
-    return;
+    return undefined;
   }
   const fetchedAt = Date.now();
   const r2Key = await putSnapshot(productId, page.html, fetchedAt);
@@ -277,6 +282,9 @@ async function fetchAndExtract(
     rung: "none",
     fetchedAt,
   });
+  // After the page is stored, so the sweep's next try reads it again
+  // rather than fetching it again.
+  if (await isModelCallSpent(deps)) return "deferred";
   const ladder = deps.ladder ?? runLadder;
   const result = ladder(new URL(page.finalUrl), page.html);
   await extractFrom(
@@ -286,12 +294,37 @@ async function fetchAndExtract(
     page.html,
     result,
   );
+  return undefined;
+}
+
+/**
+ * Whether the consumer may not ask the model now: one is configured and
+ * the hour's model calls are spent (`spend-limit.ts`). Asked before the
+ * ladder reads the page, and over it nothing is written to the product: it
+ * stays `pending` for the hourly sweep. Writing the deterministic answer alone would mark
+ * the product `done`, which is never claimed again. The Desk's re-run is
+ * the operator's own press and does not ask (owner, 2026-11-21).
+ */
+async function isModelCallSpent(deps: EnrichmentDeps): Promise<boolean> {
+  return deps.model !== undefined && !(await canSpendModelCall(deps.db));
+}
+
+/**
+ * One proxy call for this product: the product's own count for the day
+ * first, so a product that has had its call spends nothing shared, then
+ * the day's count across everyone.
+ */
+async function canSpendProxyFor(db: Db, productId: string): Promise<boolean> {
+  return (
+    (await canSpendProductProxyCall(db, productId)) && canSpendProxyCall(db)
+  );
 }
 
 /**
  * The work for a `pending` product: the page stored within the reuse
- * window, or a fresh fetch — `deferred` when the hour's fetches are spent
- * (`spend-limit.ts`), and the row stays `pending` for the hourly sweep.
+ * window, or a fresh fetch — `deferred` when the hour's fetches or model
+ * calls are spent (`spend-limit.ts`), and the row stays `pending` for the
+ * hourly sweep.
  */
 async function extractPending(
   deps: EnrichmentDeps,
@@ -306,13 +339,14 @@ async function extractPending(
   if (recent !== undefined) {
     const stored = await readSnapshot(recent.r2Key);
     if (stored !== undefined) {
+      if (await isModelCallSpent(deps)) return "deferred";
       await extractStored(deps, productId, recent, stored);
       return undefined;
     }
   }
-  if (!(await canSpendPageFetch(deps.db))) return "deferred";
-  await fetchAndExtract(deps, productId, sourceUrl);
-  return undefined;
+  return (await canSpendPageFetch(deps.db))
+    ? fetchAndExtract(deps, productId, sourceUrl)
+    : "deferred";
 }
 
 async function processEnrichJob(
@@ -438,6 +472,9 @@ export async function handleEnrichmentDlqBatch(
  * mechanism that makes a better parser or a promoted fibre retroactive
  * (D-31, packet §6). Nothing when the product has never been snapshotted,
  * or when the snapshot row points at an object that is not there.
+ *
+ * The operator's own press, so its model call is not counted against the
+ * hour's (owner, 2026-11-21).
  */
 export async function reextract(
   deps: EnrichmentDeps,
