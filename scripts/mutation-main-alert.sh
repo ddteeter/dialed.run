@@ -11,8 +11,9 @@
 #
 # Re-runnable (law 1): a run already named in the issue is not reported
 # twice. DRY_RUN=1 prints what it would do and changes nothing, so it can
-# be tried locally against a past run. Needs `gh` with issues:write and
-# actions:read.
+# be tried locally against a past run (where the viewer is you, so the
+# workflow's earlier comments are not counted). Needs `gh` with
+# issues:write and actions:read, and `jq`.
 set -eu
 
 run=${1:?run id}
@@ -30,11 +31,26 @@ act() {
   fi
 }
 
-open=$(gh issue list --repo "$repo" --state open --search "\"$title\" in:title" \
-  --json number,title --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+# The alert is the workflow's own issue: one the Actions account opened,
+# with this exact title. Only that account's text counts as "already
+# reported": the issue body it wrote and the comments it posted. The
+# choice is made here, in jq, rather than left to gh's search, so the
+# script's test can see it. Needs `jq` (present on GitHub's runners).
+bot="app/github-actions"
+issues=$(gh issue list --repo "$repo" --state open --author "$bot" --limit 100 \
+  --search "\"$title\" in:title" --json number,title,author)
+open=$(printf '%s' "$issues" | jq -r --arg title "$title" --arg bot "$bot" \
+  'map(select(.title == $title and .author.login == $bot)) | .[0].number // empty')
 
-if [ -n "$open" ] && gh issue view "$open" --repo "$repo" --json body,comments \
-  --jq '.body, .comments[].body' | grep -qF "actions/runs/$run"; then
+if [ -n "$open" ]; then
+  thread=$(gh issue view "$open" --repo "$repo" --json body,comments)
+  own=$(printf '%s' "$thread" |
+    jq -r '.body, (.comments[] | select(.viewerDidAuthor) | .body)')
+else
+  own=""
+fi
+
+if printf '%s\n' "$own" | grep -qF "actions/runs/$run"; then
   echo "run $run is already on #$open"
   exit 0
 fi
