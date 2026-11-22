@@ -20,6 +20,7 @@ import {
   importFailureReason,
 } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
+import { heldToTheClock } from "../../src/modules/runs/consumer";
 import type { StravaApi } from "../../src/modules/runs/strava/api";
 import {
   NO_TRACK_MESSAGE,
@@ -27,6 +28,7 @@ import {
 } from "../../src/modules/runs/parsers";
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 import { createManualRun } from "../../src/modules/runs/service";
+import { MAX_START_AHEAD_SECONDS } from "../../src/modules/runs/inputs";
 import { unreadNotificationCount } from "../../src/modules/notifications";
 import { attachObservation } from "../../src/modules/weather";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
@@ -37,7 +39,11 @@ import treadmillTcx from "./fixtures/treadmill.tcx?raw";
 import pausedClimbGpx from "./fixtures/paused-climb.gpx?raw";
 import { nowSeconds } from "../../src/lib/now";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
-import { oweInCore, weatherLater } from "../queue-fakes";
+import {
+  oweImportFileDeleteInCore,
+  oweInCore,
+  weatherLater,
+} from "../queue-fakes";
 import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
 import {
   reminderFromSubject,
@@ -132,6 +138,7 @@ function makeDeps(overrides: Partial<ConsumerDeps> = {}): ConsumerDeps & {
       exceptions.push({ error, context });
     },
     owe: oweInCore,
+    oweFileDelete: oweImportFileDeleteInCore,
     attachObservation: weatherLater,
     exceptions,
     ...overrides,
@@ -1515,12 +1522,14 @@ describe("the batch that concludes an import", () => {
     expect(await kitRemindersOf(userId)).toStrictEqual([
       { subjectId: row?.runId },
     ]);
+    // The file the run was read from went with the batch that landed.
+    expect(await env.IMPORTS.head(row?.r2Key ?? "")).toBeNull();
     expect(
       await coreDb()
         .select({ kind: outbox.kind })
         .from(outbox)
         .where(eq(outbox.dedupeKey, `${userId}:${row?.r2Key ?? ""}`)),
-    ).toStrictEqual([{ kind: "import_file_expire" }]);
+    ).toStrictEqual([]);
   });
 
   it("holds the kit reminder, so a failed write of it is not lost for good (#843)", async () => {
@@ -1904,13 +1913,29 @@ describe("a failed import's file is deleted 30 days after it failed (owner, 2026
   });
 });
 
+/**
+The read file's deletion still owed for `key`, if any.
+*/
+async function owedDeleteOf(userId: string, key: string) {
+  const [row] = await coreDb()
+    .select()
+    .from(outbox)
+    .where(
+      and(
+        eq(outbox.kind, "import_file_delete"),
+        eq(outbox.dedupeKey, `${userId}:${key}`),
+      ),
+    );
+  return row;
+}
+
 describe("a read file goes once its run is in the log (D-116)", () => {
-  it("is owed now, in the batch that marks the import done, and the next drain takes it", async () => {
+  it("is deleted straight after the batch that marks the import done, with nothing left owed", async () => {
     const deps = makeDeps();
     const userId = newUlid();
     const importId = await seedImport(deps.db, userId, validTcx, "tcx");
     const key = `imports/${userId}/${importId}.tcx`;
-    const before = nowSeconds();
+    expect(await env.IMPORTS.head(key)).not.toBeNull();
 
     await handleImportsBatch(
       fakeBatch([{ body: { type: "import", importId } }]).batch,
@@ -1922,18 +1947,10 @@ describe("a read file goes once its run is in the log (D-116)", () => {
       .from(imports)
       .where(eq(imports.id, importId));
     expect(done?.status).toBe("done");
-    const owed = await expiryOf(userId, key);
-    expect(owed?.nextAttemptAt).toBeGreaterThanOrEqual(before);
-    expect(owed?.nextAttemptAt).toBeLessThanOrEqual(nowSeconds());
-    expect(await env.IMPORTS.head(key)).not.toBeNull();
-
-    // The drain is the schedule arriving, not a fast path that failed: the
-    // file goes, the digest hears nothing, and the run stays.
-    const anomalies: string[] = [];
-    await drainExpiries(anomalies, nowSeconds());
     expect(await env.IMPORTS.head(key)).toBeNull();
-    expect(anomalies).toStrictEqual([]);
+    expect(await owedDeleteOf(userId, key)).toBeUndefined();
     expect(await expiryOf(userId, key)).toBeUndefined();
+    expect(deps.exceptions).toStrictEqual([]);
     const [run] = await deps.db
       .select({ id: runs.id })
       .from(runs)
@@ -1941,7 +1958,7 @@ describe("a read file goes once its run is in the log (D-116)", () => {
     expect(run?.id).toBe(done?.runId);
   });
 
-  it("owes a duplicate's file too, since its run is already in the log", async () => {
+  it("deletes a duplicate's file too, since its run is already in the log", async () => {
     const deps = makeDeps();
     const userId = newUlid();
     const firstId = await seedImport(deps.db, userId, validTcx, "tcx");
@@ -1951,6 +1968,7 @@ describe("a read file goes once its run is in the log (D-116)", () => {
     );
     const secondId = await seedImport(deps.db, userId, validTcx, "tcx");
     const key = `imports/${userId}/${secondId}.tcx`;
+    expect(await env.IMPORTS.head(key)).not.toBeNull();
 
     await handleImportsBatch(
       fakeBatch([{ body: { type: "import", importId: secondId } }]).batch,
@@ -1962,11 +1980,122 @@ describe("a read file goes once its run is in the log (D-116)", () => {
       .from(imports)
       .where(eq(imports.id, secondId));
     expect(second?.status).toBe("duplicate");
-    expect(await expiryOf(userId, key)).toMatchObject({
+    expect(await env.IMPORTS.head(key)).toBeNull();
+    expect(await owedDeleteOf(userId, key)).toBeUndefined();
+  });
+
+  it("leaves the deletion owed for the drain when the delete fails, and the import done", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const importId = await seedImport(deps.db, userId, validTcx, "tcx");
+    const key = `imports/${userId}/${importId}.tcx`;
+    const refused = vi
+      .spyOn(env.IMPORTS, "delete")
+      .mockRejectedValueOnce(new Error("R2 is down"));
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+    refused.mockRestore();
+
+    const [done] = await deps.db
+      .select({ status: imports.status })
+      .from(imports)
+      .where(eq(imports.id, importId));
+    expect(done?.status).toBe("done");
+    expect(await env.IMPORTS.head(key)).not.toBeNull();
+    expect(await owedDeleteOf(userId, key)).toMatchObject({
       payload: JSON.stringify({ userId, key }),
     });
-    await drainExpiries([], nowSeconds());
+
+    await drainOutbox(coreDb(), [], {
+      handlers: outboxHandlers,
+      now: nowSeconds() + 3600,
+      kinds: ["import_file_delete"],
+    });
     expect(await env.IMPORTS.head(key)).toBeNull();
+    expect(await owedDeleteOf(userId, key)).toBeUndefined();
+  });
+});
+
+describe("heldToTheClock", () => {
+  const draft = {
+    startedAt: 1_000_000,
+    durationS: 1800,
+    distanceM: 5000,
+    indoor: true,
+    title: "Imported run",
+  };
+
+  it("keeps a run that starts a day past the clock, and refuses one a second later", () => {
+    const now = draft.startedAt - MAX_START_AHEAD_SECONDS;
+    expect(heldToTheClock(draft, now)).toBe(draft);
+    const tooFar = () => heldToTheClock(draft, now - 1);
+    expect(tooFar).toThrow(RunParseError);
+    expect(tooFar).toThrow(
+      expect.objectContaining({
+        reason: "import: the run starts more than a day ahead",
+        message: PARSE_FAILURE_MESSAGE,
+      }),
+    );
+  });
+});
+
+describe("a file whose run starts more than a day ahead", () => {
+  it("fails the import, saves no run, and keeps the file for its thirty days", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const ahead = new Date(
+      (nowSeconds() + MAX_START_AHEAD_SECONDS + 60) * 1000,
+    );
+    const importId = await seedImport(
+      deps.db,
+      userId,
+      fitFile({ startTime: ahead, timestamp: ahead }),
+      "fit",
+    );
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    const [failed] = await deps.db
+      .select({ status: imports.status, reason: imports.failureReason })
+      .from(imports)
+      .where(eq(imports.id, importId));
+    expect(failed).toStrictEqual({
+      status: "failed",
+      reason: PARSE_FAILURE_MESSAGE,
+    });
+    expect(await runIdsOf(userId)).toStrictEqual([]);
+    expect(deps.exceptions).toStrictEqual([]);
+  });
+
+  it("imports one that starts a day ahead, as a manual run may", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const ahead = new Date(
+      (nowSeconds() + MAX_START_AHEAD_SECONDS - 60) * 1000,
+    );
+    const importId = await seedImport(
+      deps.db,
+      userId,
+      fitFile({ startTime: ahead, timestamp: ahead }),
+      "fit",
+    );
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    const [row] = await deps.db
+      .select({ status: imports.status })
+      .from(imports)
+      .where(eq(imports.id, importId));
+    expect(row?.status).toBe("done");
   });
 });
 

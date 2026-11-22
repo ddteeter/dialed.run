@@ -20,6 +20,7 @@ import validGpx from "./fixtures/valid.gpx?raw";
 import {
   batchOf,
   fakeMessage,
+  oweImportFileDeleteInCore,
   oweInCore,
   weatherLater,
 } from "../queue-fakes";
@@ -124,6 +125,7 @@ describe("a stored run carries the rounded point", () => {
         errors.push(error);
       },
       owe: oweInCore,
+      oweFileDelete: oweImportFileDeleteInCore,
       attachObservation: weatherLater,
     });
 

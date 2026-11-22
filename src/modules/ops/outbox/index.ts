@@ -15,5 +15,9 @@ export {
   type OutboxDebt,
   type OutboxDebtOf,
 } from "./outbox";
-export { oweInCore, oweInCoreWhere } from "./owe-in-core";
+export {
+  oweImportFileDeleteInCore,
+  oweInCore,
+  oweInCoreWhere,
+} from "./owe-in-core";
 export { storageHandlers } from "./storage-handlers";

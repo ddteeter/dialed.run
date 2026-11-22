@@ -3,8 +3,10 @@ import type { MesgDefinition } from "@garmin/fitsdk";
 import { describe, expect, it } from "vitest";
 
 import {
+  FIT_MESSAGE_WEIGHT,
   FIT_READ_OPTIONS,
   MAX_DEVELOPER_FIELD_LOOKUPS,
+  MAX_FIT_KEPT_VALUES,
   MAX_FIELD_DESCRIPTIONS,
   fitReadLimits,
   fitSource,
@@ -333,18 +335,25 @@ describe("rpeFrom", () => {
 function definition(
   sizes: readonly number[],
   globalMessageNumber = 20,
+  fields = 0,
 ): MesgDefinition {
   return {
     recordHeader: 0x40,
     reserved: 0,
     endianness: true,
-    numFields: 0,
+    numFields: fields,
     architecture: 0,
     globalMessageNumber,
     localMesgNum: 0,
     messageSize: 0,
     developerDataSize: 0,
-    fieldDefinitions: [],
+    fieldDefinitions: Array.from({ length: fields }, (_, number) => ({
+      fieldDefinitionNumber: number,
+      size: 1,
+      baseType: 0x02,
+      invalidValue: 0xff,
+      baseTypeSize: 1,
+    })),
     developerFieldDefinitions: sizes.map((size) => ({
       fieldDefinitionNumber: 0,
       size,
@@ -499,6 +508,87 @@ describe("fit: the developer field lookup budget (SA-L23)", () => {
 
   it("is five hundred million", () => {
     expect(MAX_DEVELOPER_FIELD_LOOKUPS).toBe(500_000_000);
+  });
+});
+
+describe("fit: developer fields on a type the profile does not name", () => {
+  it("refuses the definition, and so the file", async () => {
+    const { mesgDefinitionListener } = fitReadLimits();
+    expect(() => {
+      mesgDefinitionListener(definition([1], 65_280));
+    }).toThrow("fit: developer fields on an unknown message type");
+    expect(() => {
+      mesgDefinitionListener(definition([], 65_280, 3));
+      mesgDefinitionListener(definition([1], 20));
+    }).not.toThrow();
+
+    const failure = await failureFrom(
+      fitFileOfDeveloperFields({
+        descriptions: 1,
+        fields: 1,
+        messages: 1,
+        type: 65_280,
+      }),
+    );
+    expect(failure.cause).toStrictEqual(
+      new Error("fit: developer fields on an unknown message type"),
+    );
+  });
+});
+
+/**
+ * A record and a session read under `budget`: the record's type defined
+ * with two fields and one developer field, then again with none.
+ */
+function recordAndSession(budget: number): () => void {
+  const limits = fitReadLimits(MAX_DEVELOPER_FIELD_LOOKUPS, budget);
+  limits.mesgDefinitionListener(definition([1], 20, 2));
+  // A narrower definition of the same type leaves it at its widest.
+  limits.mesgDefinitionListener(definition([], 20, 0));
+  return () => {
+    limits.mesgListener(20);
+    limits.mesgListener(18);
+  };
+}
+
+describe("fit: what the decoder may keep", () => {
+  it("counts a message at its weight and its type's fields and developer fields", () => {
+    // A record: two fields and one developer field. A session: none.
+    const record = FIT_MESSAGE_WEIGHT + 3;
+    const session = FIT_MESSAGE_WEIGHT;
+    const reading = recordAndSession;
+    expect(reading(record + session)).not.toThrow();
+    expect(reading(record + session - 1)).toThrow(
+      "fit: too many messages and fields",
+    );
+  });
+
+  it("refuses a file of more messages than it may keep, and reads one under", async () => {
+    // Records with no fields: each one costs its weight alone.
+    const records = MAX_FIT_KEPT_VALUES / FIT_MESSAGE_WEIGHT;
+    const failure = await failureFrom(
+      fitFileOfDeveloperFields({
+        descriptions: 0,
+        fields: 0,
+        messages: records,
+      }),
+    );
+    expect(failure.cause).toStrictEqual(
+      new Error("fit: too many messages and fields"),
+    );
+    const draft = await fitSource.parse(
+      fitFileOfDeveloperFields({
+        descriptions: 0,
+        fields: 0,
+        messages: records - 100,
+      }),
+    );
+    expect(draft).toMatchObject({ durationS: 1800, distanceM: 5000 });
+  });
+
+  it("is three million, a message counting four", () => {
+    expect(MAX_FIT_KEPT_VALUES).toBe(3_000_000);
+    expect(FIT_MESSAGE_WEIGHT).toBe(4);
   });
 });
 

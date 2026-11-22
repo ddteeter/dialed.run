@@ -37,7 +37,13 @@ import {
 } from "../../src/modules/runs/strava/reminder-email";
 import { pairWithReminder } from "../../src/modules/runs/strava/reminder-match";
 import { fakeMail, seedUser } from "../email/helpers";
-import { batchOf, fakeMessage, oweInCore, weatherLater } from "../queue-fakes";
+import {
+  batchOf,
+  fakeMessage,
+  oweImportFileDeleteInCore,
+  oweInCore,
+  weatherLater,
+} from "../queue-fakes";
 
 /**
 The drains' registry, as production assembles it (no linker).
@@ -239,6 +245,7 @@ function deps(overrides: Partial<ConsumerDeps> = {}): ConsumerDeps {
     importBucket: env.IMPORTS,
     captureException: vi.fn(),
     owe: oweInCore,
+    oweFileDelete: oweImportFileDeleteInCore,
     attachObservation: weatherLater,
     ...overrides,
   };

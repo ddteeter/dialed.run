@@ -197,16 +197,15 @@ describe("gpx: every way it refuses", () => {
     expect(outOfRange).toContain("runDraftSchema");
   });
 
-  it("expands no entities, however the file asks", async () => {
-    // The reader reads no DTD, which is the XXE guard, and an *internal*
-    // entity is how to see it working: with expansion, `&later;` becomes
-    // a valid timestamp and this file parses. Without it the text stays
-    // literal, the point has no readable time, and the run is refused.
+  it("refuses a file that declares entities, before any is used", async () => {
+    // An *internal* entity is how to see it: with expansion, `&later;`
+    // becomes a valid timestamp and this file parses. The DOCTYPE that
+    // declares it is refused, so the point's time is never read at all.
     const withEntity = `<?xml version="1.0"?>
 <!DOCTYPE gpx [<!ENTITY later "${LATER}">]>
 <gpx><trk><trkseg>${point(44.98, START)}<trkpt lat="45" lon="-93.27"><time>&later;</time></trkpt></trkseg></trk></gpx>`;
 
-    expect(await reasonFor(withEntity)).toContain("fewer than 2 track points");
+    expect(await reasonFor(withEntity)).toBe("gpx: a DOCTYPE");
   });
 
   it("keeps the underlying failure as the cause", async () => {
@@ -493,13 +492,13 @@ describe("gpx: the tag and attribute budget (SA-M29, SA-L23)", () => {
   });
 
   it("never reads an external entity a file declares", async () => {
-    // Declared, used as a point's time, and left as the text it was
-    // written as: nothing is fetched and nothing is put in its place.
+    // Declared and used as a point's time: the declaration is refused,
+    // so nothing is fetched and nothing is put in its place.
     const external = `<?xml version="1.0"?>
 <!DOCTYPE gpx [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
 <gpx><trk><trkseg>${point(44.98, START)}<trkpt lat="45" lon="-93.27"><time>&xxe;</time></trkpt></trkseg></trk></gpx>`;
 
-    expect(await reasonFor(external)).toContain("fewer than 2 track points");
+    expect(await reasonFor(external)).toBe("gpx: a DOCTYPE");
   });
 
   it("is two million", () => {

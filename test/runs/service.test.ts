@@ -850,9 +850,8 @@ function retime(
   userId: string,
   runId: string,
   startedAt: number,
-  timeZone?: string,
 ) {
-  return retimeRun(coreDb(), weather, userId, { runId, startedAt, timeZone });
+  return retimeRun(coreDb(), weather, userId, { runId, startedAt });
 }
 
 describe("retimeRun: A1's time correction", () => {
@@ -918,31 +917,49 @@ describe("retimeRun: A1's time correction", () => {
     expect(run?.startedAt).toBe(START);
   });
 
-  it("holds the date fixed, on the clock the card read", async () => {
+  it("holds the date fixed, on the runner's home clock for a run with no conditions", async () => {
     // Round 26, item 1: "The date is fixed." 12:00 UTC on the 12th is
     // 07:00 in Chicago; 23:59 Chicago the same day is allowed, 00:00 the
-    // next day is not — and on UTC's clock the same move is refused.
+    // next day is not.
     const userId = newUlid();
+    await coreDb()
+      .insert(userProfiles)
+      .values({ userId, timeZone: "America/Chicago" });
     const runId = await aRun(userId, { weatherStatus: "attached" });
     const weather = fakeWeather();
     const lastMinute = Math.floor(Date.UTC(2025, 7, 13, 4, 59) / 1000);
     const nextDay = lastMinute + 60;
 
-    expect(
-      await retime(weather, userId, runId, nextDay, "America/Chicago"),
-    ).toBe("refused");
-    expect(await retime(weather, userId, runId, lastMinute)).toBe("refused");
+    expect(await retime(weather, userId, runId, nextDay)).toBe("refused");
     expect(await getRun(coreDb(), userId, runId)).toMatchObject({
       startedAt: START,
       weatherStatus: "attached",
     });
     expect(weather.attached).toHaveLength(0);
 
-    expect(
-      await retime(weather, userId, runId, lastMinute, "America/Chicago"),
-    ).toBe("moved");
+    expect(await retime(weather, userId, runId, lastMinute)).toBe("moved");
     const moved = await getRun(coreDb(), userId, runId);
     expect(moved?.startedAt).toBe(lastMinute);
+  });
+
+  it("holds the date fixed on UTC's clock for a runner with no zone", async () => {
+    // The same move as above, for a runner with no home zone and a run
+    // with no place, so no conditions: on UTC's clock 04:59 on the 13th
+    // is another day, whatever zone a card names.
+    const userId = newUlid();
+    const runId = await aRun(userId, { lat: NOWHERE, lng: NOWHERE });
+    const lastMinute = Math.floor(Date.UTC(2025, 7, 13, 4, 59) / 1000);
+    const request = {
+      runId,
+      startedAt: lastMinute,
+      timeZone: "America/Chicago",
+    };
+
+    expect(await retimeRun(coreDb(), fakeWeather(), userId, request)).toBe(
+      "refused",
+    );
+    const run = await getRun(coreDb(), userId, runId);
+    expect(run?.startedAt).toBe(START);
   });
 
   it("treats a retry of the same start as the first call having landed", async () => {

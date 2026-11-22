@@ -32,6 +32,22 @@ export const MAX_XML_NODES = 2_000_000;
 export const MAX_XML_DEPTH = 64;
 
 /**
+ * The most elements one kept element may hold, at any depth. A track
+ * point with its time, elevation and a watch's extensions holds a dozen or
+ * two; past this the file is refused, so what a kept element builds stays
+ * small whatever the file holds.
+ */
+export const MAX_KEPT_ELEMENT_CHILDREN = 256;
+
+/**
+ * The most slips a document may have that the reader forgives (a bare
+ * `&`, text after the root, a close tag that matches nothing). An export
+ * has none or a handful; `sax` reports some slips once a character, so
+ * this is what bounds the work they cost.
+ */
+export const MAX_XML_FAULTS = 1000;
+
+/**
 How many bytes are decoded and parsed at a time.
 */
 export const XML_CHUNK_BYTES = 64 * 1024;
@@ -132,19 +148,86 @@ const SAX_OPTIONS = { trim: false, strictEntities: true };
 const BUFFER_OVERRUN = "Max buffer length exceeded";
 
 /**
+ * What the reader keeps while it builds the elements a collector asked
+ * for: the frames open now, and how many elements the outermost of them
+ * holds so far.
+ */
+interface Building {
+  readonly frames: Frame[];
+  held: number;
+}
+
+/**
+ * Opens a frame for an element inside a kept one, or for a kept one
+ * itself. A kept element holding more than `MAX_KEPT_ELEMENT_CHILDREN`
+ * elements is refused.
+ */
+function openFrame(
+  building: Building,
+  attributes: Readonly<AttributeMap>,
+  kind: string,
+): void {
+  if (building.frames.length === 0) building.held = 0;
+  else building.held += 1;
+  if (building.held > MAX_KEPT_ELEMENT_CHILDREN) {
+    throw new RunParseError(
+      `${kind}: an element holds more than ${String(MAX_KEPT_ELEMENT_CHILDREN)} elements`,
+    );
+  }
+  building.frames.push({ attributes, children: new Map(), text: "" });
+}
+
+/**
+ * Closes the innermost frame: the outermost goes to the collector, any
+ * other is added to its parent's children of that name.
+ */
+function closeFrame(
+  building: Building,
+  name: string,
+  path: readonly string[],
+  collector: XmlCollector,
+): void {
+  const frame = building.frames.pop();
+  if (frame === undefined) return;
+  const parent = building.frames.at(-1);
+  if (parent === undefined) {
+    collector.value(path, valueOf(frame));
+    return;
+  }
+  const siblings = parent.children.get(name);
+  if (siblings === undefined) parent.children.set(name, [valueOf(frame)]);
+  else siblings.push(valueOf(frame));
+}
+
+/**
  * The parser, wired to the collector. Elements outside a value being
  * built are offered to the collector; inside one, they are built into it.
+ *
+ * A DOCTYPE is refused: no GPX or TCX carries one, and `sax` stops
+ * checking its buffers once it has read one. Every other slip is forgiven
+ * up to `MAX_XML_FAULTS`.
  */
 function parserFor(kind: string, collector: XmlCollector): sax.SAXParser {
   const parser = sax.parser(true, SAX_OPTIONS);
   const path: string[] = [];
-  const frames: Frame[] = [];
+  const building: Building = { frames: [], held: 0 };
+  let faults = 0;
 
   parser.onerror = (error) => {
     if (error.message.startsWith(BUFFER_OVERRUN)) {
       throw new RunParseError(`${kind}: XML parser threw`, { cause: error });
     }
+    faults += 1;
+    if (faults > MAX_XML_FAULTS) {
+      throw new RunParseError(
+        `${kind}: more than ${String(MAX_XML_FAULTS)} XML faults`,
+        { cause: error },
+      );
+    }
     parser.resume();
+  };
+  parser.ondoctype = () => {
+    throw new RunParseError(`${kind}: a DOCTYPE`);
   };
   parser.onopentag = (tag: sax.Tag) => {
     path.push(tag.name);
@@ -153,31 +236,21 @@ function parserFor(kind: string, collector: XmlCollector): sax.SAXParser {
         `${kind}: nested deeper than ${String(MAX_XML_DEPTH)} elements`,
       );
     }
-    if (frames.length > 0 || collector.open(path, tag.attributes)) {
-      frames.push({
-        attributes: tag.attributes,
-        children: new Map(),
-        text: "",
-      });
+    if (
+      building.frames.length > 0 ||
+      collector.open(path, tag.attributes)
+    ) {
+      openFrame(building, tag.attributes, kind);
     }
   };
   const onText = (text: string): void => {
-    const frame = frames.at(-1);
+    const frame = building.frames.at(-1);
     if (frame !== undefined) frame.text += text;
   };
   parser.ontext = onText;
   parser.oncdata = onText;
   parser.onclosetag = (name) => {
-    const frame = frames.pop();
-    if (frame !== undefined) {
-      const parent = frames.at(-1);
-      if (parent === undefined) {
-        collector.value(path, valueOf(frame));
-      } else {
-        const siblings = parent.children.get(name) ?? [];
-        parent.children.set(name, [...siblings, valueOf(frame)]);
-      }
-    }
+    closeFrame(building, name, path, collector);
     path.pop();
   };
   return parser;
@@ -206,12 +279,14 @@ function decoded(
 /**
  * Reads a document, telling `collector` what it holds. Throws a
  * `RunParseError` for bytes that are not UTF-8, a document over a budget,
- * or a name or attribute value that outgrows `sax`'s buffer (64 kB,
- * checked between chunks, so one spanning several chunks is refused).
+ * a DOCTYPE, or a name or attribute value that outgrows `sax`'s buffer
+ * (64 kB, checked between chunks, so one spanning several chunks is
+ * refused).
  *
  * Malformed XML is not by itself a refusal, as it was not for the tree
  * parser this replaces: an unclosed tag, a bare `&`, text after the root.
- * `sax` reports each and is told to carry on, so the file is read as far
+ * `sax` reports each and is told to carry on, up to `MAX_XML_FAULTS` of
+ * them, so the file is read as far
  * as it makes sense and the run's own checks decide. `kind` names the
  * format in the maintainer-facing reason.
  */

@@ -11,6 +11,7 @@
  * entry) so a test can make it fail.
  */
 import { and, eq, isNull, or, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 
 import { dlqBatchHandler } from "../../db/gave-up";
 import {
@@ -20,7 +21,7 @@ import {
   stravaConnections,
   stravaRevocations,
 } from "../../db/schema-core";
-import { effortFromWatch } from "../../lib/contracts";
+import { effortFromWatch, type RunDraft } from "../../lib/contracts";
 import { GARMIN_DEVICE_NAME } from "./garmin";
 import { didClaim } from "../../lib/sql/claim";
 import { newUlid, type Ulid } from "../../lib/ids";
@@ -48,6 +49,7 @@ import { deauthorizeAthlete, type Owe } from "./strava";
 import { owedReminderEmail, reminderHistory } from "./strava";
 import { pairRunWith, pairWithReminder, unpairedUploadFor } from "./strava";
 import { findDuplicateRun, initialWeatherStatus, storedStart } from "./service";
+import { MAX_START_AHEAD_SECONDS } from "./inputs";
 
 export interface ConsumerDeps {
   db: CoreDb;
@@ -85,13 +87,28 @@ export interface ConsumerDeps {
    * failing, it is not owed.
    */
   runnerTimeZone?: ((userId: string) => Promise<string>) | undefined;
+  /**
+   * Owes a read file's deletion in the caller's batch, and pays it once
+   * the batch has landed (D-116): ops' `oweImportFileDeleteInCore`, handed
+   * in as `owe` is. The outbox row stays owed if the delete fails, for the
+   * drain.
+   */
+  oweFileDelete: OweFileDelete;
 }
+
+/**
+A read file's deletion: the row for the batch, and the delete that pays it.
+*/
+export type OweFileDelete = (payload: { userId: string; key: string }) => {
+  readonly write: BatchItem<"sqlite">;
+  readonly settle: () => Promise<void>;
+};
 
 /**
 What the dead-letter handler needs: it marks and tells, and never asks for
 a run's weather.
 */
-type DeadLetterDeps = Omit<ConsumerDeps, "attachObservation">;
+type DeadLetterDeps = Omit<ConsumerDeps, "attachObservation" | "oweFileDelete">;
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
 
@@ -178,25 +195,18 @@ async function withPendingOnThrow(
 const FAILED_IMPORT_FILE_DAYS = 30;
 
 /**
- * A read file's deletion, owed now (decision D-116, replacing D-110's
- * "kept as long as the run"). Once the run row holds what was read, the
- * file is only a full GPS track — usually starting at a front door — that
- * nothing reads again. Owed in the batch that concludes the import, so the
- * conclusion never lands without it (law 8c), and paid by the daily drain:
- * `import_file_expire` is the scheduled kind, so a debt the drain finds due
- * is the schedule arriving rather than a fast path that failed.
+ * A read file's deletion (decision D-116, replacing D-110's "kept as long
+ * as the run"). Once the run row holds what was read, the file is only a
+ * full GPS track — usually starting at a front door — that nothing reads
+ * again. Owed in the batch that concludes the import, so the conclusion
+ * never lands without it (law 8c), and paid straight after that batch;
+ * if the delete fails, the row is the drain's.
  */
 function fileGoes(
-  deps: Pick<ConsumerDeps, "owe">,
+  deps: Pick<ConsumerDeps, "oweFileDelete">,
   importRow: { userId: string; r2Key: string },
 ) {
-  return deps.owe(
-    {
-      kind: "import_file_expire",
-      payload: { userId: importRow.userId, key: importRow.r2Key },
-    },
-    nowSeconds(),
-  );
+  return deps.oweFileDelete({ userId: importRow.userId, key: importRow.r2Key });
 }
 
 /**
@@ -251,6 +261,18 @@ async function failImport(
  */
 export function importFailureReason(error: unknown): string {
   return error instanceof RunParseError ? error.message : PARSE_FAILURE_MESSAGE;
+}
+
+/**
+ * A parsed run, refused when it starts more than `MAX_START_AHEAD_SECONDS`
+ * past `now`: the bound a manual run has, so a file is held to it too.
+ * Refused as a file that could not be read.
+ */
+export function heldToTheClock(draft: RunDraft, now = nowSeconds()): RunDraft {
+  if (draft.startedAt > now + MAX_START_AHEAD_SECONDS) {
+    throw new RunParseError("import: the run starts more than a day ahead");
+  }
+  return draft;
 }
 
 /**
@@ -317,7 +339,7 @@ async function parseAndSave(
   try {
     const extension = extensionFromKey(importRow.r2Key);
     const bytes = await object.arrayBuffer();
-    draft = await sourceFor(extension).parse(bytes);
+    draft = heldToTheClock(await sourceFor(extension).parse(bytes));
   } catch (error) {
     if (!(error instanceof RunParseError)) {
       deps.captureException(error, {
@@ -337,13 +359,15 @@ async function parseAndSave(
   if (duplicate !== undefined) {
     // The run is already in the log, so this copy of its file is not
     // needed either.
+    const goes = fileGoes(deps, importRow);
     await deps.db.batch([
       deps.db
         .update(imports)
         .set({ status: "duplicate", runId: duplicate.id })
         .where(eq(imports.id, importRow.id)),
-      fileGoes(deps, importRow),
+      goes.write,
     ]);
+    await goes.settle();
     return;
   }
 
@@ -387,6 +411,7 @@ async function parseAndSave(
     // watch did not ask.
     ...effortFromWatch(draft.rpe),
   });
+  const goes = fileGoes(deps, importRow);
   await deps.db.batch([
     run,
     deps.db
@@ -395,7 +420,7 @@ async function parseAndSave(
       .where(eq(imports.id, importRow.id)),
     pairing.pairRun,
     pairing.markRead,
-    fileGoes(deps, importRow),
+    goes.write,
     notificationInsert(deps.db, {
       userId: importRow.userId,
       kind: "kit_reminder",
@@ -403,6 +428,7 @@ async function parseAndSave(
       body: "Add your kit for the run you just imported.",
     }),
   ]);
+  await goes.settle();
 
   // Last, once the import is done: the conditions are secondary to it, and
   // the upload screen keeps polling while the run's weather is pending. One

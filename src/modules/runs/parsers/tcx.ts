@@ -95,6 +95,13 @@ const LAP_METRES = [...LAP, "DistanceMeters"] as const;
 const TRACKPOINT = [...LAP, "Track", "Trackpoint"] as const;
 
 /**
+ * The most laps a TCX's activity may hold. A watch laps a mile or a
+ * kilometre at a time, or each lap of a track, so a day-long race is a few
+ * hundred; past this the file is refused.
+ */
+export const MAX_TCX_LAPS = 2000;
+
+/**
  * The laps of the file's first activity, in order. Only the first
  * activity is read: v1 imports one run per file, and a multi-activity
  * export (a multisport session, say) is out of scope rather than summed.
@@ -113,6 +120,11 @@ function lapsIn(bytes: ArrayBuffer): LapFound[] {
       if (isAt(path, ACTIVITY)) activities += 1;
       if (activities !== 1) return false;
       if (isAt(path, LAP)) {
+        if (laps.length >= MAX_TCX_LAPS) {
+          throw new RunParseError(
+            `tcx: more than ${String(MAX_TCX_LAPS)} laps`,
+          );
+        }
         lap = {
           startTime: attributes.StartTime,
           seconds: [],

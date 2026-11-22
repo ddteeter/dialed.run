@@ -76,10 +76,10 @@ views {
         A parse that throws puts the row back to `pending` itself. A redelivery of an import that is already `done`, `failed` or `duplicate` claims nothing and stops here.
       '''
     }
-    // source: src/modules/runs/consumer.ts parseAndSave, failImportWrites, importFailureReason, FAILED_IMPORT_FILE_DAYS
+    // source: src/modules/runs/consumer.ts parseAndSave, failImportWrites, importFailureReason, FAILED_IMPORT_FILE_DAYS; src/modules/runs/inputs.ts MAX_START_AHEAD_SECONDS
     cf.app.runs.consumer -> cf.importsBucket 'reads the file back and parses it' {
       notes '''
-        **If the file cannot be parsed:** one batch marks the import `failed` with a reason the runner reads, writes them an import-failed notification, and owes the file\'s deletion in 30 days. A stored file that is missing fails the same way.
+        **If the file cannot be parsed:** one batch marks the import `failed` with a reason the runner reads, writes them an import-failed notification, and owes the file\'s deletion in 30 days. A stored file that is missing fails the same way, and so does a run that starts more than a day past the clock.
 
         An error that is not the parser\'s own gets a generic sentence, and is reported. A terminal failure is never silent.
       '''
@@ -94,6 +94,16 @@ views {
         All of it lands or none does, so a redelivery never finds half of it.
       '''
     }
+    // source: src/modules/runs/consumer.ts parseAndSave, fileGoes; src/modules/ops/outbox/owe-in-core.ts oweImportFileDeleteInCore; src/modules/ops/outbox/storage-handlers.ts importFileDeleteHandler; src/modules/dispatch/scheduled.ts runDailyDigest
+    cf.app.runs.consumer -> cf.importsBucket 'deletes the file that was read' {
+      notes '''
+        **Not atomic with the previous step.** The concluding batch owed this deletion, for a `done` import and a `duplicate` one alike, and the consumer pays it straight after the batch lands.
+
+        **If it fails:** it is reported, and the owed row stays for the daily 12:00 UTC drain, which pays it.
+
+        **Guard: a delete is safe to repeat.** Deleting a file that is already gone does nothing.
+      '''
+    }
     // source: src/modules/runs/consumer.ts parseAndSave (the injected weather attach); src/modules/runs/service.ts initialWeatherStatus
     cf.app.runs.consumer -> cf.app.weather 'asks for the conditions' {
       notes '''
@@ -104,14 +114,6 @@ views {
         **If it fails:** the run stays `pending` on its weather and the hourly cron picks it up.
       '''
       navigateTo weatherStory
-    }
-    // source: src/modules/dispatch/scheduled.ts runDailyDigest, drainOwedEmail, drainProductLinks; src/modules/ops/outbox/storage-handlers.ts importFileDeleteHandler; src/modules/runs/consumer.ts fileGoes
-    cf.app.cronDaily1200 -> cf.importsBucket 'deletes the file that was read' {
-      notes '''
-        **Timing boundary: the next 12:00 UTC.** The concluding batch owed this deletion, and the daily firing\'s drain pays it. The hourly firings drain only email and product links, so a read file stays until then.
-
-        **Guard: a delete is safe to repeat.** Deleting a file that is already gone does nothing.
-      '''
     }
   }
 
@@ -262,7 +264,7 @@ views {
         notes '''
           **The marker is `runs.weather_status = pending`.** The hourly cron re-drives it.
 
-          **Bounded.** Each pass takes up to 50 pending runs, oldest start first, and clears each one\'s copy of its conditions before it asks again.
+          **Bounded.** Each pass takes up to 50 pending runs, each runner\'s oldest first: every runner with a run pending has one tried before any runner has a second. It clears each one\'s copy of its conditions before it asks again.
 
           **If one run\'s attach throws:** it is reported with the run\'s id, and that run loses this hour\'s turn. The pass goes on to the runs after it, and its give-up still runs.
         '''

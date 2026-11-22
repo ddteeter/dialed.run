@@ -131,13 +131,16 @@ const UINT32 = 0x86;
  * does not write: `descriptions` developer field descriptions, then
  * `messages` records that each carry `fields` one-byte developer fields,
  * then a session. A record costs the decoder a description lookup for each
- * of its developer fields.
+ * of its developer fields. `type` is the records' global message number:
+ * `record` (20) unless a test names another.
  */
 export function fitFileOfDeveloperFields(shape: {
   descriptions: number;
   fields: number;
   messages: number;
+  type?: number;
 }): ArrayBuffer {
+  const type = shape.type ?? 20;
   const startS = Math.floor(START.getTime() / 1000) - FIT_EPOCH_S;
   const body: number[] = [
     // developer_data_id (207), local type 0: developer_data_index.
@@ -172,9 +175,9 @@ export function fitFileOfDeveloperFields(shape: {
   for (let index = 0; index < shape.descriptions; index += 1) {
     body.push(0x01, 0, index % 256, UINT8);
   }
-  // record (20), local type 2, developer data flagged: no fields of its
-  // own, `fields` developer fields of one byte each.
-  body.push(0x62, 0, 0, 20, 0, 0, shape.fields);
+  // `type`, local type 2, developer data flagged: no fields of its own,
+  // `fields` developer fields of one byte each.
+  body.push(0x62, 0, 0, type & 0xff, type >> 8, 0, shape.fields);
   for (let index = 0; index < shape.fields; index += 1) body.push(index, 1, 0);
   // session (18), local type 3: start_time, total_elapsed_time,
   // total_timer_time, total_distance. Thirty minutes, five kilometres.

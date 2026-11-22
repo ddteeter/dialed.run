@@ -213,7 +213,6 @@ export const storageHandlers = {
   photo_delete: photoDeleteHandler,
   entry_media_delete: entryMediaDeleteHandler,
   import_file_delete: importFileDeleteHandler,
-  // A run file owed on a date — read (D-116), or failed 30 days ago: the
-  // same delete.
+  // A failed import's run file, owed 30 days on: the same delete.
   import_file_expire: importFileDeleteHandler,
 } satisfies Partial<OutboxHandlers>;

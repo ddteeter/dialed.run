@@ -40,6 +40,7 @@ import type { StravaApi, StravaConfig } from "./api";
 import { disconnectedEmail, type Owe } from "./deauthorize";
 import { reminderSubjectPrefix, type RevokeJob } from "../queue-messages";
 import { nowSeconds } from "../../../lib/now";
+import { isWithinRateLimit } from "../../email";
 
 export interface RevokeQueueProducer {
   send(message: RevokeJob): Promise<unknown>;
@@ -347,6 +348,7 @@ export async function connectFromCallback(
   if (api === undefined) {
     return { ok: false, reason: "Strava isn't configured yet.", full: false };
   }
+  if (!(await isWithinExchanges(db, userId))) return NOT_CONNECTED;
   try {
     await completeStravaConnect(db, api, userId, outcome.code);
     return { ok: true };
@@ -355,8 +357,37 @@ export async function connectFromCallback(
       return { ok: false, reason: "Strava is full for now.", full: true };
     }
     captureException(error, { userId, surface: "strava-connect" });
-    return { ok: false, reason: "Strava didn't connect.", full: false };
+    return NOT_CONNECTED;
   }
+}
+
+/**
+ * How many codes one runner's callbacks may exchange with Strava in an
+ * hour (owner, 2026-11-21). A connect is one exchange, and a few retries
+ * fit; past it the callback answers as a refused exchange does.
+ */
+export const STRAVA_EXCHANGES_PER_HOUR = 5;
+
+const HOUR_SECONDS = 3600;
+
+const NOT_CONNECTED = {
+  ok: false,
+  reason: "Strava didn't connect.",
+  full: false,
+} as const;
+
+/**
+ * Counts one exchange for the runner, before it is made, and says
+ * whether it is within `STRAVA_EXCHANGES_PER_HOUR`.
+ */
+function isWithinExchanges(db: CoreDb, userId: string): Promise<boolean> {
+  return isWithinRateLimit(
+    db,
+    "strava-connect-runner",
+    userId,
+    STRAVA_EXCHANGES_PER_HOUR,
+    HOUR_SECONDS,
+  );
 }
 
 /**

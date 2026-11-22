@@ -3,7 +3,14 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { coreDb } from "../../../env";
 import type { OutboxMessage } from "../../../lib/sql/outbox";
-import { outboxInsert, outboxInsertWhere, oweOutbox } from "./outbox";
+import type { PayloadOf } from "./handler";
+import {
+  outboxInsert,
+  outboxInsertWhere,
+  oweOutbox,
+  settleOutbox,
+} from "./outbox";
+import { storageHandlers } from "./storage-handlers";
 
 /**
  * An outbox row for a module's batch that `ops` imports, and so cannot be
@@ -26,4 +33,19 @@ export function oweInCoreWhere(
   from: Readonly<{ table: SQLiteTable; where: SQL }>,
 ) {
   return outboxInsertWhere(coreDb(), oweOutbox(message), from);
+}
+
+/**
+ * A run file's deletion for the imports consumer's batch, and the fast
+ * path that pays it once the batch has landed (D-116). A delete that
+ * fails is reported and left owed, for the daily drain.
+ */
+export function oweImportFileDeleteInCore(
+  payload: PayloadOf<"import_file_delete">,
+) {
+  const debt = oweOutbox({ kind: "import_file_delete", payload });
+  return {
+    write: outboxInsert(coreDb(), debt),
+    settle: () => settleOutbox(coreDb(), debt, storageHandlers),
+  };
 }

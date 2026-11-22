@@ -12,7 +12,7 @@ import {
 } from "../runs";
 import { attachObservation } from "../weather";
 import { enrichmentDeps, queueRegistry } from "../ops/desk";
-import { oweInCore } from "../ops/outbox";
+import { oweImportFileDeleteInCore, oweInCore } from "../ops/outbox";
 import { captureException } from "../ops/sentry";
 
 /**
@@ -46,6 +46,7 @@ export async function handleQueueBatch(
         captureException,
         stravaApi: stravaApiFromEnv(),
         owe: oweInCore,
+        oweFileDelete: oweImportFileDeleteInCore,
         runnerTimeZone: (userId) => runnerTimeZone(coreDb(), userId),
         attachObservation,
       });

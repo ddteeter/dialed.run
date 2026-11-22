@@ -691,15 +691,16 @@ export async function retimeRun(
   db: CoreDb,
   weather: Pick<WeatherWrites, "attach">,
   userId: string,
-  request: { runId: string; startedAt: number; timeZone?: string | undefined },
+  request: { runId: string; startedAt: number },
 ): Promise<RetimeOutcome> {
   const { runId, startedAt } = request;
   const run = await getRun(db, userId, runId);
-  if (
-    run === undefined ||
-    calendarDay(startedAt, request.timeZone) !==
-      calendarDay(run.startedAt, request.timeZone)
-  ) {
+  if (run === undefined) return "refused";
+  // The day is the one the run is drawn on: its conditions' zone, else
+  // the runner's home zone, else UTC, read as run detail reads it.
+  const summaries = await summariesOf(db, userId, [run]);
+  const [zone] = summaries.map((summary) => summary.clockZone);
+  if (calendarDay(startedAt, zone) !== calendarDay(run.startedAt, zone)) {
     return "refused";
   }
   const isLocated = run.lat !== null && run.lng !== null;
