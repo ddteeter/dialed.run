@@ -469,8 +469,9 @@ exception, the human never polls dashboards.
 What picks up a lost step is drawn per flow in the model in
 `docs/diagrams/`: [`importRecovery`](https://ddteeter.github.io/dialed.run/#/view/importRecovery/),
 [`enrichmentRecovery`](https://ddteeter.github.io/dialed.run/#/view/enrichmentRecovery/),
-[`publicPhotosRecovery`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosRecovery/) and
-[`exportRecovery`](https://ddteeter.github.io/dialed.run/#/view/exportRecovery/). The rest is below, in
+[`publicPhotosRecovery`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosRecovery/),
+[`exportRecovery`](https://ddteeter.github.io/dialed.run/#/view/exportRecovery/) and
+[`deletionRecovery`](https://ddteeter.github.io/dialed.run/#/view/deletionRecovery/). The rest is below, in
 words.
 
 - **Queues**: `max_retries: 3` with delayed retry; DLQ bound and consumed —
@@ -546,7 +547,10 @@ words.
   closet and uploads (their R2 owed to the drain), and last, in one batch,
   every remaining row, Better Auth's, and the claim. Each step deletes what
   is left, so a purge that stops anywhere is finished by the next firing.
-  The purge also lists and deletes the runner's export ZIPs.
+  The purge also lists and deletes the runner's export ZIPs. Drawn as
+  [`deletionStory`](https://ddteeter.github.io/dialed.run/#/view/deletionStory/),
+  [`deletionPurge`](https://ddteeter.github.io/dialed.run/#/view/deletionPurge/)
+  and [`deletionRecovery`](https://ddteeter.github.io/dialed.run/#/view/deletionRecovery/).
 - **Data export** (task 126, ACC-10) is **reconciliation** too:
   `data_exports.status` is the marker. A request writes the `pending` row,
   then sends `account_export` on `dialed-exports` (its own queue and DLQ,
