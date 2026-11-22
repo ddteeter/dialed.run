@@ -117,7 +117,8 @@ function lockKeyOf(line: string): string {
   return `${action.split("/", 2).join("/")}@${tag}`;
 }
 
-const byName = (left: string, right: string): number => left.localeCompare(right);
+const byName = (left: string, right: string): number =>
+  left.localeCompare(right);
 
 /**
 `actions.lock`'s `workflows:` section, read as text: each workflow path with
@@ -150,7 +151,9 @@ The references `actions.lock`'s `dependencies:` section records a full
 commit for.
 */
 function recordedCommits(lock: string): Set<string> {
-  const entries = lock.slice(lock.indexOf("\ndependencies:\n")).split(/\n(?= {4}')/u);
+  const entries = lock
+    .slice(lock.indexOf("\ndependencies:\n"))
+    .split(/\n(?= {4}')/u);
   return new Set(
     entries
       .filter((entry) => /\n {8}commit: 'sha1-[0-9a-f]{40}'/u.test(entry))
@@ -180,7 +183,9 @@ describe("the workflow lockfile (D-182)", () => {
     const used = Object.entries(workflows)
       .map(([path, source]): [string, string[]] => [
         `.github/workflows/${path.slice(path.lastIndexOf("/") + 1)}`,
-        [...new Set(usesLines(source).map((line) => lockKeyOf(line)))].toSorted(byName),
+        [...new Set(usesLines(source).map((line) => lockKeyOf(line)))].toSorted(
+          byName,
+        ),
       ])
       .filter(([, actions]) => actions.length > 0);
     expect(Object.fromEntries(used)).toEqual(lockedWorkflows(actionsLock));
@@ -196,8 +201,8 @@ describe("the workflow lockfile (D-182)", () => {
 });
 
 describe("zizmor's ignores", () => {
-  it("are the four reviewed lines and no more, each naming its rule", () => {
-    // An ignore is a finding someone decided to keep. A fifth needs the
+  it("are the five reviewed lines and no more, each naming its rule", () => {
+    // An ignore is a finding someone decided to keep. A sixth needs the
     // owner's say-so and a reason beside it, as these have.
     const ignores = Object.entries(workflows).flatMap(([path, source]) =>
       Array.from(source.matchAll(/ # zizmor: ignore\[([\w-]+)\]$/gm), (match) =>
@@ -210,9 +215,10 @@ describe("zizmor's ignores", () => {
         "dependabot-pr.yml dangerous-triggers",
         "oss-list-commit.yml artipacked",
         "oss-list-commit.yml dangerous-triggers",
+        "protected-paths.yml dangerous-triggers",
       ]),
     );
-    expect(ignores).toHaveLength(4);
+    expect(ignores).toHaveLength(5);
     const mentions = Object.values(workflows)
       .join("\n")
       .split("zizmor: ignore[").length;
@@ -352,6 +358,201 @@ describe("the Dependabot self-merge decision (SA-M38, SA-L10)", () => {
 });
 
 /**
+A workflow's source by file name; "" when there is none.
+*/
+function workflowNamed(name: string): string {
+  return (
+    Object.entries(workflows).find(([path]) =>
+      path.endsWith(`/${name}`),
+    )?.[1] ?? ""
+  );
+}
+
+/**
+One job's section of a workflow, from its header to the next job's.
+*/
+function jobIn(source: string, name: string): string {
+  const start = source.indexOf(`\n  ${name}:\n`);
+  if (start === -1) return "";
+  const next = source.slice(start + 1).search(/\n {2}[\w-]+:\n/u);
+  return next === -1
+    ? source.slice(start)
+    : source.slice(start, start + 1 + next);
+}
+
+/**
+A job's lines with comment lines dropped, so prose cannot satisfy a pin.
+*/
+function codeOf(section: string): string {
+  return section
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("#"))
+    .join("\n");
+}
+
+describe("a Dependabot push that classify does not answer yes to", () => {
+  const disarm = codeOf(jobIn(workflowNamed("dependabot-pr.yml"), "disarm"));
+
+  it("has a job, found", () => {
+    expect(disarm).toContain("needs: classify");
+  });
+
+  it("runs on a hold or a failed classify, on every push, and never on a skipped one", () => {
+    const condition = /\n {4}if: (.*)\n/u.exec(disarm)?.[1] ?? "";
+    expect(condition).toContain("always()");
+    expect(condition).toContain("needs.classify.outputs.merge != 'true'");
+    expect(condition).toContain("needs.classify.result != 'skipped'");
+    expect(condition).not.toContain("synchronize");
+  });
+
+  it("turns auto-merge off with the App's token, and says why on a later push", () => {
+    expect(disarm).toContain("environment: dependabot-merge");
+    expect(disarm).toContain('gh pr merge --disable-auto "$PR_URL"');
+    expect(disarm).toContain("GH_TOKEN: ${{ steps.app.outputs.token }}");
+    expect(disarm).toContain("if: github.event.action == 'synchronize'");
+    expect(disarm).toContain('gh pr comment "$PR_URL" --body-file');
+  });
+});
+
+describe.each(["a11y-review.yml", "dependabot-pr.yml"])(
+  "the Claude review in %s",
+  (name) => {
+    const source = workflowNamed(name);
+    const review = codeOf(jobIn(source, "review"));
+    const post = codeOf(jobIn(source, "post"));
+
+    it("is found, so an empty result cannot pass for a clean one", () => {
+      expect(review).toContain("- id: claude");
+      expect(post).toContain("name: Screen and post the review");
+    });
+
+    it("starts Claude with only the settings the workflow writes", () => {
+      expect(review).toMatch(/\n {12}--setting-sources user\n/u);
+    });
+
+    it("hands Claude a Bun and a Claude Code it checked, each against its own sum", () => {
+      expect(review).toContain(
+        "path_to_bun_executable: ${{ steps.bin.outputs.dir }}/bun",
+      );
+      expect(review).toContain(
+        "path_to_claude_code_executable: ${{ steps.bin.outputs.dir }}/claude",
+      );
+      expect(review).toMatch(/\n {10}BUN_SHA256: [\da-f]{64}\n/u);
+      expect(review).toMatch(/\n {10}CLAUDE_CODE_SHA256: [\da-f]{64}\n/u);
+      expect(review).toContain(
+        'echo "$BUN_SHA256  $bin/bun.zip" | sha256sum -c',
+      );
+      expect(review).toContain(
+        'echo "$CLAUDE_CODE_SHA256  $bin/claude" | sha256sum -c',
+      );
+    });
+
+    it("leaves the installers' hosts off its egress list", () => {
+      const lines = review.split("\n").map((line) => line.trim());
+      expect(lines).not.toContain("claude.ai:443");
+      expect(lines).not.toContain("bun.sh:443");
+      expect(lines).toContain("downloads.claude.ai:443");
+    });
+
+    it("passes the review to post as a job output, never an artifact", () => {
+      expect(source).not.toContain("actions/upload-artifact@");
+      expect(source).not.toContain("actions/download-artifact@");
+      expect(review).toContain(
+        "review: ${{ steps.claude.outputs.structured_output }}",
+      );
+      expect(post).toContain("REVIEW: ${{ needs.review.outputs.review }}");
+    });
+
+    it("escapes the summary as it escapes the table cells", () => {
+      expect(post).toContain("\\(.summary | cell)");
+      expect(post).not.toContain("\\(.summary)");
+    });
+  },
+);
+
+describe("a PR's mutation shard", () => {
+  const mutate = codeOf(jobIn(workflowNamed("mutation.yml"), "mutate"));
+
+  it("is found, so an empty result cannot pass for a clean one", () => {
+    expect(mutate).toContain("npx stryker run --incremental");
+  });
+
+  it("keeps its report in no Actions cache", () => {
+    expect(mutate).not.toContain("actions/cache");
+  });
+
+  it("is seeded only from a passing shard of a push run on main, measured under its dependencies", () => {
+    expect(mutate).toContain("      actions: read");
+    expect(mutate).toContain(
+      "gh run list --workflow mutation.yml --branch main --event push",
+    );
+    expect(mutate).toContain('.name == $name and .conclusion == "success"');
+    expect(mutate).toContain(
+      '[ "$(cat "$seed/stryker-deps.txt" 2>/dev/null)" = "$DEPS" ] || continue',
+    );
+  });
+
+  it("uploads main's report with its digest, kept seven days", () => {
+    expect(mutate).toContain(
+      `printf '%s\\n' "$DEPS" >reports/stryker-deps.txt`,
+    );
+    expect(mutate).toContain("            reports/stryker-deps.txt\n");
+    expect(mutate).toContain("          retention-days: 7\n");
+  });
+});
+
+describe("the protected-paths check", () => {
+  const source = workflowNamed("protected-paths.yml");
+  const job = codeOf(jobIn(source, "protected-paths"));
+
+  it("is the job the ruleset requires, found", () => {
+    expect(job).toContain("    name: Protected paths\n");
+  });
+
+  it("runs from main on every change to the PR or its labels, reading only", () => {
+    expect(source).toContain(
+      "types: [opened, reopened, synchronize, edited, labeled, unlabeled]",
+    );
+    expect(source).toContain("pull_request_target:");
+    expect(source).not.toContain("actions/checkout@");
+    expect(job).toContain(
+      "    permissions:\n      contents: read\n      pull-requests: read\n    steps:",
+    );
+  });
+
+  it.each([
+    "guardrails\\.config\\.json",
+    "stryker\\.conf\\.json",
+    "\\.github/.+",
+    "\\.githooks/.+",
+    "eslint\\.config\\.js",
+    "\\.dependency-cruiser\\.cjs",
+    "lockfile-lint\\.config\\.mjs",
+    "knip\\.json",
+    "\\.fallowrc\\.jsonc",
+    "vite\\.config\\.ts",
+    "vitest\\.config\\.ts",
+    "\\.claude/settings\\.json",
+  ])("protects %s", (pattern) => {
+    const protectedPaths = /\n {12}(\^\(.*\)\$)\n/u.exec(job)?.[1] ?? "";
+    expect(protectedPaths.slice(2, -2).split("|")).toContain(pattern);
+  });
+
+  it("compares the guardrails-core pin at the merge-base and the head", () => {
+    expect(job).toContain(`jq -ce '.devDependencies["guardrails-core"]'`);
+    expect(job).toContain(
+      `jq -ce '.packages["node_modules/guardrails-core"] | [.resolved, .integrity]'`,
+    );
+    expect(job).toContain(".merge_base_commit.sha");
+  });
+
+  it("passes a protected change only with the owner's label", () => {
+    expect(job).toContain("LABEL: owner-approved");
+    expect(job).toContain('grep -qxF "$LABEL"');
+  });
+});
+
+/**
 The `- ` step lines of a job's steps, in order, comments and blanks skipped.
 */
 function stepLinesOf(section: string): string[] {
@@ -389,7 +590,10 @@ describe("a job that blocks egress (SA-L20)", () => {
     const unproven = blocking
       .filter(({ steps }) => {
         const claude = steps.findIndex((line) => line.includes("- id: claude"));
-        return claude < 1 || steps[claude - 1] !== "      - name: The fence is still up";
+        return (
+          claude < 1 ||
+          steps[claude - 1] !== "      - name: The fence is still up"
+        );
       })
       .map(({ job }) => job);
     expect(unproven).toEqual([]);
@@ -427,10 +631,30 @@ describe("the deploy (SA-L10)", () => {
     expect(deploy).toContain("needs: [bundle]");
     expect(deploy).toContain("name: worker-bundle");
     expect(runsOf(deploy)).toStrictEqual([
+      "|",
       "npm ci --ignore-scripts",
       "|",
       "npx wrangler deploy",
     ]);
     expect(deploy).toContain("environment: production");
+  });
+
+  it("checks the downloaded deploy config before any step that holds the token", () => {
+    const steps = stepLinesOf(job("deploy"));
+    const check = steps.indexOf("      - name: Check the deploy config");
+    const download = steps.findIndex((line) =>
+      line.includes("actions/download-artifact@"),
+    );
+    const migrations = steps.indexOf("      - name: Apply migrations");
+    expect(check).toBeGreaterThan(download);
+    expect(download).toBeGreaterThan(-1);
+    expect(check).toBeLessThan(migrations);
+    const deploy = job("deploy");
+    expect(deploy).toContain(
+      `jq -e '. == {"configPath": "../../dist/server/wrangler.json", "auxiliaryWorkers": []}'`,
+    );
+    expect(deploy).toContain(
+      `jq -e 'type == "object" and (has("build") | not)' dist/server/wrangler.json`,
+    );
   });
 });

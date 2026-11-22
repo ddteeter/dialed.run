@@ -413,8 +413,10 @@ needs its own Strava app, not a second subscription.
   pull request can reach it however it is targeted.
 - **Branch protection on `main`** — already configured (ruleset "main
   protection"): no deletion, no force-push, PR required, and
-  `Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails` and
-  `Mutation` must pass (`e2e (build)` is added by design 156's setup).
+  `Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails`,
+  `Mutation` and `Protected paths` must pass (`e2e (build)` is added by
+  design 156's setup; `Protected paths` and its `owner-approved` label by
+  the owner, once `protected-paths.yml` is on main).
   There are no bypass actors, including the owner, and the automation App
   must never become one.
 
