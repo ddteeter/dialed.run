@@ -53,6 +53,7 @@ import {
   entryPhotos,
   follows,
   followNotices,
+  heldTakeDowns,
   imports,
   inviteCodes,
   inviteRedemptions,
@@ -615,6 +616,10 @@ async function deleteAccountRows(
     ...byUserId.map((table) =>
       db.delete(table).where(eq(table.userId, userId)),
     ),
+    // The take-downs of their material a hold kept (owner, 2026-11-21):
+    // the purge waits out every live hold, so these name nothing still
+    // kept. No index leads with the owner, so this scans once.
+    db.delete(heldTakeDowns).where(eq(heldTakeDowns.ownerId, userId)),
     ...addresses.flatMap((address) => forgetAddress(db, address)),
     // What sign-up refuses for 3 years, in place of the addresses.
     ...fingerprints.map((row) =>

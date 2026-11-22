@@ -136,9 +136,10 @@ export interface TakedownRequestDeps<Attempt> {
  * the address, finds it, and nothing is written or sent again.
  *
  * **The row decides what the request does** (design 137): its insert
- * writes `hold_state` from the limits as they stand when it runs, and
+ * writes `hold_state` from the limits as they stand when it runs, then
  * `held_at` only where that state may hide and the link names something
- * a hold moves or a report already hid. Every other statement in the
+ * a hold moves or already out of public view, and `hid_at` where it is
+ * this request that hides it. Every other statement in the
  * batch — the hide, the author's notice, the alerts and the receipt's
  * words — is conditional on the row as written, so what requests sent
  * together do is counted one after another.
@@ -215,7 +216,9 @@ export async function fileTakedownRequest<Attempt>(
  * same batch (design 137):
  *
  * 1. `held_at`, where that state may hide and the subject is one a hold
- *    moves or a report already hid;
+ *    moves or one already out of public view; and `hid_at` beside it
+ *    where the subject is still public, so this request is the one that
+ *    hides it (the hold runs after these, in the same batch);
  * 2. `alerted_at`, where it may act but hid nothing and the hour's
  *    one-by-one alerts have room;
  * 3. the state `valve` for one that hid nothing past that room — the
@@ -240,6 +243,10 @@ function decisionWrites(
             .update(takedownRequests)
             .set({ heldAt: now })
             .where(and(mayAct, subjectHoldable(subject))),
+          db
+            .update(takedownRequests)
+            .set({ hidAt: now })
+            .where(and(mayAct, subjectPublic(subject))),
         ]),
     db
       .update(takedownRequests)
@@ -331,8 +338,17 @@ function subjectHoldable(subject: TakedownSubject): SQL {
 }
 
 /**
- * The edge purge, for a request whose row says it hid at `now`: read
- * back once the batch has landed, since only the row knows (design 163).
+Whether the subject is in a state a hold moves from: still public.
+*/
+function subjectPublic(subject: TakedownSubject): SQL {
+  const { table, where } = holdable(subject);
+  return sql`exists (select 1 from ${table} where ${where})`;
+}
+
+/**
+ * The edge purge, for a request whose row says it newly hid its subject
+ * at `now` (`hid_at`): read back once the batch has landed, since only
+ * the row knows (design 163).
  */
 async function purgeIfHeld(
   db: Db,
@@ -349,7 +365,7 @@ async function purgeIfHeld(
     takedownRequests,
     eq(takedownRequests.id, request.id),
   );
-  if (written?.heldAt === now) await purgeHeld(db, request.subject, purge);
+  if (written?.hidAt === now) await purgeHeld(db, request.subject, purge);
 }
 
 /**
@@ -674,19 +690,22 @@ const HOLD_FROM = {
 } as const;
 
 /**
- * The states a request still pins: those a hold moves from, and the one
- * a report's hide or a request's hold leaves (not public, a person will
- * look).
+ * The states a request still pins: those a hold moves from, the one a
+ * report's hide or a request's hold leaves (not public, a person will
+ * look), and `removed`, where a copyright hold keeps it until a
+ * counter-notice may give it back.
  */
 const HOLD_OR_REVIEW = {
   entry: inArray(outfitEntries.moderationStatus, [
     "ok",
     "hidden_pending_review",
+    "removed",
   ]),
   photo: inArray(entryPhotos.screenStatus, [
     "pending",
     "pass",
     "hidden_pending_review",
+    "removed",
   ]),
 } as const;
 

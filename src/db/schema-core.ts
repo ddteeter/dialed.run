@@ -1566,7 +1566,10 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     holdState: text("hold_state", {
       enum: ["held", "confirm", "valve", "blocked"],
     }),
-    // When it hid something — at filing, or at the confirm.
+    // When it held its subject — at filing, or at the confirm: one a hold
+    // moves, or one already out of public view (hidden by a report or a
+    // request, or removed under a copyright hold). A pending request with
+    // it pins its subject against an Approve.
     heldAt: integer("held_at"),
     // SHA-256 of the confirm link's token, for a request waiting on one.
     confirmTokenHash: text("confirm_token_hash"),
@@ -1578,6 +1581,9 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     // When a request that hid nothing alerted every operator one by one:
     // the hour's allowance of such alerts counts these.
     alertedAt: integer("alerted_at"),
+    // When it moved its subject out of public view: the hide valve counts
+    // these, one per subject newly hidden.
+    hidAt: integer("hid_at"),
   },
   (t) => [
     uniqueIndex("takedown_requests_idempotency").on(
@@ -1589,8 +1595,10 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     // The cap: this requester's open requests, by either key.
     index("takedown_requests_requester_status").on(t.requesterKey, t.status),
     index("takedown_requests_ip_status").on(t.ipKey, t.status),
-    // The valve: what hid something in the last hour.
+    // What held a subject, by when.
     index("takedown_requests_held_at").on(t.heldAt),
+    // The valve: what newly hid a subject in the last hour.
+    index("takedown_requests_hid_at").on(t.hidAt),
     // The alerts of requests that hid nothing, in the last hour.
     index("takedown_requests_alerted_at").on(t.alertedAt),
     // The confirm link's lookup.
@@ -1942,10 +1950,6 @@ export const copyrightHolds = /*#__PURE__*/ sqliteTable(
     caseClosedBy: text("case_closed_by"),
     // When the sweep restored or purged it.
     settledAt: integer("settled_at"),
-    // The Remove or Take it down (its moderation action) made while this
-    // hold kept the material: the hold's end then deletes the subject
-    // rather than restoring it.
-    takenDownBy: text("taken_down_by"),
   },
   (t) => [
     uniqueIndex("copyright_holds_action").on(t.moderationActionId),
@@ -1959,6 +1963,35 @@ export const copyrightHolds = /*#__PURE__*/ sqliteTable(
     index("copyright_holds_owner").on(t.ownerId),
     // The 3-year sweep (D-131, design 150): holds settled before its line.
     index("copyright_holds_status_settled").on(t.status, t.settledAt),
+  ],
+);
+
+/**
+ * A Remove or a non-copyright Take it down of material a live copyright
+ * or litigation hold kept (owner, 2026-11-21): one row per take-down, the
+ * moderation action's id as its key. The bytes stay while any live hold
+ * is on the kit; no hold's end gives back a subject a row names, or a
+ * photo whose kit a row names; and the daily sweep deletes the subject
+ * once no live hold is on its kit. No foreign keys: the row outlives the
+ * subject, and names nothing once it is gone.
+ */
+export const heldTakeDowns = /*#__PURE__*/ sqliteTable(
+  "held_take_downs",
+  {
+    actionId: text("action_id").primaryKey(),
+    subjectType: text("subject_type", { enum: ["entry", "photo"] }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    // The kit the subject is, or is on, and its runner.
+    entryId: text("entry_id").notNull(),
+    ownerId: text("owner_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    // The give-back's check: is this subject, or this photo's kit, taken
+    // down.
+    index("held_take_downs_subject").on(t.subjectType, t.subjectId),
+    // By kit.
+    index("held_take_downs_entry").on(t.entryId),
   ],
 );
 

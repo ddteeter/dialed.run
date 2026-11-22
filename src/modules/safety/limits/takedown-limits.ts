@@ -101,12 +101,13 @@ export function holdStateSql(keys: RequesterKeys, now: number): SQL {
 }
 
 /**
- * Whether the valve is shut as this statement runs: as many requests hid
- * something in the hour before `now` as the valve allows, by `held_at`'s
- * index.
+ * Whether the valve is shut as this statement runs: as many subjects were
+ * newly hidden by a request in the hour before `now` as the valve allows,
+ * by `hid_at`'s index. A request naming a subject already out of public
+ * view hides nothing new and takes no place.
  */
 export function valveShutSql(now: number): SQL {
-  return sql`(select count(*) from ${takedownRequests} where ${gte(takedownRequests.heldAt, now - HOUR_S)}) >= ${TAKEDOWN_VALVE_PER_HOUR}`;
+  return sql`(select count(*) from ${takedownRequests} where ${gte(takedownRequests.hidAt, now - HOUR_S)}) >= ${TAKEDOWN_VALVE_PER_HOUR}`;
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   notifications,
   outbox,
   outfitEntries,
+  reviewQueue,
   takedownBlocks,
   takedownRequests,
   userProfiles,
@@ -43,6 +44,8 @@ import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
 import { queriesDuring } from "../d1-spy";
 import { fakeMail } from "../email/helpers";
 import { noPurge, purgeSpy } from "../purge-spy";
+import type { PurgeTags } from "../../src/lib/cache-tags";
+import { resolveReview } from "../../src/modules/safety/review/review";
 import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
@@ -83,7 +86,12 @@ const entryLink = (entryId: string) =>
 async function file(
   email: string,
   location: string,
-  options: { ip?: string; secret?: string | undefined; now?: number } = {},
+  options: {
+    ip?: string;
+    secret?: string | undefined;
+    now?: number;
+    purge?: PurgeTags;
+  } = {},
 ) {
   await fileTakedownRequest(
     core(),
@@ -98,7 +106,11 @@ async function file(
       remoteIp: options.ip ?? "203.0.113.9",
       isLimited: false,
     },
-    { ...deps, secret: "secret" in options ? options.secret : SECRET },
+    {
+      ...deps,
+      purge: options.purge ?? noPurge,
+      secret: "secret" in options ? options.secret : SECRET,
+    },
     options.now ?? NOW,
   );
   const [row] = await core()
@@ -429,7 +441,7 @@ describe("the confirm", () => {
 });
 
 /**
-`count` requests that hid something just before `at`, from strangers.
+`count` requests that newly hid something just before `at`, from strangers.
 */
 async function heldThisHour(count: number, at: number): Promise<void> {
   for (let index = 0; index < count; index += 1) {
@@ -446,12 +458,34 @@ async function heldThisHour(count: number, at: number): Promise<void> {
         requesterKey: `flood${String(index)}@example.com`,
         holdState: "held",
         heldAt: at - 60,
+        hidAt: at - 60,
         status: "declined",
       });
   }
 }
 
 describe("the valve", () => {
+  it("counts subjects newly hidden, not requests: many naming one kit take one place", async () => {
+    const once = await sharedEntry();
+    for (let index = 0; index < TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await file(`one${String(index)}@example.com`, entryLink(once), {
+        ip: `198.51.100.${String(index + 1)}`,
+      });
+    }
+    const hiders = await core()
+      .select({ hidAt: takedownRequests.hidAt })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.subjectId, once));
+    expect(hiders.filter((row) => row.hidAt === NOW)).toHaveLength(1);
+
+    const next = await sharedEntry();
+    const row = await file("next@example.com", entryLink(next), {
+      ip: "203.0.113.77",
+    });
+    expect(row).toMatchObject({ holdState: "held", heldAt: NOW, hidAt: NOW });
+    expect(await entryStatus(next)).toBe("hidden_pending_review");
+  });
+
   it("is ten hides an hour, and then a request hides nothing and alerts once an hour", async () => {
     expect(TAKEDOWN_VALVE_PER_HOUR).toBe(10);
     await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
@@ -1232,25 +1266,56 @@ describe("a request that names nothing a hold moves", () => {
     expect(later.alertedAt).toBe(NOW + 3660);
   });
 
-  it("records no hide for a kit a copyright hold has removed, but still names it", async () => {
+  it("holds a kit a copyright hold has removed, newly hiding nothing", async () => {
     const entryId = await sharedEntry();
     await core()
       .update(outfitEntries)
       .set({ moderationStatus: "removed" })
       .where(eq(outfitEntries.id, entryId));
+    const spy = purgeSpy();
 
-    const row = await file("me@example.com", entryLink(entryId));
+    const row = await file("me@example.com", entryLink(entryId), {
+      purge: spy.purge,
+    });
 
     expect(row).toMatchObject({
       holdState: "held",
-      heldAt: NOT_SET,
-      alertedAt: NOW,
+      heldAt: NOW,
+      hidAt: NOT_SET,
+      alertedAt: NOT_SET,
       subjectId: entryId,
     });
-    const [receipt] = await owedWhere(
-      (email) => email.dedupeKey === `removal_request_received:${row.id}`,
+    expect(await entryStatus(entryId)).toBe("removed");
+    expect(spy.calls).toStrictEqual([]);
+  });
+
+  it("pins a kit it held under a copyright hold against a review's Approve", async () => {
+    const entryId = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, entryId));
+    await file("me@example.com", entryLink(entryId));
+    // The hold's restore hands the kit to review, and a report's row is open.
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "hidden_pending_review" })
+      .where(eq(outfitEntries.id, entryId));
+    const queueId = newUlid();
+    await core().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "entry",
+      subjectId: entryId,
+      source: "reports",
+      status: "pending",
+      createdAt: NOW,
+      openedAt: NOW,
+    });
+
+    expect(await resolveReview(queueId, await makeUser(), "approve")).toBe(
+      "resolved",
     );
-    expect(receipt?.email.template.isHidden).toBe(false);
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
   });
 
   it("records a hide for a kit a report already hid, which it pins", async () => {
@@ -1261,10 +1326,16 @@ describe("a request that names nothing a hold moves", () => {
       .where(eq(outfitEntries.id, entryId));
     await core().delete(notifications);
 
-    const row = await file("me@example.com", entryLink(entryId));
+    const spy = purgeSpy();
+    const row = await file("me@example.com", entryLink(entryId), {
+      purge: spy.purge,
+    });
 
     expect(row.heldAt).toBe(NOW);
+    expect(row.hidAt).toBeNull();
     expect(row.alertedAt).toBeNull();
+    // Nothing newly hidden, so nothing to purge.
+    expect(spy.calls).toStrictEqual([]);
     // A report already told the author; the request does not again.
     expect(await core().select().from(notifications)).toStrictEqual([]);
   });

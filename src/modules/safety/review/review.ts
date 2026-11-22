@@ -1262,9 +1262,10 @@ function unlessRequestHolds<T extends SQLiteTable & { id: SQLiteColumn }>(
 
 /**
  * No pending removal request holds this kit or photo (SA-M23): one that
- * hid it at filing (`held_at`). A request that was blocked, past the
- * valve or unconfirmed hid nothing, so it pins nothing. Any other subject
- * type is never a request's.
+ * held it at filing or at its confirm (`held_at`), whether it hid it then
+ * or it was already out of public view. A request that was blocked, past
+ * the valve or unconfirmed held nothing, so it pins nothing. Any other
+ * subject type is never a request's.
  */
 function notHeldByRequest(
   subjectType: ReviewSubjectType,

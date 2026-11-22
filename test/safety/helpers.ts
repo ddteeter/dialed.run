@@ -13,6 +13,7 @@ import { drizzle } from "drizzle-orm/d1";
 import {
   blocks,
   copyrightHolds,
+  heldTakeDowns,
   brands,
   domainDenylist,
   entryPhotos,
@@ -76,6 +77,7 @@ export async function resetSafetyTables(): Promise<void> {
     moderationActions,
     quarantinedContent,
     copyrightHolds,
+    heldTakeDowns,
     outbox,
     usernameHistory,
   ]);

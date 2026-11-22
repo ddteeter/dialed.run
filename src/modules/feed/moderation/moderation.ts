@@ -17,8 +17,9 @@
  *
  * **Held material is never deleted early** (owner, 2026-11-21): a Remove
  * or a removal request's takedown of a subject a live copyright or
- * litigation hold keeps marks the hold instead (`takenDownWrite`), so no
- * hold's end can restore it, and leaves the bytes as the hold keeps them.
+ * litigation hold keeps records a held take-down instead
+ * (`takenDownWrite`), so no hold's end can restore it, and leaves the
+ * bytes as the hold keeps them.
  * The sweep deletes it once no live hold keeps it (`sweepCopyrightHolds`).
  *
  * **Quarantine is silent and keeps everything** (decision D-70). Before
@@ -305,7 +306,8 @@ interface TakeDownPlan {
 /**
  * How a take-down goes, from what the holds say (`takeDownHoldOf`): a
  * copyright takedown hides, a take-down of material a live hold keeps
- * marks the hold, and everything else deletes, a quarantine included.
+ * records a held take-down, and everything else deletes, a quarantine
+ * included.
  */
 async function takeDownPlanOf(
   db: Db,

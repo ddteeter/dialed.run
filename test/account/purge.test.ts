@@ -17,6 +17,7 @@ import {
   entryTags,
   follows,
   followNotices,
+  heldTakeDowns,
   productCorrections,
   imports,
   inviteCodes,
@@ -704,6 +705,10 @@ async function footprint(seeded: Seeded) {
       .select()
       .from(productCorrections)
       .where(eq(productCorrections.userId, userId)),
+    heldTakeDowns: await core
+      .select()
+      .from(heldTakeDowns)
+      .where(eq(heldTakeDowns.ownerId, userId)),
     notifications: await core
       .select()
       .from(notifications)
@@ -807,6 +812,7 @@ const GONE = {
   blocks: [],
   rings: [],
   corrections: [],
+  heldTakeDowns: [],
   notifications: [],
   preferences: [],
   verifications: [],
@@ -948,6 +954,14 @@ describe("purgeDueAccounts — a full purge", () => {
         idempotencyKey: newUlid(),
         createdAt: NOW,
       }),
+      core.insert(heldTakeDowns).values({
+        actionId: newUlid(),
+        subjectType: "entry",
+        subjectId: other.entryId,
+        entryId: other.entryId,
+        ownerId: other.userId,
+        createdAt: NOW,
+      }),
       core
         .insert(reactions)
         .values({ entryId: other.entryId, userId: third, createdAt: NOW }),
@@ -1000,6 +1014,14 @@ describe("purgeDueAccounts — a full purge", () => {
         field: "fabric",
         value: "merino",
         idempotencyKey: newUlid(),
+        createdAt: NOW,
+      }),
+      core.insert(heldTakeDowns).values({
+        actionId: newUlid(),
+        subjectType: "entry",
+        subjectId: runner.entryId,
+        entryId: runner.entryId,
+        ownerId: runner.userId,
         createdAt: NOW,
       }),
       core.insert(reports).values([

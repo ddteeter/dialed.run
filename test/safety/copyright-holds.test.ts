@@ -8,6 +8,7 @@ import { user } from "../../src/db/schema-auth";
 import {
   copyrightHolds,
   entryPhotos,
+  heldTakeDowns,
   notifications,
   outbox,
   outfitEntries,
@@ -1116,13 +1117,21 @@ describe("a restore of what something else still holds", () => {
   });
 });
 
-async function takenDownBy(subjectId: string) {
-  const hold = await holdOf(subjectId);
-  return hold.takenDownBy;
+/**
+What the take-downs of held material recorded, subject by subject.
+*/
+async function takenDown() {
+  return core()
+    .select({
+      subjectType: heldTakeDowns.subjectType,
+      subjectId: heldTakeDowns.subjectId,
+    })
+    .from(heldTakeDowns)
+    .orderBy(heldTakeDowns.createdAt, heldTakeDowns.actionId);
 }
 
 describe("a take-down of held material (owner, 2026-11-21)", () => {
-  it("keeps a held photo, its bytes and fingerprint, and marks its hold", async () => {
+  it("keeps a held photo, its bytes and fingerprint, and records the take-down", async () => {
     const { photoId, key } = await posted();
     await takeDown("photo", photoId);
 
@@ -1134,10 +1143,13 @@ describe("a take-down of held material (owner, 2026-11-21)", () => {
     });
     expect(await isStored(key)).toBe(true);
     expect(await mediaDebts()).toBe(0);
-    expect(await takenDownBy(photoId)).toStrictEqual(expect.any(String));
+    expect(await takenDown()).toStrictEqual([
+      { subjectType: "photo", subjectId: photoId },
+    ]);
     expect(await takeDown("photo", photoId, "intimate")).toBe(
       "already_removed",
     );
+    expect(await takenDown()).toHaveLength(1);
   });
 
   it("keeps a kit a moderator removes while it is held, and settles its rows", async () => {
@@ -1164,7 +1176,9 @@ describe("a take-down of held material (owner, 2026-11-21)", () => {
       { status: "removed" },
       { status: "removed" },
     ]);
-    expect(await takenDownBy(entryId)).toStrictEqual(expect.any(String));
+    expect(await takenDown()).toStrictEqual([
+      { subjectType: "entry", subjectId: entryId },
+    ]);
   });
 
   it("keeps a held kit's photo when the kit itself is taken down", async () => {
@@ -1175,7 +1189,9 @@ describe("a take-down of held material (owner, 2026-11-21)", () => {
 
     expect(await entryStatus(entryId)).toBe("removed");
     expect(await isStored(key)).toBe(true);
-    expect(await takenDownBy(photoId)).toStrictEqual(expect.any(String));
+    expect(await takenDown()).toStrictEqual([
+      { subjectType: "entry", subjectId: entryId },
+    ]);
   });
 
   it("keeps a photo on a held kit when the photo is taken down", async () => {
@@ -1185,7 +1201,9 @@ describe("a take-down of held material (owner, 2026-11-21)", () => {
     expect(await takeDown("photo", photoId, "intimate")).toBe("removed");
 
     expect(await isStored(key)).toBe(true);
-    expect(await takenDownBy(entryId)).toStrictEqual(expect.any(String));
+    expect(await takenDown()).toStrictEqual([
+      { subjectType: "photo", subjectId: photoId },
+    ]);
   });
 
   it("leaves another kit's hold alone", async () => {
@@ -1196,7 +1214,11 @@ describe("a take-down of held material (owner, 2026-11-21)", () => {
 
     await takeDown("photo", one.photoId, "intimate");
 
-    expect(await takenDownBy(two.photoId)).toBe(NOT_SET);
+    expect(await takenDown()).toStrictEqual([
+      { subjectType: "photo", subjectId: one.photoId },
+    ]);
+    expect(await screenOf(two.photoId)).toBe("removed");
+    expect(await entryStatus(two.entryId)).toBe("ok");
   });
 
   it("is never restored, and is deleted once the hold ends: no strike", async () => {
@@ -1320,7 +1342,7 @@ describe("which holds a take-down reads (owner, 2026-11-21)", () => {
 
     expect(await photoRow(other.photoId)).toBeUndefined();
     expect(await isStored(other.key)).toBe(false);
-    expect(await takenDownBy(photoId)).toBe(NOT_SET);
+    expect(await takenDown()).toStrictEqual([]);
   });
 
   it("settles only the taken-down photo's review, not its kit's other photos'", async () => {
@@ -1342,9 +1364,136 @@ describe("which holds a take-down reads (owner, 2026-11-21)", () => {
 
     expect(await takeDown("entry", entryId, "intimate")).toBe("removed");
 
-    expect(await takenDownBy(entryId)).toStrictEqual(expect.any(String));
+    expect(await takenDown()).toStrictEqual([
+      { subjectType: "photo", subjectId: photoId },
+      { subjectType: "entry", subjectId: entryId },
+    ]);
     expect(await takeDown("entry", entryId, "intimate")).toBe(
       "already_removed",
     );
+  });
+});
+
+/**
+ * A handle whose first batch runs `first` before it: a write that lands
+ * between a take-down's reads and its batch.
+ */
+function racedBy(first: () => Promise<void>) {
+  const real = core();
+  const counter = { batches: 0 };
+  const batch: typeof real.batch = async (items) => {
+    counter.batches += 1;
+    if (counter.batches === 1) await first();
+    return real.batch(items);
+  };
+  return new Proxy(real, {
+    get(target, property, receiver): unknown {
+      return property === "batch"
+        ? batch
+        : Reflect.get(target, property, receiver);
+    },
+  });
+}
+
+describe("held take-downs, in sequence (owner, 2026-11-21)", () => {
+  it("gives a held kit back without its photo taken down, and deletes the photo", async () => {
+    const { entryId, photoId, key } = await posted();
+    await takeDown("entry", entryId);
+    await takeDown("photo", photoId, "intimate");
+    const { restoreAt } = await counterNotice(await holdIdOf(entryId));
+
+    await sweepCopyrightHolds(core(), restoreAt, quiet);
+
+    expect(await entryStatus(entryId)).toBe("ok");
+    expect(await photoRow(photoId)).toBeUndefined();
+    expect(await isStored(key)).toBe(false);
+  });
+
+  it("records a kit's take-down after its photo's under one hold, and deletes both at its end", async () => {
+    const { author, runId, entryId, photoId, key } = await posted();
+    await takeDown("entry", entryId);
+    await takeDown("photo", photoId, "intimate");
+
+    expect(await takeDown("entry", entryId, "intimate")).toBe("removed");
+    const { restoreAt } = await counterNotice(await holdIdOf(entryId));
+    await sweepCopyrightHolds(core(), restoreAt, quiet);
+
+    expect(await entryStatus(entryId)).toBeUndefined();
+    expect(await photoRow(photoId)).toBeUndefined();
+    expect(await isStored(key)).toBe(false);
+    // Each take-down is its own audit row: the copyright notice's band
+    // goes with the restore, and both take-downs' bands stay.
+    expect(await takenDown()).toStrictEqual([
+      { subjectType: "photo", subjectId: photoId },
+      { subjectType: "entry", subjectId: entryId },
+    ]);
+    expect(await removalsOnRun(core(), author, runId)).toHaveLength(2);
+  });
+
+  it("deletes at the next sweep a take-down that landed after the hold ended", async () => {
+    const { photoId, key } = await posted();
+    await takeDown("photo", photoId);
+    const { restoreAt } = await counterNotice(await holdIdOf(photoId));
+    const raced = racedBy(() => sweepCopyrightHolds(core(), restoreAt, quiet));
+
+    expect(
+      await moderateContent(
+        raced,
+        {
+          actorId: "desk",
+          action: "takedown",
+          subjectType: "photo",
+          subjectId: photoId,
+          reason: "intimate",
+        },
+        quiet,
+      ),
+    ).toBe("removed");
+    expect(await holdStatus(photoId)).toBe("restored");
+    expect(await screenOf(photoId)).toBe("removed");
+
+    await sweepCopyrightHolds(core(), restoreAt + DAY, quiet);
+
+    expect(await photoRow(photoId)).toBeUndefined();
+    expect(await isStored(key)).toBe(false);
+  });
+
+  it("forgets a take-down's row the sweep after its subject's delete", async () => {
+    const { photoId } = await posted();
+    await takeDown("photo", photoId);
+    const { restoreAt } = await counterNotice(await holdIdOf(photoId));
+    await takeDown("photo", photoId, "intimate");
+    await sweepCopyrightHolds(core(), restoreAt, quiet);
+    expect(await photoRow(photoId)).toBeUndefined();
+    expect(await takenDown()).toHaveLength(1);
+
+    await sweepCopyrightHolds(core(), restoreAt + DAY, quiet);
+
+    expect(await takenDown()).toStrictEqual([]);
+  });
+
+  it("keeps the row of a take-down whose subject is still there", async () => {
+    const { photoId } = await posted();
+    await takeDown("photo", photoId);
+    await takeDown("photo", photoId, "intimate");
+
+    await sweepCopyrightHolds(core(), nowSeconds(), quiet);
+
+    expect(await takenDown()).toHaveLength(1);
+  });
+
+  it("keeps a kit taken down under its photo's hold out when a later hold on the kit ends", async () => {
+    const { entryId, photoId, key } = await posted();
+    await takeDown("photo", photoId);
+    await takeDown("entry", entryId, "intimate");
+    await takeDown("entry", entryId);
+    const { restoreAt } = await counterNotice(await holdIdOf(entryId));
+
+    await sweepCopyrightHolds(core(), restoreAt, quiet);
+
+    expect(await holdStatus(entryId)).toBe("restored");
+    expect(await entryStatus(entryId)).toBe("removed");
+    // The photo's hold still keeps the kit, so nothing is deleted yet.
+    expect(await isStored(key)).toBe(true);
   });
 });
