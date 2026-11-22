@@ -8,6 +8,7 @@ import {
   gaveUpClearPrefix,
   gaveUpUpsert,
   giveUpEach,
+  MAX_RAW_ERROR_LENGTH,
   type GaveUpWrites,
 } from "../../src/db/gave-up";
 import { gaveUp, imports } from "../../src/db/schema-core";
@@ -50,6 +51,23 @@ describe("gaveUpUpsert", () => {
       firstFailedAt: 1000,
       lastFailedAt: 1000,
     });
+  });
+
+  it("keeps no more of a raw error than MAX_RAW_ERROR_LENGTH, on insert and on update", async () => {
+    const fact = {
+      kind: "weather" as const,
+      subjectId: "run-long",
+      reason: "No weather.",
+      rawError: "x".repeat(MAX_RAW_ERROR_LENGTH + 1),
+      tries: 1,
+    };
+    await gaveUpUpsert(db(), fact);
+    const inserted = await gaveUpRow("weather", "run-long");
+    expect(inserted?.rawError).toBe("x".repeat(MAX_RAW_ERROR_LENGTH));
+
+    await gaveUpUpsert(db(), { ...fact, rawError: "y".repeat(5000) });
+    const updated = await gaveUpRow("weather", "run-long");
+    expect(updated?.rawError).toBe("y".repeat(MAX_RAW_ERROR_LENGTH));
   });
 
   it("stores no raw error when the writer had none", async () => {

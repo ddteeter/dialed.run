@@ -32,7 +32,7 @@ function linkProblem(
   schemes: ReadonlySet<string>,
 ): string | undefined {
   const url = URL.parse(value);
-  if (!url?.hostname.includes(".")) {
+  if (!url?.hostname.includes(".") || isOutsizedHost(url.hostname)) {
     return "That isn't a link. Paste the address of the shop's page.";
   }
   if (isOwnHost(url.hostname)) {
@@ -41,6 +41,21 @@ function linkProblem(
   return schemes.has(url.protocol)
     ? undefined
     : "Use a link that starts with https://.";
+}
+
+/**
+ * The longest host a name can be (DNS's own 253), and more labels than any
+ * shop's address has: a host past either is not a shop's page, whatever
+ * else it parses as (owner, 2026-11-21).
+ */
+export const MAX_HOST_LENGTH = 253;
+export const MAX_HOST_LABELS = 10;
+
+function isOutsizedHost(hostname: string): boolean {
+  return (
+    hostname.length > MAX_HOST_LENGTH ||
+    hostname.split(".").length > MAX_HOST_LABELS
+  );
 }
 
 const HTTPS_ONLY: ReadonlySet<string> = new Set(["https:"]);

@@ -12,17 +12,21 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { sweepRateLimits } from "../../src/modules/email";
 import {
+  canSpendModelCall,
   canSpendPageFetch,
+  canSpendProductProxyCall,
   canSpendProxyCall,
   canSpendRunnerRequest,
   ENRICHMENT_REQUESTS_PER_RUNNER_PER_DAY,
   forgetRunnerEnrichmentLimit,
+  MODEL_CALLS_PER_HOUR,
   PAGE_FETCHES_PER_HOUR,
   PROXY_CALLS_PER_DAY,
+  PROXY_CALLS_PER_PRODUCT_PER_DAY,
 } from "../../src/modules/enrichment/spend-limit";
 
 /**
- * Enrichment's three spend counts on real D1: each allows its number in
+ * Enrichment's spend counts on real D1: each allows its number in
  * its window, refuses the next, and starts over once the window ends.
  */
 
@@ -73,7 +77,16 @@ function canSpendProxy(now: number): Promise<boolean> {
   return canSpendProxyCall(db, now);
 }
 
+function canSpendProductProxy(now: number): Promise<boolean> {
+  return canSpendProductProxyCall(db, PRODUCT, now);
+}
+
+function canSpendModel(now: number): Promise<boolean> {
+  return canSpendModelCall(db, now);
+}
+
 const RUNNER = newUlid();
+const PRODUCT = newUlid();
 
 describe("the spend counts", () => {
   it.each([
@@ -95,6 +108,18 @@ describe("the spend counts", () => {
       limit: PROXY_CALLS_PER_DAY,
       windowS: DAY,
     },
+    {
+      name: "a product's proxy calls",
+      canSpend: canSpendProductProxy,
+      limit: PROXY_CALLS_PER_PRODUCT_PER_DAY,
+      windowS: DAY,
+    },
+    {
+      name: "model calls",
+      canSpend: canSpendModel,
+      limit: MODEL_CALLS_PER_HOUR,
+      windowS: HOUR,
+    },
   ])(
     "$name: allows the window's number, refuses the next, and starts over when it ends",
     async ({ canSpend, limit, windowS }) => {
@@ -109,6 +134,8 @@ describe("the spend counts", () => {
     expect(ENRICHMENT_REQUESTS_PER_RUNNER_PER_DAY).toBe(50);
     expect(PAGE_FETCHES_PER_HOUR).toBe(200);
     expect(PROXY_CALLS_PER_DAY).toBe(150);
+    expect(PROXY_CALLS_PER_PRODUCT_PER_DAY).toBe(1);
+    expect(MODEL_CALLS_PER_HOUR).toBe(200);
   });
 
   it("counts each runner, and each global count, on its own", async () => {
@@ -116,7 +143,12 @@ describe("the spend counts", () => {
     await canSpendRunnerRequest(db, runner, NOW);
     await canSpendPageFetch(db, NOW);
     await canSpendProxyCall(db, NOW);
+    await canSpendProductProxyCall(db, PRODUCT, NOW);
+    await canSpendModelCall(db, NOW);
     expect(await countOf("enrich-runner", runner)).toBe(1);
+    expect(await countOf("proxy-product", PRODUCT)).toBe(1);
+    expect(await countOf("model-call")).toBe(1);
+    expect(await canSpendProductProxyCall(db, newUlid(), NOW)).toBe(true);
     expect(await countOf("page-fetch")).toBe(1);
     expect(await countOf("proxy-call")).toBe(1);
     expect(await canSpendRunnerRequest(db, newUlid(), NOW)).toBe(true);
@@ -127,11 +159,13 @@ describe("the spend counts", () => {
     await canSpendRunnerRequest(db, runner);
     await canSpendPageFetch(db);
     await canSpendProxyCall(db);
+    await canSpendProductProxyCall(db, PRODUCT);
+    await canSpendModelCall(db);
     const rows = await db.select().from(rateLimits);
     for (const row of rows) {
       expect(Math.abs(row.windowStartedAt - nowSeconds())).toBeLessThan(60);
     }
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(5);
   });
 });
 

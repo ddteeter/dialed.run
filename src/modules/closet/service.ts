@@ -975,6 +975,9 @@ export async function withResolvedProduct(
   ) {
     return garment;
   }
+  // The save's own refusal, asked before the shared product can take the
+  // link as its source: a refused link is never a product's source page.
+  await assertLinkAllowed(garment);
   const link = await productLinkFor(
     db,
     {

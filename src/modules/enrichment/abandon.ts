@@ -108,7 +108,15 @@ export function sweepOwed(now = nowSeconds()): SQL | undefined {
 }
 
 /**
- * Put every product the sweep has stopped re-driving on the Desk's Gave
+ * The most products one firing lists, oldest first. An hour's abandonments
+ * are a handful; any left over are listed by the next firing, so one
+ * firing's read stays small whatever is parked.
+ */
+export const ABANDONED_PER_FIRING = 100;
+
+/**
+ * Put each product the sweep has stopped re-driving (up to
+ * `ABANDONED_PER_FIRING`) on the Desk's Gave
  * up, from the failure facts it kept while it was still being retried
  * (R-119), and clear them in the same batch — so each is listed once, and
  * a product the operator drops does not come back the next hour.
@@ -134,7 +142,9 @@ export async function listAbandonedEnrichments(
       tries: products.extractionTries,
     })
     .from(products)
-    .where(parked);
+    .where(parked)
+    .orderBy(products.createdAt)
+    .limit(ABANDONED_PER_FIRING);
   // One batch per product, each its pair: an hour's abandonments are the
   // pastes that failed a day ago, a handful, and a pair that stands alone
   // cannot be sunk by another product's.

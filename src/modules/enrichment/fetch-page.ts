@@ -1,5 +1,6 @@
 import ipaddr from "ipaddr.js";
 
+import { MAX_PRODUCT_LINK_LENGTH } from "../../lib/contracts";
 import { withoutRootDot } from "../../lib/domain";
 import { PageFetchError, readCapped } from "./bounds";
 import { scrapeThroughProxy } from "./firecrawl";
@@ -143,9 +144,25 @@ function isBlockedNamedHost(host: string): boolean {
 }
 
 /**
-https, and a host we are willing to ask for.
+ * No longer than a link a runner may paste, wherever the address came
+ * from: the paste, a redirect, a refresh, or the proxy's report of where
+ * it landed. Checked before anything else reads the address, so what a
+ * refusal names, what a snapshot records and what the model is shown are
+ * all held to it.
+ */
+function assertShortEnough(href: string): void {
+  if (href.length > MAX_PRODUCT_LINK_LENGTH) {
+    throw new PageFetchError(
+      `Refusing a URL longer than ${String(MAX_PRODUCT_LINK_LENGTH)} characters`,
+    );
+  }
+}
+
+/**
+A short enough address, on https, at a host we are willing to ask for.
 */
 function assertFetchable(url: URL): void {
+  assertShortEnough(url.href);
   if (url.protocol !== "https:") {
     throw new PageFetchError(`Refusing a non-https URL: ${url.protocol}`);
   }
@@ -219,6 +236,7 @@ async function refused(
       options.proxyApiKey,
       fetchImpl,
     );
+    assertShortEnough(proxied.finalUrl);
     return { ...proxied, via: "proxy" };
   }
   throw new PageFetchError(`Page returned ${String(response.status)}`);

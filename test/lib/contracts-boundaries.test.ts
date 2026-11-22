@@ -3,6 +3,9 @@ import type { z } from "zod";
 
 import {
   brandNameSchema,
+  COMPOSITION_LIMITS,
+  MAX_HOST_LABELS,
+  MAX_HOST_LENGTH,
   validExtracted,
   effortSchema,
   entryTagSchema,
@@ -412,5 +415,148 @@ describe("a product link's length (SA-M17)", () => {
     expect(PRODUCT_LINK_TOO_LONG).toBe(
       "That link is too long. Paste the shop page's address.",
     );
+  });
+});
+
+const NOT_A_LINK = "That isn't a link. Paste the address of the shop's page.";
+
+/**
+A host of `count` labels: one-letter ones, then `com`.
+*/
+function hostOfLabels(count: number): string {
+  return "a.".repeat(count - 1) + "com";
+}
+
+/**
+A host exactly `length` characters long.
+*/
+function hostOfLength(length: number): string {
+  return "shop.".padEnd(length - 4, "a") + ".com";
+}
+
+/**
+An image address exactly `length` characters long.
+*/
+function imageOfLength(length: number): string {
+  return "https://cdn.example.com/".padEnd(length, "a");
+}
+
+describe("a link's host is no longer than a name can be", () => {
+  it("keeps a host of MAX_HOST_LABELS labels and refuses one more", () => {
+    expect(MAX_HOST_LABELS).toBe(10);
+    expect(
+      productLinkProblem(`https://${hostOfLabels(MAX_HOST_LABELS)}/p`),
+    ).toBeUndefined();
+    expect(
+      productLinkProblem(`https://${hostOfLabels(MAX_HOST_LABELS + 1)}/p`),
+    ).toBe(NOT_A_LINK);
+    expect(productLinkProblem(`https://${hostOfLabels(102)}/p`)).toBe(
+      NOT_A_LINK,
+    );
+  });
+
+  it("keeps a host of MAX_HOST_LENGTH characters and refuses one more", () => {
+    expect(MAX_HOST_LENGTH).toBe(253);
+    expect(
+      productLinkProblem(`https://${hostOfLength(MAX_HOST_LENGTH)}/p`),
+    ).toBeUndefined();
+    expect(
+      productLinkProblem(`https://${hostOfLength(MAX_HOST_LENGTH + 1)}/p`),
+    ).toBe(NOT_A_LINK);
+    expect(
+      httpsUrlProblem(`https://${hostOfLength(MAX_HOST_LENGTH + 1)}/p`),
+    ).toBe(NOT_A_LINK);
+  });
+});
+
+/**
+A composition at the edge of every limit, or one past it where `over` says.
+*/
+function compositionAt(over: keyof typeof COMPOSITION_LIMITS | undefined) {
+  const length = (key: keyof typeof COMPOSITION_LIMITS) =>
+    COMPOSITION_LIMITS[key] + (over === key ? 1 : 0);
+  const material = { material: "m".repeat(length("name")), pct: 10 };
+  const part = {
+    part: "p".repeat(length("name")),
+    materials: Array.from({ length: length("materials") }, () => material),
+  };
+  return {
+    verbatim: "v".repeat(length("verbatim")),
+    parts: Array.from({ length: length("parts") }, () => part),
+  };
+}
+
+describe("what a stored composition and image may hold", () => {
+  it("are the owner's numbers", () => {
+    expect(COMPOSITION_LIMITS).toStrictEqual({
+      verbatim: 500,
+      parts: 10,
+      materials: 10,
+      name: 60,
+    });
+  });
+
+  it("keeps a composition at every limit", () => {
+    const fabricComposition = compositionAt(undefined);
+    expect(validExtracted({ fabricComposition })).toStrictEqual({
+      fabricComposition,
+    });
+  });
+
+  it.each(["verbatim", "parts", "materials", "name"] as const)(
+    "drops a composition one past its %s limit, and keeps the rest",
+    (over) => {
+      expect(
+        validExtracted({ name: "Tee", fabricComposition: compositionAt(over) }),
+      ).toStrictEqual({ name: "Tee" });
+    },
+  );
+
+  it.each([
+    ["a material", { material: "m".repeat(61), pct: 10 }, "p".repeat(60)],
+    ["a part", { material: "m".repeat(60), pct: 10 }, "p".repeat(61)],
+  ])(
+    "drops a composition whose %s name alone is one past the limit",
+    (_, material, part) => {
+      const fabricComposition = {
+        verbatim: "x",
+        parts: [{ part, materials: [material] }],
+      };
+      expect(validExtracted({ name: "Tee", fabricComposition })).toStrictEqual({
+        name: "Tee",
+      });
+    },
+  );
+
+  it("keeps a composition with a short part name", () => {
+    const fabricComposition = {
+      verbatim: "x",
+      parts: [{ part: "Body", materials: [{ material: "Cotton", pct: 100 }] }],
+    };
+    expect(validExtracted({ fabricComposition })).toStrictEqual({
+      fabricComposition,
+    });
+  });
+
+  it("drops a composition part with no materials", () => {
+    const fabricComposition = { verbatim: "x", parts: [{ materials: [] }] };
+    expect(validExtracted({ fabricComposition })).toStrictEqual({});
+  });
+
+  it("keeps an image address as long as a product link and drops a longer one", () => {
+    expect(
+      validExtracted({ imageUrl: imageOfLength(MAX_PRODUCT_LINK_LENGTH) }),
+    ).toStrictEqual({ imageUrl: imageOfLength(MAX_PRODUCT_LINK_LENGTH) });
+    expect(
+      validExtracted({
+        name: "Tee",
+        imageUrl: imageOfLength(MAX_PRODUCT_LINK_LENGTH + 1),
+      }),
+    ).toStrictEqual({ name: "Tee" });
+    expect(
+      validExtracted({
+        imageUrl: ["http:", "//cdn.example.com/a.jpg"].join(""),
+      }),
+    ).toStrictEqual({});
   });
 });

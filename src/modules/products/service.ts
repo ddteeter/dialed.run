@@ -266,12 +266,16 @@ export interface ResolveProductInput {
  * this runs while someone is still typing, and a lookup that created a
  * brand per keystroke would fill the shared vocabulary with fragments.
  * An unknown brand simply has no products yet.
+ *
+ * A chip is a name, so each product is read as its id and name only: any
+ * signed-in runner can ask this on every keystroke, and nothing else a
+ * product row holds is theirs to be sent.
  */
 export async function productsForBrand(
   db: Db,
   brandName: string,
   limit = AUTOCOMPLETE_LIMIT,
-): Promise<ProductRow[]> {
+): Promise<{ id: string; name: string }[]> {
   const normalized = normalizeIdentity(brandName);
   if (normalized === "") return [];
   const [brand] = await db
@@ -282,7 +286,7 @@ export async function productsForBrand(
   return brand === undefined
     ? []
     : db
-        .select()
+        .select({ id: products.id, name: products.name })
         .from(products)
         .where(
           and(eq(products.brandId, brand.id), eq(products.status, "active")),

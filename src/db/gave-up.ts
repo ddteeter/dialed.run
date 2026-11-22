@@ -40,6 +40,20 @@ export {
  */
 
 /**
+ * The most of a failure's own message a row keeps. The Desk shows it as
+ * the row's detail, and a message can quote what failed, so it is held to
+ * a few lines whatever wrote it.
+ */
+export const MAX_RAW_ERROR_LENGTH = 500;
+
+/**
+A failure's message, no longer than `MAX_RAW_ERROR_LENGTH`.
+*/
+export function shortRawError(message: string): string {
+  return message.slice(0, MAX_RAW_ERROR_LENGTH);
+}
+
+/**
  * Record a job as given up. A job already here is the same row (UNIQUE on
  * kind and subject): its tries add to what it had, its reason and raw
  * error become this failure's, and `first_failed_at` stays when it first
@@ -58,16 +72,18 @@ export function gaveUpUpsert(
   now = nowSeconds(),
   onlyIf: SQL = sql`1`,
 ) {
+  const rawError =
+    fact.rawError === undefined ? undefined : shortRawError(fact.rawError);
   return db
     .insert(gaveUp)
     .select(
-      sql`SELECT ${newUlid()}, ${fact.kind}, ${fact.subjectId}, ${fact.reason}, ${orSqlNull(fact.rawError)}, ${fact.tries}, ${now}, ${now} WHERE ${onlyIf}`,
+      sql`SELECT ${newUlid()}, ${fact.kind}, ${fact.subjectId}, ${fact.reason}, ${orSqlNull(rawError)}, ${fact.tries}, ${now}, ${now} WHERE ${onlyIf}`,
     )
     .onConflictDoUpdate({
       target: [gaveUp.kind, gaveUp.subjectId],
       set: {
         reason: fact.reason,
-        rawError: orSqlNull(fact.rawError),
+        rawError: orSqlNull(rawError),
         tries: sql`${gaveUp.tries} + ${fact.tries}`,
         lastFailedAt: now,
       },

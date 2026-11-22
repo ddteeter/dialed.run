@@ -18,7 +18,9 @@ import {
   countSend,
 } from "../../src/modules/email";
 import {
+  canSpendModelCall,
   canSpendPageFetch,
+  canSpendProductProxyCall,
   canSpendProxyCall,
   canSpendRunnerRequest,
 } from "../../src/modules/enrichment/spend-limit";
@@ -47,6 +49,7 @@ beforeEach(async () => {
 describe("the rate-limit kinds", () => {
   it("are exactly the kinds the app counts", async () => {
     const runner = newUlid();
+    const product = newUlid();
     for (const kind of SEND_LIMIT_KINDS) {
       await countSend(db, kind, "Someone@Example.test", NOW);
     }
@@ -54,6 +57,8 @@ describe("the rate-limit kinds", () => {
     await canSpendRunnerRequest(db, runner, NOW);
     await canSpendPageFetch(db, NOW);
     await canSpendProxyCall(db, NOW);
+    await canSpendProductProxyCall(db, product, NOW);
+    await canSpendModelCall(db, NOW);
     await claimSignInTry(db, "Someone@Example.test", NOW);
     await cspReportDepsFromEnv().isWithinLimit("203.0.113.9");
     await isWithinUploadCap(db, runner, NOW);
@@ -78,6 +83,8 @@ describe("the rate-limit kinds", () => {
         `upload-runner:${runner}`,
         `page-fetch:${GLOBAL_SUBJECT}`,
         `proxy-call:${GLOBAL_SUBJECT}`,
+        `proxy-product:${product}`,
+        `model-call:${GLOBAL_SUBJECT}`,
         "sign-in:someone@example.test",
         "csp-report:203.0.113.9",
         `report-runner:${runner}`,

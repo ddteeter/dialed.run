@@ -264,6 +264,50 @@ describe("deniedLinksOf, the batched read every surface asks", () => {
   });
 });
 
+/**
+An https link whose host is `labels` labels: one-letter ones, then `parent`.
+*/
+function deepLink(labels: number, parent = "com"): string {
+  const parentLabels = parent.split(".").length;
+  return `https://${"a.".repeat(labels - parentLabels)}${parent}/p`;
+}
+
+describe("deniedLinksOf, whatever the number of parent domains", () => {
+  beforeEach(resetSafetyTables);
+
+  it("answers for a link with more parent domains than D1 binds parameters", async () => {
+    expect(await deniedLinksOf(core(), [deepLink(102)])).toEqual(new Set());
+  });
+
+  it("answers for a link beside a deep one", async () => {
+    await denyDomain("spam.example", await makeUser());
+    const denied = await deniedLinksOf(core(), [
+      "https://spam.example/p",
+      deepLink(150),
+    ]);
+    expect(denied).toEqual(new Set(["https://spam.example/p"]));
+  });
+
+  it("still finds a denied parent above a deep host", async () => {
+    await denyDomain("spam.example", await makeUser());
+    const link = deepLink(150, "spam.example");
+    expect(await deniedLinksOf(core(), [link])).toEqual(new Set([link]));
+  });
+
+  it("answers for a batch of more links than D1 binds parameters", async () => {
+    await denyDomain("spam.example", await makeUser());
+    const links = Array.from(
+      { length: 150 },
+      (_, index) => `https://shop${String(index)}.example/p`,
+    );
+    const denied = await deniedLinksOf(core(), [
+      ...links,
+      "https://spam.example/p",
+    ]);
+    expect(denied).toEqual(new Set(["https://spam.example/p"]));
+  });
+});
+
 describe("a link is denied by where it lands (R-176)", () => {
   beforeEach(resetSafetyTables);
 

@@ -22,10 +22,15 @@ import {
   createOrGetBrand,
   createOrGetProduct,
 } from "../../src/modules/products";
-import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
-import { listAbandonedEnrichments } from "../../src/modules/enrichment/abandon";
+import { DEAD_LETTER_REASON, MAX_RAW_ERROR_LENGTH } from "../../src/db/gave-up";
+import {
+  ABANDONED_PER_FIRING,
+  listAbandonedEnrichments,
+} from "../../src/modules/enrichment/abandon";
+import { MAX_OPEN_TAGS } from "../../src/modules/enrichment/html";
 import { pageFailureReason } from "../../src/modules/enrichment/bounds";
 import {
+  MODEL_CALLS_PER_HOUR,
   PAGE_FETCHES_PER_HOUR,
   PROXY_CALLS_PER_DAY,
 } from "../../src/modules/enrichment/spend-limit";
@@ -33,7 +38,7 @@ import { isDeniedLink, isDeniedOnLanding } from "../../src/modules/safety";
 import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import { nowSeconds } from "../../src/lib/now";
 import { gaveUpRow } from "../gave-up-rows";
-import { batchOf, fakeMessage } from "../queue-fakes";
+import { batchOf, fakeMessage, type SpiedMessage } from "../queue-fakes";
 
 /**
  * The consumer against a real D1 and a real R2, with only the network
@@ -1251,7 +1256,7 @@ async function repend(productId: string): Promise<void> {
     .where(eq(products.id, productId));
 }
 
-type GlobalSpend = "page-fetch" | "proxy-call";
+type GlobalSpend = "page-fetch" | "proxy-call" | "model-call";
 
 async function spentAlready(kind: GlobalSpend, count: number) {
   await db()
@@ -1372,5 +1377,250 @@ describe("handleEnrichmentBatch: the spend ceilings", () => {
     const row = await rowOf(productId);
     expect(row.extractionStatus).toBe("failed");
     expect(row.extractionError).toBe("Page returned 403");
+  });
+});
+
+/**
+A page whose refresh names a host of 2,000 letters and no dot, which the
+fetch refuses with the host in its message.
+*/
+const LONG_HOST = "a".repeat(2000);
+const REFRESH_TO_LONG_HOST = `<meta http-equiv="refresh" content="0;url=https://${LONG_HOST}/">`;
+const LONG_HOST_FAILURE = `Refusing a private or local host: ${LONG_HOST}`;
+
+/**
+One enrichment message for the product, through the consumer.
+*/
+async function consumeOne(
+  productId: string,
+  fetchImpl: typeof fetch,
+): Promise<SpiedMessage> {
+  const message = jobFor(productId);
+  await handleEnrichmentBatch(
+    batchOf("dialed-enrichment", [message]),
+    depsWith(fetchImpl),
+  );
+  return message;
+}
+
+describe("a failure's message is kept short wherever it is stored", () => {
+  it("parks no more than MAX_RAW_ERROR_LENGTH of it inside the product's day", async () => {
+    const productId = await pendingProduct();
+
+    await consumeOne(productId, serving(REFRESH_TO_LONG_HOST));
+
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("failed");
+    expect(row.extractionError).toBe(
+      LONG_HOST_FAILURE.slice(0, MAX_RAW_ERROR_LENGTH),
+    );
+  });
+
+  it("lists no more than MAX_RAW_ERROR_LENGTH of it past the day", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
+
+    await consumeOne(productId, serving(REFRESH_TO_LONG_HOST));
+
+    const row = await gaveUpRow("enrichment", productId);
+    expect(row?.rawError).toBe(
+      LONG_HOST_FAILURE.slice(0, MAX_RAW_ERROR_LENGTH),
+    );
+  });
+});
+
+describe("a page with more tags open than the cap", () => {
+  it("fails the product and acks the message", async () => {
+    const productId = await pendingProduct();
+
+    const message = await consumeOne(
+      productId,
+      serving("<b>".repeat(MAX_OPEN_TAGS + 2)),
+    );
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(message.retry).not.toHaveBeenCalled();
+    expect(await rowOf(productId)).toMatchObject({
+      extractionStatus: "failed",
+      extractionError: `Page nests more than ${String(MAX_OPEN_TAGS)} tags`,
+    });
+  });
+});
+
+describe("listAbandonedEnrichments: one firing's share", () => {
+  it("lists the oldest ABANDONED_PER_FIRING and leaves the rest for the next firing", async () => {
+    const oldest = await parked(DAY + 600, { extractionTries: 6 });
+    for (let index = 1; index < ABANDONED_PER_FIRING; index += 1) {
+      await parked(DAY + 60, { extractionTries: 6 });
+    }
+    const newest = await parked(DAY + 30, { extractionTries: 6 });
+
+    await listAbandonedEnrichments(db());
+
+    expect(await gaveUpRow("enrichment", oldest)).toBeDefined();
+    expect(await gaveUpRow("enrichment", newest)).toBeUndefined();
+    const waiting = await rowOf(newest);
+    expect(waiting.extractionTries).toBe(6);
+
+    await listAbandonedEnrichments(db());
+
+    expect(await gaveUpRow("enrichment", newest)).toBeDefined();
+  });
+});
+
+/**
+Whether any of a fetch's calls went to the proxy.
+*/
+function hasCalledTheProxy(fetchImpl: ReturnType<typeof vi.fn<typeof fetch>>) {
+  return fetchImpl.mock.calls.some(([input]) =>
+    urlOf(input).startsWith("https://api.firecrawl.dev/"),
+  );
+}
+
+describe("handleEnrichmentBatch: one proxy call a product a day", () => {
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("goes direct only on a product's second try that day, and spends nothing shared", async () => {
+    const productId = await pendingProduct();
+    const deps = { ...depsWith(vi.fn(refusedThroughProxy)), proxyApiKey: "k" };
+    await consumeWith(productId, deps);
+    await repend(productId);
+    const again = vi.fn(refusedThroughProxy);
+
+    await consumeWith(productId, { ...deps, fetchImpl: again });
+
+    expect(hasCalledTheProxy(again)).toBe(false);
+    expect(await limitCountOf("proxy-call")).toBe(1);
+    const row = await rowOf(productId);
+    expect(row.extractionError).toBe("Page returned 403");
+  });
+
+  it("leaves another product its proxy call after one product's six tries", async () => {
+    const refused = await pendingProduct();
+    const deps = { ...depsWith(vi.fn(refusedThroughProxy)), proxyApiKey: "k" };
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      await consumeWith(refused, deps);
+      await repend(refused);
+    }
+    const honest = await pendingProduct();
+    const fetchImpl = vi.fn(refusingWithProxy);
+
+    await consumeWith(honest, { ...deps, fetchImpl });
+
+    expect(hasCalledTheProxy(fetchImpl)).toBe(true);
+    expect(await statusOf(honest)).toBe("done");
+    expect(await limitCountOf("proxy-call")).toBe(2);
+  });
+});
+
+/**
+One enrichment message for the product, through the consumer with `deps`.
+*/
+async function consumeWith(
+  productId: string,
+  deps: Parameters<typeof handleEnrichmentBatch>[1],
+): Promise<void> {
+  await handleEnrichmentBatch(
+    batchOf("dialed-enrichment", [jobFor(productId)]),
+    deps,
+  );
+}
+
+describe("handleEnrichmentBatch: the hour's model calls", () => {
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("counts the model call of a fresh fetch", async () => {
+    const productId = await pendingProduct();
+
+    await consumeWith(productId, depsWith(serving(PAGE)));
+
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("model-call")).toBe(1);
+  });
+
+  it("stores the page but asks no model once the hour's calls are spent, and leaves the row pending", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const productId = await pendingProduct({
+      extractionError: "Page returned 403",
+      extractionTries: 2,
+    });
+    const deps = depsWith(serving(PAGE));
+
+    await consumeWith(productId, deps);
+
+    expect(deps.model.extract).not.toHaveBeenCalled();
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("pending");
+    expect(row.extractionError).toBe("Page returned 403");
+    expect(row.extractionTries).toBe(2);
+    expect(await snapshotsOf(productId)).toHaveLength(1);
+  });
+
+  it("reads the stored page again on the next try, counting a model call and no fetch", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const productId = await pendingProduct();
+    await consumeWith(productId, depsWith(serving(PAGE)));
+    await db().delete(rateLimits);
+    const fetchImpl = serving(PAGE);
+
+    await consumeWith(productId, depsWith(fetchImpl));
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("model-call")).toBe(1);
+  });
+
+  it("defers a stored page's re-read too once the hour's calls are spent", async () => {
+    const productId = await pendingProduct();
+    await consumeWith(productId, depsWith(serving(PAGE)));
+    await repend(productId);
+    await db()
+      .update(products)
+      .set({ extractionError: "Page returned 403", extractionTries: 2 })
+      .where(eq(products.id, productId));
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const deps = depsWith(serving(PAGE));
+
+    await consumeWith(productId, deps);
+
+    expect(deps.model.extract).not.toHaveBeenCalled();
+    const row = await rowOf(productId);
+    expect(row.extractionStatus).toBe("pending");
+    expect(row.extractionError).toBe("Page returned 403");
+    expect(row.extractionTries).toBe(2);
+  });
+
+  it("asks the model for the last call the hour allows", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR - 1);
+    const productId = await pendingProduct();
+
+    await consumeWith(productId, depsWith(serving(PAGE)));
+
+    expect(await statusOf(productId)).toBe("done");
+  });
+
+  it("counts nothing with no model configured", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const productId = await pendingProduct();
+
+    await consumeWith(productId, depsWithoutModel(serving(PAGE)));
+
+    expect(await statusOf(productId)).toBe("done");
+    expect(await limitCountOf("model-call")).toBe(MODEL_CALLS_PER_HOUR);
+  });
+
+  it("lets the Desk's re-run ask the model whatever the hour's count", async () => {
+    const productId = await pendingProduct();
+    await consumeWith(productId, depsWith(serving(PAGE)));
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const deps = depsWith(serving(PAGE));
+
+    await reextract(deps, productId);
+
+    expect(deps.model.extract).toHaveBeenCalledTimes(1);
+    expect(await limitCountOf("model-call")).toBe(MODEL_CALLS_PER_HOUR);
   });
 });

@@ -9,12 +9,12 @@
  * anchor, not here — a function that returns a domain has no business
  * knowing about HTML attributes.
  */
-import { inArray } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { domainDenylist, linkLandings } from "../../../db/schema-core";
 import { primaryCoreDb } from "../../../env";
 import { domainOf, siteOf } from "../../../lib/domain";
+import { inJsonList } from "../../../lib/sql/json-list";
 import { columnWhere } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
 
@@ -40,19 +40,23 @@ function suffixesOf(domain: string): string[] {
 
 /**
  * Which of these domains are denied, by their own row or a parent's, in
- * one read of the denylist by its key, whatever the batch size.
+ * one read of the denylist by its key, whatever the batch size: the
+ * candidates are bound as one JSON list, each once, so a host of any
+ * number of labels is one parameter.
  */
 async function deniedAmong(
   database: Db,
   domains: ReadonlySet<string>,
 ): Promise<Set<string>> {
-  const candidates = [...domains].flatMap((domain) => suffixesOf(domain));
+  const candidates = new Set(
+    [...domains].flatMap((domain) => suffixesOf(domain)),
+  );
   const listed = new Set(
     await columnWhere(
       database,
       domainDenylist,
       domainDenylist.domain,
-      inArray(domainDenylist.domain, candidates),
+      inJsonList(domainDenylist.domain, [...candidates]),
     ),
   );
   return new Set(
@@ -97,7 +101,7 @@ export async function deniedLinksOf(
   const rows = await database
     .select({ url: linkLandings.url, domain: linkLandings.landedDomain })
     .from(linkLandings)
-    .where(inArray(linkLandings.url, valid));
+    .where(inJsonList(linkLandings.url, valid));
   const landings = new Map(rows.map(({ url, domain }) => [url, domain]));
   const denied = await deniedAmong(
     database,

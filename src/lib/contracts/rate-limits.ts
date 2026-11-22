@@ -37,6 +37,10 @@ export const SEND_LIMIT_KINDS = [
  *   `GLOBAL_SUBJECT`;
  * - `proxy-call` — enrichment's proxy calls across everyone;
  *   `GLOBAL_SUBJECT`;
+ * - `proxy-product` — enrichment's proxy calls for one product; the
+ *   product's id;
+ * - `model-call` — enrichment's model calls across everyone;
+ *   `GLOBAL_SUBJECT`;
  * - `sign-in` — email sign-in's tries for one typed address, lowercased,
  *   whether or not it has an account (`SIGN_IN_TRIES`);
  * - `csp-report` — the CSP reports one visitor's browser posts, so a
@@ -72,6 +76,8 @@ export const RATE_LIMIT_KINDS = [
   "upload-runner",
   "page-fetch",
   "proxy-call",
+  "proxy-product",
+  "model-call",
   "sign-in",
   "csp-report",
   "report-runner",

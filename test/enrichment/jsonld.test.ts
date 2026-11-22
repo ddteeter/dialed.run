@@ -59,6 +59,34 @@ describe("the JSON-LD rung", () => {
     );
   });
 
+  it("takes a list's first brand however the rest of the list reads", () => {
+    const html = pageWith(
+      JSON.stringify({
+        "@type": "Product",
+        name: "AFO Middle Short",
+        brand: [
+          { name: "Janji" },
+          42,
+          ...Array.from({ length: 1000 }, () => 0),
+        ],
+      }),
+    );
+    expect(jsonLdExtractor.extract(PAGE, html)).toMatchObject({
+      brand: "Janji",
+    });
+  });
+
+  it("takes no brand from a list whose first entry is not one, or an empty list", () => {
+    for (const brand of [[42, { name: "Janji" }], []]) {
+      const html = pageWith(
+        JSON.stringify({ "@type": "Product", name: "Tee", brand }),
+      );
+      expect(jsonLdExtractor.extract(PAGE, html)).toStrictEqual({
+        name: "Tee",
+      });
+    }
+  });
+
   it("finds the Product inside an @graph of other things", () => {
     // The common real shape: Organization, BreadcrumbList and WebPage share
     // the block, and the Product is somewhere among them.

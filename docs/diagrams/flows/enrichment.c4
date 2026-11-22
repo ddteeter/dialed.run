@@ -11,12 +11,14 @@ views {
         description 'The products row is the durable marker'
       }
 
-    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey); src/modules/closet/service.ts withResolvedProduct, isListedName, isUnconfirmed; src/modules/closet/product-link.ts linkTypedGarments, productLinkFor
+    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey); src/modules/closet/service.ts withResolvedProduct, isListedName, isUnconfirmed, assertLinkAllowed; src/modules/closet/product-link.ts linkTypedGarments, productLinkFor
     runner -> cf.app.closet.saveGarment 'saves a garment with a brand, a model and a product link' {
       notes '''
         **Guard: the garment\'s idempotency key, on a create.** A repeat of the save also asks for enrichment again, which the claim below turns into nothing.
 
         **Guard: only a nameable product.** An empty or listed brand or model, or an unconfirmed runner, makes no product and asks for nothing; the garment saves as typed. Confirming the account later links those garments the same way, and that asks for enrichment too.
+
+        **Guard: the denylist, before the product.** A link the denylist refuses fails the save before the shared product is found or made, so it never becomes a product\'s link and asks for nothing.
       '''
     }
     // source: src/modules/products/service.ts resolveProduct, createOrGetProduct (onConflictDoUpdate, coalesce on source_url)
@@ -32,7 +34,7 @@ views {
 
         **Degrade, don\'t fail.** This never throws. A failed claim or a failed send is reported and swallowed, and the garment still saves. After a failed claim the product stays as it was: nothing re-drives it, and the next save that links it asks again.
 
-        It runs before the garment row is written and before the link is checked against the denylist, so a save that is then refused has still asked.
+        It runs before the garment row is written.
       '''
     }
     // source: src/modules/enrichment/request.ts requestEnrichment, abandonedBefore (didClaim from none, or failed past the first day, source_url not null)
@@ -104,19 +106,19 @@ views {
         description 'The products row is the durable marker'
       }
 
-    // source: src/modules/enrichment/fetch-page.ts fetchProductPage, TIMEOUT_MS, MAX_REDIRECTS, assertFetchable; src/modules/enrichment/meta-refresh.ts refreshTarget; src/modules/enrichment/bounds.ts MAX_BYTES
+    // source: src/modules/enrichment/fetch-page.ts fetchProductPage, TIMEOUT_MS, MAX_REDIRECTS, assertFetchable, assertShortEnough; src/modules/enrichment/meta-refresh.ts refreshTarget; src/modules/enrichment/bounds.ts MAX_BYTES; src/lib/contracts/common.ts MAX_PRODUCT_LINK_LENGTH; src/modules/enrichment/html.ts readPage, MAX_OPEN_TAGS
     cf.app.enrichment.consumer -> shop 'fetches the page, one hop at a time' {
       notes '''
-        **Bounded.** 10 seconds a hop, at most 5 redirects (a meta refresh counts as one), at most 6 MB of page. Every hop is checked before it is fetched.
+        **Bounded.** 10 seconds a hop, at most 5 redirects (a meta refresh counts as one), at most 6 MB of page. Every hop is checked before it is fetched, and no address, the proxy\'s included, may be longer than 2,048 characters. A page with more than 512 tags open at once is refused.
 
         **If it fails:** a refusal by the page is terminal (`failed`, acked). A network error or a timeout throws, and the queue retries.
       '''
     }
-    opt 'the shop refuses a Worker (401, 403, 429 or 503), a proxy key is set, and the day\'s proxy calls are not spent' {
-      // source: src/modules/enrichment/fetch-page.ts refused, REFUSALS, fetchProductPage (proxyApiKey); src/modules/enrichment/firecrawl.ts scrapeThroughProxy, PROXY_TIMEOUT_MS; src/modules/enrichment/consume.ts claimProxy; src/modules/enrichment/spend-limit.ts canSpendProxyCall, PROXY_CALLS_PER_DAY (150)
+    opt 'the shop refuses a Worker (401, 403, 429 or 503), a proxy key is set, and neither the product\'s nor the day\'s proxy calls are spent' {
+      // source: src/modules/enrichment/fetch-page.ts refused, REFUSALS, fetchProductPage (proxyApiKey); src/modules/enrichment/firecrawl.ts scrapeThroughProxy, PROXY_TIMEOUT_MS; src/modules/enrichment/consume.ts canSpendProxyFor; src/modules/enrichment/spend-limit.ts canSpendProductProxyCall, PROXY_CALLS_PER_PRODUCT_PER_DAY (1), canSpendProxyCall, PROXY_CALLS_PER_DAY (150)
       cf.app.enrichment.consumer -> firecrawl 'fetches the page through the proxy' {
         notes '''
-          **Bounded.** 150 proxy calls a day, shared by everyone, and at most one a page. The proxy call has 30 seconds.
+          **Bounded.** One proxy call a product a day, asked first, so a product\'s later tries that day go direct and spend nothing shared. Then 150 proxy calls a day, shared by everyone, and at most one a page. The proxy call has 30 seconds.
 
           **Degrade, don\'t fail.** With no key, or past the day\'s calls, a refused page is a failed fetch.
         '''
@@ -144,9 +146,11 @@ views {
         **Before the ladder runs.** The row is written with no rung yet, so a read that throws leaves a page the retry finds and reads again instead of fetching it again. The rung that read it is set with the write-back.
       '''
     }
-    // source: src/modules/enrichment/model/rung.ts modelPass; src/modules/enrichment/model/chat-completions.ts createChatCompletionsModel, TIMEOUT_MS; src/modules/enrichment/model/from-env.ts extractionModelFromEnv
+    // source: src/modules/enrichment/model/rung.ts modelPass; src/modules/enrichment/model/chat-completions.ts createChatCompletionsModel, TIMEOUT_MS, MAX_ANSWER_TOKENS; src/modules/enrichment/model/from-env.ts extractionModelFromEnv; src/modules/enrichment/consume.ts isModelCallSpent; src/modules/enrichment/spend-limit.ts canSpendModelCall, MODEL_CALLS_PER_HOUR (200)
     cf.app.enrichment.consumer -> openai 'asks the model for what the page left blank' {
       notes '''
+        **Bounded.** 200 model calls an hour, shared by everyone, counted before the ladder reads the stored page, a re-read of one included. Over that, the job is acked and the product stays `pending` for the sweep, with the page kept for it. The Desk\'s re-run is not counted. The answer is capped at 4,000 tokens, and a field the contract refuses is dropped, keeping the rest.
+
         **If it fails:** the error throws and the queue retries. The product stays `pending`, because the model is the only source of composition and a `done` product would never be asked again. The call has 30 seconds.
 
         With no model key, this step is skipped and the declared fields are the answer.
@@ -223,9 +227,9 @@ views {
       cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again'
     }
     opt 'failed, and past the product\'s first day' {
-      // source: src/modules/enrichment/abandon.ts listAbandonedEnrichments
+      // source: src/modules/enrichment/abandon.ts listAbandonedEnrichments, ABANDONED_PER_FIRING (100)
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'lists it on the Desk\'s Gave up' {
-        notes 'The system has stopped retrying, so a person is told. The daily digest reports it too.'
+        notes 'The system has stopped retrying, so a person is told. The daily digest reports it too. At most 100 a firing, oldest first; the rest wait for the next.'
       }
       // source: src/modules/ops/desk/gave-up.ts retryEnrichment
       operator -> cf.app.ops.deskRetry 'presses Retry'

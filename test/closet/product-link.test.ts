@@ -16,8 +16,10 @@ import {
 } from "../../src/modules/closet";
 import {
   createItem,
+  DeniedLinkError,
   withResolvedProduct,
 } from "../../src/modules/closet/service";
+import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import { resolveProduct } from "../../src/modules/products/service";
 import { addAccount } from "../feed/helpers";
 import { uniqueName } from "../unique-name";
@@ -185,6 +187,34 @@ describe("a link pasted for a product made without one (design 163, Q1)", () => 
       type: "enrich",
       productId: product?.id,
     });
+  });
+});
+
+describe("a denied link never becomes a product's source", () => {
+  it("refuses the save before the product takes the link", async () => {
+    const userId = await runner(true);
+    await denyDomain("spam-source.example", userId);
+    const brand = unique("Brand");
+    const name = unique("Tee");
+    await withResolvedProduct(db(), { category: "top", name, brand }, userId);
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+
+    await expect(
+      withResolvedProduct(
+        db(),
+        {
+          category: "top",
+          name,
+          brand,
+          productUrl: "https://shop.spam-source.example/p",
+        },
+        userId,
+      ),
+    ).rejects.toBeInstanceOf(DeniedLinkError);
+
+    const [product] = await productRows(name);
+    expect(product?.sourceUrl).toBeNull();
+    expect(send).not.toHaveBeenCalled();
   });
 });
 

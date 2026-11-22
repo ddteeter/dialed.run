@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { PageFetchError } from "../../src/modules/enrichment/bounds";
 import {
   parseJson,
   MAX_DECODE_PASSES,
+  MAX_OPEN_TAGS,
   readableText,
   readPage,
 } from "../../src/modules/enrichment/html";
@@ -241,5 +243,34 @@ describe("readableText", () => {
 
   it("collapses whitespace and trims, so nodes compare as text", () => {
     expect(readableText("  100%   merino \n  wool  ")).toBe("100% merino wool");
+  });
+});
+
+describe("readPage: how many tags may be open at once", () => {
+  it("refuses a page with more tags open than the cap", () => {
+    const read = () => readPage("<b>".repeat(MAX_OPEN_TAGS + 1));
+    expect(read).toThrow(PageFetchError);
+    expect(read).toThrow(`Page nests more than ${String(MAX_OPEN_TAGS)} tags`);
+  });
+
+  it("reads a page with exactly the cap open", () => {
+    expect(readPage(`${"<b>".repeat(MAX_OPEN_TAGS)}x`).text).toStrictEqual([
+      "x",
+    ]);
+  });
+
+  it("counts a closed tag as closed, so siblings never add up", () => {
+    const html = "<b>a</b>".repeat(10 * MAX_OPEN_TAGS);
+    expect(readPage(html).text).toHaveLength(10 * MAX_OPEN_TAGS);
+  });
+
+  it("counts a void tag as closed the moment it opens", () => {
+    const html = `${"<br>".repeat(10 * MAX_OPEN_TAGS)}x`;
+    expect(readPage(html).text).toStrictEqual(["x"]);
+  });
+
+  it("reads every meta tag of a page with many of them", () => {
+    const html = "<meta name=a content=b>".repeat(10 * MAX_OPEN_TAGS);
+    expect(readPage(html).metas).toHaveLength(10 * MAX_OPEN_TAGS);
   });
 });
