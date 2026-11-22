@@ -330,6 +330,11 @@ export interface QueueRow {
    * every other row, and on one whose photo is gone.
    */
   removedMatches?: readonly RemovedImage[] | undefined;
+  /**
+   * The copies search failed when the page was read, on a row that would
+   * have shown its copies: the row says they could not be checked.
+   */
+  copiesUnchecked?: true;
   subject: QueueSubject;
 }
 
@@ -359,7 +364,10 @@ export function firstReportHidingAtOnce(): SQL<number | null> {
  * read would: its order is an aggregate, so a `LIMIT` would still read
  * every pending row first.
  */
-export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
+export async function pendingReviewQueue(
+  limit = 100,
+  copies: CopiesEffects = {},
+): Promise<QueueRow[]> {
   // Before the reads, so every report the page shows was filed by then.
   const readAt = nowSeconds();
   const oldestFirst = asc(reviewQueue.createdAt);
@@ -372,22 +380,9 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
   const rows = [...page, ...onTheClock.filter((row) => !onThePage.has(row.id))];
 
   // No read needs another's answer, so they go together.
-  const [subjects, others, matches, removed] = await Promise.all([
+  const [subjects, found] = await Promise.all([
     subjectsFor(rows),
-    otherPhotosOf(
-      db(),
-      rows.flatMap((row) => copiesSubjectOf(row)),
-    ),
-    photoMatchesOf(
-      db(),
-      rows.flatMap((row) => copiesSubjectOf(row)),
-    ),
-    removedMatchesOf(
-      db(),
-      rows
-        .filter((row) => row.source === "fingerprint")
-        .map((row) => row.subjectId),
-    ),
+    copiesOrUnchecked(rows, copies),
   ]);
   const now = nowSeconds();
   return rows.map((row) => ({
@@ -401,13 +396,93 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     reporterCount: row.reporterCount,
     reasons: reasonsFrom(row.reasons),
     ...removalClock(row.firstAtOnce, now),
-    otherPhotos: others.get(`${row.subjectType}:${row.subjectId}`),
-    photoMatches: matches.get(`${row.subjectType}:${row.subjectId}`),
-    removedMatches: removed.get(row.subjectId),
+    ...copiesOf(row, found),
     subject: subjects.get(`${row.subjectType}:${row.subjectId}`) ?? {
       photoKeys: [],
     },
   }));
+}
+
+type Report = (error: unknown, context: Record<string, string>) => void;
+
+/**
+ * Where the copies search reports a failure (law 7: the surface alone),
+ * and, for a test, what reads it. A caller that names no reporter is not
+ * listening: a test that reads the page and nothing else.
+ */
+export interface CopiesEffects {
+  readonly report?: Report;
+  readonly read?: typeof readCopies;
+}
+
+function unreported(): void {
+  // Nothing listens.
+}
+
+/**
+ * The copies search on its own (law 5): a failure or a timeout leaves
+ * every row listed with its deadline, and the rows that would show copies
+ * say they could not be checked.
+ */
+async function copiesOrUnchecked(
+  rows: readonly PendingRow[],
+  { report = unreported, read = readCopies }: CopiesEffects,
+): Promise<Copies | "unchecked"> {
+  try {
+    return await read(rows);
+  } catch (error: unknown) {
+    report(error, { surface: "review-copies" });
+    return "unchecked";
+  }
+}
+
+/**
+ * The searches for copies of the rows' subjects: the same runner's other
+ * photos and any runner's matching ones on a row an intimate-image report
+ * started, and the removed images near a fingerprint match.
+ */
+async function readCopies(rows: readonly PendingRow[]) {
+  const subjects = rows.flatMap((row) => copiesSubjectOf(row));
+  const [others, matches, removed] = await Promise.all([
+    otherPhotosOf(db(), subjects),
+    photoMatchesOf(db(), subjects),
+    removedMatchesOf(
+      db(),
+      rows
+        .filter((row) => row.source === "fingerprint")
+        .map((row) => row.subjectId),
+    ),
+  ]);
+  return { others, matches, removed };
+}
+
+type Copies = Awaited<ReturnType<typeof readCopies>>;
+
+type PendingRow = Awaited<
+  ReturnType<ReturnType<typeof pendingRows>["orderBy"]>
+>[number];
+
+/**
+ * A row's copies, or, when the search failed, whether it is a row that
+ * would have shown them (`copiesUnchecked`).
+ */
+function copiesOf(
+  row: PendingRow,
+  found: Copies | "unchecked",
+): Pick<
+  QueueRow,
+  "otherPhotos" | "photoMatches" | "removedMatches" | "copiesUnchecked"
+> {
+  if (found === "unchecked") {
+    const isAboutCopies =
+      copiesSubjectOf(row).length > 0 || row.source === "fingerprint";
+    return isAboutCopies ? { copiesUnchecked: true } : {};
+  }
+  return {
+    otherPhotos: found.others.get(`${row.subjectType}:${row.subjectId}`),
+    photoMatches: found.matches.get(`${row.subjectType}:${row.subjectId}`),
+    removedMatches: found.removed.get(row.subjectId),
+  };
 }
 
 /**

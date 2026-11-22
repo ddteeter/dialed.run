@@ -28,6 +28,7 @@ import {
 import { coreDb, env, primaryCoreDb } from "../../env";
 import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
 import {
+  captureException,
   outboxInsert,
   outboxInsertWhere,
   oweOutbox,
@@ -166,7 +167,10 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
   async () => {
     const adminId = requireAdmin(await verifiedUserId());
     return {
-      queue: await pendingReviewQueue(),
+      // The copies search reads on its own, and a failure is reported.
+      queue: await pendingReviewQueue(undefined, {
+        report: captureException,
+      }),
       // Design 136: `/takedown` requests, which carry their own decision
       // and so are not review rows, waiting above them (round 35 #58e).
       requests: await pendingTakedownRequests(coreDb()),

@@ -2019,3 +2019,20 @@ describe("a flagged handle runners also reported", () => {
     expect(screen.queryByText(/people/u)).toBeNull();
   });
 });
+
+describe("a row whose copies could not be checked", () => {
+  it("says so in place of its copies, and is listed with its deadline", () => {
+    renderQueue([row({ copiesUnchecked: true, dueAt: 1, due: "Due in 31h" })]);
+
+    expect(
+      screen.getByText("Copies couldn't be checked; reload to try again."),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/Due in 31h/u).length).toBeGreaterThan(0);
+  });
+
+  it("says nothing of it when the copies were checked", () => {
+    renderQueue([row({ dueAt: 1, due: "Due in 31h" })]);
+
+    expect(document.querySelector("[data-part='copies-unchecked']")).toBeNull();
+  });
+});

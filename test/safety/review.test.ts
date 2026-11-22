@@ -1544,3 +1544,95 @@ describe("what holds a takedown to the row the page showed", () => {
     );
   });
 });
+
+/**
+Review with an intimate-report row, a fingerprint garment row and a plain one.
+*/
+async function threeRows() {
+  const owner = await makeUser();
+  const reported = await subjectOwnedBy.entry(owner);
+  const reportedRow = await pendingRowAbout("entry", reported);
+  await core()
+    .insert(reports)
+    .values({
+      id: newUlid(),
+      reporterId: await makeUser(),
+      subjectType: "entry",
+      subjectId: reported,
+      reason: "intimate",
+      createdAt: nowSeconds(),
+    });
+  const garmentRow = newUlid();
+  await core()
+    .insert(reviewQueue)
+    .values({
+      id: garmentRow,
+      subjectType: "garment",
+      subjectId: await subjectOwnedBy.garment(owner),
+      source: "fingerprint",
+      status: "pending",
+      createdAt: 100,
+      openedAt: 100,
+    });
+  const plainRow = await pendingRowAbout(
+    "entry",
+    await subjectOwnedBy.entry(owner),
+  );
+  return { reportedRow, garmentRow, plainRow };
+}
+
+describe("the copies search, on its own", () => {
+  beforeEach(resetSafetyTables);
+
+  it("lists every row with its deadline when it fails, marks the rows that would show copies, and reports the surface", async () => {
+    const { reportedRow, garmentRow, plainRow } = await threeRows();
+    const failure = new Error("D1 took too long");
+    const heard: unknown[] = [];
+
+    const rows = await pendingReviewQueue(100, {
+      report: (error, context) => {
+        heard.push([error, context]);
+      },
+      read: () => Promise.reject(failure),
+    });
+
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    expect(byId.get(reportedRow)).toMatchObject({
+      copiesUnchecked: true,
+    });
+    expect(typeof byId.get(reportedRow)?.due).toBe("string");
+    expect(byId.get(garmentRow)?.copiesUnchecked).toBe(true);
+    expect(byId.get(plainRow)).not.toHaveProperty("copiesUnchecked");
+    expect(byId.get(reportedRow)).not.toHaveProperty("otherPhotos");
+    expect(heard).toStrictEqual([[failure, { surface: "review-copies" }]]);
+  });
+
+  it("lists every row when it fails and no one listens", async () => {
+    const { reportedRow } = await threeRows();
+
+    const rows = await pendingReviewQueue(100, {
+      read: () => Promise.reject(new Error("D1 took too long")),
+    });
+
+    expect(
+      rows.find((row) => row.id === reportedRow)?.copiesUnchecked,
+    ).toBe(true);
+  });
+
+  it("marks no row when it answers", async () => {
+    const { reportedRow } = await threeRows();
+    const heard: unknown[] = [];
+
+    const rows = await pendingReviewQueue(100, {
+      report: (error) => {
+        heard.push(error);
+      },
+    });
+
+    expect(rows.some((row) => "copiesUnchecked" in row)).toBe(false);
+    expect(
+      rows.find((row) => row.id === reportedRow)?.otherPhotos,
+    ).toBeDefined();
+    expect(heard).toStrictEqual([]);
+  });
+});

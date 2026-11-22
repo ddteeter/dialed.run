@@ -765,6 +765,7 @@ function OpenRow({
           {row.due === undefined ? undefined : <StatutoryLine />}
           {/* D1: who reported, folded; opening it is logged (D-164). */}
           <ReportersFold row={row} reporters={reporters} />
+          <CopiesUnchecked row={row} />
           <OtherPhotos others={row.otherPhotos} />
           <PhotoMatches
             found={row.photoMatches}
@@ -778,6 +779,22 @@ function OpenRow({
       </div>
     </>
   );
+}
+
+/**
+ * What a row says in place of its copies when the search for them failed
+ * as the page was read (owner, 2026-11-22).
+ */
+const COPIES_UNCHECKED = "Copies couldn't be checked; reload to try again.";
+
+function CopiesUnchecked({
+  row,
+}: Readonly<{ row: QueueRow }>): JSX.Element | undefined {
+  return row.copiesUnchecked === true ? (
+    <p data-part="copies-unchecked" className="text-small text-quiet">
+      {COPIES_UNCHECKED}
+    </p>
+  ) : undefined;
 }
 
 /**
