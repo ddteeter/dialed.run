@@ -293,6 +293,7 @@ model {
   cf.app.ops.publicWeb -[imports]-> cf.app.email
   cf.app.ops.publicWeb -[imports]-> cf.app.ops.sentry
   cf.app.ops.publicWeb -[imports]-> cf.app.safety
+  cf.app.ops.speed -[imports]-> cf.app.ops.edge
   cf.app.ops.speed -[imports]-> cf.app.ops.sentry
   cf.app.products -[wiring]-> cf.app.auth
   cf.app.products -[imports]-> cf.app.email
