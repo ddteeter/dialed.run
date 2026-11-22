@@ -2046,6 +2046,80 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
     ).toStrictEqual([]);
   });
 
+  it("blanks the label of the code an unconfirmed account spent where it names the address it spent it with, and no other label", async () => {
+    const runner = await dueRunner(true);
+    const spentId = newUlid();
+    const otherId = newUlid();
+    await core.batch([
+      core
+        .update(user)
+        .set({ emailVerified: false })
+        .where(eq(user.id, runner.userId)),
+      core
+        .update(inviteRedemptions)
+        .set({ codeId: spentId })
+        .where(eq(inviteRedemptions.userId, runner.userId)),
+      core.insert(inviteCodes).values([
+        {
+          id: spentId,
+          code: `DIAL-${spentId}`,
+          label: `Sent to ${runner.redeemedAs.toUpperCase()}`,
+          createdAt: NOW,
+        },
+        {
+          id: otherId,
+          code: `DIAL-${otherId}`,
+          label: `Sent to ${runner.redeemedAs}`,
+          createdAt: NOW,
+        },
+      ]),
+    ]);
+
+    await purge([], {
+      ...depsAt(NOW).deps,
+      closedAddressSecret: CLOSED_KEY,
+    });
+
+    const labels = await core
+      .select({ id: inviteCodes.id, label: inviteCodes.label })
+      .from(inviteCodes)
+      .where(inArray(inviteCodes.id, [spentId, otherId]));
+    expect(
+      new Map(labels.map((row) => [row.id, row.label ?? undefined])),
+    ).toStrictEqual(
+      new Map([
+        [spentId, undefined],
+        [otherId, `Sent to ${runner.redeemedAs}`],
+      ]),
+    );
+  });
+
+  it("keeps the label of the code a runner spent when it names no address of theirs", async () => {
+    const runner = await dueRunner(false);
+    const spentId = newUlid();
+    await core.batch([
+      core
+        .update(inviteRedemptions)
+        .set({ codeId: spentId })
+        .where(eq(inviteRedemptions.userId, runner.userId)),
+      core.insert(inviteCodes).values({
+        id: spentId,
+        code: `DIAL-${spentId}`,
+        label: "Club night",
+        createdAt: NOW,
+      }),
+    ]);
+
+    await purge([], depsAt(NOW).deps);
+
+    expect(
+      await core
+        .select({ label: inviteCodes.label })
+        .from(inviteCodes)
+        .where(eq(inviteCodes.id, spentId)),
+    ).toStrictEqual([{ label: "Club night" }]);
+  });
+
   it("fingerprints only the account's own address when it has no invite on record", async () => {
     const runner = await dueRunner(true);
     await core

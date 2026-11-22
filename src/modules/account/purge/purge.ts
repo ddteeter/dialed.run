@@ -533,6 +533,21 @@ function forgetAddress(db: Db, address: string) {
 }
 
 /**
+ * The label of the code a runner redeemed, blanked where it names the
+ * address they redeemed it with (an operator may type the address they
+ * sent it to). The redemption ties the code to the runner by id, so this
+ * needs no proved address; a code's other labels stay, so a code many
+ * runners spent keeps its operator's words.
+ */
+function forgetRedeemedLabel(db: Db, userId: string) {
+  const namesTheirAddress = sql`EXISTS (SELECT 1 FROM ${inviteRedemptions} WHERE ${inviteRedemptions.userId} = ${userId} AND ${inviteRedemptions.codeId} = ${inviteCodes.id} AND instr(lower(${inviteCodes.label}), ${inviteRedemptions.email}) > 0)`;
+  return db
+    .update(inviteCodes)
+    .set({ label: orSqlNull(undefined) })
+    .where(namesTheirAddress);
+}
+
+/**
  * Everything else, and the account itself — one batch, so the claim goes
  * only with the `user` row, and a purge that reaches here finishes whole.
  */
@@ -643,6 +658,11 @@ async function deleteAccountRows(
       .update(reports)
       .set({ reporterId: sql`'deleted:' || ${reports.id}` })
       .where(eq(reports.reporterId, userId)),
+    // The code they spent, where its label names the address they spent
+    // it with: found by their own redemption, not by the address, so an
+    // account that never confirmed its address leaves it too. Before the
+    // redemption's address goes, below.
+    forgetRedeemedLabel(db, userId),
     // The invite's use stays spent (2b-1): the row stays, the address
     // does not. Distinct per account, as uses are counted by address.
     db
