@@ -895,6 +895,16 @@ describe("the queue itself", () => {
     expect(ids).toStrictEqual([onTheClock, later]);
   });
 
+  it("lists only the rows with an at-once report past the page's limit", async () => {
+    const onTheClock = await rowAt(100, 100);
+    await rowAt(200);
+
+    const page = await pendingReviewQueue(1);
+    const ids = page.map((row) => row.id);
+
+    expect(ids).toStrictEqual([onTheClock]);
+  });
+
   it("lists every row on the clock past the page's limit, most pressing first, and only pending ones", async () => {
     const oldest = await rowAt(100);
     const lessPressing = await rowAt(200, 500);
