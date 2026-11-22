@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
@@ -26,6 +27,7 @@ import type {
   QueueRow,
   ResolveOutcome,
   ReviewSource,
+  ShownRow,
 } from "../review";
 import { PickOne } from "../../components/DeskForm";
 import { DueClock } from "../../components/DueClock";
@@ -277,6 +279,12 @@ A flagged handle's rename lost a race: the handle as it is now.
 type Moved = (username: string) => void;
 
 /**
+ * The handle a flagged handle's row shows, and what to do when a Rename
+ * finds the runner holds another now.
+ */
+type ShownHandle = Readonly<{ handle: string; onMoved: Moved }>;
+
+/**
  * A content row's decision: Approve, Remove, or Remove as suspected CSAM
  * (`RemovalDecision`), sent by the queue row's id. A missing file has
  * nothing to approve, so it offers Clear photo instead (D-157).
@@ -296,7 +304,7 @@ function Decision({
   return (
     <RemovalDecision
       schema={reviewActionInput}
-      subject={{ queueId: row.id }}
+      subject={{ queueId: row.id, shown: shownOf(row) }}
       act={async (values) => {
         const decided = await decide({ data: values });
         return { action: values.action, outcome: decided.outcome };
@@ -316,6 +324,13 @@ function Decision({
   );
 }
 
+/**
+A row as this page shows it, which a decision on it sends back.
+*/
+function shownOf(row: QueueRow): ShownRow {
+  return { openedAt: row.openedAt, source: row.source };
+}
+
 export type ReviewHandle = (input: {
   data: HandleReviewValues;
 }) => Promise<HandleReview>;
@@ -332,9 +347,10 @@ function HandleDecision({
   row,
   reviewHandle,
   onSettled,
-  onMoved,
+  shown,
 }: RowSettleProps &
-  Readonly<{ reviewHandle: ReviewHandle; onMoved: Moved }>): JSX.Element {
+  Readonly<{ reviewHandle: ReviewHandle; shown: ShownHandle }>): JSX.Element {
+  const { handle, onMoved } = shown;
   const [reason, setReason] = useState<RenameReason | undefined>();
   const [said, setSaid] = useState("");
   const form = useFormSubmit({
@@ -365,6 +381,8 @@ function HandleDecision({
       onSubmit={() => {
         void form.submit({
           queueId: row.id,
+          shown: shownOf(row),
+          handle,
           action: "rename",
           nameReason: reason,
         });
@@ -373,7 +391,11 @@ function HandleDecision({
         <QuietAction
           label="Keep"
           onPress={() => {
-            void form.submit({ queueId: row.id, action: "keep" });
+            void form.submit({
+              queueId: row.id,
+              shown: shownOf(row),
+              action: "keep",
+            });
           }}
         />
       }
@@ -413,12 +435,40 @@ function WhyHere({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
       ? HANDLE_FLAGGED_LINE
       : STUCK_LINES[row.source];
   if (line === undefined) return <ReportedFor row={row} />;
+  // A flagged handle's row that runners also reported says both: the
+  // handle's sentence, then what the reporters said (owner, 2026-11-21).
   return (
-    // The same step and tone as what reporters said, its neighbour's
-    // line of the same kind (N3-13).
-    <p data-part="why-here" className="m-0 text-small text-quiet">
-      {line}
-    </p>
+    <>
+      {/* The same step and tone as what reporters said, its neighbour's
+          line of the same kind (N3-13). */}
+      <p data-part="why-here" className="m-0 text-small text-quiet">
+        {line}
+      </p>
+      {row.reporterCount === 0 ? undefined : <ReportedFor row={row} />}
+    </>
+  );
+}
+
+/**
+ * A reported kit's or kit photo's way to the Desk's own view of the kit,
+ * where its garments' names are: the row shows its photos only. Worded as
+ * a removal request's (`RemovalRequests`). Nothing on any other row, or
+ * on a photo whose kit is gone.
+ */
+function OpenTheKit({
+  row,
+}: Readonly<{ row: QueueRow }>): JSX.Element | undefined {
+  const { kitId } = row.subject;
+  if (kitId === undefined) return undefined;
+  return (
+    <Link
+      to="/desk/kit/$entryId"
+      params={{ entryId: kitId }}
+      search={{ from: "report", row: row.id }}
+      className="target self-start font-bold text-ink underline underline-offset-4"
+    >
+      {row.subjectType === "entry" ? "Open the kit" : "Open its kit"}
+    </Link>
   );
 }
 
@@ -664,7 +714,7 @@ function ReviewRow({
                 decide={decide}
                 reviewHandle={reviewHandle}
                 onSettled={onSettled}
-                onMoved={setLabel}
+                shown={{ handle: label, onMoved: setLabel }}
               />
             }
           />
@@ -711,6 +761,7 @@ function OpenRow({
             leaving the first one blank (R2-DESK-07). */}
         <div className="flex flex-col gap-3 desk:col-start-2 desk:[[data-part=row-photos]:empty+&]:col-span-full">
           <WhyHere row={row} />
+          <OpenTheKit row={row} />
           {row.due === undefined ? undefined : <StatutoryLine />}
           {/* D1: who reported, folded; opening it is logged (D-164). */}
           <ReportersFold row={row} reporters={reporters} />
@@ -735,7 +786,11 @@ function OpenRow({
  */
 function RowDecision(
   props: RowSettleProps &
-    Readonly<{ decide: Decide; reviewHandle: ReviewHandle; onMoved: Moved }>,
+    Readonly<{
+      decide: Decide;
+      reviewHandle: ReviewHandle;
+      shown: ShownHandle;
+    }>,
 ): JSX.Element {
   const { row, onSettled } = props;
   if (row.subject.handleFlagged === true) {
@@ -744,7 +799,7 @@ function RowDecision(
         row={row}
         reviewHandle={props.reviewHandle}
         onSettled={onSettled}
-        onMoved={props.onMoved}
+        shown={props.shown}
       />
     );
   }

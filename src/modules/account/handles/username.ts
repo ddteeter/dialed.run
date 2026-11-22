@@ -24,6 +24,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import {
   accountDeletions,
+  notifications,
   userProfiles,
   usernameHistory,
 } from "../../../db/schema-core";
@@ -42,6 +43,7 @@ import {
   isProfaneHandle,
   readBackDigits,
 } from "../../../lib/contracts/profanity";
+import { followRowsNaming } from "../../notifications";
 import { purgePublicPages } from "../../ops";
 import { isPlaceholderHandle } from "../../safety";
 import type { ScreenHandle } from "./handle-screen";
@@ -530,6 +532,12 @@ export type ForcedRename =
 export interface ForceRenameRequest {
   readonly userId: string;
   /**
+   * The handle the moderator was shown, when a page showed one. A runner
+   * who has changed handle since is renamed nothing: the handle shown is
+   * locked where it sits in their own history, and the answer is `moved`.
+   */
+  readonly shown?: string | undefined;
+  /**
   The new handle, as drawn or typed; parsed here like any other.
   */
   readonly typed: string;
@@ -565,11 +573,26 @@ function stillHolds(userId: string, previous: string): SQL {
  * The runner's own history row for `handle`, unless a moderator locked it.
  */
 function ownUnlocked(userId: string, handle: string) {
-  return and(
+  const own = and(
     eq(usernameHistory.username, handle),
     eq(usernameHistory.userId, userId),
-    isNull(usernameHistory.lockedAt),
   );
+  return and(own, isNull(usernameHistory.lockedAt));
+}
+
+/**
+ * Locks a handle the runner gave up themselves, so neither they nor anyone
+ * may take it. Nothing when it is not in their own history, unlocked.
+ */
+async function lockOwnHistoryHandle(
+  db: Db,
+  userId: string,
+  handle: string,
+): Promise<void> {
+  await db
+    .update(usernameHistory)
+    .set({ lockedAt: nowSeconds() })
+    .where(ownUnlocked(userId, handle));
 }
 
 /**
@@ -602,6 +625,10 @@ export async function forceRename(
   const profile = await profileOf(db, userId);
   const previous = profile?.username ?? undefined;
   if (previous === undefined) return { kind: "not_found" };
+  if (request.shown !== undefined && request.shown !== previous) {
+    await lockOwnHistoryHandle(db, userId, request.shown);
+    return { kind: "moved", username: previous };
+  }
   const parsed = usernameSchema.safeParse(request.typed);
   if (!parsed.success) return { kind: "taken" };
   const username = parsed.data;
@@ -611,6 +638,7 @@ export async function forceRename(
   const now = nowSeconds();
   const held = stillHolds(userId, previous);
   const ownUnlockedWhile = and(ownUnlocked(userId, username), held);
+  const ringsNaming = and(followRowsNaming(db, userId, previous), held);
   const holdingPrevious = and(
     eq(userProfiles.userId, userId),
     eq(userProfiles.username, previous),
@@ -628,6 +656,8 @@ export async function forceRename(
         }),
       db.delete(usernameHistory).where(ownUnlockedWhile),
       request.recordedAs(previous, held),
+      // The follow rows on others' bells that name the handle taken away.
+      db.delete(notifications).where(ringsNaming),
       ...(request.also?.(held) ?? []),
       // Last, so every statement above reads the handle before it changes.
       db

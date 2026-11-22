@@ -9,6 +9,7 @@ import {
   notifications,
   outfitEntries,
   products,
+  reports,
   reviewQueue,
   userProfiles,
 } from "../../src/db/schema-core";
@@ -46,6 +47,7 @@ import {
   makeProduct,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   resetSafetyTables,
 } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
@@ -417,6 +419,66 @@ describe("two decisions on one row (SA-L11)", () => {
     expect(await noticesOfKind("report_kept")).toBe(0);
   });
 
+  it("settles nothing on a row whose source changed since it was read", async () => {
+    const { entryId, queueId } = await queuedEntry();
+
+    const reviewer = await makeUser();
+    const [outcome] = await Promise.all([
+      resolveReview(queueId, reviewer, "approve"),
+      core()
+        .update(reviewQueue)
+        .set({ source: "classifier" })
+        .where(eq(reviewQueue.id, queueId)),
+    ]);
+
+    expect(outcome).toBe("already_resolved");
+    const row = await queueRow(queueId);
+    expect(row?.status).toBe("pending");
+    expect(await statusOf(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("settles nothing on a row re-opened for another reason since the page showed it", async () => {
+    const { entryId, queueId } = await queuedEntry();
+    const shown = { openedAt: 1, source: "classifier" } as const;
+
+    expect(
+      await resolveReview(queueId, await makeUser(), "approve", shown),
+    ).toBe("already_resolved");
+
+    const row = await queueRow(queueId);
+    expect(row?.status).toBe("pending");
+    expect(await statusOf(entryId)).toBe("hidden_pending_review");
+    expect(await noticesOfKind("report_kept")).toBe(0);
+  });
+
+  it("tells a re-open in the same second apart by its source", async () => {
+    const { queueId } = await queuedEntry();
+    const [row] = await core()
+      .select({ openedAt: reviewQueue.openedAt })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+    const sameSecond = row?.openedAt ?? 0;
+
+    expect(
+      await resolveReview(queueId, await makeUser(), "approve", {
+        openedAt: sameSecond,
+        source: "classifier",
+      }),
+    ).toBe("already_resolved");
+    expect(
+      await resolveReview(queueId, await makeUser(), "approve", {
+        openedAt: sameSecond - 1,
+        source: "reports",
+      }),
+    ).toBe("already_resolved");
+    expect(
+      await resolveReview(queueId, await makeUser(), "approve", {
+        openedAt: sameSecond,
+        source: "reports",
+      }),
+    ).toBe("resolved");
+  });
+
   it("never settles a row already settled", async () => {
     const { queueId } = await reportedProduct();
     const first = await makeUser();
@@ -580,11 +642,46 @@ describe("what a decision writes", () => {
     expect(stillPending?.photoId).toBe(photoId);
   });
 
+  it("publishes a photo the classifier sent here, so screening does not send it back", async () => {
+    const author = await makeUser();
+    const entryId = await makeEntry({
+      userId: author,
+      runId: await makeRun({ userId: author }),
+      audience: "runners",
+    });
+    const photoId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: photoId,
+        entryId,
+        photoKey: `entries/${author}/${entryId}/${photoId}`,
+        position: 0,
+        screenStatus: "hidden_pending_review",
+      });
+    const queueId = newUlid();
+    await core().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "photo",
+      subjectId: photoId,
+      source: "classifier",
+      status: "pending",
+      createdAt: nowSeconds(),
+    });
+
+    expect(await resolveReview(queueId, await makeUser(), "approve")).toBe(
+      "resolved",
+    );
+
+    expect(await photoStatusOf(photoId)).toBe("pass");
+    expect(await pendingEntryPhotos()).toStrictEqual([]);
+  });
+
   it("leaves a reported profile's own rows alone", async () => {
     // `subjectWriters` has no profile branch on purpose: removing a
     // person is a ban, with its own path and its own notice. A resolve
     // here must settle the queue row and touch nothing else.
-    const subject = await makeUser();
+    const subject = await makeVerifiedUser();
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport(
         {
@@ -607,8 +704,87 @@ describe("what a decision writes", () => {
   });
 });
 
+/**
+ * A pending row created at `createdAt`, and, when `intimateAt` is given,
+ * an intimate-image report on its subject filed then.
+ */
+async function rowAt(createdAt: number, intimateAt?: number) {
+  const id = newUlid();
+  const subjectId = newUlid();
+  await core()
+    .insert(reviewQueue)
+    .values({
+      id,
+      subjectType: "entry",
+      subjectId,
+      source: intimateAt === undefined ? "classifier" : "reports",
+      status: "pending",
+      createdAt,
+      openedAt: createdAt,
+    });
+  if (intimateAt !== undefined) {
+    await core().insert(reports).values({
+      id: newUlid(),
+      reporterId: newUlid(),
+      subjectType: "entry",
+      subjectId,
+      reason: "intimate",
+      createdAt: intimateAt,
+    });
+  }
+  return id;
+}
+
 describe("the queue itself", () => {
   beforeEach(resetSafetyTables);
+
+  it("lists a row on the removal clock that the page's limit cut, once", async () => {
+    const first = await rowAt(100);
+    const second = await rowAt(200);
+    const onTheClock = await rowAt(300, 300);
+
+    const page = await pendingReviewQueue(2);
+    const ids = page.map((row) => row.id);
+
+    expect(ids).toStrictEqual([first, second, onTheClock]);
+  });
+
+  it("does not list a row on the clock twice when the page has it", async () => {
+    const onTheClock = await rowAt(100, 100);
+    const later = await rowAt(200);
+
+    const page = await pendingReviewQueue(2);
+    const ids = page.map((row) => row.id);
+
+    expect(ids).toStrictEqual([onTheClock, later]);
+  });
+
+  it("takes the most pressing rows on the clock first, and only pending ones", async () => {
+    await rowAt(100);
+    const lessPressing = await rowAt(200, 500);
+    const morePressing = await rowAt(300, 400);
+    const decided = await rowAt(50, 50);
+    await core()
+      .update(reviewQueue)
+      .set({ status: "approved" })
+      .where(eq(reviewQueue.id, decided));
+
+    const page = await pendingReviewQueue(1);
+    const ids = page.map((row) => row.id);
+
+    expect(ids).toHaveLength(2);
+    expect(ids[1]).toBe(morePressing);
+    expect(ids).not.toContain(lessPressing);
+  });
+
+  it("gives each row the time it last went in front of a person", async () => {
+    await rowAt(100);
+    await core().update(reviewQueue).set({ openedAt: 900 });
+
+    const [row] = await pendingReviewQueue();
+
+    expect(row?.openedAt).toBe(900);
+  });
 
   it("is one row per subject, however many people reported it", async () => {
     const { entryId } = await queuedEntry();
@@ -896,14 +1072,21 @@ describe("the queue itself", () => {
 
     // "@n8's account stays open": the author, not a reporter, and on an
     // entry with no photo as much as on one with.
-    expect(subjectOf(bare)).toStrictEqual({ photoKeys: [], owner: "n8" });
+    // Each names the kit it opens, the photo's being its kit.
+    expect(subjectOf(bare)).toStrictEqual({
+      photoKeys: [],
+      owner: "n8",
+      kitId: bare,
+    });
     expect(subjectOf(pictured)).toStrictEqual({
       photoKeys: [`entries/${author}/${pictured}/0`],
       owner: "n8",
+      kitId: pictured,
     });
     expect(subjectOf(photoId)).toStrictEqual({
       photoKeys: [`entries/${author}/${pictured}/0`],
       owner: "n8",
+      kitId: pictured,
     });
   });
 
@@ -980,14 +1163,16 @@ describe("the queue itself", () => {
 
     // The image is what is being judged; the author is a line of text.
     // An inner join to the entry dropped both.
+    // And no kit to open.
     expect(queued?.subject).toStrictEqual({
       photoKeys: [orphanKey],
       owner: undefined,
+      kitId: undefined,
     });
   });
 
   it("names a reported runner and a reported product", async () => {
-    const subject = await makeUser();
+    const subject = await makeVerifiedUser();
     await core()
       .update(userProfiles)
       .set({ username: "mark_t" })
@@ -1029,7 +1214,7 @@ describe("the queue itself", () => {
     // and product ids are different namespaces that happen to share a
     // column type — and a lookup keyed on the id alone would label the
     // reported runner with the product's name.
-    const subject = await makeUser();
+    const subject = await makeVerifiedUser();
     await core()
       .update(userProfiles)
       .set({ username: "mark_t" })

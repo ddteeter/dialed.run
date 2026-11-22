@@ -18,7 +18,6 @@ import type { SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
-  accountDeletions,
   blocks,
   outfitEntries,
   reports,
@@ -26,6 +25,7 @@ import {
   userProfiles,
   worldAudience,
 } from "../../../db/schema-core";
+import { runnerNotLeaving } from "../../../db/runner-standing";
 
 /**
  * The entry is shared by its author, nothing is pending or settled against
@@ -117,20 +117,8 @@ function authorNotBanned(): SQL {
   return sql`not exists (select 1 from ${userProfiles} where ${userProfiles.userId} = ${outfitEntries.userId} and (${userProfiles.bannedAt} is not null or ${userProfiles.systemAccount} = 1))`;
 }
 
-/**
- * A runner who asked to delete their account is gone from everyone else
- * at once (task 126, ACC-9; round 27 #14: "Shared runs leave the feed at
- * once and stop counting toward anyone's Call"), for the week before the
- * purge. The claim row is the hide, as a ban's column is: nothing about
- * the entries is written, so "Keep my account" brings them back as they
- * were. A primary-key probe per candidate.
- *
- * `runnerId` is the column naming the runner — an entry's author here, a
- * profile row's user in the feed's search and H (seam 6: one rule).
- */
-export function runnerNotLeaving(runnerId: SQLiteColumn): SQL {
-  return sql`not exists (select 1 from ${accountDeletions} where ${accountDeletions.userId} = ${runnerId})`;
-}
+// A runner leaving is everyone's rule, in `db/runner-standing` (seam 6).
+export { runnerNotLeaving } from "../../../db/runner-standing";
 
 /**
  * W2 promises both directions: "They can't see your entries" and "You

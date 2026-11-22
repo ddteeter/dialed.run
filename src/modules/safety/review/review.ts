@@ -223,6 +223,12 @@ export interface QueueSubject {
    * · Shoes · In use". Absent on every other row.
    */
   garmentLine?: string | undefined;
+  /**
+   * The kit a reported kit's or kit photo's row is about, which the row
+   * opens on the Desk (`/desk/kit/$entryId`), where its garments' names
+   * are. Absent on every other row, and on a photo whose kit is gone.
+   */
+  kitId?: string | undefined;
 }
 
 /**
@@ -250,6 +256,12 @@ export interface QueueRow {
   subjectId: string;
   source: ReviewSource;
   createdAt: number;
+  /**
+   * When the row last went in front of a person. A decision sends it back
+   * with its source, and is held to both, so a row re-opened since the
+   * page was read is left for the page that shows why.
+   */
+  openedAt: number | null;
   /**
    * How many distinct people reported this subject, and what they said was
    * wrong with it.
@@ -306,46 +318,24 @@ export function firstReportHidingAtOnce(): SQL<number | null> {
 }
 
 /**
- * What is waiting, oldest first — the review page's only read, served by
- * `review_queue_status_created`.
+ * What is waiting, oldest first, served by `review_queue_status_created`;
+ * then any row on the removal clock the page's `limit` cut, so a deadline
+ * is never behind the limit.
  *
  * `limit` is a real bound rather than a courtesy: the page renders rows and
  * a solo operator reads them, so an unbounded read would be billing D1 for
- * rows nobody looks at.
+ * rows nobody looks at. The clock's read takes the same bound, most
+ * pressing first.
  */
 export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
-  // **One joined, grouped read rather than a second pass over the ids.**
-  // The reports are what the reviewer is being asked about, so they are
-  // not a detail to fetch afterwards — and fetching them afterwards needs
-  // an `if (rows.length === 0)` in front of the second query, which is a
-  // branch nothing can observe (see `blockedRunners`, which had one).
-  //
-  // LEFT, because a classifier-sourced row has no reports at all and must
-  // still appear. `group_concat` is SQLite's only way to bring a set back
-  // in one column; it is parsed rather than trusted on the way out.
-  const rows = await db()
-    .select({
-      id: reviewQueue.id,
-      subjectType: reviewQueue.subjectType,
-      subjectId: reviewQueue.subjectId,
-      source: reviewQueue.source,
-      createdAt: reviewQueue.createdAt,
-      reporterCount: sql<number>`count(distinct ${reports.reporterId})`,
-      reasons: sql<string | null>`group_concat(distinct ${reports.reason})`,
-      firstAtOnce: firstReportHidingAtOnce(),
-    })
-    .from(reviewQueue)
-    .leftJoin(
-      reports,
-      and(
-        eq(reports.subjectType, reviewQueue.subjectType),
-        eq(reports.subjectId, reviewQueue.subjectId),
-      ),
-    )
-    .where(eq(reviewQueue.status, "pending"))
-    .groupBy(reviewQueue.id)
-    .orderBy(asc(reviewQueue.createdAt))
-    .limit(limit);
+  const oldestFirst = asc(reviewQueue.createdAt);
+  const mostPressingFirst = asc(firstReportHidingAtOnce());
+  const [page, onTheClock] = await Promise.all([
+    pendingRows().orderBy(oldestFirst).limit(limit),
+    pendingRows(reportOnTheClock()).orderBy(mostPressingFirst).limit(limit),
+  ]);
+  const onThePage = new Set(page.map((row) => row.id));
+  const rows = [...page, ...onTheClock.filter((row) => !onThePage.has(row.id))];
 
   // No read needs another's answer, so they go together.
   const [subjects, others, matches, removed] = await Promise.all([
@@ -372,6 +362,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     subjectId: row.subjectId,
     source: row.source,
     createdAt: row.createdAt,
+    openedAt: row.openedAt,
     reporterCount: row.reporterCount,
     reasons: reasonsFrom(row.reasons),
     ...removalClock(row.firstAtOnce, now),
@@ -382,6 +373,48 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
       photoKeys: [],
     },
   }));
+}
+
+/**
+ * Pending rows with their reports, ordered and bounded by the caller.
+ *
+ * **One joined, grouped read rather than a second pass over the ids.**
+ * The reports are what the reviewer is being asked about, so they are not
+ * a detail to fetch afterwards. LEFT, because a classifier-sourced row has
+ * no reports at all and must still appear. `group_concat` is SQLite's only
+ * way to bring a set back in one column; it is parsed rather than trusted
+ * on the way out.
+ */
+function pendingRows(also?: SQL) {
+  return db()
+    .select({
+      id: reviewQueue.id,
+      subjectType: reviewQueue.subjectType,
+      subjectId: reviewQueue.subjectId,
+      source: reviewQueue.source,
+      createdAt: reviewQueue.createdAt,
+      openedAt: reviewQueue.openedAt,
+      reporterCount: sql<number>`count(distinct ${reports.reporterId})`,
+      reasons: sql<string | null>`group_concat(distinct ${reports.reason})`,
+      firstAtOnce: firstReportHidingAtOnce(),
+    })
+    .from(reviewQueue)
+    .leftJoin(
+      reports,
+      and(
+        eq(reports.subjectType, reviewQueue.subjectType),
+        eq(reports.subjectId, reviewQueue.subjectId),
+      ),
+    )
+    .where(and(eq(reviewQueue.status, "pending"), also))
+    .groupBy(reviewQueue.id);
+}
+
+/**
+A row whose subject has a report of a reason that hides at once.
+*/
+function reportOnTheClock(): SQL {
+  return sql`exists (select 1 from ${reports} where ${reports.subjectType} = ${reviewQueue.subjectType} and ${reports.subjectId} = ${reviewQueue.subjectId} and ${inArray(reports.reason, [...reasonsOnTheClock])})`;
 }
 
 /**
@@ -472,6 +505,12 @@ async function subjectsFor(
         // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
         photoKey: entryPhotos.photoKey,
         owner: userProfiles.username,
+        // The photo's kit, when it still exists. An expression, not the
+        // kit's own column: D1 keys a row by column name, and the kit's is
+        // also `id`.
+        kitId: sql<
+          string | null
+        >`case when ${outfitEntries.id} is null then null else ${entryPhotos.entryId} end`,
       })
       // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
       .from(entryPhotos)
@@ -536,6 +575,7 @@ async function subjectsFor(
     found.set(`photo:${row.id}`, {
       photoKeys: [row.photoKey],
       owner: row.owner ?? undefined,
+      kitId: row.kitId ?? undefined,
     });
   }
   // An entry's photos, grouped before its subject is written, so every
@@ -547,6 +587,7 @@ async function subjectsFor(
     found.set(`entry:${row.id}`, {
       photoKeys: (photosOf.get(row.id) ?? []).map((photo) => photo.photoKey),
       owner: row.owner ?? undefined,
+      kitId: row.id,
     });
   }
   for (const row of profileRows) {
@@ -752,6 +793,11 @@ type OpenRow =
        * decision made on the row as read lands only while it is unchanged.
        */
       openedAt: number | null;
+      /**
+       * The row still as read: what a decision's settle holds to
+       * (`stillAsShown`), handed to account's Keep and Rename with it.
+       */
+      unchanged: SQL;
     };
 
 /**
@@ -768,7 +814,10 @@ type OpenRow =
  * Exported for account's flagged-handle decision (D-97), which answers
  * the same three ways.
  */
-export async function openRow(queueId: string): Promise<OpenRow> {
+export async function openRow(
+  queueId: string,
+  shown?: ShownRow,
+): Promise<OpenRow> {
   const row = await firstRowWhere(
     db(),
     reviewQueue,
@@ -779,21 +828,46 @@ export async function openRow(queueId: string): Promise<OpenRow> {
   if (row.status === "approved" || row.status === "removed") {
     return "already_resolved";
   }
+  // Re-opened since the page that sends the decision was read: that
+  // decision was made on another reason for the row, so it is answered as
+  // settled and the reloaded page shows the row as it is now.
+  if (shown !== undefined && !isAsShown(row, shown)) {
+    return "already_resolved";
+  }
   return {
     subjectType: row.subjectType,
     subjectId: row.subjectId,
     source: row.source,
     openedAt: row.openedAt,
+    unchanged: stillAsShown(row),
   };
 }
 
 /**
- * The row not re-opened since it was read (SA-L11): what a decision's
- * settle also holds to, so a report that re-opened the row in between is
- * left for a person rather than settled on what was read before it.
+ * The row not re-opened since it was read or shown (SA-L11): what a
+ * decision's settle also holds to, so a report that re-opened the row in
+ * between is left for a person rather than settled on what was read
+ * before it. Account's Keep and Rename get it on the row they read.
  */
-function unchangedSinceRead(row: Exclude<OpenRow, string>): SQL {
-  return sql`${reviewQueue.openedAt} is ${row.openedAt}`;
+function stillAsShown(row: ShownRow): SQL {
+  return sql`${reviewQueue.openedAt} is ${row.openedAt} and ${reviewQueue.source} = ${row.source}`;
+}
+
+/**
+ * A row as a Desk page showed it: when it last went in front of a person,
+ * and why. A decision sends both back. `openedAt` is in whole seconds, so
+ * the source is what tells a re-open in the same second apart.
+ */
+export interface ShownRow {
+  readonly openedAt: number | null;
+  readonly source: ReviewSource;
+}
+
+/**
+Whether a row is still the one a page showed.
+*/
+function isAsShown(row: ShownRow, shown: ShownRow): boolean {
+  return row.openedAt === shown.openedAt && row.source === shown.source;
 }
 
 /**
@@ -816,12 +890,13 @@ export function settledHere(
 }
 
 /**
- * The subject of a queue row still waiting on a decision, or nothing — for
- * a caller that acts only on open rows and leaves "why not" to
- * `resolveReview`.
+ * The subject of a queue row still waiting on a decision, and still as the
+ * page showed it, or nothing — for a caller that acts only on open rows and
+ * leaves "why not" to `resolveReview`.
  */
 export async function openSubject(
   queueId: string,
+  shown: ShownRow,
 ): Promise<{ subjectType: ReviewSubjectType; subjectId: string } | undefined> {
   return firstRowWhere(
     db(),
@@ -829,6 +904,7 @@ export async function openSubject(
     and(
       eq(reviewQueue.id, queueId),
       inArray(reviewQueue.status, ["pending", "reviewing"]),
+      stillAsShown(shown),
     ),
   );
 }
@@ -849,8 +925,13 @@ export async function resolveReview(
   queueId: string,
   reviewerId: string,
   decision: ReviewDecision,
+  /**
+   * The row as the deciding page showed it; nothing for a decision no page
+   * showed (a burst release), which holds to the row as read here.
+   */
+  shown?: ShownRow,
 ): Promise<ResolveOutcome> {
-  const row = await openRow(queueId);
+  const row = await openRow(queueId, shown);
   if (typeof row === "string") return row;
 
   // A read that decides what to write goes before the batch, not inside
@@ -874,7 +955,7 @@ export async function resolveReview(
       queueId,
       reviewerId,
       settled.status,
-      unchangedSinceRead(row),
+      row.unchanged,
       settled.at,
     ).returning({ id: reviewQueue.id }),
     ...subjectWritesFor(row, decision, here),
@@ -1006,6 +1087,10 @@ export function reviewResolution(
       status,
       resolvedBy: reviewerId,
       resolvedAt: at,
+      // The last Approve, which a re-open keeps: only the reports filed
+      // after it count toward hiding the subject again. A Remove leaves
+      // it as it was.
+      ...(status === "approved" && { approvedAt: at }),
       // Settled rows carry no claim. Left set, a resolved row would still
       // look claimed to anything reading the lease.
       claimedAt: orSqlNull(undefined),
@@ -1093,11 +1178,13 @@ const subjectWriters: Record<
   // report it. Owner's call, 2026-09-15; the reasoning is in
   // docs/designs/106-trust-safety.md.
   //
-  // The one exception is a photo the classifier never answered for a day
-  // after upload (D-157, design 167): the row exists because nothing will
-  // screen it, so back to `pending` would only bring it back tomorrow. A
-  // person has looked at it now, and their Approve publishes it (owner,
-  // 2026-10-31).
+  // Two sources publish instead. A photo the classifier never answered for
+  // a day after upload (D-157, design 167): the row exists because nothing
+  // will screen it, so back to `pending` would only bring it back tomorrow
+  // (owner, 2026-10-31). And a photo the classifier did answer for: its
+  // row is the classifier's answer, so screening it again gives the same
+  // answer and the same row. A person has looked at either now, and their
+  // Approve publishes it (owner, 2026-11-21).
   photo: (subjectId, decision, source, here) => [
     unlessRequestHolds(
       { table: entryPhotos, subjectType: "photo", subjectId },
@@ -1163,15 +1250,23 @@ function notHeldByRequest(
 }
 
 /**
- * Where Approve leaves an entry photo: `pass` when a person is the only
- * screening it will get (an `unscreened` row, D-157), `pending` for every
- * other source, so the screener still sees it.
+ * Where Approve leaves an entry photo: `pass` when the classifier already
+ * answered for it or never will (a `classifier` or an `unscreened` row),
+ * `pending` for every other source, so the screener still sees it.
  */
 function approvedPhotoStatus(
   source: ReviewSource,
 ): typeof publicPhotoStatus | "pending" {
-  return source === "unscreened" ? publicPhotoStatus : "pending";
+  return publishedOnApprove.has(source) ? publicPhotoStatus : "pending";
 }
+
+/**
+The sources whose Approve publishes a kit photo.
+*/
+const publishedOnApprove: ReadonlySet<ReviewSource> = new Set([
+  "classifier",
+  "unscreened",
+]);
 
 /**
  * One column set on the row a report named.

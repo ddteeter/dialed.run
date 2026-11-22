@@ -351,24 +351,39 @@ function lowestFiledBar(thresholds: ModerationThresholds | undefined): SQL {
 }
 
 /**
- * The reasons filed on a subject, one a reporter (the UNIQUE index), so
- * its length is the distinct reporter count.
+ * The reasons filed on a subject since a person last approved it, one a
+ * reporter (the UNIQUE index), so its length is the distinct reporter
+ * count. A report from before that Approve was answered by it, so only
+ * the reports after it count toward hiding the subject again (owner,
+ * 2026-11-21); a subject never approved counts every report.
  */
 async function filedReasonsOf(
   subjectType: ReportSubjectType,
   subjectId: string,
 ): Promise<ReportReason[]> {
+  const onSubject = subjectMatches(
+    reports.subjectType,
+    reports.subjectId,
+    subjectType,
+    subjectId,
+  );
   return columnWhere(
     db(),
     reports,
     reports.reason,
-    subjectMatches(
-      reports.subjectType,
-      reports.subjectId,
-      subjectType,
-      subjectId,
-    ),
+    and(onSubject, sinceLastApproved()),
   );
+}
+
+/**
+ * A report filed since the last Approve of its subject's Review row, or
+ * any report when there was none. Its own second included: times are in
+ * whole seconds, and a report in the Approve's second may not have been
+ * on the page that approved it.
+ */
+function sinceLastApproved(): SQL {
+  const lastApproved = sql`(select ${reviewQueue.approvedAt} from ${reviewQueue} where ${reportsOnQueueRow()})`;
+  return sql`${reports.createdAt} >= coalesce(${lastApproved}, 0)`;
 }
 
 /**

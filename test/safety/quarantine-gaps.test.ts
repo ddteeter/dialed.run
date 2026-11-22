@@ -1,4 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
+import { shownRowOf } from "./helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -549,6 +550,7 @@ describe("garment photos reach a person (design 157)", () => {
     expect(
       await decideReview(core(), "rev", {
         queueId: approvalRow,
+        shown: await shownRowOf(approvalRow),
         action: "approve",
       }),
     ).toBe("resolved");
@@ -578,6 +580,7 @@ describe("garment photos reach a person (design 157)", () => {
 
     await decideReview(core(), "rev", {
       queueId: ulidSchema.parse(row?.id),
+      shown: await shownRowOf(ulidSchema.parse(row?.id)),
       action: "approve",
     });
 
@@ -590,7 +593,11 @@ describe("garment photos reach a person (design 157)", () => {
     const itemId = await makeItem({ userId: owner });
     const queueId = await queued(itemId);
 
-    await decideReview(core(), "rev", { queueId, action: "approve" });
+    await decideReview(core(), "rev", {
+      queueId,
+      shown: await shownRowOf(queueId),
+      action: "approve",
+    });
 
     expect(await visibilityOf(itemId)).toBe("ok");
   });
@@ -766,6 +773,7 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
     expect(
       await decideReview(core(), "rev", {
         queueId,
+        shown: await shownRowOf(queueId),
         action: "quarantine",
         reason: "explicit",
       }),
@@ -873,6 +881,7 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
     expect(
       await decideReview(core(), "rev", {
         queueId,
+        shown: await shownRowOf(queueId),
         action: "quarantine",
         reason: "explicit",
       }),
@@ -896,6 +905,7 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
 
     await decideReview(core(), "rev", {
       queueId: ulidSchema.parse(row?.id),
+      shown: await shownRowOf(ulidSchema.parse(row?.id)),
       action: "quarantine",
       reason: "explicit",
     });

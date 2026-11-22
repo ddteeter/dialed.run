@@ -17,6 +17,7 @@ import {
   type CorrectionField,
 } from "../../lib/contracts/product-corrections";
 import { domainOf } from "../../lib/domain";
+import { ControlRefusal } from "../../lib/control-refusal";
 import { NotFoundError } from "../../lib/errors";
 import {
   FIELD_REFUSAL_CODE,
@@ -25,6 +26,7 @@ import {
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
+import { isWithinRateLimit } from "../email";
 import { deniedLinksOf } from "../safety";
 import {
   brandNameColumn,
@@ -61,6 +63,18 @@ export class FieldNotOnPieceError extends Error {
     this.issues = [{ path: ["field"], message: CORRECTION_FIELD_NOT_ON_PIECE }];
   }
 }
+
+/**
+How many corrections one runner may file in a day (owner, 2026-11-21).
+*/
+export const CORRECTIONS_PER_DAY = 20;
+
+/**
+The sheet's sentence past the day's corrections.
+*/
+export const CORRECTION_LIMIT_REACHED = `That's ${String(CORRECTIONS_PER_DAY)} corrections today. You can send more tomorrow.`;
+
+const DAY_S = 24 * 60 * 60;
 
 /**
  * Files a correction, or replaces the one this runner has waiting on the
@@ -102,8 +116,19 @@ export async function fileCorrection(
   if (!correctionFieldsFor(garment.category).includes(filing.field)) {
     throw new FieldNotOnPieceError();
   }
-  const note = filing.note === "" ? undefined : filing.note;
   const now = nowSeconds();
+  // One of the runner's day's corrections: after the repeat, ownership and
+  // field checks, so a replayed key or a refused filing costs nothing.
+  const isWithin = await isWithinRateLimit(
+    db,
+    "correction-runner",
+    userId,
+    CORRECTIONS_PER_DAY,
+    DAY_S,
+    now,
+  );
+  if (!isWithin) throw new ControlRefusal(CORRECTION_LIMIT_REACHED);
+  const note = filing.note === "" ? undefined : filing.note;
   const refiled = {
     garmentId: filing.garmentId,
     value: filing.value,

@@ -147,6 +147,7 @@ describe("on Review's rows", () => {
       subjectId: KIT,
       source: "reports",
       createdAt: 1_755_000_000,
+      openedAt: 1_755_000_000,
       reporterCount: 1,
       reasons: ["intimate"],
       due: "Due in 31h",

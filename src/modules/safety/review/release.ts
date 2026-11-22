@@ -13,7 +13,7 @@
  * says whether more wait; the operator presses again. Each row is a few
  * statements, and a request has a ceiling on how many it may make.
  */
-import { and, asc, count, eq, gte, inArray, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, ne, type SQL } from "drizzle-orm";
 
 import { reviewQueue } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
@@ -41,6 +41,11 @@ function openSince(since: number, ...also: readonly SQL[]) {
     // for every cause, as it is true of every cause: such a report re-opens
     // any row on its subject as `reports`.
     noReportHidingAtOnce(),
+    // Not a profile: nothing hides one, so its row is never a hold. A
+    // handle the re-ask flagged is queued as a `classifier` profile row,
+    // and a reported runner as a `reports` one; each is a person's to look
+    // at, so a release leaves it and its count leaves it out.
+    ne(reviewQueue.subjectType, "profile"),
     ...also,
   );
 }

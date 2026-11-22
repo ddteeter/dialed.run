@@ -26,7 +26,7 @@ import {
 } from "../lib/contracts";
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
-import { HOLD_CAUSES } from "../lib/contracts/hold-causes";
+import { REVIEW_SOURCES } from "../lib/contracts/hold-causes";
 import { RATE_LIMIT_KINDS } from "../lib/contracts/rate-limits";
 import { PRECIP_LEVELS } from "../lib/contracts/temperature";
 import { STORED_REPORT_REASONS } from "../lib/contracts/report-reasons";
@@ -1643,7 +1643,7 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     // are not hold causes (design 164): no breaker counts them and no
     // burst release approves them.
     source: text("source", {
-      enum: [...HOLD_CAUSES, "unscreened", "missing_file"],
+      enum: REVIEW_SOURCES,
     }).notNull(),
     status: text("status", {
       enum: ["pending", "reviewing", "approved", "removed"],
@@ -1652,6 +1652,11 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
       .default("pending"),
     resolvedBy: text("resolved_by"),
     resolvedAt: integer("resolved_at"),
+    // When a person last approved it. Kept when the row is re-opened, where
+    // `resolved_at` is cleared: only reports filed after it count toward
+    // hiding the subject again (owner, 2026-11-21). Null when no Approve
+    // was recorded, which counts every report. Additive.
+    approvedAt: integer("approved_at"),
     // When a reviewer claimed it, and the only thing that can ever release
     // the claim. `status='reviewing'` is a lock held by a browser tab, and
     // a tab that is closed, crashed or simply walked away from used to

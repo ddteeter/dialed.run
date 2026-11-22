@@ -76,6 +76,22 @@ export function WhoReported({
   );
 }
 
+/**
+ * What a reporter wrote in "Anything else": their own words, as text in a
+ * block of its own under their line, inside the fold whose opening is
+ * logged. Nothing when they wrote nothing.
+ */
+function ReporterNote({
+  note,
+}: Readonly<{ note: string | null }>): JSX.Element | undefined {
+  if (note === null) return undefined;
+  return (
+    <span data-part="reporter-note" className="block whitespace-pre-wrap">
+      {note}
+    </span>
+  );
+}
+
 function ReporterList({
   reporters,
 }: Readonly<{ reporters: readonly Reporter[] }>): JSX.Element {
@@ -88,6 +104,7 @@ function ReporterList({
             : `@${reporter.handle}`}{" "}
           · {reportReasonLabels[reporter.reason]} ·{" "}
           {monthDayLabel(reporter.createdAt)}
+          <ReporterNote note={reporter.note} />
         </li>
       ))}
     </ul>

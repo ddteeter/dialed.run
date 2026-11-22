@@ -16,6 +16,7 @@ import type {
 } from "../../src/modules/safety/review/review";
 import { bracketed, sourceTag } from "../ui/bracketed";
 import { carriedSince } from "../ui/carry-spy";
+import { renderWithRouter } from "../modules/run-fixtures";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -43,6 +44,7 @@ function row(overrides: Partial<QueueRow> = {}): QueueRow {
     subjectId: "e-1",
     source: "reports",
     createdAt: 1_755_000_000,
+    openedAt: 1_755_000_000,
     reporterCount: 3,
     reasons: ["explicit"],
     subject: { photoKeys: [] },
@@ -239,7 +241,11 @@ describe("deciding", () => {
     await user.click(screen.getByRole("button", { name: "Approve" }));
 
     expect(resolve).toHaveBeenCalledWith({
-      data: { queueId: QUEUE_ID, action: "approve" },
+      data: {
+        queueId: QUEUE_ID,
+        shown: { openedAt: 1_755_000_000, source: "reports" },
+        action: "approve",
+      },
     });
     await waitFor(() => {
       expect(waitingRows()).toBe(0);
@@ -280,7 +286,12 @@ describe("deciding", () => {
     await user.click(screen.getByRole("button", { name: "Remove" }));
 
     expect(resolve).toHaveBeenCalledWith({
-      data: { queueId: QUEUE_ID, action: "remove", reason: "home" },
+      data: {
+        queueId: QUEUE_ID,
+        shown: { openedAt: 1_755_000_000, source: "reports" },
+        action: "remove",
+        reason: "home",
+      },
     });
     await waitFor(() => {
       expect(waitingRows()).toBe(0);
@@ -365,7 +376,12 @@ describe("deciding", () => {
     await user.click(screen.getByRole("button", { name: "Remove and report" }));
 
     expect(resolve).toHaveBeenCalledExactlyOnceWith({
-      data: { queueId: QUEUE_ID, action: "quarantine", reason: "explicit" },
+      data: {
+        queueId: QUEUE_ID,
+        shown: { openedAt: 1_755_000_000, source: "reports" },
+        action: "quarantine",
+        reason: "explicit",
+      },
     });
     await waitFor(() => {
       expect(waitingRows()).toBe(0);
@@ -778,7 +794,11 @@ describe("deciding", () => {
     await user.click(screen.getByRole("button", { name: "Approve" }));
 
     expect(resolve).toHaveBeenCalledWith({
-      data: { queueId: "01HYYYYYYYYYYYYYYYYYYYYYYY", action: "approve" },
+      data: {
+        queueId: "01HYYYYYYYYYYYYYYYYYYYYYYY",
+        shown: { openedAt: 1_755_000_000, source: "reports" },
+        action: "approve",
+      },
     });
     await waitFor(() => {
       expect(waitingRows()).toBe(1);
@@ -1445,7 +1465,11 @@ describe("a photo still pending a day after upload (D-157)", () => {
     settle({ outcome: "resolved" });
 
     expect(resolve).toHaveBeenCalledWith({
-      data: { queueId: "01HZZZZZZZZZZZZZZZZZZZZZZZ", action: "clear" },
+      data: {
+        queueId: "01HZZZZZZZZZZZZZZZZZZZZZZZ",
+        shown: { openedAt: 1_755_000_000, source: "missing_file" },
+        action: "clear",
+      },
     });
     await waitFor(() => {
       expect(waitingRows()).toBe(0);
@@ -1635,7 +1659,11 @@ describe("a handle the re-ask flagged (D-97)", () => {
     await user.click(screen.getByRole("button", { name: "Keep" }));
 
     expect(reviewHandle).toHaveBeenCalledWith({
-      data: { queueId: QUEUE_ID, action: "keep" },
+      data: {
+        queueId: QUEUE_ID,
+        shown: { openedAt: 1_755_000_000, source: "classifier" },
+        action: "keep",
+      },
     });
     await waitFor(() => {
       expect(waitingRows()).toBe(0);
@@ -1666,6 +1694,8 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(reviewHandle).toHaveBeenCalledWith({
       data: {
         queueId: QUEUE_ID,
+        shown: { openedAt: 1_755_000_000, source: "classifier" },
+        handle: "quadzilla_69",
         action: "rename",
         nameReason: "Offensive or sexual",
       },
@@ -1785,6 +1815,25 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
   });
 
+  it("renames, after a rename found another handle, the one the header now shows", async () => {
+    const user = userEvent.setup();
+    const reviewHandle = vi
+      .fn<Props["reviewHandle"]>()
+      .mockResolvedValue({ outcome: "moved", username: "dunk_runs" });
+    renderQueue([flagged()], reviewHandle);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Advertising",
+    );
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+    await screen.findByText(/The handle changed to @dunk_runs/u);
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    const [last] = reviewHandle.mock.lastCall ?? [];
+    expect(last?.data).toMatchObject({ handle: "dunk_runs" });
+  });
+
   it("names a row with no label by its subject id", () => {
     renderQueue([
       flagged({
@@ -1879,5 +1928,65 @@ describe("the WHO REPORTED fold on a row (D-164)", () => {
   it("is not there without the read to open it", () => {
     renderQueue([row()]);
     expect(screen.queryByRole("button", { name: /Who reported/u })).toBeNull();
+  });
+});
+
+function renderRouted(queue: readonly QueueRow[]) {
+  return renderWithRouter(
+    <ReviewQueue
+      asOf={0}
+      queue={queue}
+      resolve={vi.fn<Props["resolve"]>()}
+      reviewHandle={vi.fn<Props["reviewHandle"]>()}
+      onDecided={vi.fn<() => void>()}
+    />,
+  );
+}
+
+describe("a reported kit's way to the kit", () => {
+  it("opens a reported kit on the Desk, from its row", async () => {
+    await renderRouted([row({ subject: { photoKeys: [], kitId: "e-1" } })]);
+
+    const link = screen.getByRole("link", { name: "Open the kit" });
+    expect(link).toHaveAttribute(
+      "href",
+      `/desk/kit/e-1?from=report&row=01HZZZZZZZZZZZZZZZZZZZZZZZ`,
+    );
+    expect(link).toHaveClass("target", "font-bold", "underline");
+  });
+
+  it("opens a reported photo's kit", async () => {
+    await renderRouted([
+      row({ subjectType: "photo", subject: { photoKeys: [], kitId: "e-9" } }),
+    ]);
+
+    expect(screen.getByRole("link", { name: "Open its kit" })).toHaveAttribute(
+      "href",
+      `/desk/kit/e-9?from=report&row=01HZZZZZZZZZZZZZZZZZZZZZZZ`,
+    );
+  });
+
+  it("offers no kit where the row has none", async () => {
+    await renderRouted([row({ subjectType: "photo" })]);
+
+    expect(screen.queryByRole("link", { name: /kit/u })).toBeNull();
+  });
+});
+
+describe("a flagged handle runners also reported", () => {
+  it("says what the reporters said under the handle's sentence", () => {
+    renderQueue([flagged({ reporterCount: 2, reasons: ["impersonation"] })]);
+
+    expect(
+      screen.getByText(/The hourly re-check flagged a handle/u),
+    ).toBeVisible();
+    expect(screen.getByText(bracketed("2 people"))).toBeVisible();
+  });
+
+  it("says only the handle's sentence when nobody reported it", () => {
+    renderQueue([flagged()]);
+
+    expect(screen.queryByText(bracketed("1 person"))).toBeNull();
+    expect(screen.queryByText(/people/u)).toBeNull();
   });
 });

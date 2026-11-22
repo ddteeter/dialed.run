@@ -3,6 +3,8 @@ import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  accountDeletions,
+  blocks,
   entryPhotos,
   notifications,
   outbox,
@@ -10,6 +12,7 @@ import {
   rateLimits,
   reports,
   reviewQueue,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
@@ -33,6 +36,7 @@ import {
   makeProduct,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   resetSafetyTables,
 } from "./helpers";
 
@@ -229,7 +233,7 @@ describe("what a report may name (design 232)", () => {
       await report({
         reporterId: reporter,
         subjectType: "profile",
-        subjectId: await makeUser(),
+        subjectId: await makeVerifiedUser(),
         reason: "offensive",
       }),
     ).toMatchObject({ status: "filed" });
@@ -241,6 +245,46 @@ describe("what a report may name (design 232)", () => {
         reason: "spam",
       }),
     ).toMatchObject({ status: "filed" });
+  });
+
+  it("refuses a profile the reporter could not see: closed, leaving, unconfirmed or in a block", async () => {
+    const reporter = await makeUser();
+    const closed = await makeVerifiedUser();
+    await core()
+      .update(userProfiles)
+      .set({ bannedAt: 1 })
+      .where(eq(userProfiles.userId, closed));
+    const leaving = await makeVerifiedUser();
+    await core()
+      .insert(accountDeletions)
+      .values({ userId: leaving, requestedAt: 1, purgeAfter: 2 });
+    const unconfirmed = await makeUser();
+    const blockedThem = await makeVerifiedUser();
+    const blockedMe = await makeVerifiedUser();
+    await core()
+      .insert(blocks)
+      .values([
+        { blockerId: reporter, blockedId: blockedThem, createdAt: 1 },
+        { blockerId: blockedMe, blockedId: reporter, createdAt: 1 },
+      ]);
+
+    for (const subjectId of [
+      closed,
+      leaving,
+      unconfirmed,
+      blockedThem,
+      blockedMe,
+    ]) {
+      expect(
+        await report({
+          reporterId: reporter,
+          subjectType: "profile",
+          subjectId,
+          reason: "offensive",
+        }),
+      ).toStrictEqual({ status: "not_found" });
+    }
+    expect(await core().select().from(reports)).toStrictEqual([]);
   });
 
   it("still files, queues and alerts on a shared kit already hidden for another reason", async () => {

@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import { shownRowOf } from "./helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -142,6 +143,7 @@ describe("a garment photo's Remove tells its owner (R-167, design 159)", () => {
     expect(
       await decideReview(core(), "rev", {
         queueId,
+        shown: await shownRowOf(queueId),
         action: "remove",
         reason: "home",
       }),
@@ -218,6 +220,7 @@ describe("a garment photo's Remove tells its owner (R-167, design 159)", () => {
 
       await decideReview(core(), "rev", {
         queueId,
+        shown: await shownRowOf(queueId),
         action: "remove",
         reason: "explicit",
       });

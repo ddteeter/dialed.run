@@ -1,14 +1,10 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../../db/schema-core";
-import { runnerConfirmed } from "../../account";
-import {
-  notBlockedEitherWay,
-  profileNotReportedBy,
-  runnerNotLeaving,
-} from "../../safety";
+import { runnerInStanding } from "../../../db/runner-standing";
+import { notBlockedEitherWay, profileNotReportedBy } from "../../safety";
 
 /**
  * Whether `viewerId` may see a runner at all: not banned, not in a block
@@ -34,25 +30,9 @@ export function runnerVisibleToViewer(viewerId: string) {
 
 /**
  * The floor under every surface that shows one runner to someone else,
- * with no viewer in it: not banned, not a system account, not leaving,
- * address confirmed. The signed-in rule above adds the viewer's own blocks
- * and reports; the open web's profile (`/@handle`, D-151) has no viewer,
- * so this is its whole runner rule.
+ * with no viewer in it, in `db/runner-standing` so safety's reports read it too.
  */
-export function runnerInStanding() {
-  return and(
-    isNull(userProfiles.bannedAt),
-    // Design 193 (#533): an account the service runs, the smoke account,
-    // is no runner. Not found in search, at H or on the open web.
-    eq(userProfiles.systemAccount, false),
-    // Task 126 (ACC-9): a runner deleting their account leaves search, H
-    // and the open web at once, by safety's rule (seam 6).
-    runnerNotLeaving(userProfiles.userId),
-    // Design 133 (D-113 Q2): an unconfirmed runner is not findable — in
-    // search, at H, through H's redirect from an id, or on the open web.
-    runnerConfirmed(userProfiles.userId),
-  );
-}
+export { runnerInStanding } from "../../../db/runner-standing";
 
 /**
  * The `select … from user_profiles where …` skeleton runner search and H

@@ -11,14 +11,18 @@
  * import safety's barrel, and safety may not import account's.
  */
 import { and, eq } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { reviewQueue, userProfiles } from "../../../db/schema-core";
+import { coreDb } from "../../../env";
 import { nowSeconds } from "../../../lib/now";
 import {
   openReviewRow,
   placeholderHandle,
   renameRecord,
+  reporterNotices,
   reviewResolution,
   settledHere,
   type HandleReview,
@@ -29,17 +33,41 @@ import { forceRename } from "./username";
 type Db = ReturnType<typeof drizzle>;
 
 /**
+ * The row a decision here is on: its id, the runner it is about, and the
+ * row as the page showed it.
+ */
+type HandleRow = Readonly<{
+  queueId: string;
+  userId: string;
+  /**
+  The row still as the page showed it, which the settle holds to.
+  */
+  unchanged: SQL;
+}>;
+
+/**
  * Keep: the verdict becomes `clear`, over the flag it answers only — a
  * runner who renamed since holds a new verdict that is not this one's to
- * change — and the row is approved, in one batch.
+ * change — and the row is approved, in one batch, held to the row as
+ * shown. Anyone who reported the runner is told it stayed up, as an
+ * Approve tells them.
  */
 async function keep(
   db: Db,
-  queueId: string,
-  userId: string,
+  row: HandleRow,
   reviewerId: string,
 ): Promise<HandleReview> {
+  const { queueId, userId } = row;
   const settled = { reviewerId, status: "approved", at: nowSeconds() } as const;
+  const here = settledHere(queueId, settled);
+  // Safety's own handle: its notices are typed to it.
+  const told: BatchItem<"sqlite">[] = await reporterNotices(
+    coreDb(),
+    "profile",
+    userId,
+    "kept",
+    here,
+  );
   // The settle first, and the verdict only if it landed (SA-L11): a Keep
   // racing another decision on the row clears nothing once it lost.
   const cleared = db
@@ -49,7 +77,7 @@ async function keep(
       and(
         eq(userProfiles.userId, userId),
         eq(userProfiles.usernameScreen, "flagged"),
-        settledHere(queueId, settled),
+        here,
       ),
     );
   const [settle] = await db.batch([
@@ -58,38 +86,47 @@ async function keep(
       queueId,
       reviewerId,
       settled.status,
-      undefined,
+      row.unchanged,
       settled.at,
     ).returning({ id: reviewQueue.id }),
     cleared,
+    ...told,
   ]);
   return { outcome: settle.length === 0 ? "already_resolved" : "resolved" };
 }
 
 /**
- * Rename: the moderator's force-rename, its audit row and the queue row
- * settled as removed, in `forceRename`'s one batch.
+ * Rename: the moderator's force-rename of the handle the row showed, its
+ * audit row and the queue row settled as removed, held to the row as
+ * shown, in `forceRename`'s one batch.
  */
 async function rename(
   db: Db,
+  row: HandleRow,
   input: Readonly<{
-    queueId: string;
-    userId: string;
     reviewerId: string;
-    nameReason: Extract<HandleReviewValues, { action: "rename" }>["nameReason"];
+    decision: Extract<HandleReviewValues, { action: "rename" }>;
   }>,
 ): Promise<HandleReview> {
+  const { nameReason } = input.decision;
   const renamed = await forceRename(db, {
-    userId: input.userId,
+    userId: row.userId,
+    shown: input.decision.handle,
     typed: placeholderHandle(),
-    reason: input.nameReason,
+    reason: nameReason,
     recordedAs: renameRecord(db, {
-      userId: input.userId,
+      userId: row.userId,
       actorId: input.reviewerId,
-      reason: input.nameReason,
+      reason: nameReason,
     }),
     also: (onlyIf) => [
-      reviewResolution(db, input.queueId, input.reviewerId, "removed", onlyIf),
+      reviewResolution(
+        db,
+        row.queueId,
+        input.reviewerId,
+        "removed",
+        and(onlyIf, row.unchanged),
+      ),
     ],
   });
   // A rename that lost the race names the handle it lost to (round 38 #60).
@@ -115,17 +152,16 @@ export async function reviewFlaggedHandle(
   reviewerId: string,
   decision: HandleReviewValues,
 ): Promise<HandleReview> {
-  const { queueId } = decision;
-  const subject = await openReviewRow(queueId);
+  const { queueId, shown } = decision;
+  const subject = await openReviewRow(queueId, shown);
   if (typeof subject === "string") return { outcome: subject };
   if (subject.subjectType !== "profile") return { outcome: "not_found" };
-  const userId = subject.subjectId;
+  const row = {
+    queueId,
+    userId: subject.subjectId,
+    unchanged: subject.unchanged,
+  };
   return decision.action === "keep"
-    ? keep(db, queueId, userId, reviewerId)
-    : rename(db, {
-        queueId,
-        userId,
-        reviewerId,
-        nameReason: decision.nameReason,
-      });
+    ? keep(db, row, reviewerId)
+    : rename(db, row, { reviewerId, decision });
 }

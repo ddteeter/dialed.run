@@ -154,6 +154,7 @@ model {
   cf.app.account.exportBuild -[imports]-> cf.app.ops.owedEmail
   cf.app.account.exportBuild -[imports]-> cf.app.weather
   cf.app.account.handles -[imports]-> cf.app.account.terms
+  cf.app.account.handles -[imports]-> cf.app.notifications
   cf.app.account.handles -[imports]-> cf.app.ops
   cf.app.account.handles -[imports]-> cf.app.safety
   cf.app.account.purge -[imports]-> cf.app.account.access
@@ -161,6 +162,7 @@ model {
   cf.app.account.purge -[imports]-> cf.app.email
   cf.app.account.purge -[imports]-> cf.app.enrichment
   cf.app.account.purge -[imports]-> cf.app.feed
+  cf.app.account.purge -[imports]-> cf.app.notifications
   cf.app.account.purge -[imports]-> cf.app.ops
   cf.app.account.purge -[imports]-> cf.app.runs
   cf.app.account.purge -[imports]-> cf.app.safety
@@ -215,7 +217,6 @@ model {
   cf.app.feed.attach -[imports]-> cf.app.feed.conditions
   cf.app.feed.attach -[imports]-> cf.app.feed.entries
   cf.app.feed.attach -[imports]-> cf.app.runs
-  cf.app.feed.conditions -[imports]-> cf.app.account
   cf.app.feed.conditions -[imports]-> cf.app.safety
   cf.app.feed.conditions -[imports]-> cf.app.weather
   cf.app.feed.consensus -[imports]-> cf.app.feed.conditions
@@ -294,6 +295,7 @@ model {
   cf.app.ops.publicWeb -[imports]-> cf.app.safety
   cf.app.ops.speed -[imports]-> cf.app.ops.sentry
   cf.app.products -[wiring]-> cf.app.auth
+  cf.app.products -[imports]-> cf.app.email
   cf.app.products -[imports]-> cf.app.notifications
   cf.app.products -[imports]-> cf.app.safety
   cf.app.runs -[wiring]-> cf.app.auth
@@ -327,6 +329,7 @@ model {
   cf.app.safety.review -[wiring]-> cf.app.safety.runners
   cf.app.safety.review -[imports]-> cf.app.weather
   cf.app.safety.runners -[imports]-> cf.app.email
+  cf.app.safety.runners -[imports]-> cf.app.notifications
   cf.app.safety.runners -[imports]-> cf.app.runs
   cf.app.safety.runners -[imports]-> cf.app.safety.notices
   cf.app.safety.runners -[imports]-> cf.app.safety.rules

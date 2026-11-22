@@ -9,8 +9,12 @@ import {
   notifications,
   productCorrections,
   products,
+  rateLimits,
+  userProfiles,
   wardrobeItems,
 } from "../../src/db/schema-core";
+import { nowSeconds } from "../../src/lib/now";
+import { orSqlNull } from "../../src/lib/sql/sql-null";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { NotFoundError } from "../../src/lib/errors";
@@ -27,7 +31,12 @@ import {
   CORRECTIONS_PAGE,
   type CorrectionKey,
 } from "../../src/modules/products/correction-queue";
-import { FieldNotOnPieceError } from "../../src/modules/products/corrections";
+import {
+  CORRECTION_LIMIT_REACHED,
+  CORRECTIONS_PER_DAY,
+  FieldNotOnPieceError,
+} from "../../src/modules/products/corrections";
+import { controlRefusalMessage } from "../../src/lib/control-refusal";
 import {
   createOrGetBrand,
   createOrGetProduct,
@@ -247,6 +256,121 @@ describe("filing a correction (R48·129)", () => {
   });
 });
 
+describe("how many a runner may file", () => {
+  it("refuses a runner's corrections past the day's, in the sheet's words", async () => {
+    const runner = await makeUser();
+    const filings: { productId: string; garmentId: string }[] = [];
+    for (let index = 0; index <= CORRECTIONS_PER_DAY; index += 1) {
+      const { productId } = await product(`Layer ${String(index)}`);
+      const garmentId = await makeItem({ userId: runner, category: "top" });
+      await core()
+        .update(wardrobeItems)
+        .set({ productId })
+        .where(eq(wardrobeItems.id, garmentId));
+      filings.push({ productId, garmentId });
+    }
+    const last = filings.pop();
+    if (last === undefined) throw new Error("no filings");
+    for (const filing of filings) {
+      await file(
+        { userId: runner, garmentId: filing.garmentId },
+        filing.productId,
+        "name",
+        "Better",
+      );
+    }
+
+    const filing = file(
+      { userId: runner, garmentId: last.garmentId },
+      last.productId,
+      "name",
+      "Better",
+    );
+
+    await expect(filing).rejects.toSatisfy(
+      (error: unknown) =>
+        controlRefusalMessage(error) === CORRECTION_LIMIT_REACHED,
+    );
+    expect(CORRECTION_LIMIT_REACHED).toBe(
+      "That's 20 corrections today. You can send more tomorrow.",
+    );
+    expect(await rowsOf(runner)).toHaveLength(CORRECTIONS_PER_DAY);
+  });
+
+  it("counts a day's corrections under the runner, for a day", async () => {
+    const { productId } = await product();
+    const who = await owner(productId);
+    // A full day's count, started an hour ago: still the same day.
+    await core()
+      .insert(rateLimits)
+      .values({
+        kind: "correction-runner",
+        subject: who.userId,
+        windowStartedAt: nowSeconds() - 3600,
+        count: CORRECTIONS_PER_DAY,
+      });
+
+    await expect(file(who, productId, "name", "Better")).rejects.toSatisfy(
+      (error: unknown) =>
+        controlRefusalMessage(error) === CORRECTION_LIMIT_REACHED,
+    );
+  });
+
+  it("does not count a repeat of the same key, or a filing refused before it", async () => {
+    const { productId } = await product();
+    const who = await owner(productId);
+    const key = newUlid();
+    for (let index = 0; index < CORRECTIONS_PER_DAY; index += 1) {
+      await file(who, productId, "name", "Better", { idempotencyKey: key });
+      await expect(
+        file(
+          { userId: who.userId, garmentId: newUlid() },
+          productId,
+          "name",
+          "Better",
+        ),
+      ).rejects.toBeInstanceOf(NotFoundError);
+    }
+
+    await file(who, productId, "weight", "light");
+
+    expect(await rowsOf(who.userId)).toHaveLength(2);
+  });
+});
+
+describe("a closed account's corrections", () => {
+  it("leave the queue, its count and its filers, and come back if it is reopened", async () => {
+    const { productId } = await product();
+    const closed = await owner(productId, "closed_one");
+    const open = await owner(productId, "open_one");
+    await file(closed, productId, "weight", "light");
+    await file(open, productId, "weight", "light");
+    await file(closed, productId, "name", "Other");
+
+    await core()
+      .update(userProfiles)
+      .set({ bannedAt: 1 })
+      .where(eq(userProfiles.userId, closed.userId));
+    const queue = await correctionsQueue();
+
+    expect(queue.waiting).toBe(1);
+    expect(queue.groups).toHaveLength(1);
+    expect(queue.groups[0]?.filers.map((filer) => filer.handle)).toStrictEqual([
+      "open_one",
+    ]);
+    expect(await waitingCorrectionsCountOf(core())).toStrictEqual([
+      { rows: 1 },
+    ]);
+
+    await core()
+      .update(userProfiles)
+      .set({ bannedAt: orSqlNull(undefined) })
+      .where(eq(userProfiles.userId, closed.userId));
+    const reopened = await correctionsQueue();
+    expect(reopened.waiting).toBe(2);
+  });
+});
+
 describe("the sheet's context (R48·129)", () => {
   it("names the product, says what it says now, and lists the runner's own waiting", async () => {
     const { productId } = await product();
@@ -320,8 +444,12 @@ async function decideAt(userId: string, decidedAt: number): Promise<void> {
 
 describe("the Desk's queue (R48·130)", () => {
   it("loads a page of a hundred different products (SA-M37)", async () => {
-    const runner = await makeUser();
+    let runner = await makeUser();
     for (let index = 0; index < CORRECTIONS_PAGE; index += 1) {
+      // A new runner each day's worth, so no filing is past the limit.
+      if (index > 0 && index % CORRECTIONS_PER_DAY === 0) {
+        runner = await makeUser();
+      }
       const { productId } = await product(`Layer ${String(index)}`);
       const garmentId = await makeItem({ userId: runner, category: "top" });
       await core()

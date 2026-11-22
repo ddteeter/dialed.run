@@ -84,6 +84,7 @@ import { forgetRunnerEnrichmentLimit } from "../../enrichment";
 import { deleteRuns, LIVE_HOLD } from "../../feed";
 import { captureException, outboxInsert, oweOutbox } from "../../ops";
 import { disconnectStrava } from "../../runs";
+import { followRowsNaming } from "../../notifications";
 import { forgetReportCounts, settleOpenReviews } from "../../safety";
 import { forgetManualBands } from "../../weather";
 import { closedAddressRows, forgetClosedAddresses } from "../access";
@@ -531,36 +532,6 @@ function forgetAddress(db: Db, address: string) {
 }
 
 /**
- * SA-L09: the follow rows on other runners' bells that name this runner —
- * one they alone rang (it links to them), or a group whose words name them
- * as its newest follower ("@ada and 3 others followed you."). A group that
- * names someone else stays: it counts them, and names nobody gone. Found
- * through their rings (`follow_notices_follower`), each bell's row by its
- * runner, kind and group (`notifications_dedupe`).
- */
-function followRowsNaming(db: Db, userId: string, handle: string | undefined) {
-  const theirRings = (column: SQLiteColumn) =>
-    db
-      .select({ id: column })
-      .from(followNotices)
-      .where(eq(followNotices.followerId, userId));
-  const opening = "@" + String(handle) + " ";
-  const named =
-    handle === undefined
-      ? eq(notifications.linkId, userId)
-      : or(
-          eq(notifications.linkId, userId),
-          sql`substr(${notifications.body}, 1, ${opening.length}) = ${opening}`,
-        );
-  return and(
-    inArray(notifications.userId, theirRings(followNotices.followeeId)),
-    eq(notifications.kind, "followed"),
-    inArray(notifications.subjectId, theirRings(followNotices.notificationId)),
-    named,
-  );
-}
-
-/**
  * Everything else, and the account itself — one batch, so the claim goes
  * only with the `user` row, and a purge that reaches here finishes whole.
  */
@@ -655,6 +626,7 @@ async function deleteAccountRows(
     forgetRateLimit(db, "photo-runner", userId),
     forgetRateLimit(db, "purge-runner", userId),
     forgetRateLimit(db, "deletion-notice", userId),
+    forgetRateLimit(db, "correction-runner", userId),
     forgetRunnerEnrichmentLimit(db, userId),
     ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post
