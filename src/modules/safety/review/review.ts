@@ -931,7 +931,7 @@ export async function resolveReview(
    */
   shown?: ShownRow,
 ): Promise<ResolveOutcome> {
-  return decide(queueId, reviewerId, decision, shown, "person");
+  return decide(queueId, reviewerId, decision, shown, false);
 }
 
 /**
@@ -944,21 +944,18 @@ export async function releaseReview(
   queueId: string,
   reviewerId: string,
 ): Promise<ResolveOutcome> {
-  return decide(queueId, reviewerId, "approve", undefined, "release");
+  return decide(queueId, reviewerId, "approve", undefined, true);
 }
-
-/**
- * Who made a decision: a person, on the row in front of them, or a burst
- * release of many rows nobody opened.
- */
-type DecidedBy = "person" | "release";
 
 async function decide(
   queueId: string,
   reviewerId: string,
   decision: ReviewDecision,
   shown: ShownRow | undefined,
-  decidedBy: DecidedBy,
+  /**
+  A burst release of many rows nobody opened, rather than a person's decision on one.
+  */
+  isRelease: boolean,
 ): Promise<ResolveOutcome> {
   const row = await openRow(queueId, shown);
   if (typeof row === "string") return row;
@@ -987,7 +984,7 @@ async function decide(
       row.unchanged,
       settled.at,
     ).returning({ id: reviewQueue.id }),
-    ...subjectWritesFor(row, decision, decidedBy, here),
+    ...subjectWritesFor(row, decision, isRelease, here),
     ...told,
   ]);
   return settle.length === 0 ? "already_resolved" : "resolved";
@@ -1143,13 +1140,13 @@ export function reviewResolution(
 function subjectWritesFor(
   row: Exclude<OpenRow, string>,
   decision: ReviewDecision,
-  decidedBy: DecidedBy,
+  isRelease: boolean,
   here: SQL,
 ) {
   return subjectWriters[row.subjectType](
     row.subjectId,
     decision,
-    approvedPhotoStatus(row.source, decidedBy),
+    approvedPhotoStatus(row.source, isRelease),
     here,
   );
 }
@@ -1286,9 +1283,9 @@ type ApprovedPhotoStatus = typeof publicPhotoStatus | "pending";
  */
 function approvedPhotoStatus(
   source: ReviewSource,
-  decidedBy: DecidedBy,
+  isRelease: boolean,
 ): ApprovedPhotoStatus {
-  return decidedBy === "person" && publishedOnApprove.has(source)
+  return !isRelease && publishedOnApprove.has(source)
     ? publicPhotoStatus
     : "pending";
 }
