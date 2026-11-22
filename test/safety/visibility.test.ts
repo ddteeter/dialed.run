@@ -21,7 +21,10 @@ import {
   photoResponse,
 } from "../../src/modules/feed/entries/photos";
 import { visibleRunnerHandle } from "../../src/modules/feed/following/profiles";
-import { setUsefulReaction } from "../../src/modules/feed/entries/reactions";
+import {
+  setUsefulReaction,
+  usefulCount,
+} from "../../src/modules/feed/entries/reactions";
 import { searchRunners } from "../../src/modules/feed/following/search";
 import {
   isUnderReviewForAuthor,
@@ -292,6 +295,59 @@ describe("a block (SAF-12)", () => {
     await expect(
       setUsefulReaction(posted.entryId, blocked, true),
     ).rejects.toThrow("entry is not visible to this viewer");
+  });
+
+  it("answers a blocked runner's take-back with no count", async () => {
+    const posted = await postedEntry();
+    const fan = await makeVerifiedUser();
+    const blocked = await makeVerifiedUser();
+    await setUsefulReaction(posted.entryId, fan, true);
+    await blockRunner(posted.author, blocked);
+
+    expect(
+      await setUsefulReaction(posted.entryId, blocked, false),
+    ).toStrictEqual({ status: "set", useful: false, count: 0 });
+  });
+
+  it("still takes back a mark made before the block", async () => {
+    const posted = await postedEntry();
+    const blocked = await makeVerifiedUser();
+    await setUsefulReaction(posted.entryId, blocked, true);
+    await blockRunner(posted.author, blocked);
+
+    await setUsefulReaction(posted.entryId, blocked, false);
+
+    expect(await usefulCount(posted.entryId)).toBe(0);
+  });
+
+  it("answers a take-back on an entry made private with no count", async () => {
+    const posted = await postedEntry();
+    const fan = await makeVerifiedUser();
+    const stranger = await makeVerifiedUser();
+    await setUsefulReaction(posted.entryId, fan, true);
+    await core()
+      .update(outfitEntries)
+      .set({ audience: "private" })
+      .where(eq(outfitEntries.id, posted.entryId));
+
+    expect(
+      await setUsefulReaction(posted.entryId, stranger, false),
+    ).toStrictEqual({ status: "set", useful: false, count: 0 });
+    // Its author still reads the true count.
+    expect(
+      await setUsefulReaction(posted.entryId, posted.author, false),
+    ).toStrictEqual({ status: "set", useful: false, count: 1 });
+  });
+
+  it("answers a take-back the true count where the entry is seen", async () => {
+    const posted = await postedEntry();
+    const fan = await makeVerifiedUser();
+    const other = await makeVerifiedUser();
+    await setUsefulReaction(posted.entryId, fan, true);
+
+    expect(await setUsefulReaction(posted.entryId, other, false)).toStrictEqual(
+      { status: "set", useful: false, count: 1 },
+    );
   });
 });
 
