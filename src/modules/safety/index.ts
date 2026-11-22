@@ -40,7 +40,6 @@ export {
   undecidedRemovalsDue,
 } from "./reports";
 export {
-  type HandleReview,
   type ResolveOutcome,
   type ReviewSubjectType,
   enqueueForReview,
@@ -50,6 +49,7 @@ export {
   openRow as openReviewRow,
   openSubject,
   pendingReviewCount,
+  hasPhotosHeldAtLimit,
   releaseStaleClaims,
   resolveReview,
   reviewResolution,

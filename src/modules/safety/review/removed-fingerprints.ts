@@ -18,7 +18,6 @@ import {
   asc,
   between,
   eq,
-  inArray,
   isNotNull,
   lte,
   sql,
@@ -47,7 +46,7 @@ import {
   distanceBetweenSql,
   nearestOf,
 } from "../../../lib/sql/fingerprint-distance";
-import { jsonField, jsonTable } from "../../../lib/sql/json-list";
+import { inJsonList, jsonField, jsonTable } from "../../../lib/sql/json-list";
 import { ceilingReading, hasFingerprintHoldThisHour } from "../limits";
 import type { RemovalReason } from "../rules";
 
@@ -248,8 +247,11 @@ export async function removedMatchesOf(
   const ids = [...photoIds];
   const kitPrint = entryPhotos.fingerprint;
   const garmentPrint = wardrobeItems.photoFingerprint;
-  const kits = and(inArray(entryPhotos.id, ids), isNotNull(kitPrint));
-  const garments = and(inArray(wardrobeItems.id, ids), isNotNull(garmentPrint));
+  const kits = and(inJsonList(entryPhotos.id, ids), isNotNull(kitPrint));
+  const garments = and(
+    inJsonList(wardrobeItems.id, ids),
+    isNotNull(garmentPrint),
+  );
   const [kitPhotos, garmentPhotos] = await db.batch([
     db
       .select({ id: entryPhotos.id, fingerprint: sql<string>`${kitPrint}` })

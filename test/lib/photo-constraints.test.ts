@@ -4,6 +4,7 @@ import {
   allowedPhotoTypes,
   photoAcceptAttribute,
   photoFormatWords,
+  PHOTOS_STILL_HELD,
 } from "../../src/lib/photo-constraints";
 
 /**
@@ -18,5 +19,13 @@ describe("photoFormatWords", () => {
 
   it("covers the same types the input filters by", () => {
     expect(photoAcceptAttribute).toBe(allowedPhotoTypes.join(","));
+  });
+});
+
+describe("PHOTOS_STILL_HELD", () => {
+  it("says, in the owner's words, that the last ten photos are still being checked", () => {
+    expect(PHOTOS_STILL_HELD).toBe(
+      "Your last 10 photos are still being checked. You can add more once they're through.",
+    );
   });
 });

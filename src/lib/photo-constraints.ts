@@ -91,3 +91,16 @@ export const PHOTO_UPLOADS_PER_DAY = 50;
  * 2026-11-16): the kit's photo row and the garment's photo both show it.
  */
 export const PHOTO_LIMIT_REACHED = `That's ${String(PHOTO_UPLOADS_PER_DAY)} photos today. You can add more tomorrow.`;
+
+/**
+ * How many of a runner's photos may wait in Review at once after the
+ * classifier held them (owner, 2026-11-21). At this many, a new upload
+ * waits until some are through.
+ */
+export const PHOTOS_HELD_AT_ONCE = 10;
+
+/**
+ * The sentence once that many are waiting (owner, 2026-11-21): the kit's
+ * photo row and the garment's photo both show it.
+ */
+export const PHOTOS_STILL_HELD = `Your last ${String(PHOTOS_HELD_AT_ONCE)} photos are still being checked. You can add more once they're through.`;

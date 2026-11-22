@@ -35,6 +35,8 @@ import {
 import { garmentCategoryLabels } from "../../../lib/contracts";
 import type { GarmentCategory } from "../../../lib/contracts/garment-fields";
 import { garmentLabel } from "../../../lib/garment-label";
+import { inJsonList } from "../../../lib/sql/json-list";
+import { qualified } from "../../../lib/sql/qualified";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
@@ -319,20 +321,24 @@ export function firstReportHidingAtOnce(): SQL<number | null> {
 
 /**
  * What is waiting, oldest first, served by `review_queue_status_created`;
- * then any row on the removal clock the page's `limit` cut, so a deadline
+ * then every row on the removal clock the page's `limit` cut, so a deadline
  * is never behind the limit.
  *
  * `limit` is a real bound rather than a courtesy: the page renders rows and
  * a solo operator reads them, so an unbounded read would be billing D1 for
- * rows nobody looks at. The clock's read takes the same bound, most
- * pressing first.
+ * rows nobody looks at. **The clock's read takes no bound.** Each of its
+ * rows has 48 hours to be decided, so none of them is a row nobody needs
+ * to look at, and a cut there would let a pile of them push a later one
+ * off the page however pressing it is. It scans no more than a bounded
+ * read would: its order is an aggregate, so a `LIMIT` would still read
+ * every pending row first.
  */
 export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
   const oldestFirst = asc(reviewQueue.createdAt);
   const mostPressingFirst = asc(firstReportHidingAtOnce());
   const [page, onTheClock] = await Promise.all([
     pendingRows().orderBy(oldestFirst).limit(limit),
-    pendingRows(reportOnTheClock()).orderBy(mostPressingFirst).limit(limit),
+    pendingRows(reportOnTheClock()).orderBy(mostPressingFirst),
   ]);
   const onThePage = new Set(page.map((row) => row.id));
   const rows = [...page, ...onTheClock.filter((row) => !onThePage.has(row.id))];
@@ -406,8 +412,39 @@ function pendingRows(also?: SQL) {
         eq(reports.subjectId, reviewQueue.subjectId),
       ),
     )
-    .where(and(eq(reviewQueue.status, "pending"), also))
+    .where(and(waitingOnReview(), also))
     .groupBy(reviewQueue.id);
+}
+
+/**
+ * A row Review shows: pending, and not about a closed account's things.
+ * A row whose subject belongs to a runner whose account is closed leaves
+ * the page and its count, and comes back as it was if the account is
+ * reopened, so nothing about the row itself is written. A product has no
+ * owner, so its rows always show.
+ */
+function waitingOnReview(): SQL | undefined {
+  const closed = sql`exists (select 1 from ${userProfiles} where ${qualified(userProfiles, userProfiles.userId)} = ${subjectOwner()} and ${qualified(userProfiles, userProfiles.bannedAt)} is not null)`;
+  return and(eq(reviewQueue.status, "pending"), sql`not ${closed}`);
+}
+
+/**
+ * Whose a row's subject is, as SQL: the runner for a profile, the kit's
+ * author for a kit or one of its photos, the garment's owner for a
+ * garment's photo, and NULL for a product. Every column is named with its
+ * table, so none binds to the reports joined beside the queue.
+ */
+export function subjectOwner(): SQL {
+  const type = qualified(reviewQueue, reviewQueue.subjectType);
+  const id = qualified(reviewQueue, reviewQueue.subjectId);
+  const kitAuthor = qualified(outfitEntries, outfitEntries.userId);
+  const kitId = qualified(outfitEntries, outfitEntries.id);
+  return sql`case ${type}
+    when 'profile' then ${id}
+    when 'entry' then (select ${kitAuthor} from ${outfitEntries} where ${kitId} = ${id})
+    when 'photo' then (select ${kitAuthor} from ${entryPhotos} join ${outfitEntries} on ${kitId} = ${qualified(entryPhotos, entryPhotos.entryId)} where ${qualified(entryPhotos, entryPhotos.id)} = ${id})
+    when 'garment' then (select ${qualified(wardrobeItems, wardrobeItems.userId)} from ${wardrobeItems} where ${qualified(wardrobeItems, wardrobeItems.id)} = ${id})
+  end`;
 }
 
 /**
@@ -471,7 +508,9 @@ async function subjectsFor(
   // have been all along — and the filter's own predicate was a branch no
   // input could distinguish, because it never decided anything.
   //
-  // The cost is a few extra index probes on a page of at most 100 rows.
+  // The cost is a few extra index probes a row. The ids go as one JSON
+  // list a statement (`inJsonList`), not one bound value each: D1 refuses
+  // a statement past 100, and the page can be longer than that.
   // **Four selects in one batch rather than one UNION**, asked on PR #73.
   // Drizzle does expose `union`/`unionAll` for SQLite, so the tool is
   // there; it is the wrong shape for this. A UNION requires every arm to
@@ -486,7 +525,7 @@ async function subjectsFor(
   const subjectIds = rows.map((row) => row.subjectId);
   const database = db();
   const garmentsWithPhoto = and(
-    inArray(wardrobeItems.id, subjectIds),
+    inJsonList(wardrobeItems.id, subjectIds),
     isNotNull(wardrobeItems.photoKey),
   );
 
@@ -522,7 +561,7 @@ async function subjectsFor(
       .leftJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
       // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
       .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
-      .where(inArray(entryPhotos.id, subjectIds)),
+      .where(inJsonList(entryPhotos.id, subjectIds)),
     database
       .select({
         // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
@@ -530,7 +569,7 @@ async function subjectsFor(
         photoKey: entryPhotos.photoKey,
       })
       .from(entryPhotos)
-      .where(inArray(entryPhotos.entryId, subjectIds))
+      .where(inJsonList(entryPhotos.entryId, subjectIds))
       .orderBy(asc(entryPhotos.position)),
     // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
     database
@@ -538,7 +577,7 @@ async function subjectsFor(
       .select({ id: outfitEntries.id, owner: userProfiles.username })
       .from(outfitEntries)
       .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
-      .where(inArray(outfitEntries.id, subjectIds)),
+      .where(inJsonList(outfitEntries.id, subjectIds)),
     database
       .select({
         userId: userProfiles.userId,
@@ -547,11 +586,11 @@ async function subjectsFor(
       })
       // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/desk/owner-handles.ts but safety cannot import ops without a cycle (ops/desk/desk.ts imports safety)
       .from(userProfiles)
-      .where(inArray(userProfiles.userId, subjectIds)),
+      .where(inJsonList(userProfiles.userId, subjectIds)),
     database
       .select({ id: products.id, name: products.name })
       .from(products)
-      .where(inArray(products.id, subjectIds)),
+      .where(inJsonList(products.id, subjectIds)),
     // A garment's photo (design 157): the card size its owner sees,
     // under the version the row names now.
     database
@@ -641,14 +680,15 @@ export function reasonsFrom(concatenated: string | null): ReportReason[] {
 /**
  * How many decisions are waiting. The daily digest reports this (packet
  * §2), which is the difference between "the queue is empty" and "nobody has
- * looked at the queue".
+ * looked at the queue". It counts the rows Review shows, so a closed
+ * account's are not among them.
  */
 export async function pendingReviewCount(): Promise<number> {
   const ids = await columnWhere(
     db(),
     reviewQueue,
     reviewQueue.id,
-    eq(reviewQueue.status, "pending"),
+    waitingOnReview(),
   );
   return ids.length;
 }

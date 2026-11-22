@@ -20,6 +20,7 @@ import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import {
   PHOTO_LIMIT_REACHED,
+  PHOTOS_STILL_HELD,
   isAllowedPhotoType,
 } from "../../../lib/photo-constraints";
 import { photoRefusal, withReleased } from "../../../lib/photo-pipeline";
@@ -50,6 +51,7 @@ import {
   classifierFromEnv,
   enqueueForReview,
   isHeldAsRemovedCopy,
+  hasPhotosHeldAtLimit,
   screenPhoto,
   screeningHoldNotice,
   type Classify,
@@ -146,6 +148,11 @@ export async function uploadPhoto(
     .from(entryPhotos)
     .where(eq(entryPhotos.entryId, input.entryId));
   if (existing.length >= MAX_PHOTOS_PER_ENTRY) throw kitIsFull();
+  // Refused while the classifier's holds on the runner's photos are at
+  // their limit, before the day's count, so the refusal spends none of it.
+  if (await hasPhotosHeldAtLimit(input.userId)) {
+    throw new InvalidPhotoError(PHOTOS_STILL_HELD);
+  }
   // One of the runner's day's photo uploads (SA-M14): after the repeat
   // check, so a retry of one submission is not counted again, and before
   // anything is decoded or stored.
