@@ -491,12 +491,15 @@ describe("a PR's mutation shard", () => {
     expect(mutate).not.toContain("actions/cache");
   });
 
-  it("is seeded only from a passing shard of a push run on main, measured under its dependencies", () => {
+  it("is seeded from a push run on main, measured under its dependencies, keeping only its kills", () => {
     expect(mutate).toContain("      actions: read");
     expect(mutate).toContain(
       "runs=$(sh scripts/main-mutation-runs.sh refs/remotes/origin/main 20)",
     );
-    expect(mutate).toContain('.name == $name and .conclusion == "success"');
+    expect(mutate).not.toContain('.conclusion == "success"');
+    expect(mutate).toContain(
+      'select(.status != "Survived" and .status != "NoCoverage")',
+    );
     expect(mutate).toContain(
       '[ "$(cat "$seed/stryker-deps.txt" 2>/dev/null)" = "$DEPS" ] || continue',
     );

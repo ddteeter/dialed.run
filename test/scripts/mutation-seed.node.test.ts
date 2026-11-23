@@ -103,70 +103,98 @@ afterAll(() => {
 });
 
 /**
-The stub's answers: three runs, newest first, X's the newest, each with a
-passing shard and a report measured under this run's digest.
+A stored report from run `id`: one file whose mutants hold every status a
+shard leaves, so the seed's filter shows. The run's id rides in the file's
+name, so a test can see which run seeded.
 */
-function report(id: number): { files: Record<string, string> } {
+function storedReport(id: number) {
+  const statuses = ["Killed", "Survived", "NoCoverage", "Timeout"];
   return {
     files: {
-      "stryker-incremental.json": `{"run": ${String(id)}}`,
+      [`src/run-${String(id)}.ts`]: {
+        language: "typescript",
+        source: "",
+        mutants: statuses.map((status, index) => ({
+          id: String(index),
+          status,
+        })),
+      },
+    },
+  };
+}
+
+/**
+The artifact run `id` uploads: its report and the digest it was measured under.
+*/
+function download(id: number) {
+  return {
+    files: {
+      "stryker-incremental.json": JSON.stringify(storedReport(id)),
       "stryker-deps.txt": `${DEPS}\n`,
     },
   };
 }
 
+/**
+The stub's answers: three runs, newest first, X's the newest, each with a
+report measured under this run's digest. Whether each run's shard passed
+is not asked: a red shard's kills seed as well as a green one's.
+*/
 function routes(): Record<string, unknown> {
   const runs = [
     { databaseId: 3, headSha: sha.x },
     { databaseId: 2, headSha: sha.b },
     { databaseId: 1, headSha: sha.a },
   ];
-  const passed = { jobs: [{ name: SHARD, conclusion: "success" }] };
   return {
     "run list": runs,
-    "run view 3": passed,
-    "run view 2": passed,
-    "run view 1": passed,
-    "run download 3": report(3),
-    "run download 2": report(2),
-    "run download 1": report(1),
+    "run download 3": download(3),
+    "run download 2": download(2),
+    "run download 1": download(1),
   };
 }
 
+function seeded(): unknown {
+  return JSON.parse(
+    readFileSync(
+      path.join(checkout, "reports/stryker-incremental.json"),
+      "utf8",
+    ),
+  );
+}
+
 describe("a PR shard's seed in CI", () => {
-  it("comes from the newest run whose commit is in main's history", () => {
+  it("comes from the newest run whose commit is in main's history, keeping only what it measured as killed or timed out", () => {
     rmSync(path.join(checkout, "reports"), { recursive: true, force: true });
-    const run = runStep(scriptOf(WORKFLOW, STEP), {
-      cwd: checkout,
-      env: {
-        ...literalEnvOf(WORKFLOW, STEP),
-        GH_TOKEN: "token",
-        GH_REPO: "owner/repo",
-        SHARD,
-        SLUG,
-        DEPS,
-      },
-      routes: routes(),
-    });
+    const run = seedStep(routes());
     expect(run.stdout).toContain("::notice::seeded from main's run 2");
     expect(run.status).toBe(0);
-    expect(
-      readFileSync(
-        path.join(checkout, "reports/stryker-incremental.json"),
-        "utf8",
-      ),
-    ).toBe('{"run": 2}');
+    expect(seeded()).toStrictEqual({
+      files: {
+        "src/run-2.ts": {
+          language: "typescript",
+          source: "",
+          mutants: [
+            { id: "0", status: "Killed" },
+            { id: "3", status: "Timeout" },
+          ],
+        },
+      },
+    });
     expect(run.calls.some((call) => call.startsWith("run download 3"))).toBe(
       false,
     );
-    expect(run.calls.some((call) => call.startsWith("run view 3"))).toBe(false);
+    expect(run.calls.some((call) => call.startsWith("run view"))).toBe(false);
   });
 
-  it("passes over a run whose jobs the API would not read", () => {
+  it("passes over a run whose report the API would not hand over", () => {
     rmSync(path.join(checkout, "reports"), { recursive: true, force: true });
-    const run = seedStep({ ...routes(), "run view 2": FAILS });
+    const run = seedStep({ ...routes(), "run download 2": FAILS });
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("::notice::seeded from main's run 1");
+    expect(Object.keys((seeded() as { files: object }).files)).toStrictEqual([
+      "src/run-1.ts",
+    ]);
   });
 
   it("runs cold when the API would not list main's runs", () => {
