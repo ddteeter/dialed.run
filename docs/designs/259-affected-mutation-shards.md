@@ -87,4 +87,11 @@ main" alert, and stop-the-line applies.
 
 ## Open questions
 
-None.
+- **The saving is small.** Replaying the last 44 merged PRs that touched
+  code against today's graph, this rule kept 39 of 43 shards on average:
+  module barrels make almost every test reach almost every scope, and a
+  third of those PRs changed `stryker.conf.json`, a migration or a test
+  helper. Dropping (b) changes little. A narrower rule would read which
+  test files cover each shard's mutants from main's seed reports
+  (`coveredBy`), which is exactly what `--incremental` re-tests. Worth a
+  follow-up?
