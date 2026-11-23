@@ -3,13 +3,17 @@
  * `stryker.conf.json`'s `mutate` array; a PR keeps the ones its diff can
  * affect, and a push to `main` keeps them all.
  *
- * A shard is kept when (a) a changed file is in its scope, (b) a file in
- * its scope transitively imports a changed file, or (c) a changed test
- * transitively imports a file in its scope. Every shard is kept when the
- * diff touches what every shard runs on, or when the graph cannot answer.
+ * A shard is kept when (a) a changed file is in its scope, (b) a changed
+ * test is one main's report for the shard lists as covering or killing a
+ * mutant, or (c) a changed file outside every scope is imported, through
+ * any chain, by a file in its scope. (a) and (b) are what the shard's
+ * `--incremental` run re-tests; (c) is the import a report cannot see. A
+ * shard with no report to read is kept. Every shard is kept when the diff
+ * touches what every shard runs on, or when the graph cannot answer.
  *
- * Pure: the changed files and the import graph in, the shards out. The
- * graph is read in `graph.ts` and the CLI is `scripts/mutation-shards.ts`.
+ * Pure: the changed files, the import graph and the reports' coverage in,
+ * the shards out. The graph is read in `graph.ts`, the coverage in
+ * `coverage.ts`, and the CLI is `scripts/mutation-shards.ts`.
  */
 import nodePath from "node:path";
 
@@ -112,7 +116,8 @@ export type Selection =
 
 /**
 What every shard runs on: the toolchain, the test harness and its setup,
-the databases the worker tests migrate, the selector itself. A change to
+the databases the worker tests migrate, the selector and the scripts that
+find its reports. A change to
 any of them keeps every shard.
 */
 const EVERY_SHARD: readonly RegExp[] = [
@@ -129,6 +134,7 @@ const EVERY_SHARD: readonly RegExp[] = [
   /^public\//u,
   /^src\/db\/migrations\//u,
   /^scripts\/mutation-shards(?:\.ts$|\/)/u,
+  /^scripts\/main-mutation-(?:reports|runs)\.sh$/u,
 ];
 
 const TEST = /^test\/.*\.test\.tsx?$/u;
@@ -171,65 +177,101 @@ function importersOf(graph: Graph): Map<string, string[]> {
 }
 
 /**
-Why every shard runs for this change, or undefined when the graph can say
-which do.
+Each shard's name, with the test files main's report for it lists as
+covering or killing a mutant. A shard missing from it had no report to read.
+*/
+export type Coverage = ReadonlyMap<string, ReadonlySet<string>>;
+
+/**
+Why every shard runs for this change, or undefined when the graph and the
+reports can say which do.
 */
 function everyShardBecause(change: Change, graph: Graph): string | undefined {
   const { path } = change;
   if (EVERY_SHARD.some((pattern) => pattern.test(path))) {
     return `${path} is what every shard runs on`;
   }
-  if (path.startsWith("test/") && !TEST.test(path)) {
+  if (TEST.test(path)) return undefined;
+  if (path.startsWith("test/")) {
     return `${path} supports the tests, outside the import graph`;
   }
-  if (change.deleted) {
-    return TEST.test(path)
-      ? `${path} was deleted, so what it reached is unknown`
-      : undefined;
-  }
-  const isUnread = CRUISED.test(path) && !graph.imports.has(path);
+  const isUnread =
+    !change.deleted && CRUISED.test(path) && !graph.imports.has(path);
   return isUnread && (path.startsWith("src/") || CODE.test(path))
     ? `${path} is not in the import graph`
     : undefined;
+}
+
+type Reason = readonly [Shard, string];
+
+/**
+(b): the shards whose report lists this test as covering a mutant.
+*/
+function coveredBy(
+  shards: readonly Shard[],
+  coverage: Coverage,
+  test: string,
+): Reason[] {
+  return shards
+    .filter((shard) => coverage.get(shard.name)?.has(test) === true)
+    .map((shard) => [shard, `${test} covers its mutants`]);
+}
+
+/**
+(c): the shards with a file that imports this one, through any chain. A
+file whose imports are unseen may import it.
+*/
+function importedBy(
+  shards: readonly Shard[],
+  graph: Graph,
+  importers: ReadonlyMap<string, readonly string[]>,
+  path: string,
+): Reason[] {
+  const dependents = [...reach([path, ...graph.unseen], importers)];
+  return dependents.flatMap((file) =>
+    shards
+      .filter((shard) => isInScope(shard, file))
+      .map((shard): Reason => [shard, `${file} imports ${path}`]),
+  );
+}
+
+function reasonsFor(
+  change: Change,
+  context: {
+    readonly shards: readonly Shard[];
+    readonly graph: Graph;
+    readonly coverage: Coverage;
+    readonly importers: ReadonlyMap<string, readonly string[]>;
+  },
+): Reason[] {
+  const { shards, graph, coverage, importers } = context;
+  const { path } = change;
+  const owners = shards
+    .filter((shard) => isInScope(shard, path))
+    .map((shard): Reason => [shard, `${path} changed`]);
+  if (TEST.test(path)) return [...owners, ...coveredBy(shards, coverage, path)];
+  if (change.deleted || owners.length > 0) return owners;
+  return importedBy(shards, graph, importers, path);
 }
 
 export function selectShards(
   shards: readonly Shard[],
   changes: readonly Change[],
   graph: Graph,
+  coverage: Coverage,
 ): Selection {
   for (const change of changes) {
     const reason = everyShardBecause(change, graph);
     if (reason !== undefined) return { kind: "all", reason };
   }
   const kept = new Map<string, string>();
-  const keep = (files: Iterable<string>, why: (file: string) => string) => {
-    for (const file of files) {
-      for (const shard of shards) {
-        if (!kept.has(shard.name) && isInScope(shard, file)) {
-          kept.set(shard.name, why(file));
-        }
-      }
-    }
-  };
-  const importers = importersOf(graph);
-  for (const { path, deleted } of changes) {
-    keep([path], () => `${path} changed`);
-    if (deleted || !graph.imports.has(path)) continue;
-    if (TEST.test(path)) {
-      const reached = reach([path], graph.imports);
-      const blind = [...reached].find((file) => graph.unseen.has(file));
-      if (blind !== undefined) {
-        return {
-          kind: "all",
-          reason: `${path} reaches ${blind}, whose imports the graph cannot follow`,
-        };
-      }
-      keep(reached, (file) => `${path} tests ${file}`);
-    } else {
-      // A file whose imports are unseen may import this one.
-      const dependents = reach([path, ...graph.unseen], importers);
-      keep(dependents, (file) => `${file} imports ${path}`);
+  for (const shard of shards) {
+    if (!coverage.has(shard.name)) kept.set(shard.name, "no report to read");
+  }
+  const context = { shards, graph, coverage, importers: importersOf(graph) };
+  for (const change of changes) {
+    for (const [shard, why] of reasonsFor(change, context)) {
+      if (!kept.has(shard.name)) kept.set(shard.name, why);
     }
   }
   return { kind: "some", kept };
