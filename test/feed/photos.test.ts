@@ -37,6 +37,7 @@ import {
   isPhotoVisible,
   photoResponse,
   photoUploadFrom,
+  storeRow,
   uploadPhoto,
   uploadPhotoAnswer,
 } from "../../src/modules/feed/entries/photos";
@@ -751,6 +752,116 @@ describe("bounds on what one runner stores (SA-M14)", () => {
     expect(key.startsWith(entryPhotoPrefix(userId, entryId))).toBe(true);
   });
 
+  it("counts an earlier upload still waiting on its screening against the limit", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
+    const upload = {
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    };
+
+    // No classifier answers here, so the first stays waiting to be screened.
+    await uploadPhoto(upload);
+    await expect(uploadPhoto(upload)).rejects.toThrow(
+      new InvalidPhotoError(PHOTOS_STILL_HELD),
+    );
+  });
+
+  it("takes one of two uploads sent at once for the runner's last held place, and keeps no object for the other", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
+    const upload = {
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    };
+
+    const attempts = await Promise.allSettled([
+      uploadPhoto(upload),
+      uploadPhoto(upload),
+    ]);
+
+    const taken = attempts.filter((a) => a.status === "fulfilled");
+    const refused = attempts.filter((a) => a.status === "rejected");
+    expect(taken).toHaveLength(1);
+    expect(refused).toHaveLength(1);
+    expect(refused[0]?.reason).toStrictEqual(
+      new InvalidPhotoError(PHOTOS_STILL_HELD),
+    );
+    const rows = await drizzle(env.DIALED_CORE)
+      .select({ key: entryPhotos.photoKey })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.entryId, entryId));
+    expect(rows).toStrictEqual([{ key: taken[0]?.value }]);
+    const listed = await env.MEDIA.list({
+      prefix: entryPhotoPrefix(userId, entryId),
+    });
+    expect(listed.objects.map((object) => object.key)).toStrictEqual([
+      taken[0]?.value,
+    ]);
+  });
+
+  it("writes no row and says the held photos had no room when the insert finds them at the limit", async () => {
+    const userId = await makeUser();
+    const entryId = await makeEntry({
+      userId,
+      runId: await makeRun({ userId }),
+    });
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE);
+    const id = newUlid();
+
+    const outcome = await storeRow(drizzle(env.DIALED_CORE), userId, {
+      id,
+      entryId,
+      photoKey: entryPhotoKeyFor(userId, entryId, id),
+      idempotencyKey: undefined,
+      fingerprint: "0000000000000000",
+    });
+
+    expect(outcome).toBe("still-held");
+    expect(
+      await drizzle(env.DIALED_CORE)
+        .select({ id: entryPhotos.id })
+        .from(entryPhotos)
+        .where(eq(entryPhotos.entryId, entryId)),
+    ).toStrictEqual([]);
+  });
+
+  it("says the kit was full when the held photos had room", async () => {
+    const userId = await makeUser();
+    const entryId = await makeEntry({
+      userId,
+      runId: await makeRun({ userId }),
+    });
+    const upload = {
+      userId,
+      entryId,
+      contentType: "image/jpeg",
+      bytes: JPEG_BYTES,
+    };
+    for (let index = 0; index < MAX_PHOTOS_PER_ENTRY; index += 1) {
+      await uploadPhoto(upload);
+    }
+    const id = newUlid();
+
+    const outcome = await storeRow(drizzle(env.DIALED_CORE), userId, {
+      id,
+      entryId,
+      photoKey: entryPhotoKeyFor(userId, entryId, id),
+      idempotencyKey: undefined,
+      fingerprint: "0000000000000000",
+    });
+
+    expect(outcome).toBe("full");
+  });
+
   it("counts each upload once, and a repeat of one submission not again", async () => {
     const userId = await makeUser();
     const runId = await makeRun({ userId });
@@ -791,6 +902,25 @@ describe("bounds on what one runner stores (SA-M14)", () => {
       .where(eq(rateLimits.subject, userId));
     expect(await uploadPhotoAnswer(upload)).toStrictEqual({
       refusal: "That's 50 photos today. You can add more tomorrow.",
+    });
+  });
+
+  it("answers the attach screen with the held photos' sentence at their limit", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await makeEntry({ userId, runId });
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE);
+
+    expect(
+      await uploadPhotoAnswer({
+        userId,
+        entryId,
+        contentType: "image/jpeg",
+        bytes: JPEG_BYTES,
+      }),
+    ).toStrictEqual({
+      refusal:
+        "Your last 10 photos are still being checked. You can add more once they're through.",
     });
   });
 

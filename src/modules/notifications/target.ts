@@ -17,6 +17,10 @@ export function notificationTarget(
     readonly kind: string;
     readonly linkId: string | null;
     readonly linkHandle: string | null;
+    /**
+    A follow row about a group of followers, rather than one.
+    */
+    readonly isGroup: boolean;
     readonly createdAt: number;
   },
   viewer: ViewerZone,
@@ -33,7 +37,7 @@ export function notificationTarget(
     // the runner's own profile, where the count is, until a followers list
     // exists (R48·131c; a design-ask).
     case "followed": {
-      if (row.linkId === null) return { to: "own-profile" };
+      if (row.isGroup) return { to: "own-profile" };
       return row.linkHandle === null
         ? undefined
         : { to: "profile", handle: row.linkHandle };

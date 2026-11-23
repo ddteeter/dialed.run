@@ -177,7 +177,7 @@ export async function fileTakedownRequest<Attempt>(
   const dueAt = now + REMOVAL_DUE_SECONDS;
   const subject = await filedSubjectOf(db, input.location);
   const row = rowOf(id);
-  const hid = holds(row.hid(now));
+  const hid = holds(row.newlyHid(now));
   const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
   await db.batch([
     db
@@ -195,7 +195,7 @@ export async function fileTakedownRequest<Attempt>(
         idempotencyKey: input.idempotencyKey,
         requesterKey: keys.requesterKey,
         ipKey: keys.ipKey,
-        holdState: sql`${holdStateSql(keys, now)}`,
+        holdState: sql`${holdStateSql(keys, now, subject)}`,
         posterUsername: input.posterUsername,
       })
       .onConflictDoNothing(),
@@ -203,7 +203,7 @@ export async function fileTakedownRequest<Attempt>(
     ...holdWrites(db, subject, hid),
     ...told,
     ...operatorAlerts(deps.oweWhere, { id, dueAt, subject }, row.alerts(now)),
-    ...valveAlerts(deps.oweWhere, now, row.is("valve")),
+    ...valveAlerts(deps.oweWhere, now, row.owesSummary(now)),
     ...receipts(deps.oweWhere, { id, email, dueAt }, row, now),
   ]);
   await purgeIfHeld(db, { id, subject }, now, deps.purge);
@@ -215,14 +215,19 @@ export async function fileTakedownRequest<Attempt>(
  * insert or the confirm's claim has recorded the limits' state, in the
  * same batch (design 137):
  *
+ * 0. the state `held` for one the valve quieted whose subject is already
+ *    out of public view: it hides nothing new, so it holds that subject
+ *    whatever the valve says, and its alert follows 2 and 3;
  * 1. `held_at`, where that state may hide and the subject is one a hold
  *    moves or one already out of public view; and `hid_at` beside it
  *    where the subject is still public, so this request is the one that
  *    hides it (the hold runs after these, in the same batch);
- * 2. `alerted_at`, where it may act but hid nothing and the hour's
+ * 2. `alerted_at`, where it may act but newly hid nothing (it held a
+ *    subject already out of public view, or nothing) and the hour's
  *    one-by-one alerts have room;
- * 3. the state `valve` for one that hid nothing past that room — the
- *    valve's hourly alert is what it owes;
+ * 3. the state `valve` for one that held nothing past that room. One that
+ *    holds its subject keeps `held` and `held_at`; both owe the valve's
+ *    hourly alert (`row.owesSummary`);
  * 4. no state for a link that is not ours, which holds nothing.
  *
  * One statement each, so each counts what the one before it wrote.
@@ -234,11 +239,21 @@ function decisionWrites(
   now: number,
 ): BatchItem<"sqlite">[] {
   const mayAct = and(row, eq(takedownRequests.holdState, "held"));
-  const hidNothing = and(mayAct, isNull(takedownRequests.heldAt));
+  const heldNothing = and(mayAct, isNull(takedownRequests.heldAt));
   return [
     ...(subject === undefined
       ? []
       : [
+          db
+            .update(takedownRequests)
+            .set({ holdState: "held" })
+            .where(
+              and(
+                row,
+                eq(takedownRequests.holdState, "valve"),
+                subjectOutOfView(subject),
+              ),
+            ),
           db
             .update(takedownRequests)
             .set({ heldAt: now })
@@ -251,11 +266,11 @@ function decisionWrites(
     db
       .update(takedownRequests)
       .set({ alertedAt: now })
-      .where(and(hidNothing, alertRoomSql(now))),
+      .where(and(mayAct, isNull(takedownRequests.hidAt), alertRoomSql(now))),
     db
       .update(takedownRequests)
       .set({ holdState: "valve" })
-      .where(and(hidNothing, isNull(takedownRequests.alertedAt))),
+      .where(and(heldNothing, isNull(takedownRequests.alertedAt))),
     ...(subject === undefined
       ? [
           db
@@ -287,16 +302,28 @@ function rowOf(id: string, also: SQL = sql`1`) {
     */
     hid: (now: number) => row(sql`${takedownRequests.heldAt} = ${now}`),
     /**
+    It is the request that took its subject out of public view at `now`.
+    */
+    newlyHid: (now: number) => row(sql`${takedownRequests.hidAt} = ${now}`),
+    /**
     It hid nothing at `now` (`is not`, so an unset `held_at` answers true).
     */
     hidNothing: (now: number) =>
       row(sql`${takedownRequests.heldAt} is not ${now}`),
     /**
-    It alerts every operator one by one: it hid, or it may alert though it hid nothing.
+    It alerts every operator one by one: it newly hid its subject, or the hour's allowance had room.
     */
     alerts: (now: number) =>
       row(
-        sql`(${takedownRequests.heldAt} = ${now} or ${takedownRequests.alertedAt} = ${now})`,
+        sql`(${takedownRequests.hidAt} = ${now} or ${takedownRequests.alertedAt} = ${now})`,
+      ),
+    /**
+     * It owes the valve's hourly alert instead: quieted by the valve, or
+     * holding a subject already out of view past the hour's allowance.
+     */
+    owesSummary: (now: number) =>
+      row(
+        sql`(${takedownRequests.holdState} = 'valve' or (${takedownRequests.heldAt} = ${now} and ${takedownRequests.hidAt} is null and ${takedownRequests.alertedAt} is null))`,
       ),
     /**
     Its recorded state is `state`; `isNot` answers true of an unset one.
@@ -335,6 +362,13 @@ function owedWhere(
 function subjectHoldable(subject: TakedownSubject): SQL {
   const { table, where } = holdable(subject, HOLD_OR_REVIEW);
   return sql`exists (select 1 from ${table} where ${where})`;
+}
+
+/**
+Whether the subject is one a request still pins, but no longer public.
+*/
+function subjectOutOfView(subject: TakedownSubject): SQL {
+  return sql`(${subjectHoldable(subject)} and not ${subjectPublic(subject)})`;
 }
 
 /**
@@ -575,25 +609,18 @@ function holdWrites(
  * The author's notice that a request hid their kit or photo (R-163; owner,
  * 2026-10-24): the hide notice a report's hide sends (D-145), unchanged,
  * raised where the row says it hid (`onlyIf`). The author is read before
- * the batch, which cannot branch, and only while the subject is in a
- * state the hold moves — so a subject a report already hid, or a removal
- * already took, is not told it was hidden again. Suspected CSAM is not
- * known yet when a request lands; the quarantine that may follow tells
- * nobody anything more (D-70).
+ * the batch, which cannot branch. `hid_at` is stamped only where the
+ * subject was still public in the same batch, so a subject a report
+ * already hid, or a removal already took, is not told it was hidden
+ * again. Suspected CSAM is not known yet when a request lands; the
+ * quarantine that may follow tells nobody anything more (D-70).
  */
-async function holdNotice(
+function holdNotice(
   db: Db,
   subject: TakedownSubject,
   onlyIf: SQL,
 ): Promise<BatchItem<"sqlite">[]> {
-  const { table, where } = holdable(subject);
-  const [row] = await db
-    .select({ one: sql`1` })
-    .from(table)
-    .where(where);
-  return row === undefined
-    ? []
-    : hiddenNotice(db, subject.subjectType, subject.subjectId, onlyIf);
+  return hiddenNotice(db, subject.subjectType, subject.subjectId, onlyIf);
 }
 
 /**
@@ -778,9 +805,14 @@ export async function confirmTakedownRequest(
   // past them answers as an unknown link (owner, 2026-11-16).
   if (now > request.dueAt) return "not_found";
   const subject = await requestSubjectOf(db, request);
-  const state = sql<HoldState>`(case when ${valveShutSql(now)} then 'valve' else 'held' end)`;
-  const row = rowOf(request.id, eq(takedownRequests.confirmedAt, now));
-  const hid = holds(row.hid(now));
+  const state = sql<HoldState>`(case when ${valveShutSql(now, subject)} then 'valve' else 'held' end)`;
+  // This claim's moment, on a request still pending: a second press in
+  // the same second whose batch lands after a decision acts on nothing.
+  const row = rowOf(
+    request.id,
+    sql`(${eq(takedownRequests.confirmedAt, now)} and ${eq(takedownRequests.status, "pending")})`,
+  );
+  const hid = holds(row.newlyHid(now));
   const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
   const claim = and(
     eq(takedownRequests.id, request.id),
@@ -800,7 +832,7 @@ export async function confirmTakedownRequest(
       { id: request.id, dueAt: request.dueAt, subject },
       row.alerts(now),
     ),
-    ...valveAlerts(effects.oweWhere, now, row.is("valve")),
+    ...valveAlerts(effects.oweWhere, now, row.owesSummary(now)),
   ]);
   await purgeIfHeld(db, { id: request.id, subject }, now, effects.purge);
   return "confirmed";

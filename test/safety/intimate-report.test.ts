@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import {
   entryPhotos,
+  notifications,
   outbox,
   outfitEntries,
   reports,
@@ -232,6 +233,50 @@ describe("one report of an intimate image", () => {
 
     expect(await entryStatus(entryId)).toBe("hidden_pending_review");
     expect(await owedEmails()).toStrictEqual([]);
+  });
+
+  it("hides and tells once when the same report is sent twice at once", async () => {
+    Reflect.set(env, "ADMIN_USER_IDS", "op-one");
+    const author = await makeUser();
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
+    const sent = {
+      reporterId: await makeUser(),
+      subjectType: "entry" as const,
+      subjectId: entryId,
+      reason: "intimate" as const,
+    };
+
+    // Neither has seen the other's row when it files: one lands, and the
+    // other finds its own report already there.
+    const results = await Promise.all([
+      fileReport(sent, oweInCore, noPurge),
+      fileReport(sent, oweInCore, noPurge),
+    ]);
+
+    expect(results).toContainEqual({
+      status: "filed",
+      reporterCount: 1,
+      hiddenPendingReview: true,
+    });
+    expect(results).toContainEqual({
+      status: "filed",
+      reporterCount: 1,
+      hiddenPendingReview: false,
+    });
+    expect(await core().select().from(reports)).toHaveLength(1);
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+    expect(await owedEmails()).toHaveLength(1);
+    expect(
+      await core()
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, author)),
+    ).toHaveLength(1);
   });
 });
 

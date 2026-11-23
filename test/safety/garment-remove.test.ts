@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { shownRowOf } from "./helpers";
+import { firstBatchAfter, shownRowOf } from "./helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,7 +16,13 @@ import { env } from "../../src/env";
 import { newUlid, ulidSchema } from "../../src/lib/ids";
 import { moderateGarmentPhoto } from "../../src/modules/feed/moderation/garment-moderation";
 import { decideReview } from "../../src/modules/feed/moderation/moderation";
-import { enqueueForReview, resolveReview } from "../../src/modules/safety";
+import {
+  enqueueForReview,
+  openSubject,
+  resolveReview,
+} from "../../src/modules/safety";
+import { quarantineKeyFor } from "../../src/lib/entry-photo-key";
+import type { Report } from "../../src/modules/feed/entries/retract";
 import { addAccount } from "../feed/helpers";
 import { makeItem, makeUser, resetSafetyTables } from "./helpers";
 
@@ -134,6 +140,74 @@ describe("a garment photo's Remove tells its owner (R-167, design 159)", () => {
   });
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("takes nothing down when the row is decided between its read and the takedown's batch", async () => {
+    const { owner, itemId, photoKey } = await heldGarment();
+    const queueId = await queueRow(itemId, "reports");
+    const shown = await shownRowOf(queueId);
+
+    const outcome = await decideReview(
+      firstBatchAfter(() =>
+        core()
+          .update(reviewQueue)
+          .set({ status: "approved", resolvedBy: "other" })
+          .where(eq(reviewQueue.id, queueId)),
+      ),
+      "rev",
+      { queueId, shown, action: "remove", reason: "home" },
+    );
+
+    expect(outcome).toBe("already_resolved");
+    const garment = await garmentOf(itemId);
+    expect(garment?.photoKey).toBe(photoKey);
+    expect(
+      await core()
+        .select()
+        .from(moderationActions)
+        .where(eq(moderationActions.subjectId, itemId)),
+    ).toStrictEqual([]);
+    expect(await bellOf(owner)).toStrictEqual([]);
+  });
+
+  it("takes nothing down when the row is re-opened for another cause in between", async () => {
+    const { itemId, photoKey } = await heldGarment();
+    const queueId = await queueRow(itemId, "reports");
+    const shown = await shownRowOf(queueId);
+
+    const outcome = await decideReview(
+      firstBatchAfter(() =>
+        core()
+          .update(reviewQueue)
+          .set({ source: "fingerprint" })
+          .where(eq(reviewQueue.id, queueId)),
+      ),
+      "rev",
+      { queueId, shown, action: "quarantine", reason: "explicit" },
+    );
+
+    expect(outcome).toBe("already_resolved");
+    const garment = await garmentOf(itemId);
+    expect(garment?.photoKey).toBe(photoKey);
+  });
+
+  it("passes on a takedown's failure that is not the row's", async () => {
+    const { itemId } = await heldGarment();
+    const queueId = await queueRow(itemId, "reports");
+    const shown = await shownRowOf(queueId);
+    const failing = core();
+    Reflect.set(failing, "batch", () =>
+      Promise.reject(new Error("D1 is down")),
+    );
+
+    await expect(
+      decideReview(failing, "rev", {
+        queueId,
+        shown,
+        action: "remove",
+        reason: "home",
+      }),
+    ).rejects.toThrow("D1 is down");
   });
 
   it("takes the photo off the garment and tells its owner a person decided", async () => {
@@ -363,5 +437,211 @@ describe("a garment photo's Remove tells its owner (R-167, design 159)", () => {
     expect(await bellOf(owner)).toStrictEqual([]);
     expect(await owedEmails()).toStrictEqual([]);
     expect(await core().select().from(removedFingerprints)).toStrictEqual([]);
+  });
+});
+
+/**
+Another reviewer's decision on the row, landing after the page's read.
+*/
+async function decided(queueId: string): Promise<void> {
+  await core()
+    .update(reviewQueue)
+    .set({ status: "approved", resolvedBy: "other" })
+    .where(eq(reviewQueue.id, queueId));
+}
+
+async function quarantined(): Promise<string[]> {
+  const listed = await env.MEDIA.list({ prefix: "quarantine/items/" });
+  return listed.objects.map((object) => object.key);
+}
+
+/**
+A held garment with its original beside its size, and its open row's hold.
+*/
+async function heldWithHold() {
+  const garment = await heldGarment();
+  await env.MEDIA.put(`${garment.photoKey}/original.jpg`, new Uint8Array([8]));
+  const queueId = await queueRow(garment.itemId, "reports");
+  const subject = await openSubject(queueId, await shownRowOf(queueId));
+  if (subject === undefined) throw new Error("not open");
+  return { ...garment, queueId, heldTo: subject.heldTo };
+}
+
+describe("a refused garment quarantine and the copies it made", () => {
+  beforeEach(cleared);
+  beforeEach(async () => {
+    const keys = await quarantined();
+    if (keys.length > 0) await env.MEDIA.delete(keys);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("deletes the copies, and answers as before", async () => {
+    const { itemId, photoKey } = await heldGarment();
+    const queueId = await queueRow(itemId, "reports");
+    const shown = await shownRowOf(queueId);
+
+    const outcome = await decideReview(
+      firstBatchAfter(() => decided(queueId)),
+      "rev",
+      { queueId, shown, action: "quarantine", reason: "explicit" },
+    );
+
+    expect(outcome).toBe("already_resolved");
+    expect(await quarantined()).toStrictEqual([]);
+    const garment = await garmentOf(itemId);
+    expect(garment?.photoKey).toBe(photoKey);
+  });
+
+  it("deletes only the copies it made when one object was already gone", async () => {
+    const { itemId, photoKey, queueId, heldTo } = await heldWithHold();
+    const get = env.MEDIA.get.bind(env.MEDIA);
+    // Gone between the listing and the copy: R2 answers as for any key
+    // it does not hold.
+    vi.spyOn(env.MEDIA, "get").mockImplementation((key, options) =>
+      get(key === `${photoKey}/card.webp` ? "gone/none" : key, options),
+    );
+    const deletes = vi.spyOn(env.MEDIA, "delete");
+
+    const taking = moderateGarmentPhoto(
+      firstBatchAfter(() => decided(queueId)),
+      {
+        actorId: "rev",
+        itemId,
+        action: "quarantine",
+        reason: "explicit",
+        heldTo,
+      },
+      quiet,
+    );
+
+    await expect(taking).rejects.toThrow(
+      /NOT NULL[\s\S]*review_queue\.status/u,
+    );
+    expect(deletes.mock.calls).toStrictEqual([
+      [[quarantineKeyFor(`${photoKey}/original.jpg`)]],
+    ]);
+    expect(await quarantined()).toStrictEqual([]);
+  });
+
+  it("tells Sentry the surface and the copies' kind, never a key, when the copies will not delete", async () => {
+    const { itemId, photoKey, queueId, heldTo } = await heldWithHold();
+    const failure = new Error("R2 is down");
+    vi.spyOn(env.MEDIA, "delete").mockRejectedValue(failure);
+    const report = vi.fn<Report>();
+
+    const taking = moderateGarmentPhoto(
+      firstBatchAfter(() => decided(queueId)),
+      {
+        actorId: "rev",
+        itemId,
+        action: "quarantine",
+        reason: "explicit",
+        heldTo,
+      },
+      report,
+    );
+
+    await expect(taking).rejects.toThrow(
+      /NOT NULL[\s\S]*review_queue\.status/u,
+    );
+    expect(report.mock.calls).toStrictEqual([
+      [
+        failure,
+        { surface: "refused-quarantine-copies", kind: "garment-photo" },
+      ],
+    ]);
+    expect(JSON.stringify(report.mock.calls)).not.toContain(photoKey);
+  });
+
+  it("answers the refusal as before when the copies will not delete", async () => {
+    const { itemId } = await heldGarment();
+    const queueId = await queueRow(itemId, "reports");
+    const shown = await shownRowOf(queueId);
+    vi.spyOn(env.MEDIA, "delete").mockRejectedValue(new Error("R2 is down"));
+
+    const outcome = await decideReview(
+      firstBatchAfter(() => decided(queueId)),
+      "rev",
+      { queueId, shown, action: "quarantine", reason: "explicit" },
+    );
+
+    expect(outcome).toBe("already_resolved");
+  });
+
+  it("keeps the copies when the batch fails for any other cause", async () => {
+    const { itemId, photoKey, queueId, heldTo } = await heldWithHold();
+    const report = vi.fn<Report>();
+
+    const taking = moderateGarmentPhoto(
+      firstBatchAfter(() => decided(queueId)),
+      {
+        actorId: "rev",
+        itemId,
+        action: "quarantine",
+        reason: "explicit",
+        heldTo: { statement: heldTo.statement, refused: () => false },
+      },
+      report,
+    );
+
+    await expect(taking).rejects.toThrow(/NOT NULL/u);
+    const copies = await quarantined();
+    expect(copies.toSorted((a, b) => a.localeCompare(b))).toStrictEqual([
+      quarantineKeyFor(`${photoKey}/card.webp`),
+      quarantineKeyFor(`${photoKey}/original.jpg`),
+    ]);
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("passes on a failed quarantine held to no Review row as it came, and keeps the copies", async () => {
+    const { itemId, photoKey } = await heldGarment();
+    await env.MEDIA.put(`${photoKey}/original.jpg`, new Uint8Array([8]));
+    const failure = new Error("D1 is down");
+    const failing = core();
+    const batch = failing.batch.bind(failing);
+    // The reads before the takedown go through; the takedown's own batch,
+    // the only one with more than three statements, fails.
+    Reflect.set(
+      failing,
+      "batch",
+      (statements: Parameters<typeof failing.batch>[0]) =>
+        statements.length > 3 ? Promise.reject(failure) : batch(statements),
+    );
+    const report = vi.fn<Report>();
+
+    const taking = moderateGarmentPhoto(
+      failing,
+      { actorId: "rev", itemId, action: "quarantine", reason: "explicit" },
+      report,
+    );
+
+    // The very error the batch failed with, not one the hold's absence made.
+    await expect(taking).rejects.toBe(failure);
+    const copies = await quarantined();
+    expect(copies.toSorted((a, b) => a.localeCompare(b))).toStrictEqual([
+      quarantineKeyFor(`${photoKey}/card.webp`),
+      quarantineKeyFor(`${photoKey}/original.jpg`),
+    ]);
+    expect(report).not.toHaveBeenCalled();
+    const garment = await garmentOf(itemId);
+    expect(garment?.photoKey).toBe(photoKey);
+  });
+
+  it("deletes nothing when a refused takedown is a Remove", async () => {
+    const { itemId, queueId, heldTo } = await heldWithHold();
+    const deletes = vi.spyOn(env.MEDIA, "delete");
+    const report = vi.fn();
+
+    const taking = moderateGarmentPhoto(
+      firstBatchAfter(() => decided(queueId)),
+      { actorId: "rev", itemId, action: "remove", reason: "home", heldTo },
+      report,
+    );
+
+    await expect(taking).rejects.toThrow(/NOT NULL/u);
+    expect(deletes).not.toHaveBeenCalled();
+    expect(report).not.toHaveBeenCalled();
   });
 });

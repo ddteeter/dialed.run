@@ -80,8 +80,41 @@ async function sharedEntry(): Promise<string> {
   return makeEntry({ userId: author, runId, audience: "runners" });
 }
 
+async function hiddenKit(): Promise<string> {
+  const entryId = await sharedEntry();
+  await core()
+    .update(outfitEntries)
+    .set({ moderationStatus: "hidden_pending_review" })
+    .where(eq(outfitEntries.id, entryId));
+  return entryId;
+}
+
 const entryLink = (entryId: string) =>
   `https://dialed.run/feed/entry/${entryId}`;
+
+const photoLink = (entryId: string, photoId: string) =>
+  `https://dialed.run/feed/photo/entries/runner/${entryId}/${photoId}`;
+
+/**
+A photo on the kit, in `screenStatus`.
+*/
+async function photoOn(
+  entryId: string,
+  screenStatus: "pass" | "hidden_pending_review",
+  position = 0,
+): Promise<string> {
+  const photoId = newUlid();
+  await core()
+    .insert(entryPhotos)
+    .values({
+      id: photoId,
+      entryId,
+      photoKey: `entries/x/${entryId}/${photoId}.jpg`,
+      position,
+      screenStatus,
+    });
+  return photoId;
+}
 
 async function file(
   email: string,
@@ -441,7 +474,7 @@ describe("the confirm", () => {
 });
 
 /**
-`count` requests that newly hid something just before `at`, from strangers.
+`count` requests that newly hid something just before `at`, from strangers, each on a kit of its own.
 */
 async function heldThisHour(count: number, at: number): Promise<void> {
   for (let index = 0; index < count; index += 1) {
@@ -452,6 +485,8 @@ async function heldThisHour(count: number, at: number): Promise<void> {
         requesterEmail: `flood${String(index)}@example.com`,
         signature: "x",
         location: "x",
+        subjectType: "entry",
+        subjectId: newUlid(),
         dueAt: at,
         createdAt: at - 60,
         idempotencyKey: newUlid(),
@@ -527,6 +562,91 @@ describe("the valve", () => {
     await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 1, NOW);
     const a = await sharedEntry();
     expect(await stateOf("one@example.com", entryLink(a))).toBe("held");
+  });
+});
+
+describe("the valve, counting kits", () => {
+  it("gives a kit and its photos one place between them", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 2, NOW);
+    const kit = await sharedEntry();
+    const photos = await Promise.all(
+      [0, 1, 2, 3].map((position) => photoOn(kit, "pass", position)),
+    );
+    await file("kit@example.com", entryLink(kit), { ip: "198.51.100.30" });
+    for (const [index, photoId] of photos.entries()) {
+      const row = await file(
+        `photo${String(index)}@example.com`,
+        photoLink(kit, photoId),
+        {
+          ip: `198.51.100.${String(31 + index)}`,
+        },
+      );
+      expect(row).toMatchObject({ holdState: "held", hidAt: NOW });
+    }
+
+    const next = await sharedEntry();
+    const row = await file("next@example.com", entryLink(next), {
+      ip: "198.51.100.40",
+    });
+    expect(row).toMatchObject({ holdState: "held", hidAt: NOW });
+  });
+
+  it("shuts for a new kit, and still lets a photo on a kit it counted hide", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 1, NOW);
+    const kit = await sharedEntry();
+    const photoId = await photoOn(kit, "pass");
+    await file("kit@example.com", entryLink(kit), { ip: "198.51.100.30" });
+
+    const other = await sharedEntry();
+    const otherPhoto = await photoOn(other, "pass");
+    const shut = await file("other@example.com", photoLink(other, otherPhoto), {
+      ip: "198.51.100.31",
+    });
+    expect(shut).toMatchObject({ holdState: "valve", hidAt: NOT_SET });
+
+    const same = await file("same@example.com", photoLink(kit, photoId), {
+      ip: "198.51.100.32",
+    });
+    expect(same).toMatchObject({ holdState: "held", hidAt: NOW });
+  });
+
+  it("reads a photo's kit from the photo, never from its link", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 1, NOW);
+    const kit = await sharedEntry();
+    await file("kit@example.com", entryLink(kit), { ip: "198.51.100.30" });
+    const other = await sharedEntry();
+    const otherPhoto = await photoOn(other, "pass");
+
+    const row = await file("liar@example.com", photoLink(kit, otherPhoto), {
+      ip: "198.51.100.31",
+    });
+
+    expect(row).toMatchObject({ holdState: "valve", hidAt: NOT_SET });
+  });
+
+  it("gives a photo gone since a place of its own", async () => {
+    for (let index = 0; index < TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await core()
+        .insert(takedownRequests)
+        .values({
+          id: newUlid(),
+          requesterEmail: `gone${String(index)}@example.com`,
+          signature: "x",
+          location: `gone${String(index)}`,
+          subjectType: "photo",
+          subjectId: newUlid(),
+          dueAt: NOW,
+          createdAt: NOW - 60,
+          idempotencyKey: newUlid(),
+          requesterKey: `gone${String(index)}@example.com`,
+          holdState: "held",
+          heldAt: NOW - 60,
+          hidAt: NOW - 60,
+          status: "declined",
+        });
+    }
+    const kit = await sharedEntry();
+    expect(await stateOf("one@example.com", entryLink(kit))).toBe("valve");
   });
 });
 
@@ -1282,7 +1402,7 @@ describe("a request that names nothing a hold moves", () => {
       holdState: "held",
       heldAt: NOW,
       hidAt: NOT_SET,
-      alertedAt: NOT_SET,
+      alertedAt: NOW,
       subjectId: entryId,
     });
     expect(await entryStatus(entryId)).toBe("removed");
@@ -1333,11 +1453,239 @@ describe("a request that names nothing a hold moves", () => {
 
     expect(row.heldAt).toBe(NOW);
     expect(row.hidAt).toBeNull();
-    expect(row.alertedAt).toBeNull();
+    expect(row.alertedAt).toBe(NOW);
     // Nothing newly hidden, so nothing to purge.
     expect(spy.calls).toStrictEqual([]);
     // A report already told the author; the request does not again.
     expect(await core().select().from(notifications)).toStrictEqual([]);
+  });
+});
+
+describe("a request that holds a subject already out of view", () => {
+  it("takes one of the hour's one-by-one alerts, and past them keeps its hold and owes the hourly alert", async () => {
+    const entryId = await hiddenKit();
+    for (let index = 0; index <= TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await file(`held${String(index)}@example.com`, entryLink(entryId), {
+        ip: `198.51.100.${String(index + 1)}`,
+      });
+    }
+    const rows = await core().select().from(takedownRequests);
+    const filedBy = (index: number) =>
+      rows.find(
+        (row) => row.requesterEmail === `held${String(index)}@example.com`,
+      );
+
+    expect(filedBy(TAKEDOWN_VALVE_PER_HOUR - 1)).toMatchObject({
+      holdState: "held",
+      heldAt: NOW,
+      alertedAt: NOW,
+    });
+    expect(filedBy(TAKEDOWN_VALVE_PER_HOUR)).toMatchObject({
+      holdState: "held",
+      heldAt: NOW,
+      hidAt: NOT_SET,
+      alertedAt: NOT_SET,
+    });
+    expect(
+      await owedWhere(
+        (email) => email.email.template.kind === "removal_requested",
+      ),
+    ).toHaveLength(2 * TAKEDOWN_VALVE_PER_HOUR);
+    const valveAlerts = await owedWhere(
+      (email) => email.email.template.kind === "takedown_valve",
+    );
+    expect(valveAlerts.map((email) => email.dedupeKey)).toStrictEqual([
+      `takedown_valve:${String(valveHour(NOW))}:op-one`,
+      `takedown_valve:${String(valveHour(NOW))}:op-two`,
+    ]);
+  });
+
+  it("owes no hourly alert while the allowance has room", async () => {
+    const entryId = await hiddenKit();
+    await file("held@example.com", entryLink(entryId));
+    expect(
+      await owedWhere(
+        (email) => email.email.template.kind === "takedown_valve",
+      ),
+    ).toStrictEqual([]);
+  });
+
+  it("spends the allowance links that are not ours share", async () => {
+    for (let index = 0; index < TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await fileAlone(index, elsewhere(index));
+    }
+    const row = await file("held@example.com", entryLink(await hiddenKit()), {
+      ip: "198.51.100.90",
+    });
+    expect(row).toMatchObject({ holdState: "held", alertedAt: NOT_SET });
+    expect(
+      await owedWhere((email) =>
+        email.dedupeKey.startsWith(`removal_requested:${row.id}`),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  it("leaves the allowance to requests that hide nothing when it hides something new", async () => {
+    const hider = await file(
+      "hider@example.com",
+      entryLink(await sharedEntry()),
+    );
+    expect(hider).toMatchObject({ hidAt: NOW, alertedAt: NOT_SET });
+    expect(
+      await owedWhere((email) =>
+        email.dedupeKey.startsWith(`removal_requested:${hider.id}`),
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("owes the hourly alert at its confirm past the allowance", async () => {
+    const entryId = await hiddenKit();
+    const a = await sharedEntry();
+    const b = await sharedEntry();
+    await file("me@example.com", entryLink(a));
+    await file("me@example.com", entryLink(b));
+    const waiting = await file("me@example.com", entryLink(entryId));
+    expect(waiting.holdState).toBe("confirm");
+    // Others' addresses, none of them this requester's.
+    for (let index = 20; index < 20 + TAKEDOWN_VALVE_PER_HOUR; index += 1) {
+      await fileAlone(index, elsewhere(index));
+    }
+
+    await confirmTakedownRequest(
+      core(),
+      await confirmTokenFor(waiting.id),
+      { oweWhere: oweInCoreWhere, purge: noPurge },
+      NOW + 60,
+    );
+
+    const [row] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, waiting.id));
+    expect(row).toMatchObject({
+      holdState: "held",
+      heldAt: NOW + 60,
+      alertedAt: NOT_SET,
+    });
+    expect(
+      await owedWhere((email) =>
+        email.dedupeKey.startsWith(`removal_requested:${waiting.id}`),
+      ),
+    ).toStrictEqual([]);
+    expect(
+      await owedWhere((email) =>
+        email.dedupeKey.startsWith(
+          `takedown_valve:${String(valveHour(NOW + 60))}:`,
+        ),
+      ),
+    ).toHaveLength(2);
+  });
+});
+
+describe("a request about a subject already out of view, while the valve is shut", () => {
+  it("holds a kit a report hid, and pins it against a review's Approve", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
+    const entryId = await hiddenKit();
+    const row = await file("me@example.com", entryLink(entryId));
+
+    expect(row).toMatchObject({
+      holdState: "held",
+      heldAt: NOW,
+      hidAt: NOT_SET,
+      alertedAt: NOW,
+    });
+    const queueId = newUlid();
+    await core().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "entry",
+      subjectId: entryId,
+      source: "reports",
+      status: "pending",
+      createdAt: NOW,
+      openedAt: NOW,
+    });
+    await resolveReview(queueId, await makeUser(), "approve");
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("holds a kit a copyright hold removed", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
+    const entryId = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, entryId));
+
+    const row = await file("me@example.com", entryLink(entryId));
+
+    expect(row).toMatchObject({ holdState: "held", heldAt: NOW });
+    expect(await entryStatus(entryId)).toBe("removed");
+  });
+
+  it("holds a photo a report hid", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
+    const entryId = await sharedEntry();
+    const photoId = await photoOn(entryId, "hidden_pending_review");
+
+    const row = await file("me@example.com", photoLink(entryId, photoId));
+
+    expect(row).toMatchObject({
+      subjectType: "photo",
+      holdState: "held",
+      heldAt: NOW,
+    });
+  });
+
+  it("still holds nothing for a public kit, or for a blocked requester", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
+    const open = await file("one@example.com", entryLink(await sharedEntry()), {
+      ip: "198.51.100.61",
+    });
+    expect(open).toMatchObject({ holdState: "valve", heldAt: NOT_SET });
+
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: requesterKey("two@example.com"),
+        kind: "email",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+    const blocked = await file(
+      "two@example.com",
+      entryLink(await hiddenKit()),
+      {
+        ip: "198.51.100.62",
+      },
+    );
+    expect(blocked).toMatchObject({ holdState: "blocked", heldAt: NOT_SET });
+    // A later request's statements touch only its own row.
+    const [after] = await core()
+      .select({ holdState: takedownRequests.holdState })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, open.id));
+    expect(after?.holdState).toBe("valve");
+  });
+
+  it("holds it at its confirm too", async () => {
+    const entryId = await hiddenKit();
+    await file("me@example.com", entryLink(await sharedEntry()));
+    await file("me@example.com", entryLink(await sharedEntry()));
+    const waiting = await file("me@example.com", entryLink(entryId));
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW + 60);
+
+    await confirmTakedownRequest(
+      core(),
+      await confirmTokenFor(waiting.id),
+      { oweWhere: oweInCoreWhere, purge: noPurge },
+      NOW + 60,
+    );
+
+    const [row] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, waiting.id));
+    expect(row).toMatchObject({ holdState: "held", heldAt: NOW + 60 });
   });
 });
 
@@ -1397,6 +1745,83 @@ describe("a confirm that lands after a decision", () => {
         (email) => email.email.template.kind === "removal_requested",
       ),
     ).toHaveLength(before.length);
+  });
+
+  it("hides nothing again when a second press in the same second lands after the Decline", async () => {
+    const { entryId, request } = await pastTheCap();
+    const token = await confirmTokenFor(request.id);
+    const effects = { oweWhere: oweInCoreWhere, purge: noPurge };
+
+    await confirmTakedownRequest(
+      landingFirst(async () => {
+        await confirmTakedownRequest(core(), token, effects, NOW + 60);
+        await decideRemovalRequest(
+          core(),
+          "op-one",
+          request.id,
+          { outcome: "declined", reason: "Not what it says." },
+          NOW + 60,
+        );
+      }),
+      token,
+      effects,
+      NOW + 60,
+    );
+
+    expect(await entryStatus(entryId)).toBe("ok");
+  });
+});
+
+describe("what a request that held something already out of view tells", () => {
+  it("tells the author once when two requests for one kit land together", async () => {
+    const entryId = await sharedEntry();
+    await core().delete(notifications);
+
+    await fileTakedownRequest(
+      landingFirst(async () => {
+        await file("first@example.com", entryLink(entryId), {
+          ip: "198.51.100.71",
+        });
+        // The author reads the first notice before the second lands.
+        await core().update(notifications).set({ read: true });
+      }),
+      {
+        email: "second@example.com",
+        signature: "Sam Runner",
+        location: `${entryLink(entryId)}?again`,
+        description: "",
+        isAttested: true,
+        idempotencyKey: newUlid(),
+        attempt: "token",
+        remoteIp: "198.51.100.72",
+        isLimited: false,
+      },
+      deps,
+      NOW,
+    );
+
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+    const notices = await core().select().from(notifications);
+    expect(notices.map((notice) => notice.read)).toStrictEqual([true]);
+  });
+
+  it("tells the requester about a removed kit that it is hidden", async () => {
+    const entryId = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, entryId));
+
+    const row = await file("me@example.com", entryLink(entryId));
+
+    const [receipt] = await owedWhere(
+      (email) => email.dedupeKey === `removal_request_received:${row.id}`,
+    );
+    expect(receipt?.email.template).toStrictEqual({
+      kind: "removal_request_received",
+      dueAt: row.dueAt,
+      isHidden: true,
+    });
   });
 });
 

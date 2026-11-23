@@ -55,7 +55,7 @@ import { screeningNotice } from "../notices";
 import {
   enqueueForReview,
   settleOpenReviews,
-  type ReviewSource,
+  stuckSources,
 } from "../review";
 import { moderationThresholds, photoThresholds } from "./thresholds";
 
@@ -342,17 +342,6 @@ export const queueSubjectOf = {
   entry: "photo",
   garment: "garment",
 } as const satisfies Record<PhotoScope, string>;
-
-/**
- * Why a photo still pending a day after upload is in the queue (D-157,
- * design 167): storage had nothing to screen, or the classifier has not
- * answered. Here rather than with the escalation, because a verdict that
- * finally lands settles exactly these.
- */
-export const stuckSources = [
-  "missing_file",
-  "unscreened",
-] as const satisfies readonly ReviewSource[];
 
 /**
 Which outcome each decision reports to the caller.

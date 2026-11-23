@@ -42,6 +42,10 @@ type HandleRow = Readonly<{
   The row still as the page showed it, which the settle holds to.
   */
   unchanged: SQL;
+  /**
+  When the server read the page that showed it.
+  */
+  readAt: number;
 }>;
 
 /**
@@ -62,6 +66,7 @@ async function keep(db: Db, row: HandleRow, reviewerId: string) {
     userId,
     "kept",
     here,
+    queueId,
   );
   // The settle first, and the verdict only if it landed (SA-L11): a Keep
   // racing another decision on the row clears nothing once it lost.
@@ -76,6 +81,7 @@ async function keep(db: Db, row: HandleRow, reviewerId: string) {
       ),
     );
   const [settle] = await db.batch([
+    // The report count restarts from the moment the page was read.
     reviewResolution(
       db,
       queueId,
@@ -83,6 +89,7 @@ async function keep(db: Db, row: HandleRow, reviewerId: string) {
       settled.status,
       row.unchanged,
       settled.at,
+      row.readAt,
     ).returning({ id: reviewQueue.id }),
     cleared,
     ...told,
@@ -164,6 +171,7 @@ export async function reviewFlaggedHandle(
     queueId,
     userId: subject.subjectId,
     unchanged: subject.unchanged,
+    readAt: shown.readAt,
   };
   return decision.action === "keep"
     ? keep(db, row, reviewerId)

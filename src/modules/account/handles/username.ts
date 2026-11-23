@@ -43,7 +43,7 @@ import {
   isProfaneHandle,
   readBackDigits,
 } from "../../../lib/contracts/profanity";
-import { followRowsNaming } from "../../notifications";
+import { followRowsNaming, followRowsOpeningWith } from "../../notifications";
 import { purgePublicPages } from "../../ops";
 import { isPlaceholderHandle } from "../../safety";
 import type { ScreenHandle } from "./handle-screen";
@@ -550,7 +550,14 @@ export interface ForceRenameRequest {
    * was taken away and the condition the rename still happens on (R-121),
    * so it lands in the same batch as the rename, and only if it does.
    */
-  readonly recordedAs: (previous: string, onlyIf: SQL) => BatchItem<"sqlite">;
+  readonly recordedAs: (
+    previous: string,
+    onlyIf: SQL,
+    /**
+    The handle the runner holds now, for a lock of `previous` that renamed nothing.
+    */
+    current?: string,
+  ) => BatchItem<"sqlite">;
   /**
    * Anything else the rename settles, in its batch — the Desk's review
    * row when the rename answers a flagged handle (D-97). It is given the
@@ -582,17 +589,24 @@ function ownUnlocked(userId: string, handle: string) {
 
 /**
  * Locks a handle the runner gave up themselves, so neither they nor anyone
- * may take it. Nothing when it is not in their own history, unlocked.
+ * may take it, takes the follow rows that open with it off the other
+ * runners' bells, and writes the caller's record of the lock, in one
+ * batch. Nothing when it is not in their own history, unlocked.
  */
 async function lockOwnHistoryHandle(
   db: Db,
-  userId: string,
-  handle: string,
+  request: Pick<ForceRenameRequest, "userId" | "recordedAs">,
+  handles: { readonly shown: string; readonly current: string },
 ): Promise<void> {
-  await db
-    .update(usernameHistory)
-    .set({ lockedAt: nowSeconds() })
-    .where(ownUnlocked(userId, handle));
+  const { userId } = request;
+  const unlocked = ownUnlocked(userId, handles.shown);
+  const stillTheirs = sql`exists (select 1 from ${usernameHistory} where ${unlocked})`;
+  const rowsOpening = followRowsOpeningWith(db, userId, handles.shown);
+  await db.batch([
+    request.recordedAs(handles.shown, stillTheirs, handles.current),
+    db.delete(notifications).where(and(rowsOpening, stillTheirs)),
+    db.update(usernameHistory).set({ lockedAt: nowSeconds() }).where(unlocked),
+  ]);
 }
 
 /**
@@ -626,7 +640,10 @@ export async function forceRename(
   const previous = profile?.username ?? undefined;
   if (previous === undefined) return { kind: "not_found" };
   if (request.shown !== undefined && request.shown !== previous) {
-    await lockOwnHistoryHandle(db, userId, request.shown);
+    await lockOwnHistoryHandle(db, request, {
+      shown: request.shown,
+      current: previous,
+    });
     return { kind: "moved", username: previous };
   }
   const parsed = usernameSchema.safeParse(request.typed);

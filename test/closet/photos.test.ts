@@ -29,6 +29,7 @@ import { countedKeys, countRow } from "../rate-limit-rows";
 import { heldGarmentPhotos } from "../held-photo-rows";
 import {
   getItemPhotoObject,
+  isHeldPhotosRefusal,
   isPhotoSize,
   photoSizes,
   PhotoValidationError,
@@ -61,6 +62,8 @@ const outboxHandlers = registryWith(undefined);
 function db() {
   return drizzle(env.DIALED_CORE);
 }
+
+const byText = (a: string, b: string) => a.localeCompare(b);
 
 describe("photo validation", () => {
   it("rejects an unsupported content type", () => {
@@ -1077,6 +1080,80 @@ describe("the runner's day's photo uploads (SA-M14)", () => {
     expect(photoKey.startsWith(photoKeyFor(userId, item.id))).toBe(true);
   });
 
+  it("takes one of two garment photos sent at once for the runner's last held place, and keeps no object for the other", async () => {
+    const client = db();
+    const userId = newUlid();
+    const items = await Promise.all(
+      ["First racing shirt", "Second racing shirt"].map((name) =>
+        createItem(client, userId, { category: "top", name }),
+      ),
+    );
+    await heldGarmentPhotos(userId, PHOTOS_HELD_AT_ONCE - 1);
+    await import("@cf-wasm/photon/workerd");
+
+    const attempts = await Promise.allSettled(
+      items.map((item) =>
+        uploadItemPhoto(
+          client,
+          userId,
+          item.id,
+          new Uint8Array(samplePhotoBytes),
+          "image/jpeg",
+        ),
+      ),
+    );
+
+    const outcomes = attempts.map((a) => a.status);
+    expect(outcomes.toSorted(byText)).toStrictEqual(["fulfilled", "rejected"]);
+    const refusedAt = outcomes.indexOf("rejected");
+    const refused = attempts[refusedAt];
+    expect(refused?.status === "rejected" && refused.reason).toStrictEqual(
+      new PhotoValidationError(PHOTOS_STILL_HELD),
+    );
+    const refusedItem = items[refusedAt]?.id ?? "";
+    expect(await storedKeys(photoKeyFor(userId, refusedItem))).toStrictEqual(
+      [],
+    );
+    const rows = await client
+      .select({ id: wardrobeItems.id, photoKey: wardrobeItems.photoKey })
+      .from(wardrobeItems)
+      .where(eq(wardrobeItems.userId, userId));
+    const refusedRow = rows.find((row) => row.id === refusedItem);
+    expect(refusedRow?.photoKey).toBeNull();
+    const takenItem = items[1 - refusedAt]?.id ?? "";
+    const takenKeys = await storedKeys(photoKeyFor(userId, takenItem));
+    expect(takenKeys).toHaveLength(photoSizes.length + 1);
+  });
+
+  it("lets a garment photo's write fail with its own error when the held photos are not why", async () => {
+    const client = db();
+    const userId = newUlid();
+    const item = await createItem(client, userId, {
+      category: "top",
+      name: "Write fails shirt",
+    });
+    await import("@cf-wasm/photon/workerd");
+    const failure = new Error("D1 down");
+    const batch = vi.spyOn(client, "batch").mockRejectedValueOnce(failure);
+
+    const uploading = uploadItemPhoto(
+      client,
+      userId,
+      item.id,
+      new Uint8Array(samplePhotoBytes),
+      "image/jpeg",
+    );
+
+    // The very error the batch failed with, not the held photos' refusal.
+    await expect(uploading).rejects.toBe(failure);
+    expect(batch).toHaveBeenCalledTimes(1);
+    const [row] = await db()
+      .select({ photoKey: wardrobeItems.photoKey })
+      .from(wardrobeItems)
+      .where(eq(wardrobeItems.id, item.id));
+    expect(row?.photoKey).toBeNull();
+  });
+
   it("counts a garment photo against the runner's day", async () => {
     const { client, userId } = await itemWithPhoto();
     const [row] = await client
@@ -1111,5 +1188,46 @@ describe("the runner's day's photo uploads (SA-M14)", () => {
       ok: false,
       error: "That's 50 photos today. You can add more tomorrow.",
     });
+  });
+});
+
+describe("isHeldPhotosRefusal", () => {
+  it("knows the held photos' refusal, as workerd's D1 words it", () => {
+    expect(
+      isHeldPhotosRefusal(
+        new Error(
+          "NOT NULL constraint failed: wardrobe_items.visibility: SQLITE_CONSTRAINT (extended: SQLITE_CONSTRAINT_NOTNULL)",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("knows it wrapped, wherever the words sit", () => {
+    expect(
+      isHeldPhotosRefusal(
+        new Error(
+          "D1_ERROR: NOT NULL constraint failed: wardrobe_items.visibility: SQLITE_CONSTRAINT",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isHeldPhotosRefusal(
+        "wardrobe_items.visibility may not be NULL (NOT NULL)",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not take another column's or another constraint's failure for it", () => {
+    expect(
+      isHeldPhotosRefusal(
+        new Error("NOT NULL constraint failed: wardrobe_items.name"),
+      ),
+    ).toBe(false);
+    expect(
+      isHeldPhotosRefusal(
+        new Error("CHECK constraint failed: wardrobe_items.visibility"),
+      ),
+    ).toBe(false);
+    expect(isHeldPhotosRefusal(new Error("D1 is down"))).toBe(false);
   });
 });

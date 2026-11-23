@@ -25,6 +25,7 @@ import {
 } from "../../src/modules/safety";
 import {
   claimForReview,
+  openSubject,
   pendingReviewQueue,
   reasonsFrom,
   type ReviewSubjectType,
@@ -441,7 +442,11 @@ describe("two decisions on one row (SA-L11)", () => {
 
   it("settles nothing on a row re-opened for another reason since the page showed it", async () => {
     const { entryId, queueId } = await queuedEntry();
-    const shown = { openedAt: 1, source: "classifier" } as const;
+    const shown = {
+      openedAt: 1,
+      source: "classifier",
+      readAt: nowSeconds(),
+    } as const;
 
     expect(
       await resolveReview(queueId, await makeUser(), "approve", shown),
@@ -465,18 +470,21 @@ describe("two decisions on one row (SA-L11)", () => {
       await resolveReview(queueId, await makeUser(), "approve", {
         openedAt: sameSecond,
         source: "classifier",
+        readAt: nowSeconds(),
       }),
     ).toBe("already_resolved");
     expect(
       await resolveReview(queueId, await makeUser(), "approve", {
         openedAt: sameSecond - 1,
         source: "reports",
+        readAt: nowSeconds(),
       }),
     ).toBe("already_resolved");
     expect(
       await resolveReview(queueId, await makeUser(), "approve", {
         openedAt: sameSecond,
         source: "reports",
+        readAt: nowSeconds(),
       }),
     ).toBe("resolved");
   });
@@ -839,10 +847,11 @@ describe("a closed account's rows", () => {
     },
   );
 
-  it("leave a row on the removal clock off the page too", async () => {
+  it("leave a row on the removal clock on the page and in its count, whatever its owner's state", async () => {
     const owner = await makeUser();
     const entryId = await subjectOwnedBy.entry(owner);
-    await pendingRowAbout("entry", entryId);
+    const rowId = await pendingRowAbout("entry", entryId);
+    await pendingRowAbout("entry", await subjectOwnedBy.entry(owner));
     await core()
       .insert(reports)
       .values({
@@ -855,7 +864,9 @@ describe("a closed account's rows", () => {
       });
     await setClosed(owner, 500);
 
-    expect(await pendingReviewQueue(1)).toStrictEqual([]);
+    // The owner's other row, on no clock, stays off.
+    expect(await reviewIds()).toStrictEqual([rowId]);
+    expect(await pendingReviewCount()).toBe(1);
   });
 
   it("leave a product's row where it is, since a product has no owner", async () => {
@@ -1443,5 +1454,185 @@ describe("reading the reasons back out of one column", () => {
     // nothing, and a reviewer cannot tell a blank line from a reason
     // with no words.
     expect(reasonsFrom("explicit,retired_reason,")).toEqual(["explicit"]);
+  });
+});
+
+/**
+`openSubject`'s hold on an open row of its own.
+*/
+async function heldTo() {
+  const id = newUlid();
+  await core().insert(reviewQueue).values({
+    id,
+    subjectType: "entry",
+    subjectId: newUlid(),
+    source: "reports",
+    status: "pending",
+    createdAt: 1,
+    openedAt: 1,
+  });
+  const subject = await openSubject(id, {
+    openedAt: 1,
+    source: "reports",
+    readAt: 1,
+  });
+  if (subject === undefined) throw new Error("not open");
+  return subject.heldTo;
+}
+
+describe("what holds a takedown to the row the page showed", () => {
+  beforeEach(resetSafetyTables);
+
+  it("knows its own refusal, as workerd's D1 words it", async () => {
+    const { refused } = await heldTo();
+    expect(
+      refused(
+        new Error(
+          "NOT NULL constraint failed: review_queue.status: SQLITE_CONSTRAINT (extended: SQLITE_CONSTRAINT_NOTNULL)",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("knows it wrapped, wherever the words sit", async () => {
+    const { refused } = await heldTo();
+    expect(
+      refused(
+        new Error(
+          "D1_ERROR: NOT NULL constraint failed: review_queue.status: SQLITE_CONSTRAINT",
+        ),
+      ),
+    ).toBe(true);
+    expect(refused("review_queue.status may not be NULL (NOT NULL)")).toBe(
+      true,
+    );
+  });
+
+  it("does not take another constraint's failure for it", async () => {
+    const { refused } = await heldTo();
+    expect(
+      refused(
+        new Error(
+          "D1_ERROR: UNIQUE constraint failed: review_queue.subject_type, review_queue.subject_id",
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      refused(new Error("NOT NULL constraint failed: reports.reason")),
+    ).toBe(false);
+    expect(refused(new Error("D1 is down"))).toBe(false);
+  });
+
+  it("does not take another constraint on the row's status for it", async () => {
+    const { refused } = await heldTo();
+    expect(
+      refused(
+        new Error(
+          "D1_ERROR: CHECK constraint failed: review_queue.status: SQLITE_CONSTRAINT",
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  it("fails its batch once the row is decided, and only then", async () => {
+    const { statement } = await heldTo();
+    await core().batch([statement]);
+    await core().update(reviewQueue).set({ status: "approved" });
+
+    await expect(core().batch([statement])).rejects.toThrow(
+      /NOT NULL[\s\S]*review_queue\.status/u,
+    );
+  });
+});
+
+/**
+Review with an intimate-report row, a fingerprint garment row and a plain one.
+*/
+async function threeRows() {
+  const owner = await makeUser();
+  const reported = await subjectOwnedBy.entry(owner);
+  const reportedRow = await pendingRowAbout("entry", reported);
+  await core()
+    .insert(reports)
+    .values({
+      id: newUlid(),
+      reporterId: await makeUser(),
+      subjectType: "entry",
+      subjectId: reported,
+      reason: "intimate",
+      createdAt: nowSeconds(),
+    });
+  const garmentRow = newUlid();
+  await core()
+    .insert(reviewQueue)
+    .values({
+      id: garmentRow,
+      subjectType: "garment",
+      subjectId: await subjectOwnedBy.garment(owner),
+      source: "fingerprint",
+      status: "pending",
+      createdAt: 100,
+      openedAt: 100,
+    });
+  const plainRow = await pendingRowAbout(
+    "entry",
+    await subjectOwnedBy.entry(owner),
+  );
+  return { reportedRow, garmentRow, plainRow };
+}
+
+describe("the copies search, on its own", () => {
+  beforeEach(resetSafetyTables);
+
+  it("lists every row with its deadline when it fails, marks the rows that would show copies, and reports the surface", async () => {
+    const { reportedRow, garmentRow, plainRow } = await threeRows();
+    const failure = new Error("D1 took too long");
+    const heard: unknown[] = [];
+
+    const rows = await pendingReviewQueue(100, {
+      report: (error, context) => {
+        heard.push([error, context]);
+      },
+      read: () => Promise.reject(failure),
+    });
+
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    expect(byId.get(reportedRow)).toMatchObject({
+      copiesUnchecked: true,
+    });
+    expect(typeof byId.get(reportedRow)?.due).toBe("string");
+    expect(byId.get(garmentRow)?.copiesUnchecked).toBe(true);
+    expect(byId.get(plainRow)).not.toHaveProperty("copiesUnchecked");
+    expect(byId.get(reportedRow)).not.toHaveProperty("otherPhotos");
+    expect(heard).toStrictEqual([[failure, { surface: "review-copies" }]]);
+  });
+
+  it("lists every row when it fails and no one listens", async () => {
+    const { reportedRow } = await threeRows();
+
+    const rows = await pendingReviewQueue(100, {
+      read: () => Promise.reject(new Error("D1 took too long")),
+    });
+
+    expect(
+      rows.find((row) => row.id === reportedRow)?.copiesUnchecked,
+    ).toBe(true);
+  });
+
+  it("marks no row when it answers", async () => {
+    const { reportedRow } = await threeRows();
+    const heard: unknown[] = [];
+
+    const rows = await pendingReviewQueue(100, {
+      report: (error) => {
+        heard.push(error);
+      },
+    });
+
+    expect(rows.some((row) => "copiesUnchecked" in row)).toBe(false);
+    expect(
+      rows.find((row) => row.id === reportedRow)?.otherPhotos,
+    ).toBeDefined();
+    expect(heard).toStrictEqual([]);
   });
 });

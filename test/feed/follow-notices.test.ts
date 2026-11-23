@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import {
   followNotices,
   notifications,
   userProfiles,
+  usernameHistory,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { follow, unfollow } from "../../src/modules/feed/following/follows";
@@ -300,6 +301,35 @@ function renamed(userId: string) {
   });
 }
 
+/**
+A handle no other test holds, so the history's key never collides.
+*/
+function freshHandle(prefix: string): string {
+  handles.made += 1;
+  return `${prefix}_${String(Date.now() % 1e6)}${String(handles.made)}`;
+}
+
+const handles = { made: 0 };
+
+/**
+The runner gives up `before` for `after` themselves, as Settings does.
+*/
+async function changesHandle(
+  userId: string,
+  before: string,
+  after: string,
+): Promise<void> {
+  await core().batch([
+    core()
+      .insert(usernameHistory)
+      .values({ username: before, userId, retiredAt: nowSeconds() }),
+    core()
+      .update(userProfiles)
+      .set({ username: after })
+      .where(eq(userProfiles.userId, userId)),
+  ]);
+}
+
 describe("a handle taken away leaves the bells it rang", () => {
   it("deletes a moderator-renamed runner's rows, and one naming them newest, and leaves the rest", async () => {
     const you = await makeVerifiedUser();
@@ -377,5 +407,109 @@ describe("a handle taken away leaves the bells it rang", () => {
     );
 
     expect(await bellOf(you)).toStrictEqual([]);
+  });
+
+  it("deletes a group row that names a handle they gave up, on a rename and on a ban", async () => {
+    for (const takeAway of [
+      (userId: string) => renamed(userId),
+      (userId: string) =>
+        banUser(
+          { userId, reason: "Spam", rule: "spam", bannedBy: "op" },
+          noPurge,
+        ),
+    ]) {
+      const you = await makeVerifiedUser();
+      const old = freshHandle("old");
+      const ada = await makeUser({ username: old });
+      const bo = await makeUser({ username: freshHandle("bo") });
+      await follow(bo, you);
+      await follow(ada, you);
+      await changesHandle(ada, old, freshHandle("now"));
+
+      await takeAway(ada);
+
+      expect(await bellOf(you)).toStrictEqual([]);
+    }
+  });
+
+  it("takes the shown handle off the bells when the runner moved to another, and locks it", async () => {
+    const you = await makeVerifiedUser();
+    const them = await makeVerifiedUser();
+    const old = freshHandle("old");
+    const now = freshHandle("now");
+    const ada = await makeUser({ username: old });
+    await follow(ada, you);
+    await changesHandle(ada, old, now);
+    await follow(ada, them);
+
+    expect(
+      await forceRename(core(), {
+        userId: ada,
+        shown: old,
+        typed: "runner_4821",
+        reason: "Offensive or sexual",
+        recordedAs: () => core().select().from(userProfiles).limit(0),
+      }),
+    ).toStrictEqual({ kind: "moved", username: now });
+
+    expect(await bellOf(you)).toStrictEqual([]);
+    const theirs = await bellOf(them);
+    expect(theirs.map((row) => row.body)).toStrictEqual([
+      `@${now} followed you.`,
+    ]);
+    const [locked] = await core()
+      .select({ lockedAt: usernameHistory.lockedAt })
+      .from(usernameHistory)
+      .where(eq(usernameHistory.username, old));
+    expect(locked?.lockedAt).not.toBeNull();
+  });
+
+  it("takes nothing off the bells for a shown handle that is not theirs", async () => {
+    const you = await makeVerifiedUser();
+    const other = freshHandle("other");
+    const bo = await makeUser({ username: other });
+    const ada = await makeUser({ username: freshHandle("ada") });
+    // A group holding ada's ring, whose words name bo's old handle.
+    await follow(ada, you);
+    await follow(bo, you);
+    await changesHandle(bo, other, freshHandle("bo"));
+
+    await forceRename(core(), {
+      userId: ada,
+      shown: other,
+      typed: "runner_4821",
+      reason: "Offensive or sexual",
+      recordedAs: () => core().select().from(userProfiles).limit(0),
+    });
+
+    expect(await bellOf(you)).toHaveLength(1);
+  });
+
+  it("on a ban of a runner with no handle now, deletes the rows linking to them and leaves a group naming someone else", async () => {
+    const you = await makeVerifiedUser();
+    const them = await makeVerifiedUser();
+    const ada = await makeUser({ username: freshHandle("ada") });
+    const boHandle = freshHandle("bo");
+    const bo = await makeUser({ username: boHandle });
+    // A group on your bell holding ada's ring, naming bo newest; a row on
+    // theirs that ada alone rang.
+    await follow(ada, you);
+    await follow(bo, you);
+    await follow(ada, them);
+    await core()
+      .update(userProfiles)
+      .set({ username: sql`NULL` })
+      .where(eq(userProfiles.userId, ada));
+
+    await banUser(
+      { userId: ada, reason: "Spam", rule: "spam", bannedBy: "op" },
+      noPurge,
+    );
+
+    const rows = await bellOf(you);
+    expect(rows.map((row) => row.body)).toStrictEqual([
+      `@${boHandle} and 1 other followed you.`,
+    ]);
+    expect(await bellOf(them)).toStrictEqual([]);
   });
 });

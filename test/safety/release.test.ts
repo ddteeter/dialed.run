@@ -2,7 +2,13 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { entryPhotos, reports, reviewQueue } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  outfitEntries,
+  reports,
+  reviewQueue,
+  userProfiles,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -256,6 +262,45 @@ describe("what a release may reach (SA-L12)", () => {
 
     expect(outcome).toStrictEqual({ released: 0, hasMore: false });
     expect(await statusesOf()).toStrictEqual(["pending"]);
+  });
+});
+
+/**
+Closes the account of the runner whose kit the photo is on.
+*/
+async function closeOwnerOf(photoId: string): Promise<void> {
+  const [photo] = await core()
+    .select({ userId: outfitEntries.userId })
+    .from(entryPhotos)
+    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+    .where(eq(entryPhotos.id, photoId));
+  if (photo === undefined) throw new Error("no photo");
+  await core()
+    .update(userProfiles)
+    .set({ bannedAt: 1 })
+    .where(eq(userProfiles.userId, photo.userId));
+}
+
+describe("a closed account's holds", () => {
+  it("are neither counted nor approved by a release", async () => {
+    const closed = await heldPhoto(SINCE);
+    const open = await heldPhoto(SINCE);
+    await closeOwnerOf(closed);
+
+    expect(await waitingHoldsSince(SINCE)).toStrictEqual([
+      { cause: "fingerprint", waiting: 1 },
+    ]);
+    expect(await releaseHolds("fingerprint", SINCE, "op")).toStrictEqual({
+      released: 1,
+      hasMore: false,
+    });
+    const rows = await core()
+      .select({ subjectId: reviewQueue.subjectId, status: reviewQueue.status })
+      .from(reviewQueue);
+    expect(rows.find((row) => row.subjectId === closed)?.status).toBe(
+      "pending",
+    );
+    expect(rows.find((row) => row.subjectId === open)?.status).toBe("approved");
   });
 });
 

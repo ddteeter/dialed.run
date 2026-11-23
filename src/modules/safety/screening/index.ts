@@ -6,7 +6,6 @@ export {
   garmentPhotoForgotten,
   screeningDeletes,
   screenPhoto,
-  stuckSources,
 } from "./screening";
 export { isStuck } from "./stuck";
 export {

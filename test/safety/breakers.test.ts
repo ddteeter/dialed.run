@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -14,7 +15,7 @@ import {
   quietScreenerWeek,
   FINGERPRINT_HOLDS_PER_HOUR,
   hasFingerprintHoldThisHour,
-  honestBusiest,
+  honestCeiling,
   overCeilings,
   REPORT_BASELINE_S,
   REPORT_HIDES_FLOOR,
@@ -426,6 +427,85 @@ describe("the report breaker's count, as later reports land", () => {
     expect(reading.isOver).toBe(true);
   });
 
+  it("keeps an open row's hour when a later report re-opens it, and moves a decided one's", async () => {
+    await opened("reports", 1, NOW - 60, "entry", 1);
+    await opened("reports", 1, NOW - 60, "photo", 0);
+    await core()
+      .update(reviewQueue)
+      .set({ status: "approved" })
+      .where(eq(reviewQueue.subjectType, "photo"));
+    const rows = await core().select().from(reviewQueue);
+
+    for (const row of rows) {
+      await core().batch([
+        enqueueForReview(core(), {
+          subjectType: row.subjectType,
+          subjectId: row.subjectId,
+          source: "reports",
+          hid: 0,
+        }),
+      ]);
+    }
+
+    const after = await core()
+      .select({ type: reviewQueue.subjectType, openedAt: reviewQueue.openedAt })
+      .from(reviewQueue);
+    expect(after.find((row) => row.type === "entry")?.openedAt).toBe(NOW - 60);
+    expect(after.find((row) => row.type === "photo")?.openedAt).not.toBe(
+      NOW - 60,
+    );
+  });
+
+  it("counts in this hour a hide that a report adds to an open row held for review long ago", async () => {
+    const longAgo = nowSeconds() - 2 * HOUR;
+    await opened("classifier", 1, longAgo, "entry");
+    const [row] = await core().select().from(reviewQueue);
+    if (row === undefined) throw new Error("no row");
+
+    await core().batch([
+      enqueueForReview(core(), {
+        subjectType: "entry",
+        subjectId: row.subjectId,
+        source: "reports",
+        hid: 1,
+      }),
+    ]);
+
+    const [after] = await core()
+      .select({ openedAt: reviewQueue.openedAt, hid: reviewQueue.hid })
+      .from(reviewQueue);
+    expect(after?.hid).toBe(1);
+    expect(after?.openedAt).toBeGreaterThan(longAgo + HOUR);
+    const reading = await ceilingReading(core(), "reports", nowSeconds());
+    expect(reading.count).toBe(1);
+  });
+
+  it("keeps an open row's hour when a later report re-opens it without a counted hide", async () => {
+    await opened("reports", 1, NOW - 60, "entry", 0);
+    await opened("classifier", 1, NOW - 60, "photo");
+    const rows = await core().select().from(reviewQueue);
+
+    for (const [index, row] of rows.entries()) {
+      await core().batch([
+        enqueueForReview(core(), {
+          subjectType: row.subjectType,
+          subjectId: row.subjectId,
+          source: "reports",
+          // Past the ceiling, or a reason that hides at once.
+          hid: index === 0 ? 0 : 2,
+        }),
+      ]);
+    }
+
+    const after = await core()
+      .select({ openedAt: reviewQueue.openedAt })
+      .from(reviewQueue);
+    expect(after).toStrictEqual([
+      { openedAt: NOW - 60 },
+      { openedAt: NOW - 60 },
+    ]);
+  });
+
   it("takes a re-open's own hide once the row was decided", async () => {
     await opened("reports", 1, NOW - 60, "entry", 1);
     const [row] = await core().select().from(reviewQueue);
@@ -481,34 +561,99 @@ describe("the report breaker's baseline leaves out its own tripped hours", () =>
 
   it("counts a busy hour that stayed under the ceiling then in force", async () => {
     await opened("reports", 9, NOW - 3 * HOUR);
-    await opened("reports", REPORT_HIDES_FLOOR, NOW - 2 * HOUR);
+    await opened("reports", 19, NOW - 2 * HOUR);
     await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
 
-    // Nine set a ceiling of 36, so the ten after them were honest.
+    // Nine raised the next hour's ceiling only to twice ten, so the
+    // nineteen after them were honest; and the ceiling now is twice that.
     expect(await ceilingReading(core(), "reports", NOW)).toMatchObject({
       isOver: false,
       ceiling: 40,
     });
   });
+
+  it("leaves out an hour that reached the doubled ceiling", async () => {
+    await opened("reports", 9, NOW - 3 * HOUR);
+    await opened("reports", 20, NOW - 2 * HOUR);
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
+
+    expect(await ceilingReading(core(), "reports", NOW)).toMatchObject({
+      ceiling: 36,
+    });
+  });
 });
 
-describe("honestBusiest", () => {
-  it("is zero for no hours", () => {
-    expect(honestBusiest([])).toBe(0);
+/**
+Two hours four apart, read sixteen hours on.
+*/
+function apart(first: number, second: number): number {
+  return honestCeiling(
+    [
+      { hour: 1, n: first },
+      { hour: 5, n: second },
+    ],
+    20,
+  );
+}
+
+describe("honestCeiling", () => {
+  it("is the floor for no hours", () => {
+    expect(honestCeiling([], 7)).toBe(REPORT_HIDES_FLOOR);
   });
 
   it("skips an hour that reached the ceiling of the hours before it", () => {
     // 3 sets 12; 12 reached it; 5 is under it.
-    expect(honestBusiest([{ n: 3 }, { n: 12 }, { n: 5 }])).toBe(5);
+    expect(
+      honestCeiling(
+        [
+          { hour: 1, n: 3 },
+          { hour: 5, n: 12 },
+          { hour: 9, n: 5 },
+        ],
+        20,
+      ),
+    ).toBe(20);
   });
 
   it("keeps an hour just under that ceiling", () => {
-    expect(honestBusiest([{ n: 3 }, { n: 11 }])).toBe(11);
+    expect(
+      honestCeiling(
+        [
+          { hour: 1, n: 3 },
+          { hour: 5, n: 11 },
+        ],
+        20,
+      ),
+    ).toBe(44);
   });
 
   it("keeps the busier of two honest hours, in either order", () => {
-    expect(honestBusiest([{ n: 8 }, { n: 2 }])).toBe(8);
-    expect(honestBusiest([{ n: 2 }, { n: 8 }])).toBe(8);
+    expect(apart(8, 2)).toBe(32);
+    expect(apart(2, 8)).toBe(32);
+  });
+
+  it("at most doubles from one hour to the next", () => {
+    const hours = [
+      { hour: 1, n: 9 },
+      { hour: 2, n: 19 },
+    ];
+    expect(honestCeiling(hours, 2)).toBe(20);
+    expect(honestCeiling(hours, 3)).toBe(40);
+    expect(honestCeiling(hours, 4)).toBe(76);
+  });
+
+  it("may double across hours with no rows", () => {
+    expect(honestCeiling([{ hour: 1, n: 9 }], 2)).toBe(20);
+    expect(honestCeiling([{ hour: 1, n: 9 }], 3)).toBe(36);
+  });
+
+  it("holds a group that stops one short each hour to doubling", () => {
+    const hours = [
+      { hour: 1, n: 9 },
+      { hour: 2, n: 19 },
+      { hour: 3, n: 39 },
+    ];
+    expect(honestCeiling(hours, 4)).toBe(80);
   });
 });
 

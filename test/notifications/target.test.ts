@@ -14,7 +14,8 @@ const row = (
   kind: string,
   linkId: string | null = NOTHING,
   linkHandle: string | null = NOTHING,
-) => ({ kind, linkId, linkHandle, createdAt: LATE_CHICAGO });
+  isGroup = false,
+) => ({ kind, linkId, linkHandle, isGroup, createdAt: LATE_CHICAGO });
 
 describe("where a bell row goes", () => {
   it("opens the garment for a correction's outcome (R48·129f)", () => {
@@ -29,7 +30,7 @@ describe("where a bell row goes", () => {
 
   it("opens one follower's profile by their handle now (R48·131c)", () => {
     expect(
-      notificationTarget(row("followed", "01ADA", "ada"), OWED),
+      notificationTarget(row("followed", NOTHING, "ada"), OWED),
     ).toStrictEqual({
       to: "profile",
       handle: "ada",
@@ -37,11 +38,13 @@ describe("where a bell row goes", () => {
   });
 
   it("goes nowhere for a follower whose profile is gone", () => {
-    expect(notificationTarget(row("followed", "01ADA"), OWED)).toBeUndefined();
+    expect(notificationTarget(row("followed"), OWED)).toBeUndefined();
   });
 
   it("opens the runner's own profile for a group", () => {
-    expect(notificationTarget(row("followed"), OWED)).toStrictEqual({
+    expect(
+      notificationTarget(row("followed", NOTHING, NOTHING, true), OWED),
+    ).toStrictEqual({
       to: "own-profile",
     });
   });

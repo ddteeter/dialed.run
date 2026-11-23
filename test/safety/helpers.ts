@@ -30,6 +30,7 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
 import type {
   ReviewSubjectType,
   ShownRow,
@@ -176,7 +177,11 @@ export async function makeProduct(id: string = newUlid()): Promise<string> {
  * What a decision on a row that does not exist sends as shown: anything,
  * since the decision is answered as not found either way.
  */
-export const anyShownRow: ShownRow = { openedAt: 0, source: "reports" };
+export const anyShownRow: ShownRow = {
+  openedAt: 0,
+  source: "reports",
+  readAt: 0,
+};
 
 /**
  * A Review row as a page that read it now would show it, which a decision
@@ -187,5 +192,25 @@ export async function shownRowOf(queueId: string): Promise<ShownRow> {
     .select({ openedAt: reviewQueue.openedAt, source: reviewQueue.source })
     .from(reviewQueue)
     .where(eq(reviewQueue.id, queueId));
-  return row ?? anyShownRow;
+  return row === undefined ? anyShownRow : { ...row, readAt: nowSeconds() };
+}
+
+/**
+ * A handle on the core database whose first batch first lets `before`
+ * land: the moment between a decision's read and its takedown.
+ */
+export function firstBatchAfter(before: () => Promise<unknown>) {
+  const db = drizzle(env.DIALED_CORE);
+  const batch = db.batch.bind(db);
+  const seen = { batches: 0 };
+  Reflect.set(
+    db,
+    "batch",
+    async (...statements: Parameters<typeof db.batch>) => {
+      seen.batches += 1;
+      if (seen.batches === 1) await before();
+      return batch(...statements);
+    },
+  );
+  return db;
 }

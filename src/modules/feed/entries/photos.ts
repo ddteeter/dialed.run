@@ -15,6 +15,7 @@ import {
 } from "../../../db/schema-core";
 import { coreDb, env, primaryCoreDb } from "../../../env";
 import { firstColumnWhere } from "../../../lib/sql/keyed-read";
+import { doesConditionHold } from "../../../lib/sql/condition";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
@@ -51,7 +52,7 @@ import {
   classifierFromEnv,
   enqueueForReview,
   isHeldAsRemovedCopy,
-  hasPhotosHeldAtLimit,
+  photosHeldBelowLimit,
   screenPhoto,
   screeningHoldNotice,
   type Classify,
@@ -150,7 +151,7 @@ export async function uploadPhoto(
   if (existing.length >= MAX_PHOTOS_PER_ENTRY) throw kitIsFull();
   // Refused while the classifier's holds on the runner's photos are at
   // their limit, before the day's count, so the refusal spends none of it.
-  if (await hasPhotosHeldAtLimit(input.userId)) {
+  if (!(await hasHeldPhotoRoom(input.userId))) {
     throw new InvalidPhotoError(PHOTOS_STILL_HELD);
   }
   // One of the runner's day's photo uploads (SA-M14): after the repeat
@@ -178,15 +179,17 @@ export async function uploadPhoto(
     idempotencyKey: input.idempotencyKey,
     fingerprint,
   });
-  // Another upload to this kit took its last place while this one was
-  // being encoded (SA-M14): its object goes too, and the kit stays at four.
-  if (outcome === "full") {
-    await env.MEDIA.delete(key);
-    throw kitIsFull();
-  }
   // A held photo waits for a person, not the classifier: Approve sends it
   // back to `pending`, and the screening-retry sweep screens it then.
   if (outcome === "held") return key;
+  // Another upload to this kit took its last place while this one was
+  // being encoded (SA-M14), or another of the runner's uploads took the
+  // last of their held photos' room: its object goes too, and the kit and
+  // the count stay where they were.
+  if (outcome !== undefined) {
+    await env.MEDIA.delete(key);
+    throw refusalOf(outcome);
+  }
 
   // Screened inline rather than after responding, because the packet's
   // common path is "pass -> visible immediately" and a photo that appears
@@ -218,8 +221,10 @@ export async function uploadPhoto(
 
 /**
  * `uploadPhoto` as the attach screen hears it: the key, or the sentence
- * for a runner whose day's photo uploads are used up (SA-M14), which the
- * photo row shows in place of "Not sent". Anything else still throws.
+ * for a runner whose day's photo uploads are used up (SA-M14), or whose
+ * last photos are still being checked, which the photo row shows in
+ * place of "Not sent", as the garment's photo does. Anything else still
+ * throws.
  */
 export async function uploadPhotoAnswer(
   input: UploadPhotoInput,
@@ -229,35 +234,48 @@ export async function uploadPhotoAnswer(
   } catch (error: unknown) {
     if (
       error instanceof InvalidPhotoError &&
-      error.message === PHOTO_LIMIT_REACHED
+      UPLOAD_REFUSALS.has(error.message)
     ) {
-      return { refusal: PHOTO_LIMIT_REACHED };
+      return { refusal: error.message };
     }
     throw error;
   }
 }
 
 /**
- * The photo's row, written only while the kit has room (SA-M14): the
- * count and the insert are one statement, so uploads racing for one kit
- * cannot all read three and all write a fifth. Its place is the count at
- * that moment. Returns the id it wrote, or nothing when the kit was full.
+The refusals the photo row says in its own words.
+*/
+const UPLOAD_REFUSALS: ReadonlySet<string> = new Set([
+  PHOTO_LIMIT_REACHED,
+  PHOTOS_STILL_HELD,
+]);
+
+/**
+ * The photo's row, written only while the kit has room (SA-M14) and the
+ * runner's photos held or waiting to be screened are under their limit:
+ * the counts and the insert are one statement, so uploads racing for one
+ * kit cannot all read three and all write a fifth, and uploads racing
+ * for the runner's last held place cannot all take it. Its place is the
+ * kit's count at that moment. Returns the id it wrote, or nothing when
+ * either had no room.
  */
 function insertWhileRoom(
   database: ReturnType<typeof db>,
+  uploaderId: string,
   row: PhotoRow,
   screenStatus: (typeof entryPhotos.$inferInsert)["screenStatus"],
 ) {
   const inKit = sql`(SELECT count(*) FROM ${entryPhotos} WHERE ${entryPhotos.entryId} = ${row.entryId})`;
+  const room = sql`${inKit} < ${MAX_PHOTOS_PER_ENTRY} AND ${photosHeldBelowLimit(database, uploaderId)}`;
   return database
     .insert(entryPhotos)
     .select(
-      sql`SELECT ${row.id}, ${row.entryId}, ${row.photoKey}, ${inKit}, ${orSqlNull(row.idempotencyKey)}, ${row.fingerprint}, ${screenStatus} WHERE ${inKit} < ${MAX_PHOTOS_PER_ENTRY}`,
+      sql`SELECT ${row.id}, ${row.entryId}, ${row.photoKey}, ${inKit}, ${orSqlNull(row.idempotencyKey)}, ${row.fingerprint}, ${screenStatus} WHERE ${room}`,
     )
     .returning({ id: entryPhotos.id });
 }
 
-type PhotoRow = Readonly<{
+export type PhotoRow = Readonly<{
   id: string;
   entryId: string;
   photoKey: string;
@@ -270,16 +288,17 @@ type PhotoRow = Readonly<{
  * removed as intimate (D-147, design 152) and the fingerprint breaker has
  * room (design 164): hidden from everyone but its owner, as a classifier
  * flag is, with a Review row and its uploader's notice (D-162) in the same
- * batch. Says whether it was held or refused because the kit was full;
- * `undefined` is a row stored for screening. The match is read first, since a batch cannot branch on its own
- * results; a held batch whose row was refused takes its Review row and
+ * batch. Says whether it was held, or refused because the kit was full or
+ * the runner's held photos had no room; `undefined` is a row stored for
+ * screening. The match is read first, since a batch cannot branch on its
+ * own results; a held batch whose row was refused takes its Review row and
  * notice back, which name a photo nobody can reach.
  */
-async function storeRow(
+export async function storeRow(
   database: ReturnType<typeof db>,
   uploaderId: string,
   row: PhotoRow,
-): Promise<"held" | "full" | undefined> {
+): Promise<"held" | Refused | undefined> {
   // From the primary (design 143): what was kept is an operator's write,
   // not this runner's, so the session's bookmark does not promise a replica
   // has it. Read from one, a copy posted seconds after its takedown would
@@ -291,11 +310,11 @@ async function storeRow(
     nowSeconds(),
   );
   if (!isHeld) {
-    const written = await insertWhileRoom(database, row, "pending");
-    return written.length === 0 ? "full" : undefined;
+    const written = await insertWhileRoom(database, uploaderId, row, "pending");
+    return written.length === 0 ? await whyRefused(uploaderId) : undefined;
   }
   const [written] = await database.batch([
-    insertWhileRoom(database, row, "hidden_pending_review"),
+    insertWhileRoom(database, uploaderId, row, "hidden_pending_review"),
     enqueueForReview(database, {
       subjectType: "photo",
       subjectId: row.id,
@@ -316,7 +335,29 @@ async function storeRow(
     database.delete(reviewQueue).where(queuedRow),
     database.delete(notifications).where(toldRow),
   ]);
-  return "full";
+  return whyRefused(uploaderId);
+}
+
+/**
+Why a photo's row was not written.
+*/
+type Refused = "full" | "still-held";
+
+/**
+The error each refusal is answered with.
+*/
+function refusalOf(refused: Refused): InvalidPhotoError {
+  return refused === "full"
+    ? kitIsFull()
+    : new InvalidPhotoError(PHOTOS_STILL_HELD);
+}
+
+/**
+ * Which room the refused insert lacked: the runner's held photos at their
+ * limit, read again from the primary, or else the kit's four places.
+ */
+async function whyRefused(uploaderId: string): Promise<Refused> {
+  return (await hasHeldPhotoRoom(uploaderId)) ? "full" : "still-held";
 }
 
 /**
@@ -578,4 +619,14 @@ const MEDIA_POLICY = "sandbox; default-src 'none'";
 
 function notFound(): Response {
   return new Response("not found", { status: 404 });
+}
+
+/**
+ * Whether the runner has room for one more photo held or waiting to be
+ * screened, read from the primary, since the answer decides whether an
+ * upload is written: the rule the photo's own write carries.
+ */
+async function hasHeldPhotoRoom(userId: string): Promise<boolean> {
+  const primary = primaryCoreDb();
+  return doesConditionHold(primary, photosHeldBelowLimit(primary, userId));
 }

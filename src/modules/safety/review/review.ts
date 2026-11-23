@@ -7,7 +7,18 @@
  * human, and the daily digest reports how deep it is so an empty queue is a
  * fact rather than an assumption.
  */
-import { and, asc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNotNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -100,6 +111,12 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
   reopenOnlyIf: SQL = sql`1`,
 ) {
   const now = nowSeconds();
+  const stillOpen = sql`${reviewQueue.status} in ('pending', 'reviewing')`;
+  const stillCountedHide = sql`(${stillOpen} and ${reviewQueue.hid} = 1)`;
+  // An opening the reports breaker counts as a hide keeps the row's hour
+  // only when the row was already such a hide; any other keeps it while
+  // the row is open.
+  const keepsOpening = input.hid === 1 ? stillCountedHide : stillOpen;
   return (
     database
       .insert(reviewQueue)
@@ -123,14 +140,18 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
           status: "pending",
           source: input.source,
           // Reopened now, though created when it first was: the hold
-          // breakers count this as a hold (design 164).
-          openedAt: now,
+          // breakers count this as a hold (design 164). A row still open
+          // keeps its opening, so a later report never refuses a decision
+          // pending on it, nor moves a counted hide into a later hour,
+          // unless this opening is the hide the reports breaker counts
+          // and the row was not yet one: that hide is counted in this hour.
+          openedAt: sql`(case when ${keepsOpening} then ${reviewQueue.openedAt} else ${now} end)`,
           // This opening's own: whether it hid, or null when the caller
           // does not say (only a report's opening does) — except that a
           // row still open on a hide the reports breaker counted keeps it
           // (`hid` 1), so a later report can bring a row into its count
           // and never take one out.
-          hid: sql`(case when ${reviewQueue.status} in ('pending', 'reviewing') and ${reviewQueue.hid} = 1 then 1 else ${orSqlNull(input.hid)} end)`,
+          hid: sql`(case when ${stillCountedHide} then 1 else ${orSqlNull(input.hid)} end)`,
           // Cleared, not left alone: this row is being re-opened, and a
           // stale reviewer stamped on a pending decision would read as
           // "someone already looked at this". An `undefined` here would
@@ -265,6 +286,11 @@ export interface QueueRow {
    */
   openedAt: number | null;
   /**
+   * When the server read this page, which a decision sends back with the
+   * row (`ShownRow`).
+   */
+  readAt: number;
+  /**
    * How many distinct people reported this subject, and what they said was
    * wrong with it.
    *
@@ -304,6 +330,11 @@ export interface QueueRow {
    * every other row, and on one whose photo is gone.
    */
   removedMatches?: readonly RemovedImage[] | undefined;
+  /**
+   * The copies search failed when the page was read, on a row that would
+   * have shown its copies: the row says they could not be checked.
+   */
+  copiesUnchecked?: true;
   subject: QueueSubject;
 }
 
@@ -333,7 +364,12 @@ export function firstReportHidingAtOnce(): SQL<number | null> {
  * read would: its order is an aggregate, so a `LIMIT` would still read
  * every pending row first.
  */
-export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
+export async function pendingReviewQueue(
+  limit = 100,
+  copies: CopiesEffects = {},
+): Promise<QueueRow[]> {
+  // Before the reads, so every report the page shows was filed by then.
+  const readAt = nowSeconds();
   const oldestFirst = asc(reviewQueue.createdAt);
   const mostPressingFirst = asc(firstReportHidingAtOnce());
   const [page, onTheClock] = await Promise.all([
@@ -344,22 +380,9 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
   const rows = [...page, ...onTheClock.filter((row) => !onThePage.has(row.id))];
 
   // No read needs another's answer, so they go together.
-  const [subjects, others, matches, removed] = await Promise.all([
+  const [subjects, found] = await Promise.all([
     subjectsFor(rows),
-    otherPhotosOf(
-      db(),
-      rows.flatMap((row) => copiesSubjectOf(row)),
-    ),
-    photoMatchesOf(
-      db(),
-      rows.flatMap((row) => copiesSubjectOf(row)),
-    ),
-    removedMatchesOf(
-      db(),
-      rows
-        .filter((row) => row.source === "fingerprint")
-        .map((row) => row.subjectId),
-    ),
+    copiesOrUnchecked(rows, copies),
   ]);
   const now = nowSeconds();
   return rows.map((row) => ({
@@ -369,16 +392,97 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     source: row.source,
     createdAt: row.createdAt,
     openedAt: row.openedAt,
+    readAt,
     reporterCount: row.reporterCount,
     reasons: reasonsFrom(row.reasons),
     ...removalClock(row.firstAtOnce, now),
-    otherPhotos: others.get(`${row.subjectType}:${row.subjectId}`),
-    photoMatches: matches.get(`${row.subjectType}:${row.subjectId}`),
-    removedMatches: removed.get(row.subjectId),
+    ...copiesOf(row, found),
     subject: subjects.get(`${row.subjectType}:${row.subjectId}`) ?? {
       photoKeys: [],
     },
   }));
+}
+
+type Report = (error: unknown, context: Record<string, string>) => void;
+
+/**
+ * Where the copies search reports a failure (law 7: the surface alone),
+ * and, for a test, what reads it. A caller that names no reporter is not
+ * listening: a test that reads the page and nothing else.
+ */
+export interface CopiesEffects {
+  readonly report?: Report;
+  readonly read?: typeof readCopies;
+}
+
+function unreported(): void {
+  // Nothing listens.
+}
+
+/**
+ * The copies search on its own (law 5): a failure or a timeout leaves
+ * every row listed with its deadline, and the rows that would show copies
+ * say they could not be checked.
+ */
+async function copiesOrUnchecked(
+  rows: readonly PendingRow[],
+  { report = unreported, read = readCopies }: CopiesEffects,
+): Promise<Copies | "unchecked"> {
+  try {
+    return await read(rows);
+  } catch (error: unknown) {
+    report(error, { surface: "review-copies" });
+    return "unchecked";
+  }
+}
+
+/**
+ * The searches for copies of the rows' subjects: the same runner's other
+ * photos and any runner's matching ones on a row an intimate-image report
+ * started, and the removed images near a fingerprint match.
+ */
+async function readCopies(rows: readonly PendingRow[]) {
+  const subjects = rows.flatMap((row) => copiesSubjectOf(row));
+  const [others, matches, removed] = await Promise.all([
+    otherPhotosOf(db(), subjects),
+    photoMatchesOf(db(), subjects),
+    removedMatchesOf(
+      db(),
+      rows
+        .filter((row) => row.source === "fingerprint")
+        .map((row) => row.subjectId),
+    ),
+  ]);
+  return { others, matches, removed };
+}
+
+type Copies = Awaited<ReturnType<typeof readCopies>>;
+
+type PendingRow = Awaited<
+  ReturnType<ReturnType<typeof pendingRows>["orderBy"]>
+>[number];
+
+/**
+ * A row's copies, or, when the search failed, whether it is a row that
+ * would have shown them (`copiesUnchecked`).
+ */
+function copiesOf(
+  row: PendingRow,
+  found: Copies | "unchecked",
+): Pick<
+  QueueRow,
+  "otherPhotos" | "photoMatches" | "removedMatches" | "copiesUnchecked"
+> {
+  if (found === "unchecked") {
+    const isAboutCopies =
+      copiesSubjectOf(row).length > 0 || row.source === "fingerprint";
+    return isAboutCopies ? { copiesUnchecked: true } : {};
+  }
+  return {
+    otherPhotos: found.others.get(`${row.subjectType}:${row.subjectId}`),
+    photoMatches: found.matches.get(`${row.subjectType}:${row.subjectId}`),
+    removedMatches: found.removed.get(row.subjectId),
+  };
 }
 
 /**
@@ -417,15 +521,27 @@ function pendingRows(also?: SQL) {
 }
 
 /**
- * A row Review shows: pending, and not about a closed account's things.
- * A row whose subject belongs to a runner whose account is closed leaves
- * the page and its count, and comes back as it was if the account is
- * reopened, so nothing about the row itself is written. A product has no
- * owner, so its rows always show.
+ * A row Review shows: pending, and not about a closed account's things,
+ * unless it is on the removal clock, which shows whatever its owner's
+ * state (owner, 2026-11-22). A row whose subject belongs to a runner
+ * whose account is closed leaves the page and its count, and comes back
+ * as it was if the account is reopened, so nothing about the row itself
+ * is written. A product has no owner, so its rows always show.
  */
 function waitingOnReview(): SQL | undefined {
+  return and(
+    eq(reviewQueue.status, "pending"),
+    or(ownerNotClosed(), reportOnTheClock()),
+  );
+}
+
+/**
+ * A row whose subject's owner's account is not closed: one any runner
+ * owns, or a product, which has none.
+ */
+export function ownerNotClosed(): SQL {
   const closed = sql`exists (select 1 from ${userProfiles} where ${qualified(userProfiles, userProfiles.userId)} = ${subjectOwner()} and ${qualified(userProfiles, userProfiles.bannedAt)} is not null)`;
-  return and(eq(reviewQueue.status, "pending"), sql`not ${closed}`);
+  return sql`not ${closed}`;
 }
 
 /**
@@ -693,6 +809,42 @@ export async function pendingReviewCount(): Promise<number> {
   return ids.length;
 }
 
+/**
+ * Why a photo still pending a day after upload is in the queue (D-157,
+ * design 167): storage had nothing to screen, or the classifier has not
+ * answered. A verdict that finally lands settles exactly these.
+ */
+export const stuckSources = [
+  "missing_file",
+  "unscreened",
+] as const satisfies readonly ReviewSource[];
+
+/**
+ * The sources Today counts as "photos the screener couldn't finish": what
+ * it flagged, and what it never screened at all (D-157).
+ */
+const screenerSources = ["classifier", ...stuckSources] as const;
+
+/**
+ * The rows Review lists, grouped by whether the screener sent them, with
+ * how many and when the oldest arrived: Today's and the digest's figures
+ * beside the count, read from the same rows. Grouped rather than one
+ * aggregate row, so "nothing waiting" is no row. Built, not run, for the
+ * caller's batch.
+ */
+export function waitingBySource(database: ReturnType<typeof drizzle>) {
+  const fromScreener = inArray(reviewQueue.source, [...screenerSources]);
+  return database
+    .select({
+      isScreener: sql<number>`${fromScreener}`.mapWith(Boolean),
+      rows: count(),
+      oldest: sql<number>`min(${reviewQueue.createdAt})`,
+    })
+    .from(reviewQueue)
+    .where(waitingOnReview())
+    .groupBy(fromScreener);
+}
+
 export type ClaimOutcome = "claimed" | "already_taken";
 
 /**
@@ -889,7 +1041,7 @@ export async function openRow(
  * between is left for a person rather than settled on what was read
  * before it. Account's Keep and Rename get it on the row they read.
  */
-function stillAsShown(row: ShownRow): SQL {
+function stillAsShown(row: AsShown): SQL {
   return sql`${reviewQueue.openedAt} is ${row.openedAt} and ${reviewQueue.source} = ${row.source}`;
 }
 
@@ -901,12 +1053,22 @@ function stillAsShown(row: ShownRow): SQL {
 export interface ShownRow {
   readonly openedAt: number | null;
   readonly source: ReviewSource;
+  /**
+   * When the server read the page that showed it: an Approve counts the
+   * reports from then, and tells "kept" to those filed by then.
+   */
+  readonly readAt: number;
 }
+
+/**
+What a decision is held to of the row a page showed.
+*/
+type AsShown = Pick<ShownRow, "openedAt" | "source">;
 
 /**
 Whether a row is still the one a page showed.
 */
-function isAsShown(row: ShownRow, shown: ShownRow): boolean {
+function isAsShown(row: AsShown, shown: AsShown): boolean {
   return row.openedAt === shown.openedAt && row.source === shown.source;
 }
 
@@ -933,20 +1095,57 @@ export function settledHere(
  * The subject of a queue row still waiting on a decision, and still as the
  * page showed it, or nothing — for a caller that acts only on open rows and
  * leaves "why not" to `resolveReview`.
+ *
+ * `heldTo` holds the caller's own batch to the same: its `statement`, in
+ * that batch, fails the whole batch when the row was decided or
+ * re-opened since this read (it would set the row's status, which may
+ * not be empty, to nothing), and `refused` says whether an error is that
+ * failure.
  */
 export async function openSubject(
   queueId: string,
   shown: ShownRow,
-): Promise<{ subjectType: ReviewSubjectType; subjectId: string } | undefined> {
-  return firstRowWhere(
-    db(),
-    reviewQueue,
-    and(
-      eq(reviewQueue.id, queueId),
-      inArray(reviewQueue.status, ["pending", "reviewing"]),
-      stillAsShown(shown),
-    ),
+): Promise<OpenSubject | undefined> {
+  const openAsShown = and(
+    eq(reviewQueue.id, queueId),
+    inArray(reviewQueue.status, ["pending", "reviewing"]),
+    stillAsShown(shown),
   );
+  const row = await firstRowWhere(db(), reviewQueue, openAsShown);
+  if (row === undefined) return undefined;
+  type Status = (typeof reviewQueue.$inferSelect)["status"];
+  const status = sql<Status>`(case when ${openAsShown} then ${reviewQueue.status} else null end)`;
+  return {
+    subjectType: row.subjectType,
+    subjectId: row.subjectId,
+    heldTo: {
+      statement: db()
+        .update(reviewQueue)
+        .set({ status })
+        .where(eq(reviewQueue.id, queueId)),
+      refused: isHoldRefusal,
+    },
+  };
+}
+
+/**
+ * Whether an error is the one `openSubject`'s statement fails its batch
+ * with: a NOT NULL refusal of `review_queue.status`. Only the parts
+ * SQLite's own text keeps are matched, wherever D1 or a wrapper puts
+ * them in the message.
+ */
+function isHoldRefusal(error: unknown): boolean {
+  const text = String(error);
+  return text.includes("NOT NULL") && text.includes("review_queue.status");
+}
+
+interface OpenSubject {
+  readonly subjectType: ReviewSubjectType;
+  readonly subjectId: string;
+  readonly heldTo: {
+    readonly statement: BatchItem<"sqlite">;
+    readonly refused: (error: unknown) => boolean;
+  };
 }
 
 /**
@@ -1014,7 +1213,14 @@ async function decide(
     at: nowSeconds(),
   } as const;
   const here = settledHere(queueId, settled);
-  const told = await decisionNotices(row, decision, here);
+  // A release tells every reporter, as it did; a person's Approve only
+  // those filed by the moment it records.
+  const told = await decisionNotices(
+    row,
+    decision,
+    here,
+    isRelease ? undefined : queueId,
+  );
   const [settle] = await db().batch([
     reviewResolution(
       db(),
@@ -1023,6 +1229,7 @@ async function decide(
       settled.status,
       row.unchanged,
       settled.at,
+      isRelease ? "release" : (shown?.readAt ?? settled.at),
     ).returning({ id: reviewQueue.id }),
     ...subjectWritesFor(row, decision, isRelease, here),
     ...told,
@@ -1050,6 +1257,10 @@ async function decisionNotices(
   row: Exclude<OpenRow, string>,
   decision: ReviewDecision,
   here: SQL,
+  /**
+  The row whose recorded Approve its "kept" counts to, when it has one.
+  */
+  approvedIn: string | undefined,
 ): Promise<BatchItem<"sqlite">[]> {
   const { subjectType, subjectId } = row;
   if (subjectType === "garment") return [];
@@ -1060,6 +1271,7 @@ async function decisionNotices(
       subjectId,
       "kept",
       here,
+      approvedIn,
     );
     // Not while a removal request still holds it (SA-M23; owner,
     // 2026-11-15): it stays hidden, and the request's own decision is
@@ -1146,6 +1358,12 @@ export function reviewResolution(
   status: "approved" | "removed",
   onlyIf?: SQL,
   at = nowSeconds(),
+  /**
+   * When the page the decision came from was read, which an Approve's
+   * `approved_at` takes; `release` for a burst release, which nobody read
+   * the reports to make and which records none.
+   */
+  readAt: number | "release" = at,
 ) {
   return database
     .update(reviewQueue)
@@ -1153,10 +1371,15 @@ export function reviewResolution(
       status,
       resolvedBy: reviewerId,
       resolvedAt: at,
-      // The last Approve, which a re-open keeps: only the reports filed
-      // after it count toward hiding the subject again. A Remove leaves
-      // it as it was.
-      ...(status === "approved" && { approvedAt: at }),
+      // The last Approve a person made, which a re-open keeps: only the
+      // reports filed after it count toward hiding the subject again. It
+      // is the moment the deciding page was read, never later than now
+      // nor earlier than the row's opening, whatever the page sent. A
+      // Remove leaves it as it was, and so does a burst release.
+      ...(status === "approved" &&
+        readAt !== "release" && {
+          approvedAt: sql<number>`min(${at}, max(${readAt}, coalesce(${reviewQueue.openedAt}, ${readAt})))`,
+        }),
       // Settled rows carry no claim. Left set, a resolved row would still
       // look claimed to anything reading the lease.
       claimedAt: orSqlNull(undefined),

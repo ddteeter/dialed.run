@@ -18,7 +18,10 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/limits/breakers";
 import { moderateContent } from "../../src/modules/feed/moderation/moderation";
-import { uploadPhoto } from "../../src/modules/feed/entries/photos";
+import { storeRow, uploadPhoto } from "../../src/modules/feed/entries/photos";
+import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
+import { PHOTOS_HELD_AT_ONCE } from "../../src/lib/photo-constraints";
+import { heldGarmentPhotos } from "../held-photo-rows";
 import {
   deleteEntryPhoto,
   deleteRuns,
@@ -337,6 +340,35 @@ describe("a copy of a removed image is held for review (D-147)", () => {
     expect(
       told.map((row) => row.subjectId ?? "").toSorted(byText),
     ).toStrictEqual(kept);
+  });
+
+  it("writes no held copy, and takes back its Review row and notice, when the runner's held photos have no room", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await removed("photo", first.photoId);
+    const [kept] = await keptRows();
+    if (kept === undefined) throw new Error("nothing kept");
+    const kit = await aKit();
+    await heldGarmentPhotos(kit.userId, PHOTOS_HELD_AT_ONCE);
+    const id = newUlid();
+
+    const outcome = await storeRow(core(), kit.userId, {
+      id,
+      entryId: kit.entryId,
+      photoKey: entryPhotoKeyFor(kit.userId, kit.entryId, id),
+      idempotencyKey: undefined,
+      fingerprint: kept.fingerprint,
+    });
+
+    expect(outcome).toBe("still-held");
+    expect(await photoRow(id)).toBeUndefined();
+    const queued = await queueRows();
+    expect(queued.filter((row) => row.subjectId === id)).toStrictEqual([]);
+    expect(
+      await core()
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(eq(notifications.subjectId, id)),
+    ).toStrictEqual([]);
   });
 
   it("tells nobody when nothing is held", async () => {

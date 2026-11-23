@@ -105,6 +105,7 @@ const READERS: Readonly<Record<string, Reason>> = {
   "src/modules/safety/limits/breakers.ts": "machinery",
   "src/modules/safety/takedowns/copyright-holds.ts": "operator",
   "src/modules/safety/review/desk-kit.ts": "operator",
+  "src/modules/safety/review/held-photos.ts": "own",
   "src/modules/safety/rules/kit-cache-tags.ts": "machinery",
   // A notice tells a runner about their own kit, or a reporter about
   // their own report.

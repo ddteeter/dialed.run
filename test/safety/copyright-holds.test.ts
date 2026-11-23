@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -12,6 +12,7 @@ import {
   notifications,
   outbox,
   outfitEntries,
+  removedFingerprints,
   reviewQueue,
   takedownRequests,
   userProfiles,
@@ -37,6 +38,9 @@ import {
 import { ControlRefusal } from "../../src/lib/control-refusal";
 import { oweInCore } from "../../src/modules/ops";
 import { resolveReview } from "../../src/modules/safety";
+import { releaseReview } from "../../src/modules/safety/review/review";
+import { fileTakedownRequest } from "../../src/modules/safety/takedowns/takedown-requests";
+import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";
 import { fileReport } from "../../src/modules/safety/reports/reports";
 import {
   COPYRIGHT_HOLD_PAGE,
@@ -46,6 +50,7 @@ import {
   recordCourtAction,
   restoreAfterCase,
   restoreDayAfter,
+  restoreDueHolds,
 } from "../../src/modules/safety/takedowns/copyright-holds";
 import { removalsOnRun } from "../../src/modules/safety/takedowns/run-removals";
 
@@ -1495,5 +1500,160 @@ describe("held take-downs, in sequence (owner, 2026-11-21)", () => {
     expect(await entryStatus(entryId)).toBe("removed");
     // The photo's hold still keeps the kit, so nothing is deleted yet.
     expect(await isStored(key)).toBe(true);
+  });
+
+  it("deletes that kit once its photo's hold ends too", async () => {
+    const { entryId, photoId, key } = await posted();
+    await takeDown("photo", photoId);
+    await takeDown("entry", entryId, "intimate");
+    await takeDown("entry", entryId);
+    const kitHold = await counterNotice(await holdIdOf(entryId));
+    await sweepCopyrightHolds(core(), kitHold.restoreAt, quiet);
+
+    const photoHold = await counterNotice(await holdIdOf(photoId));
+    await sweepCopyrightHolds(core(), photoHold.restoreAt, quiet);
+
+    expect(await entryStatus(entryId)).toBeUndefined();
+    expect(await isStored(key)).toBe(false);
+  });
+
+  it("gives back no photo whose kit was taken down while the photo was held", async () => {
+    const { entryId, photoId } = await posted();
+    await takeDown("photo", photoId);
+    await takeDown("entry", entryId, "intimate");
+    const hold = await holdOf(photoId);
+    await core()
+      .update(copyrightHolds)
+      .set({ restoreAt: nowSeconds() - 1 })
+      .where(eq(copyrightHolds.id, hold.id));
+
+    await restoreDueHolds(core(), nowSeconds());
+
+    expect(await holdStatus(photoId)).toBe("restored");
+    expect(await screenOf(photoId)).toBe("removed");
+  });
+
+  it("keeps a fingerprint for each take-down when the kit follows its photo", async () => {
+    const { entryId, photoId } = await posted();
+    await takeDown("entry", entryId);
+    await takeDown("photo", photoId, "intimate");
+    await takeDown("entry", entryId, "intimate");
+    const takeDowns = await core()
+      .select({ actionId: heldTakeDowns.actionId })
+      .from(heldTakeDowns);
+    const { restoreAt } = await counterNotice(await holdIdOf(entryId));
+    await sweepCopyrightHolds(core(), restoreAt, quiet);
+
+    const kept = await core()
+      .select({
+        fingerprint: removedFingerprints.fingerprint,
+        actionId: removedFingerprints.moderationActionId,
+      })
+      .from(removedFingerprints)
+      .where(
+        inArray(
+          removedFingerprints.moderationActionId,
+          takeDowns.map((row) => row.actionId),
+        ),
+      );
+    expect(takeDowns).toHaveLength(2);
+    expect(kept.map((row) => row.fingerprint)).toStrictEqual([
+      "00ff00ff00ff00ff",
+      "00ff00ff00ff00ff",
+    ]);
+    expect(new Set(kept.map((row) => row.actionId)).size).toBe(2);
+  });
+});
+
+/**
+A removal request for `location`, filed as the form files one.
+*/
+async function fileRequest(location: string): Promise<void> {
+  await fileTakedownRequest(
+    core(),
+    {
+      email: `${newUlid().toLowerCase()}@example.com`,
+      signature: "Sam Runner",
+      location,
+      description: "",
+      isAttested: true,
+      idempotencyKey: newUlid(),
+      attempt: "token",
+      remoteIp: "203.0.113.9",
+      isLimited: false,
+    },
+    {
+      verify: () => Promise.resolve({ ok: true }),
+      oweWhere: oweInCoreWhere,
+      purge: noPurge,
+    },
+  );
+}
+
+/**
+The one open Review row's id.
+*/
+async function openRowId(): Promise<string> {
+  const [row] = await core()
+    .select({ id: reviewQueue.id })
+    .from(reviewQueue)
+    .where(eq(reviewQueue.status, "pending"));
+  if (row === undefined) throw new Error("no open row");
+  return row.id;
+}
+
+describe("a removal request filed during a copyright hold, after the restore", () => {
+  it("keeps the kit from a review's Approve", async () => {
+    const { entryId } = await posted();
+    await takeDown("entry", entryId);
+    await fileRequest(`https://dialed.run/kit/${entryId}`);
+    const { restoreAt } = await counterNotice(await holdIdOf(entryId));
+    await sweepCopyrightHolds(core(), restoreAt, quiet);
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+    await reported("entry", entryId);
+
+    await resolveReview(await openRowId(), await makeUser(), "approve");
+
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("keeps a photo from a review's Approve", async () => {
+    const { author, entryId, photoId } = await posted();
+    await takeDown("photo", photoId);
+    await fileRequest(
+      `https://dialed.run/feed/photo/entries/${author}/${entryId}/${photoId}`,
+    );
+    const { restoreAt } = await counterNotice(await holdIdOf(photoId));
+    await sweepCopyrightHolds(core(), restoreAt, quiet);
+    expect(await screenOf(photoId)).toBe("hidden_pending_review");
+    await reported("photo", photoId);
+
+    await resolveReview(await openRowId(), await makeUser(), "approve");
+
+    expect(await screenOf(photoId)).toBe("hidden_pending_review");
+  });
+
+  it("keeps a photo from a burst release", async () => {
+    const { author, entryId, photoId } = await posted();
+    await takeDown("photo", photoId);
+    await fileRequest(
+      `https://dialed.run/feed/photo/entries/${author}/${entryId}/${photoId}`,
+    );
+    const { restoreAt } = await counterNotice(await holdIdOf(photoId));
+    await sweepCopyrightHolds(core(), restoreAt, quiet);
+    const queueId = newUlid();
+    await core().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "photo",
+      subjectId: photoId,
+      source: "fingerprint",
+      status: "pending",
+      createdAt: nowSeconds(),
+      openedAt: nowSeconds(),
+    });
+
+    await releaseReview(queueId, await makeUser());
+
+    expect(await screenOf(photoId)).toBe("hidden_pending_review");
   });
 });

@@ -9,6 +9,7 @@ import {
   moderationActions,
   outbox,
   productCorrections,
+  reports,
   reviewQueue,
   userProfiles,
 } from "../../src/db/schema-core";
@@ -100,6 +101,40 @@ describe("todayCounts", () => {
       outboxBehind: 0,
       oldestBehindAt: undefined,
     });
+  });
+
+  it("counts only the rows Review lists: a closed account's are left out, but not one on the removal clock", async () => {
+    await coreDb().delete(reports);
+    const closed = newUlid();
+    await coreDb().insert(userProfiles).values({ userId: closed, bannedAt: 1 });
+    await queueRow({
+      subjectType: "profile",
+      subjectId: closed,
+      source: "classifier",
+      createdAt: 100,
+    });
+    await queueRow({ createdAt: 500 });
+
+    expect(await todayCounts()).toMatchObject({
+      waiting: 1,
+      oldestWaitingAt: 500,
+      screenerUnfinished: 0,
+    });
+
+    await coreDb().insert(reports).values({
+      id: newUlid(),
+      reporterId: newUlid(),
+      subjectType: "profile",
+      subjectId: closed,
+      reason: "intimate",
+      createdAt: 100,
+    });
+    expect(await todayCounts()).toMatchObject({
+      waiting: 2,
+      oldestWaitingAt: 100,
+      screenerUnfinished: 1,
+    });
+    await coreDb().delete(reports);
   });
 
   it("counts each account flagged after an intimate-image removal once (D-161)", async () => {

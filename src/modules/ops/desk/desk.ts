@@ -26,8 +26,8 @@ import {
   flaggedCountOf,
   overCeilings,
   pendingReviewCount,
-  stuckSources,
   type CeilingReading,
+  waitingBySource,
 } from "../../safety";
 import type { CronName } from "./crons";
 import { DIGEST_UNCONFIRMED } from "./digest-marks";
@@ -163,15 +163,6 @@ const DAY_SECONDS = 24 * 60 * 60;
 const WEEK_SECONDS = 7 * DAY_SECONDS;
 
 /**
- * The queue sources Today counts as "photos the screener couldn't
- * finish": what it flagged, and what it never screened at all (D-157).
- */
-const screenerSources: ReadonlySet<string> = new Set([
-  "classifier",
-  ...stuckSources,
-]);
-
-/**
  * Today's counts: "waiting" from safety, the rest in one round trip.
  *
  * Grouped rather than one aggregate row: a grouped read answers with a row
@@ -190,15 +181,8 @@ export async function todayCounts(): Promise<TodayCounts> {
   const waiting = await pendingReviewCount();
   const [review, bans, flagged, gave, marks, behind, decided, corrections] =
     await db.batch([
-      db
-        .select({
-          source: reviewQueue.source,
-          rows: count(),
-          oldest: sql<number>`min(${reviewQueue.createdAt})`,
-        })
-        .from(reviewQueue)
-        .where(eq(reviewQueue.status, "pending"))
-        .groupBy(reviewQueue.source),
+      // The rows Review lists, as the count above counts them.
+      waitingBySource(db),
       banCountsOf(db, weekAgo),
       flaggedCountOf(db),
       // Grouped by a constant (not `1`, which would name the count), so an
@@ -238,9 +222,7 @@ export async function todayCounts(): Promise<TodayCounts> {
     // What the screener sent, and what it never finished: a photo still
     // pending a day after upload (D-157) is exactly "a photo the screener
     // couldn't finish", and hidden until someone looks.
-    screenerUnfinished: sumOf(
-      review.filter((g) => screenerSources.has(g.source)),
-    ),
+    screenerUnfinished: sumOf(review.filter((g) => g.isScreener)),
     bansThisWeek: bans.find((g) => g.recent === 1)?.rows ?? 0,
     bansAllTime: sumOf(bans),
     flaggedAccounts: sumOf(flagged),
