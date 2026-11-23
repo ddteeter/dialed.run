@@ -60,6 +60,10 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    run the other analyzers on each commit. The lane runs
    `npm run lint`, `npm run typecheck`, `npm test`, `npm run
 diagrams:check` (the stale-structure check left `npm test` under design 229) and `npm run build`.
+   These are what CI's "Lint, typecheck, test, build" job runs: skip one
+   and CI spends a lap on it (wave 17b: a stale structure diagram cost
+   #969 a lap). A branch that is behind main or conflicts with it is
+   refused by `guardrails ship` itself before the push.
    It doesn't run Stryker over all its changed files before shipping
    (owner, 2026-11-13). The push gate mutates the same files, seeded
    from main's CI run, so a cold local pass over them costs the same
