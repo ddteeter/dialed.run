@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, or, sql, type SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
@@ -9,6 +9,7 @@ import {
 } from "../../db/gave-up";
 import { products, productSnapshots } from "../../db/schema-core";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
+import { withoutBoundValues } from "../../lib/statement-error";
 import { consumeEach } from "../../lib/sql/queue-batch";
 import type { ExtractionModel } from "../../lib/contracts";
 import { applyExtraction, type ApplyReport } from "../products";
@@ -18,7 +19,7 @@ import { fetchProductPage } from "./fetch-page";
 import { runLadder, type LadderResult } from "./ladder";
 import { UnreadableAnswerError } from "./model/chat-completions";
 import { modelPass } from "./model/rung";
-import { enrichJobSchema } from "./queue-messages";
+import { enrichJobSchema, type EnrichJob } from "./queue-messages";
 import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
 import {
   canSpendModelCall,
@@ -47,9 +48,14 @@ type Db = DrizzleD1Database & { $client: D1Database };
  * `REUSE_WINDOW_MS` is therefore reused rather than refetched, which is the
  * idempotency the packet asks for ("dedupe on productId + snapshot") and
  * also what makes a duplicate message from the sweep cost nothing. A
- * snapshot no rung has read yet (`rung` still `none`) is reused whatever
- * its age, so a job put off with its page stored reads that page when it
- * next runs, however long it waited.
+ * snapshot whose `rung` is still `none` is reused whatever its age: stored
+ * and not yet read to a write-back, or read with nothing found. So a job
+ * put off with its page stored reads that page when it next runs, however
+ * long it waited.
+ *
+ * **A person's ask is the exception.** A paste or the Desk's Retry sends
+ * `askedAt`, and that job reuses only a page stored since: one its own
+ * earlier delivery stored. Anything older is fetched fresh.
  *
  * **Only a `pending` row is work.** `requestEnrichment` flips the row to
  * `pending` before sending, so `pending` is the claim: a message for a
@@ -60,14 +66,17 @@ type Db = DrizzleD1Database & { $client: D1Database };
  * `PageFetchError` is the page itself refusing — a 403 with no proxy, a
  * private host, an oversized body, a 404 — and no retry changes that, so
  * the row goes to `failed` and the message is acked (law 6: the failure is
- * on the row, where the closet can show it). So is an `UnreadableAnswerError`,
- * a model answer that is not an object at all: one try on the product, and
- * the hourly sweep's re-drive is the next one. So is anything thrown
- * before the page is stored — a network throw, a timeout, a D1 or R2
- * error — which `beforeStored` makes a `PageFetchError`, so each try is
- * one counted fetch. Anything else — a write-back conflict, a model
- * outage — is thrown, so the queue's own retry machinery owns it (law 3)
- * and the DLQ handler below marks the row when it gives up.
+ * on the row, where the closet can show it). So is an
+ * `UnreadableAnswerError`: no model answer to read (not an object, no
+ * content, or none in time), one try on the product, and the hourly
+ * sweep's re-drive is the next one. So is anything thrown while the page
+ * is fetched and stored — a network throw, a timeout, a D1 or R2 error
+ * there — which `beforeStored` makes a `PageFetchError`, so each try is
+ * one counted fetch. A D1 error in the reads before the fetch (the
+ * product, its stored page, the counts) is thrown as itself, as is
+ * anything else — a write-back conflict, a model HTTP or network error —
+ * so the queue's own retry machinery owns it (law 3) and the DLQ handler
+ * below marks the row when it gives up.
  */
 
 const REUSE_WINDOW_MS = 60 * 60 * 1000;
@@ -148,14 +157,32 @@ async function markFailed(
 }
 
 /**
- * The newest snapshot of a product fetched after `since` (epoch ms) or not
- * yet read by any rung, if any.
+ * Which of a product's snapshots a job may read: one stored at or after
+ * `askedAt` (epoch ms) when a person asked, else one fetched after `since`
+ * or whose rung is still `none`.
  */
-async function latestSnapshot(db: Db, productId: string, since: number) {
-  const reusable = or(
-    gt(productSnapshots.fetchedAt, since),
-    eq(productSnapshots.rung, "none"),
-  );
+function reusableSnapshot(
+  since: number,
+  askedAt: number | undefined,
+): SQL | undefined {
+  return askedAt === undefined
+    ? or(
+        gt(productSnapshots.fetchedAt, since),
+        eq(productSnapshots.rung, "none"),
+      )
+    : gte(productSnapshots.fetchedAt, askedAt);
+}
+
+/**
+The newest snapshot of a product `reusableSnapshot` allows, if any.
+*/
+async function latestSnapshot(
+  db: Db,
+  productId: string,
+  since: number,
+  askedAt?: number,
+) {
+  const reusable = reusableSnapshot(since, askedAt);
   const [row] = await db
     .select()
     .from(productSnapshots)
@@ -259,16 +286,20 @@ async function dropDeniedSource(db: Db, productId: string): Promise<void> {
 }
 
 /**
- * `work`, with whatever it throws made a `PageFetchError` that names it
- * and keeps it as its cause: a try that fails before the page is stored
- * is a failed try, so each costs one counted fetch.
+ * `work`, with whatever it throws made a `PageFetchError`: a try that
+ * fails before the page is stored is a failed try, so each costs one
+ * counted fetch. The new error's message and cause are the thrown one
+ * without bound values (`withoutBoundValues`): a failed D1 statement is
+ * named by its first words and the database's reason, and anything else
+ * as it was thrown.
  */
 async function beforeStored<T>(work: () => Promise<T>): Promise<T> {
   try {
     return await work();
   } catch (error) {
     if (error instanceof PageFetchError) throw error;
-    throw new PageFetchError(String(error), { cause: error });
+    const scrubbed = withoutBoundValues(error);
+    throw new PageFetchError(String(scrubbed), { cause: scrubbed });
   }
 }
 
@@ -367,20 +398,22 @@ async function canSpendProxyFor(db: Db, productId: string): Promise<boolean> {
 }
 
 /**
- * The work for a `pending` product: the page stored within the reuse
- * window or not yet read by any rung, or a fresh fetch — `deferred` when
- * the hour's fetches or model calls are spent (`spend-limit.ts`), and the
- * row stays `pending` for the hourly sweep.
+ * The work for a `pending` product: a stored page `latestSnapshot` allows,
+ * or a fresh fetch — `deferred` when the hour's fetches or model calls are
+ * spent (`spend-limit.ts`), and the row stays `pending` for the hourly
+ * sweep.
  */
 async function extractPending(
   deps: EnrichmentDeps,
-  productId: string,
+  job: EnrichJob,
   sourceUrl: string,
 ): Promise<"deferred" | undefined> {
+  const { productId } = job;
   const recent = await latestSnapshot(
     deps.db,
     productId,
     Date.now() - REUSE_WINDOW_MS,
+    job.askedAt,
   );
   if (recent !== undefined) {
     const stored = await readSnapshot(recent.r2Key);
@@ -397,8 +430,9 @@ async function extractPending(
 
 async function processEnrichJob(
   deps: EnrichmentDeps,
-  productId: string,
+  job: EnrichJob,
 ): Promise<void> {
+  const { productId } = job;
   const row = await firstRowWhere(
     deps.db,
     products,
@@ -412,11 +446,7 @@ async function processEnrichJob(
     // the row; a hand-edited one goes through the same door as any other
     // bad URL — a terminal `PageFetchError`, reported, and the row failed —
     // rather than a private branch that fails it silently.
-    const outcome = await extractPending(
-      deps,
-      productId,
-      String(row.sourceUrl),
-    );
+    const outcome = await extractPending(deps, job, String(row.sourceUrl));
     if (outcome === "deferred") return;
   } catch (error) {
     if (
@@ -449,7 +479,7 @@ export async function handleEnrichmentBatch(
   deps: EnrichmentDeps,
 ): Promise<void> {
   await consumeEach(batch, enrichJobSchema, {
-    process: (job) => processEnrichJob(deps, job.productId),
+    process: (job) => processEnrichJob(deps, job),
     invalidMessage: "invalid enrichment queue message",
     context: (job) => ({ productId: job.productId }),
     captureException: deps.captureException,

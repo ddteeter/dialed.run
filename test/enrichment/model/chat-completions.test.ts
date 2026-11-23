@@ -17,12 +17,12 @@ import {
 } from "../../../src/modules/enrichment/model/chat-completions";
 
 /**
- * The LLM rung as a network boundary. A model is a non-deterministic
- * upstream, so every failure here is retryable — the packet's wording is
- * "a malformed model response is a retryable failure, not a crash" — and
- * the cases below are the shapes that failure actually takes: a provider
- * rejecting the request, prose where JSON was asked for, JSON of the wrong
- * shape, and an answer that is well-formed but not a valid extraction.
+ * The LLM rung as a network boundary. The cases below are the shapes a
+ * failure actually takes: a provider rejecting the request and a body that
+ * is not the documented envelope, which the queue retries; an answer that
+ * is not an object, no answer at all, or none in time, which are
+ * `UnreadableAnswerError` and one try; and an answer that is well-formed
+ * but not a valid extraction, whose bad fields are dropped.
  */
 
 const KEY = "or-test-key";
@@ -346,14 +346,54 @@ async function refuses(fetchImpl: typeof fetch): Promise<unknown> {
 /**
 An envelope with no choices in it — a completion that completed nothing.
 */
-const noChoices: typeof fetch = () =>
-  Promise.resolve(Response.json({ choices: [] }));
+/**
+`refuses`, with a timeout of a millisecond.
+*/
+async function refusesWithin(fetchImpl: typeof fetch): Promise<unknown> {
+  const model = createChatCompletionsModel(KEY, {
+    ...OPTIONS,
+    fetchImpl,
+    timeoutMs: 1,
+  });
+  try {
+    await model.extract(PAGE_TEXT, HINT);
+  } catch (error: unknown) {
+    return error;
+  }
+  throw new Error("expected the call to fail, and it did not");
+}
 
 /**
 The fetch itself failing, rather than the model refusing.
 */
 const networkDown: typeof fetch = () =>
   Promise.reject(new TypeError("network down"));
+
+/**
+A model that never answers: the fetch waits until the timeout aborts it.
+*/
+const hangs: typeof fetch = (_input, init) =>
+  new Promise((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => {
+      reject(new Error("The operation was aborted"));
+    });
+  });
+
+/**
+A model whose answer is still arriving when the timeout aborts it.
+*/
+const trickles: typeof fetch = (_input, init) =>
+  Promise.resolve(
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          init?.signal?.addEventListener("abort", () => {
+            controller.error(new Error("body read aborted"));
+          });
+        },
+      }),
+    ),
+  );
 
 describe("createChatCompletionsModel: every way it can fail", () => {
   it("reports the provider's own complaint, not just the status", async () => {
@@ -400,13 +440,40 @@ describe("createChatCompletionsModel: every way it can fail", () => {
     expect(String(error)).toContain("did not match its contract");
   });
 
-  it("fails on an envelope with no choices in it", async () => {
+  it.each([
+    ["no choices in it", '{"choices": []}'],
+    ["a choice with no message", '{"choices": [{}]}'],
+    [
+      "a message whose content is null",
+      '{"choices": [{"message": {"content": null}}]}',
+    ],
+    ["a message with no content", '{"choices": [{"message": {}}]}'],
+  ])("fails as unreadable on an envelope with %s", async (_, envelope) => {
     // A completion that completed nothing. Reported as its own sentence
-    // rather than defaulted to an empty string, which would go on to fail
-    // as "not a valid extraction" and tell a reader the wrong thing.
-    const error = await refuses(vi.fn(noChoices));
-    expect(error).toBeInstanceOf(ModelUnavailableError);
+    // rather than defaulted to an empty string, and one try on the
+    // product, as an answer that is not an object is.
+    const error = await refuses(raw(envelope));
+    expect(error).toBeInstanceOf(UnreadableAnswerError);
     expect(String(error)).toContain("no completion");
+  });
+
+  it("fails as unreadable when the model does not answer in time", async () => {
+    const error = await refusesWithin(hangs);
+    expect(error).toBeInstanceOf(UnreadableAnswerError);
+    expect(String(error)).toContain("did not answer in time");
+    expect(error).toHaveProperty("cause.message", "The operation was aborted");
+  });
+
+  it("fails as unreadable when the body is still arriving at the timeout", async () => {
+    const error = await refusesWithin(trickles);
+    expect(error).toBeInstanceOf(UnreadableAnswerError);
+    expect(error).toHaveProperty("cause.message", "body read aborted");
+  });
+
+  it("fails as retryable, not unreadable, on a 5xx", async () => {
+    const error = await refuses(raw("upstream overloaded", 503));
+    expect(error).toBeInstanceOf(ModelUnavailableError);
+    expect(error).not.toBeInstanceOf(UnreadableAnswerError);
   });
 
   it("fails on prose where JSON was asked for", async () => {

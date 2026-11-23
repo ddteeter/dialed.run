@@ -36,6 +36,10 @@ export type RequestOutcome = "queued" | "skipped";
  * failure is reported and swallowed, because enrichment must never fail
  * the garment save that asked for it (law 5).
  *
+ * **A person's ask fetches a fresh page.** The job carries `askedAt`, so
+ * the consumer reads no page stored before it, however recent and whether
+ * or not a rung read it.
+ *
  * The flip is the dedupe: only `none` and `failed` become `pending`, so a
  * second paste of the same URL while a job is in flight sends nothing, and
  * `done` is `reextract`'s business rather than a refetch.
@@ -89,7 +93,7 @@ async function claimAndSend(
   if (!wasClaimed) return "skipped";
 
   try {
-    await deps.queue.send({ type: "enrich", productId });
+    await deps.queue.send({ type: "enrich", productId, askedAt: Date.now() });
   } catch (error) {
     deps.captureException(error, { surface: "enrichment-request", productId });
   }

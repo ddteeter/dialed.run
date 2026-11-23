@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -30,6 +30,11 @@ import {
 import { MAX_OPEN_TAGS } from "../../src/modules/enrichment/html";
 import { pageFailureReason } from "../../src/modules/enrichment/bounds";
 import { UnreadableAnswerError } from "../../src/modules/enrichment/model/chat-completions";
+import type { EnrichJob } from "../../src/modules/enrichment/queue-messages";
+import {
+  requestEnrichment,
+  retryFailedEnrichment,
+} from "../../src/modules/enrichment/request";
 import {
   MODEL_CALLS_PER_HOUR,
   PAGE_FETCHES_PER_HOUR,
@@ -38,6 +43,7 @@ import {
 import { isDeniedLink, isDeniedOnLanding } from "../../src/modules/safety";
 import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import { nowSeconds } from "../../src/lib/now";
+import { reportException } from "../../src/modules/ops/sentry/sentry";
 import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage, type SpiedMessage } from "../queue-fakes";
 
@@ -124,6 +130,25 @@ function serving(html: string, status = 200) {
   const impl: typeof fetch = () =>
     Promise.resolve(new Response(html, { status }));
   return vi.fn(impl);
+}
+
+/**
+A value bound to a statement, which no report or stored error may carry.
+*/
+const BOUND_VALUE = "https://shop.example.com/tee?token=bound-secret";
+
+/**
+ * `error` as text: its message and every cause's below it, as a reporter
+ * that follows causes would see them.
+ */
+function withEveryCause(error: unknown): string {
+  const parts: string[] = [];
+  let current = error;
+  while (current instanceof Error) {
+    parts.push(String(current));
+    current = current.cause;
+  }
+  return parts.join(" <- ");
 }
 
 /**
@@ -592,7 +617,7 @@ describe("handleEnrichmentBatch: failures", () => {
     );
   });
 
-  it("fails the try when storing the page throws", async () => {
+  it("fails the try when the landing check throws, before the page is stored", async () => {
     const productId = await pendingProduct();
     const message = jobFor(productId);
 
@@ -607,6 +632,60 @@ describe("handleEnrichmentBatch: failures", () => {
       extractionError: "Error: D1 unavailable",
     });
     expect(await snapshotsOf(productId)).toEqual([]);
+  });
+
+  it("keeps a failed statement's bound values out of the report and the stored error", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
+    const deps = {
+      ...depsWith(serving(PAGE)),
+      isLandingDenied: async () => {
+        await db().run(
+          sql`select id from products where no_such_column = ${BOUND_VALUE}`,
+        );
+        return false;
+      },
+    };
+
+    await consumeWith(productId, deps);
+
+    const reported: unknown = deps.captureException.mock.calls[0]?.[0];
+    const logged = vi.spyOn(console, "error").mockImplementation(vi.fn());
+    reportException(
+      { dsn: undefined, environment: "development" },
+      vi.fn(),
+      reported,
+      { context: { productId }, tags: {} },
+    );
+    const lines = [...logged.mock.calls];
+    logged.mockRestore();
+    expect(lines).toHaveLength(1);
+    expect(withEveryCause(lines[0]?.[2])).not.toContain(BOUND_VALUE);
+    expect(withEveryCause(reported)).not.toContain(BOUND_VALUE);
+    expect(withEveryCause(reported)).toContain(
+      "failed statement select id from",
+    );
+    const listed = await gaveUpRow("enrichment", productId);
+    expect(listed?.rawError).toContain("failed statement select id from");
+    expect(listed?.rawError).not.toContain(BOUND_VALUE);
+  });
+
+  it("keeps a failed statement's bound values out of the error parked on the product", async () => {
+    const productId = await pendingProduct();
+    const deps = {
+      ...depsWith(serving(PAGE)),
+      isLandingDenied: async () => {
+        await db().run(
+          sql`select id from products where no_such_column = ${BOUND_VALUE}`,
+        );
+        return false;
+      },
+    };
+
+    await consumeWith(productId, deps);
+
+    const row = await rowOf(productId);
+    expect(row.extractionError).toContain("failed statement select id from");
+    expect(row.extractionError).not.toContain(BOUND_VALUE);
   });
 
   it("keeps going after one bad message so the rest of the batch is served", async () => {
@@ -1714,6 +1793,144 @@ describe("handleEnrichmentBatch: a stored page no rung has read", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(await statusOf(productId)).toBe("done");
     expect(await snapshotsOf(productId)).toHaveLength(1);
+  });
+});
+
+/**
+ * A product failed past its first day, which a paste or the Desk's Retry
+ * may claim, with a page no rung has read stored two hours ago.
+ */
+async function failedWithUnreadPage(): Promise<string> {
+  const productId = await pendingProduct({
+    ...PAST_THE_DAY,
+    extractionStatus: "failed",
+  });
+  await storedPage(productId, TWO_HOURS_MS, "none");
+  return productId;
+}
+
+/**
+A queue that keeps what it is sent, so a person's ask can be consumed.
+*/
+function keepingQueue() {
+  const sent: EnrichJob[] = [];
+  const queue = {
+    send: (message: EnrichJob) => {
+      sent.push(message);
+      return Promise.resolve();
+    },
+  };
+  return { sent, asking: { queue, captureException: vi.fn() } };
+}
+
+/**
+Every job `sent` delivered once to the consumer.
+*/
+async function consumeSent(
+  sent: readonly EnrichJob[],
+  deps: Parameters<typeof handleEnrichmentBatch>[1],
+): Promise<void> {
+  const messages = sent.map((job, index) =>
+    fakeMessage(`asked-${String(index)}`, job),
+  );
+  await handleEnrichmentBatch(batchOf("dialed-enrichment", messages), deps);
+}
+
+const CORRECTED_LINK = "https://shop.example.com/products/tee-corrected";
+
+describe("handleEnrichmentBatch: a person's ask fetches a fresh page", () => {
+  beforeEach(async () => {
+    await db().delete(rateLimits);
+  });
+
+  it("fetches for a paste past the product's day, over a page no rung has read", async () => {
+    const productId = await failedWithUnreadPage();
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+
+    expect(await requestEnrichment(db(), productId, asking)).toBe("queued");
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(await statusOf(productId)).toBe("done");
+    expect(await snapshotsOf(productId)).toHaveLength(2);
+  });
+
+  it("fetches for the Desk's Retry, over a page no rung has read", async () => {
+    const productId = await failedWithUnreadPage();
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+
+    expect(await retryFailedEnrichment(db(), productId, asking)).toBe("queued");
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(await statusOf(productId)).toBe("done");
+  });
+
+  it("fetches the corrected link, not the page stored from the old one", async () => {
+    const productId = await failedWithUnreadPage();
+    // What a link correction's Apply writes: the product's source.
+    await db()
+      .update(products)
+      .set({ sourceUrl: CORRECTED_LINK })
+      .where(eq(products.id, productId));
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+
+    await requestEnrichment(db(), productId, asking);
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl.mock.calls.map(([input]) => urlOf(input))).toEqual([
+      CORRECTED_LINK,
+    ]);
+  });
+
+  it("fetches for the Desk's Retry over a page read inside the hour", async () => {
+    const productId = await pendingProduct({
+      ...PAST_THE_DAY,
+      extractionStatus: "failed",
+    });
+    await storedPage(productId, 1000, "text");
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+
+    await retryFailedEnrichment(db(), productId, asking);
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads the page its own earlier delivery stored, and fetches once", async () => {
+    await spentAlready("model-call", MODEL_CALLS_PER_HOUR);
+    const productId = await failedWithUnreadPage();
+    const { sent, asking } = keepingQueue();
+    const fetchImpl = serving(PAGE);
+    await requestEnrichment(db(), productId, asking);
+    await consumeSent(sent, depsWith(fetchImpl));
+    expect(await statusOf(productId)).toBe("pending");
+    await db().delete(rateLimits);
+
+    await consumeSent(sent, depsWith(fetchImpl));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(await statusOf(productId)).toBe("done");
+    const snapshots = await snapshotsOf(productId);
+    expect(snapshots.map(({ rung }) => rung)).toHaveLength(2);
+    expect(snapshots.map(({ rung }) => rung)).toEqual(
+      expect.arrayContaining(["llm", "none"]),
+    );
+  });
+
+  it("still reads a page no rung has read when the sweep sends the job", async () => {
+    const productId = await failedWithUnreadPage();
+    await repend(productId);
+    const fetchImpl = serving(PAGE);
+
+    await consumeSent([{ type: "enrich", productId }], depsWith(fetchImpl));
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(await statusOf(productId)).toBe("done");
   });
 });
 

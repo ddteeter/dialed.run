@@ -7,6 +7,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { orSqlNull } from "../../src/lib/sql/sql-null";
 import { abandonedBefore } from "../../src/modules/enrichment/abandon";
+import { enrichJobSchema } from "../../src/modules/enrichment/queue-messages";
 import {
   isClaimable,
   requestEnrichment,
@@ -55,6 +56,15 @@ async function statusOf(productId: string): Promise<string | undefined> {
   return row?.status;
 }
 
+/**
+The `askedAt` of the one job `send` was given.
+*/
+function sentAskedAt(send: {
+  mock: { calls: readonly (readonly unknown[])[] };
+}): number | undefined {
+  return enrichJobSchema.parse(send.mock.calls[0]?.[0]).askedAt;
+}
+
 function deps() {
   return {
     queue: { send: vi.fn(() => Promise.resolve()) },
@@ -66,12 +76,20 @@ describe("requestEnrichment", () => {
   it("flips a fresh product to pending and sends the job", async () => {
     const id = await productWith();
     const d = deps();
+    const before = Date.now();
     expect(await requestEnrichment(db(), id, d)).toBe("queued");
+    const after = Date.now();
     expect(await statusOf(id)).toBe("pending");
-    expect(d.queue.send).toHaveBeenCalledWith({
-      type: "enrich",
-      productId: id,
-    });
+    expect(d.queue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "enrich",
+        productId: id,
+      }),
+    );
+    // When it was asked, so the consumer reads no page stored before.
+    const askedAt = sentAskedAt(d.queue.send);
+    expect(askedAt).toBeGreaterThanOrEqual(before);
+    expect(askedAt).toBeLessThanOrEqual(after);
   });
 
   it("sends nothing for a product already pending — the flip is the dedupe", async () => {
