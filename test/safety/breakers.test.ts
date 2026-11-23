@@ -560,20 +560,21 @@ describe("the report breaker's baseline leaves out its own tripped hours", () =>
   });
 
   it("counts a busy hour that stayed under the ceiling then in force", async () => {
-    await opened("reports", 9, NOW - 3 * HOUR);
+    await opened("reports", 9, NOW - 4 * HOUR);
     await opened("reports", 19, NOW - 2 * HOUR);
     await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
 
-    // Nine raised the next hour's ceiling only to twice ten, so the
-    // nineteen after them were honest; and the ceiling now is twice that.
+    // Nine set the ceiling in force two hours on to twice ten, so the
+    // nineteen then were honest; and the ceiling now is four times them,
+    // held to twice the one before it.
     expect(await ceilingReading(core(), "reports", NOW)).toMatchObject({
       isOver: false,
-      ceiling: 40,
+      ceiling: 72,
     });
   });
 
-  it("leaves out an hour that reached the doubled ceiling", async () => {
-    await opened("reports", 9, NOW - 3 * HOUR);
+  it("leaves out an hour that reached the ceiling then in force", async () => {
+    await opened("reports", 9, NOW - 4 * HOUR);
     await opened("reports", 20, NOW - 2 * HOUR);
     await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
 
@@ -635,14 +636,15 @@ describe("honestCeiling", () => {
   it("at most doubles from one hour to the next", () => {
     const hours = [
       { hour: 1, n: 9 },
-      { hour: 2, n: 19 },
+      { hour: 3, n: 19 },
     ];
-    expect(honestCeiling(hours, 2)).toBe(20);
-    expect(honestCeiling(hours, 3)).toBe(40);
-    expect(honestCeiling(hours, 4)).toBe(76);
+    expect(honestCeiling(hours, 3)).toBe(36);
+    expect(honestCeiling(hours, 4)).toBe(72);
+    expect(honestCeiling(hours, 5)).toBe(76);
   });
 
   it("may double across hours with no rows", () => {
+    expect(honestCeiling([{ hour: 1, n: 9 }], 1)).toBe(10);
     expect(honestCeiling([{ hour: 1, n: 9 }], 2)).toBe(20);
     expect(honestCeiling([{ hour: 1, n: 9 }], 3)).toBe(36);
   });
@@ -650,10 +652,37 @@ describe("honestCeiling", () => {
   it("holds a group that stops one short each hour to doubling", () => {
     const hours = [
       { hour: 1, n: 9 },
-      { hour: 2, n: 19 },
-      { hour: 3, n: 39 },
+      { hour: 2, n: 9 },
+      { hour: 3, n: 19 },
+      { hour: 4, n: 35 },
     ];
-    expect(honestCeiling(hours, 4)).toBe(80);
+    expect(honestCeiling(hours, 4)).toBe(72);
+  });
+
+  it("judges each hour against the ceiling a reading enforced during it", () => {
+    const hours = [3, 10, 12, 24].map((n, index) => ({ hour: index + 1, n }));
+    // What a reading in each hour enforced: the floor, then 12 once the
+    // honest 3 counts.
+    const inForce = hours.map(({ hour }) =>
+      honestCeiling(
+        hours.filter((each) => each.hour < hour),
+        hour - 1,
+      ),
+    );
+    expect(inForce).toStrictEqual([10, 10, 12, 12]);
+    // 10, 12 and 24 each reached the ceiling in force, so only 3 is honest.
+    expect(honestCeiling(hours, 4)).toBe(reportCeiling(3));
+  });
+
+  it("keeps the ceiling put under a flood held at it every hour", () => {
+    const hours: { hour: number; n: number }[] = [{ hour: 1, n: 3 }];
+    for (let hour = 2; hour <= 24; hour++) {
+      hours.push({ hour, n: honestCeiling(hours, hour - 1) });
+    }
+    expect(hours.slice(2).map(({ n }) => n)).toStrictEqual(
+      Array.from({ length: 22 }, () => 12),
+    );
+    expect(honestCeiling(hours, 24)).toBe(12);
   });
 });
 
