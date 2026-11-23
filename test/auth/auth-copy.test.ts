@@ -13,6 +13,7 @@ import {
   AccountClosedRefusal,
   AuthRejected,
   GOOGLE_NOT_LINKED,
+  GOOGLE_BUSY,
   GOOGLE_REFUSALS,
   NOT_CREATED,
   NOT_LOGGED_IN,
@@ -136,6 +137,16 @@ describe("GOOGLE_REFUSALS", () => {
       retry: false,
     });
     expect(ADDRESS_CLOSED_CODE).toBe("ADDRESS_CLOSED");
+  });
+
+  it("says the hour's Google sign-ins are taken in the Google band, with no Try again", () => {
+    expect(GOOGLE_REFUSALS.get(GOOGLE_BUSY)).toStrictEqual({
+      kicker: AUTH_KICKER,
+      message:
+        "Lots of people are signing in with Google right now. Try again in a few minutes, or use your email.",
+      retry: false,
+    });
+    expect(GOOGLE_BUSY).toBe("google_busy");
   });
 
   it("offers no Try again for a Google address with no account, and points nowhere", () => {

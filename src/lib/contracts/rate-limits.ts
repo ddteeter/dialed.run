@@ -62,12 +62,17 @@ export const SEND_LIMIT_KINDS = [
  *   minute (SA-L15); the runner's id;
  * - `deletion-notice` — the "delete scheduled" emails one runner is owed
  *   in a day; the runner's id;
- * - `access-to` — Au5's asks for one address in a day, whoever asks; the
+ * - `access-to` — Au5's confirmed asks for one address in a day; the
  *   address, lowercased;
+ * - `access-confirm-to` — the confirm links Au5's asks send one address
+ *   in a day, whoever asks; the address, lowercased;
  * - `correction-runner` — one runner's product corrections in a day; the
  *   runner's id;
  * - `strava-connect-runner` — the Strava code exchanges one runner's
- *   connect callbacks make in an hour; the runner's id.
+ *   connect callbacks make in an hour; the runner's id;
+ * - `google-start` — the Continue with Google presses that start a
+ *   sign-in, across everyone, in an hour: each one is a state row Better
+ *   Auth writes; `GLOBAL_SUBJECT`.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -89,8 +94,10 @@ export const RATE_LIMIT_KINDS = [
   "purge-runner",
   "deletion-notice",
   "access-to",
+  "access-confirm-to",
   "correction-runner",
   "strava-connect-runner",
+  "google-start",
 ] as const;
 
 /**

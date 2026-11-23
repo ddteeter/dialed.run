@@ -7,6 +7,7 @@ import {
   onToSignUp,
   parseSignInSearch,
 } from "../../src/modules/auth/sign-in-search";
+import { MAX_RETURN_PATH } from "../../src/lib/return-path";
 
 /**
  * Au7's arrival, as the log-in page's search params. A bad value is
@@ -38,12 +39,16 @@ describe("parseSignInSearch", () => {
   });
 
   it("carries an invite link's code, if it is short enough to be one (ACC-5)", () => {
-    expect(parseSignInSearch({ code: "DIAL-7K3P-2QXM" }).code).toBe("DIAL-7K3P-2QXM");
+    expect(parseSignInSearch({ code: "DIAL-7K3P-2QXM" }).code).toBe(
+      "DIAL-7K3P-2QXM",
+    );
     expect(parseSignInSearch({ code: "x".repeat(20) }).code).toBe(
       "x".repeat(20),
     );
     expect(parseSignInSearch({ code: "x".repeat(21) }).code).toBeUndefined();
-    expect(joinSearch({ code: "DIAL-7K3P-2QXM", redirect: "/x" })).toStrictEqual({
+    expect(
+      joinSearch({ code: "DIAL-7K3P-2QXM", redirect: "/x" }),
+    ).toStrictEqual({
       code: "DIAL-7K3P-2QXM",
     });
     expect(joinSearch({ code: 7 })).toStrictEqual({ code: undefined });
@@ -133,7 +138,49 @@ describe("onToSignUp (/join)", () => {
   });
 });
 
+/**
+ * A way back whose failure return from log-in is `encodedLength` long:
+ * `/auth/login?redirect=` and the encoded leading slash are 24 characters.
+ */
+function wayBackOf(encodedLength: number): string {
+  return `/${"a".repeat(encodedLength - 24)}`;
+}
+
 describe("googleReturn", () => {
+  it(`keeps the way back in the failure's return up to ${String(MAX_RETURN_PATH)} characters encoded`, () => {
+    const redirect = wayBackOf(MAX_RETURN_PATH);
+    const { callbackURL, errorCallbackURL } = googleReturn("/auth/login", {
+      redirect,
+      carried: undefined,
+    });
+    expect(errorCallbackURL).toBe(
+      `/auth/login?redirect=%2F${redirect.slice(1)}`,
+    );
+    expect(errorCallbackURL).toHaveLength(MAX_RETURN_PATH);
+    expect(callbackURL).toBe(redirect);
+  });
+
+  it("brings a refused attempt back without a way back too long to carry, and still lands success on it", () => {
+    const redirect = wayBackOf(MAX_RETURN_PATH + 1);
+    expect(
+      googleReturn("/auth/signup", { redirect, carried: "run", code: "DIAL" }),
+    ).toEqual({
+      callbackURL: redirect,
+      errorCallbackURL: "/auth/signup?carried=run&code=DIAL",
+    });
+  });
+
+  it("keeps the longest way back the page accepts within what a press may name", () => {
+    const search = parseSignInSearch({ redirect: "/a".repeat(1024) });
+    expect(search.redirect).toHaveLength(MAX_RETURN_PATH);
+    const { callbackURL, errorCallbackURL } = googleReturn(
+      "/auth/login",
+      search,
+    );
+    expect(callbackURL).toBe(search.redirect);
+    expect(errorCallbackURL).toBe("/auth/login");
+  });
+
   it("brings Au2's code back with a refused attempt", () => {
     expect(googleReturn("/auth/signup", { code: "DIAL-7K3P-2QXM" })).toEqual({
       callbackURL: "/",

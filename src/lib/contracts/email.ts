@@ -17,6 +17,7 @@
 import { z } from "zod";
 
 import {
+  accessConfirm,
   accountClosed,
   accountReopened,
   address,
@@ -63,6 +64,7 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   resetPassword,
   emailChange,
   emailChanged,
+  accessConfirm,
   runReminder,
   contentRemoved,
   accountClosed,
@@ -116,6 +118,7 @@ const PREFERENCE_OF: Readonly<
   existing_account: undefined,
   reset_password: undefined,
   email_change: undefined,
+  access_confirm: undefined,
   email_changed: undefined,
   run_reminder: "run_reminder",
   content_removed: undefined,
@@ -149,6 +152,7 @@ const CONFIRMED_ADDRESS_REQUIRED: Readonly<Record<EmailKind, boolean>> = {
   existing_account: false,
   reset_password: false,
   email_change: false,
+  access_confirm: false,
   email_changed: false,
   run_reminder: false,
   content_removed: false,

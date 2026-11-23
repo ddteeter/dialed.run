@@ -28,7 +28,7 @@ import { AUTH_COPY } from "./auth-copy";
 import { CLOSED_AUTH_PATHS } from "./closed-paths";
 import { clearSignInTries, countSignInTry } from "./sign-in-limit";
 import { cutUserAgent, endOldestSessions } from "./session-cap";
-import { holdSocialBody } from "./social-body";
+import { countSocialStart, holdSocialBody } from "./social-body";
 import {
   BREACHED_CODE,
   newPasswordIn,
@@ -41,7 +41,11 @@ export interface AuthConfig {
    * `undefined` when the binding is unset: `signingSecret` refuses it.
    */
   secret: string | undefined;
-  baseUrl?: string | undefined;
+  /**
+   * The deployment's origin: `deploymentOrigin` refuses an unset one, or
+   * one the limiter and the `__Host-` cookies would quietly be off for.
+   */
+  baseUrl: string | undefined;
   /** Absent when the deployment has no Google credentials — email/password
    *  still works (CLAUDE.md law 5). */
   google?: { clientId: string; clientSecret: string } | undefined;
@@ -170,17 +174,41 @@ export function deploymentPosture(baseUrl: string | undefined): {
 }
 
 /**
+The hosts a plain http origin may name: local dev and CI's own machine.
+*/
+const LOCAL_HOSTS: ReadonlySet<string> = new Set(["localhost", "127.0.0.1"]);
+
+/**
+ * An origin auth may run on: an https one, spelled as `deploymentPosture`
+ * reads it, or plain http on this machine.
+ */
+function isServedOrigin(origin: string): boolean {
+  if (!URL.canParse(origin)) return false;
+  if (deploymentPosture(origin).secureCookies) return true;
+  return (
+    origin.startsWith("http://") && LOCAL_HOSTS.has(new URL(origin).hostname)
+  );
+}
+
+/**
  * The deployment's origin, or no auth instance at all.
  *
- * An origin decides the posture (`deploymentPosture`): with none, the
- * limiter and the `__Host-` cookies are off and Better Auth takes its base
- * URL from each request. So an unset or blank `BETTER_AUTH_URL` stops the
- * deployed instance being built, as an unset secret does. Local dev and CI
- * set an `http://localhost` origin, which is a posture of its own.
+ * An origin decides the posture (`deploymentPosture`): anything but a
+ * lower-case `https://` one has the limiter and the `__Host-` cookies
+ * off. So auth starts only on an https origin, or on plain http to
+ * `localhost` or `127.0.0.1`, which local dev and CI set; an unset or
+ * blank `BETTER_AUTH_URL`, or any other value (`http://` to a real host, a
+ * bare host, `HTTPS://`), stops the instance being built, as an unset
+ * secret does, and so the Worker serving anything.
  */
 export function deploymentOrigin(origin: string | undefined): string {
   if (origin === undefined || origin.trim() === "") {
     throw new Error("BETTER_AUTH_URL is not set: auth will not start");
+  }
+  if (!isServedOrigin(origin)) {
+    throw new Error(
+      "BETTER_AUTH_URL is not an https origin, or http on this machine: auth will not start",
+    );
   }
   return origin;
 }
@@ -284,7 +312,8 @@ export function createAuth({
   background,
   access,
 }: AuthConfig) {
-  const posture = deploymentPosture(baseUrl);
+  const origin = deploymentOrigin(baseUrl);
+  const posture = deploymentPosture(origin);
   // Better Auth's own sends go through `backgroundTasks`; the one it
   // awaits itself — the after-create hook — through this.
   async function later(work: Promise<void>): Promise<void> {
@@ -301,7 +330,7 @@ export function createAuth({
     // the router reads this list, so the server-side
     // `auth.api.changePassword` and `auth.api.verifyPassword` still work.
     disabledPaths: [...CLOSED_AUTH_PATHS],
-    ...(baseUrl !== undefined && { baseURL: baseUrl }),
+    baseURL: origin,
     // Better Auth's own limits for its sensitive paths (sign-in and
     // sign-up: 3 per 10 s per address) and 100 per minute elsewhere, with
     // the counters in D1 so every isolate shares them.
@@ -454,13 +483,15 @@ export function createAuth({
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         // A Google press carries only what the app's own press sends.
-        holdSocialBody(ctx);
+        const press = holdSocialBody(ctx);
         // The password first: a breached one is the form's to fix
         // whatever the code says. Then the way in.
         await screenPassword(passwordScreen, ctx);
         await admitSignUp(access, ctx);
         await withdrawChangeOnSignOutEverywhere(db, ctx);
         await countSignInTry(db, ctx);
+        // Last, so a press the way in refused is not counted as a start.
+        await countSocialStart(db, ctx.context.socialProviders, press);
       }),
       after: createAuthMiddleware(async (ctx) => {
         await clearSignInTries(db, ctx);

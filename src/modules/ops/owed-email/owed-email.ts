@@ -141,11 +141,12 @@ export const owedEmailHandlers = {
 
 /**
  * An owed email's fast path: `settleOutbox` with the live handler. What a
- * module that owes a runner's email hands its `settle` (`OwedMail`).
+ * module that owes a runner's email hands its `settle` (`OwedMail`), and
+ * the operators' digest its own (`operator_email`).
  */
 export function settleOwedEmail(
   db: Db,
-  debt: OutboxDebtOf<"email">,
+  debt: OutboxDebtOf<"email"> | OutboxDebtOf<"operator_email">,
   report: typeof captureException = captureException,
 ): Promise<void> {
   return settleOutbox(db, debt, owedEmailHandlers, report);

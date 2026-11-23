@@ -71,8 +71,10 @@ describe("the rate-limit kinds", () => {
     await isWithinRateLimit(db, "purge-runner", runner, 2, 60, NOW);
     await countLimit(db, "deletion-notice", runner, NOW);
     await countLimit(db, "access-to", "someone@example.test", NOW);
+    await countLimit(db, "access-confirm-to", "someone@example.test", NOW);
     await isWithinRateLimit(db, "correction-runner", runner, 20, 86_400, NOW);
     await isWithinRateLimit(db, "strava-connect-runner", runner, 5, 3600, NOW);
+    await claimLimit(db, "google-start", GLOBAL_SUBJECT, NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -96,8 +98,10 @@ describe("the rate-limit kinds", () => {
         `purge-runner:${runner}`,
         `deletion-notice:${runner}`,
         "access-to:someone@example.test",
+        "access-confirm-to:someone@example.test",
         `correction-runner:${runner}`,
         `strava-connect-runner:${runner}`,
+        `google-start:${GLOBAL_SUBJECT}`,
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));

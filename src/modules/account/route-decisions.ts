@@ -210,6 +210,16 @@ export const checkEmailSearch = z.object({
 export const tokenSearch = z.object({ token: optionalText });
 
 /**
+ * `/account/confirm-access?token=`: an access request's confirm link,
+ * read the way every token link's search is.
+ */
+export function accessConfirmSearch(
+  search: Record<string, unknown>,
+): z.infer<typeof tokenSearch> {
+  return tokenSearch.parse(search);
+}
+
+/**
  * The unsubscribe link's search, kept whole: its signature is checked on
  * the server, and a page that dropped a param here would call a good link
  * bad.

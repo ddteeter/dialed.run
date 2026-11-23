@@ -43,6 +43,7 @@ import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { account, session, user, verification } from "../../../db/schema-auth";
 import {
+  accessAsks,
   accessRequests,
   accountDeletions,
   blocks,
@@ -514,7 +515,8 @@ async function provedAddressesOf(db: Db, userId: string): Promise<string[]> {
 }
 
 /**
- * What is kept by one address: an access request, the send counters, and
+ * What is kept by one address: an access request and its asks, the send
+ * counters, and
  * an invite code's label that names it — which D7 no longer writes
  * (`invites.ts`' `requestLabelOr`), but a code made before that did, and
  * an operator may type one. `instr` rather than `LIKE`, so an address's
@@ -523,13 +525,30 @@ async function provedAddressesOf(db: Db, userId: string): Promise<string[]> {
  */
 function forgetAddress(db: Db, address: string) {
   return [
-    db.delete(accessRequests).where(eq(accessRequests.email, address)),
+    ...[accessRequests, accessAsks].map((table) =>
+      db.delete(table).where(eq(table.email, address)),
+    ),
     forgetSendLimits(db, address),
     db
       .update(inviteCodes)
       .set({ label: orSqlNull(undefined) })
       .where(sql`instr(lower(${inviteCodes.label}), ${address}) > 0`),
   ] as const;
+}
+
+/**
+ * The label of the code a runner redeemed, blanked where it names the
+ * address they redeemed it with (an operator may type the address they
+ * sent it to). The redemption ties the code to the runner by id, so this
+ * needs no proved address; a code's other labels stay, so a code many
+ * runners spent keeps its operator's words.
+ */
+function forgetRedeemedLabel(db: Db, userId: string) {
+  const namesTheirAddress = sql`EXISTS (SELECT 1 FROM ${inviteRedemptions} WHERE ${inviteRedemptions.userId} = ${userId} AND ${inviteRedemptions.codeId} = ${inviteCodes.id} AND instr(lower(${inviteCodes.label}), ${inviteRedemptions.email}) > 0)`;
+  return db
+    .update(inviteCodes)
+    .set({ label: orSqlNull(undefined) })
+    .where(namesTheirAddress);
 }
 
 /**
@@ -632,6 +651,7 @@ async function deleteAccountRows(
     forgetRateLimit(db, "purge-runner", userId),
     forgetRateLimit(db, "deletion-notice", userId),
     forgetRateLimit(db, "correction-runner", userId),
+    forgetRateLimit(db, "strava-connect-runner", userId),
     forgetRunnerEnrichmentLimit(db, userId),
     ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post
@@ -642,6 +662,11 @@ async function deleteAccountRows(
       .update(reports)
       .set({ reporterId: sql`'deleted:' || ${reports.id}` })
       .where(eq(reports.reporterId, userId)),
+    // The code they spent, where its label names the address they spent
+    // it with: found by their own redemption, not by the address, so an
+    // account that never confirmed its address leaves it too. Before the
+    // redemption's address goes, below.
+    forgetRedeemedLabel(db, userId),
     // The invite's use stays spent (2b-1): the row stays, the address
     // does not. Distinct per account, as uses are counted by address.
     db

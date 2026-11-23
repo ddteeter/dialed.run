@@ -1,7 +1,8 @@
 /**
  * The daily sweep of answered access requests (Au5's waitlist, D7):
  * a request is deleted 90 days after it was answered, invited or
- * declined. A request nobody has answered stays until somebody does.
+ * declined. A request nobody has answered stays until somebody does. An
+ * ask is deleted once its confirm link has run out, confirmed or not.
  *
  * Handed to the daily firing by the Worker entry (`src/server.ts`), as
  * account deletion's purge is: `account` imports `ops`, so `ops` cannot
@@ -10,9 +11,10 @@
 import { and, inArray, lt } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { accessRequests } from "../../../db/schema-core";
+import { accessAsks, accessRequests } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { nowSeconds } from "../../../lib/now";
+import { ACCESS_CONFIRM_S } from "./access";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -37,19 +39,24 @@ const ANSWERED_KEPT_S = 90 * 24 * 60 * 60;
  * which is the point. An address that asks again after the sweep is a new
  * pending request on D7, as a declined one already is.
  *
- * Re-runnable (law 1): a second pass finds nothing past the cutoff. Reads
- * through `access_requests_status_updated`, not a scan.
+ * Re-runnable (law 1): a second pass finds nothing past either cutoff.
+ * Reads through `access_requests_status_updated`, not a scan.
  */
 export async function forgetAnsweredRequests(
   db: Db = coreDb(),
   now = nowSeconds(),
 ): Promise<void> {
-  await db
-    .delete(accessRequests)
-    .where(
-      and(
-        inArray(accessRequests.status, ["invited", "declined"]),
-        lt(accessRequests.updatedAt, now - ANSWERED_KEPT_S),
-      ),
-    );
+  const answeredLongAgo = and(
+    inArray(accessRequests.status, ["invited", "declined"]),
+    lt(accessRequests.updatedAt, now - ANSWERED_KEPT_S),
+  );
+  await db.batch([
+    db.delete(accessRequests).where(answeredLongAgo),
+    // A confirmed ask has done its work, and an unconfirmed one can no
+    // longer be confirmed: either way its link has run out. Reads through
+    // `access_asks_created`.
+    db
+      .delete(accessAsks)
+      .where(lt(accessAsks.createdAt, now - ACCESS_CONFIRM_S)),
+  ]);
 }

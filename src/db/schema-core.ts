@@ -568,6 +568,34 @@ export const accessRequests = /*#__PURE__*/ sqliteTable(
   ],
 );
 
+/**
+ * One ask on Au5 or the marketing site's form, before its address is
+ * confirmed: what was asked, and the hash of the token its confirm link
+ * carries (never the token). Confirming it writes the access request
+ * (`access_requests`) with this ask's note and place; until then the
+ * ask is nowhere on D7. The daily sweep deletes an ask once its link has
+ * run out, confirmed or not.
+ */
+export const accessAsks = /*#__PURE__*/ sqliteTable(
+  "access_asks",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").notNull(),
+    note: text("note"),
+    blockedRegion: text("blocked_region"),
+    tokenHash: text("token_hash").notNull(),
+    createdAt: integer("created_at").notNull(),
+    confirmedAt: integer("confirmed_at"),
+  },
+  (t) => [
+    uniqueIndex("access_asks_token").on(t.tokenHash),
+    // The account purge forgets a proved address's asks.
+    index("access_asks_email").on(t.email),
+    // The daily sweep of asks whose link has run out.
+    index("access_asks_created").on(t.createdAt),
+  ],
+);
+
 export const brands = /*#__PURE__*/ sqliteTable(
   "brands",
   {

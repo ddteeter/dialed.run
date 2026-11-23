@@ -1,12 +1,13 @@
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { accessRequests, rateLimits } from "../../src/db/schema-core";
+import { accessAsks, rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { ACCESS_NOTE_MAX } from "../../src/lib/contracts/access";
 import { receiveAccessRequest } from "../../src/modules/account";
 import type { AccessEndpointDeps } from "../../src/modules/account/access/access-endpoint";
 import type { TurnstileAttempt, TurnstileVerdict } from "../../src/modules/ops";
+import { fakeMail } from "../email/helpers";
 
 /**
  * `POST /api/access-requests` (round 31, design 187) on real D1: the form
@@ -19,7 +20,7 @@ const SENT = "https://dialed.run/invite/sent";
 const VISITOR = "203.0.113.7";
 
 beforeEach(async () => {
-  await db.batch([db.delete(accessRequests), db.delete(rateLimits)]);
+  await db.batch([db.delete(accessAsks), db.delete(rateLimits)]);
 });
 
 function verifyAs(isOk: boolean) {
@@ -33,11 +34,37 @@ function verifyAs(isOk: boolean) {
   return { seen, verify };
 }
 
+/**
+The fake sender every endpoint test's confirm links go to.
+*/
+const mail = fakeMail();
+const sending: Promise<unknown>[] = [];
+
+beforeEach(() => {
+  mail.sent.length = 0;
+  sending.length = 0;
+});
+
 function depsWith(
   verify: AccessEndpointDeps["verify"],
   isLimited = false,
 ): AccessEndpointDeps {
-  return { db, verify, isLimited };
+  return {
+    db,
+    verify,
+    isLimited,
+    mail: {
+      deps: mail,
+      background: {
+        keepAlive: (work) => {
+          sending.push(work);
+        },
+        report: () => {
+          // these sends succeed, so there is nothing to report
+        },
+      },
+    },
+  };
 }
 
 function post(
@@ -59,19 +86,22 @@ function expectSeeOther(response: Response, location: string): void {
   expect(response.headers.get("location")).toBe(location);
 }
 
+/**
+The asks kept, each waiting on the link it sent.
+*/
 async function requests() {
   return db
     .select({
-      email: accessRequests.email,
-      note: accessRequests.note,
-      status: accessRequests.status,
-      blockedRegion: accessRequests.blockedRegion,
+      email: accessAsks.email,
+      note: accessAsks.note,
+      confirmedAt: accessAsks.confirmedAt,
+      blockedRegion: accessAsks.blockedRegion,
     })
-    .from(accessRequests);
+    .from(accessAsks);
 }
 
 describe("receiveAccessRequest", () => {
-  it("takes the request and sends the visitor to /invite/sent", async () => {
+  it("keeps the ask, sends its address the confirm link, and sends the visitor to /invite/sent", async () => {
     const { seen, verify } = verifyAs(true);
     const response = await receiveAccessRequest(
       post({
@@ -96,10 +126,13 @@ describe("receiveAccessRequest", () => {
       },
     ]);
     const rows = await requests();
-    expect(rows).toMatchObject([
-      { email: "sam@x.test", note: "Running club", status: "pending" },
-    ]);
+    expect(rows).toMatchObject([{ email: "sam@x.test", note: "Running club" }]);
     expect(rows[0]?.blockedRegion).toBeNull();
+    expect(rows[0]?.confirmedAt).toBeNull();
+    await Promise.all(sending);
+    expect(mail.sent.map((message) => message.to)).toStrictEqual([
+      "sam@x.test",
+    ]);
   });
 
   it("takes a request with no note, as M5 sends it", async () => {
@@ -114,7 +147,7 @@ describe("receiveAccessRequest", () => {
     expect(rows[0]?.note).toBeNull();
   });
 
-  it("gives a repeat the same receipt (the same-answer rule)", async () => {
+  it("gives a repeat the same answer, each its own ask (the same-answer rule)", async () => {
     const { verify } = verifyAs(true);
     const ask = () =>
       receiveAccessRequest(
@@ -123,7 +156,7 @@ describe("receiveAccessRequest", () => {
       );
     expectSeeOther(await ask(), SENT);
     expectSeeOther(await ask(), SENT);
-    expect(await requests()).toHaveLength(1);
+    expect(await requests()).toHaveLength(2);
   });
 
   it("answers error=turnstile when the challenge is refused, and keeps nothing", async () => {

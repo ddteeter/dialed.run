@@ -73,6 +73,12 @@ export const AUTH_COPY = {
    */
   googleNoBirthDate:
     "Enter your date of birth above, then continue with Google.",
+  /**
+   * Google on either page once the hour's Google sign-ins are all taken
+   * (`GOOGLE_STARTS_PER_HOUR`; owner, 2026-11-21).
+   */
+  googleBusy:
+    "Lots of people are signing in with Google right now. Try again in a few minutes, or use your email.",
 } as const;
 
 /**
@@ -88,6 +94,13 @@ export const NOT_SENT = "Not sent";
  */
 export const NOT_CREATED = "Not created";
 export const NOT_LOGGED_IN = "Not logged in";
+
+/**
+ * *"'Not signed in', not 'Nothing saved'. Auth saves nothing, so the
+ * contract's opener would be false. Same block, same place, same Try
+ * again. This is the only form that changes the two words."*
+ */
+export const AUTH_KICKER = "Not signed in";
 
 /**
  * A band about the way in. `retry` is false for a refusal whose fix is
@@ -131,6 +144,12 @@ export const SIGNUP_DISABLED = "signup_disabled";
  * is not a login of.
  */
 export const GOOGLE_NOT_LINKED = "account_not_linked";
+
+/**
+ * The answer when the hour's Google sign-ins are all taken: no sign-in is
+ * started, and nothing is written for it.
+ */
+export const GOOGLE_BUSY = "google_busy";
 
 /**
  * Design 134: under 18, on the form and on Google alike. A band, not the
@@ -222,6 +241,10 @@ export const GOOGLE_REFUSALS: ReadonlyMap<string | undefined, AuthBand> =
         retry: false,
       },
     ],
+    [
+      GOOGLE_BUSY,
+      { kicker: AUTH_KICKER, message: AUTH_COPY.googleBusy, retry: false },
+    ],
   ]);
 
 /**
@@ -230,13 +253,6 @@ Turnstile's refusal, as a band says it.
 export function turnstileRefused(): AccessRefused {
   return new AccessRefused({ kicker: NOT_SENT, message: TURNSTILE_REFUSED });
 }
-
-/**
- * *"'Not signed in', not 'Nothing saved'. Auth saves nothing, so the
- * contract's opener would be false. Same block, same place, same Try
- * again. This is the only form that changes the two words."*
- */
-export const AUTH_KICKER = "Not signed in";
 
 /**
  * What the server said, kept by the form so the band can name it.

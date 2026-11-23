@@ -5,6 +5,7 @@ import { countRow, countedKeys } from "../rate-limit-rows";
 
 import { account, session, user, verification } from "../../src/db/schema-auth";
 import {
+  accessAsks,
   accessRequests,
   accountDeletions,
   blocks,
@@ -336,6 +337,15 @@ async function seedAccount(): Promise<Seeded> {
     core
       .insert(passwordAttempts)
       .values({ userId, windowStartedAt: NOW, attempts: 2 }),
+    // An ask waiting on its link under every address they are known by.
+    core.insert(accessAsks).values(
+      [email, redeemedAs, movingTo(email)].map((address) => ({
+        id: newUlid(),
+        email: address.toLowerCase(),
+        tokenHash: newUlid(),
+        createdAt: NOW,
+      })),
+    ),
     // An access request under every address they are known by.
     core.insert(accessRequests).values(
       [email, redeemedAs, movingTo(email)].map((address) => ({
@@ -374,15 +384,24 @@ async function seedAccount(): Promise<Seeded> {
         countRow("photo-runner", userId, 1, NOW),
         countRow("purge-runner", userId, 1, NOW),
         countRow("deletion-notice", userId, 1, NOW),
-        ...addressesOf(email).flatMap((address) =>
+      ]),
+    // The counts kept by address, in their own statement: with the
+    // runner's above, one insert binds more parameters than D1 takes.
+    core
+      .insert(rateLimits)
+      .values(
+        addressesOf(email).flatMap((address) =>
           ADDRESS_SENDS.map((kind) => countRow(kind, address, 1, NOW)),
         ),
-      ]),
+      ),
     // Its own statement: one more row in the insert above binds more
     // parameters than D1 takes.
     core
       .insert(rateLimits)
-      .values(countRow("correction-runner", userId, 1, NOW)),
+      .values([
+        countRow("correction-runner", userId, 1, NOW),
+        countRow("strava-connect-runner", userId, 1, NOW),
+      ]),
     core.insert(inviteRedemptions).values({
       userId,
       codeId: newUlid(),
@@ -501,7 +520,8 @@ function runnersCount(
     | "photo-runner"
     | "purge-runner"
     | "deletion-notice"
-    | "correction-runner",
+    | "correction-runner"
+    | "strava-connect-runner",
   userId: string,
 ) {
   return and(eq(rateLimits.kind, kind), eq(rateLimits.subject, userId));
@@ -517,6 +537,7 @@ const ADDRESS_SENDS = [
   "sign-in",
   "takedown-to",
   "access-to",
+  "access-confirm-to",
 ] as const;
 
 /**
@@ -729,6 +750,10 @@ async function footprint(seeded: Seeded) {
       .select()
       .from(accessRequests)
       .where(inArray(accessRequests.email, provedOf(seeded.email))),
+    accessAsks: await core
+      .select({ email: accessAsks.email })
+      .from(accessAsks)
+      .where(inArray(accessAsks.email, provedOf(seeded.email))),
     inviteLabels: await core
       .select({ label: inviteCodes.label })
       .from(inviteCodes)
@@ -752,6 +777,7 @@ async function footprint(seeded: Seeded) {
           runnersCount("purge-runner", userId),
           runnersCount("deletion-notice", userId),
           runnersCount("correction-runner", userId),
+          runnersCount("strava-connect-runner", userId),
         ),
       ),
     spendLimits: await core
@@ -818,6 +844,7 @@ const GONE = {
   verifications: [],
   passwordAttempts: [],
   accessRequests: [],
+  accessAsks: [],
   inviteLabels: [],
   sendLimits: [],
   spendLimits: [],
@@ -2039,6 +2066,80 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
     expect(
       await core.select().from(user).where(eq(user.id, runner.userId)),
     ).toStrictEqual([]);
+  });
+
+  it("blanks the label of the code an unconfirmed account spent where it names the address it spent it with, and no other label", async () => {
+    const runner = await dueRunner(true);
+    const spentId = newUlid();
+    const otherId = newUlid();
+    await core.batch([
+      core
+        .update(user)
+        .set({ emailVerified: false })
+        .where(eq(user.id, runner.userId)),
+      core
+        .update(inviteRedemptions)
+        .set({ codeId: spentId })
+        .where(eq(inviteRedemptions.userId, runner.userId)),
+      core.insert(inviteCodes).values([
+        {
+          id: spentId,
+          code: `DIAL-${spentId}`,
+          label: `Sent to ${runner.redeemedAs.toUpperCase()}`,
+          createdAt: NOW,
+        },
+        {
+          id: otherId,
+          code: `DIAL-${otherId}`,
+          label: `Sent to ${runner.redeemedAs}`,
+          createdAt: NOW,
+        },
+      ]),
+    ]);
+
+    await purge([], {
+      ...depsAt(NOW).deps,
+      closedAddressSecret: CLOSED_KEY,
+    });
+
+    const labels = await core
+      .select({ id: inviteCodes.id, label: inviteCodes.label })
+      .from(inviteCodes)
+      .where(inArray(inviteCodes.id, [spentId, otherId]));
+    expect(
+      new Map(labels.map((row) => [row.id, row.label ?? undefined])),
+    ).toStrictEqual(
+      new Map([
+        [spentId, undefined],
+        [otherId, `Sent to ${runner.redeemedAs}`],
+      ]),
+    );
+  });
+
+  it("keeps the label of the code a runner spent when it names no address of theirs", async () => {
+    const runner = await dueRunner(false);
+    const spentId = newUlid();
+    await core.batch([
+      core
+        .update(inviteRedemptions)
+        .set({ codeId: spentId })
+        .where(eq(inviteRedemptions.userId, runner.userId)),
+      core.insert(inviteCodes).values({
+        id: spentId,
+        code: `DIAL-${spentId}`,
+        label: "Club night",
+        createdAt: NOW,
+      }),
+    ]);
+
+    await purge([], depsAt(NOW).deps);
+
+    expect(
+      await core
+        .select({ label: inviteCodes.label })
+        .from(inviteCodes)
+        .where(eq(inviteCodes.id, spentId)),
+    ).toStrictEqual([{ label: "Club night" }]);
   });
 
   it("fingerprints only the account's own address when it has no invite on record", async () => {

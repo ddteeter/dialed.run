@@ -82,9 +82,10 @@ function resolveOnSite(path: string): string | undefined {
 
 /**
  * Longer than any page on this site, and short enough that a way back is
- * never a payload.
+ * never a payload. Also the most a Google press may name as either of its
+ * return paths (`auth/social-body.ts`).
  */
-const MAX_RETURN_PATH = 2048;
+export const MAX_RETURN_PATH = 2048;
 
 export const returnPathSchema = z
   .string()

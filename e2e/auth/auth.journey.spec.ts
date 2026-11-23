@@ -25,7 +25,11 @@ import { INVITE_COPY } from "../../src/lib/contracts/access";
 import { AGE_CODES, AGE_COPY } from "../../src/lib/contracts/age";
 import { signInAsOperator } from "../desk/operator";
 import { expect, scene, test } from "../support/demo";
-import { confirmLinkFor, resetLinkFor } from "../support/email-links";
+import {
+  accessConfirmLinkFor,
+  confirmLinkFor,
+  resetLinkFor,
+} from "../support/email-links";
 import { turnstileAnswered } from "../support/invites";
 import { withLocalDb } from "../support/local-db";
 
@@ -161,7 +165,18 @@ test("request access -> an invite from the Desk -> create an account -> sign out
     .fill("Winter runner. Maya said to ask.");
   await turnstileAnswered(page);
   await page.getByRole("button", { name: "Send request" }).click();
-  await scene(page, "One receipt, for a new, repeat or registered address");
+  await scene(page, "One answer, for a new, repeat or registered address");
+  await expect(
+    page.getByRole("heading", { name: "Check your email" }),
+  ).toBeVisible({ timeout: 15_000 });
+
+  await scene(
+    page,
+    "The emailed link asks, and its button puts them on the list",
+  );
+  await page.goto(await accessConfirmLinkFor(email));
+  await hydrated(page);
+  await page.getByRole("button", { name: "Confirm the request" }).click();
   await expect(
     page.getByRole("heading", { name: "You're on the list" }),
   ).toBeVisible({ timeout: 15_000 });

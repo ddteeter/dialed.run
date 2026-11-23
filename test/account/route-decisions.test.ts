@@ -10,6 +10,7 @@ import {
 import { takenMessage } from "../../src/modules/account/handles/handle-copy";
 import {
   ACCOUNT_SECTION_TITLES,
+  accessConfirmSearch,
   accountSectionOrNotFound,
   checkEmailSearch,
   checkEmailView,
@@ -570,6 +571,10 @@ describe("the link searches", () => {
       token: "verify.u.s",
     });
     expect(tokenSearch.parse({ token: 7 }).token).toBeUndefined();
+    expect(accessConfirmSearch({ token: "ab12", x: 1 })).toStrictEqual({
+      token: "ab12",
+    });
+    expect(accessConfirmSearch({}).token).toBeUndefined();
     expect(
       unsubscribeSearch.parse({ u: "u1", k: "run_reminder", s: "sig", x: 1 }),
     ).toStrictEqual({ u: "u1", k: "run_reminder", s: "sig" });

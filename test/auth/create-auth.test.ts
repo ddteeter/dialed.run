@@ -36,6 +36,7 @@ function auth(overrides: Parameters<typeof createAuth>[0]) {
 const BASE = {
   db: drizzle(env.DIALED_CORE),
   secret: "test-secret-not-for-production",
+  baseUrl: "http://localhost",
   mail: recordingMail(),
   access: OPEN_ACCESS,
   passwordScreen: {
@@ -80,18 +81,21 @@ describe("createAuth", () => {
     expect(auth(BASE).options.telemetry).toStrictEqual({ enabled: false });
   });
 
-  it("sets a base URL only when one is given", () => {
-    // better-auth derives it from the request when absent; setting it to
-    // `undefined` explicitly is not the same as leaving it out, and the
-    // OAuth callback is built from it.
+  it("is built on the origin it is given", () => {
+    // The OAuth callback is built from it, and Better Auth trusts only it.
     expect(
       auth({ ...BASE, baseUrl: "https://dialed.run" }).options.baseURL,
     ).toBe("https://dialed.run");
-    // `in`, not `toBeUndefined`: spreading `{ baseURL: undefined }` also
-    // reads as undefined, and better-auth treats a present-but-undefined
-    // key as a configured empty origin rather than as "derive it from the
-    // request".
-    expect("baseURL" in auth(BASE).options).toBe(false);
+    expect(auth(BASE).options.baseURL).toBe("http://localhost");
+  });
+
+  it("refuses to build on no origin, or on one that is not served", () => {
+    expect(() => auth({ ...BASE, baseUrl: undefined })).toThrow(
+      /^BETTER_AUTH_URL is not set: auth will not start$/u,
+    );
+    expect(() => auth({ ...BASE, baseUrl: "HTTPS://dialed.run" })).toThrow(
+      /^BETTER_AUTH_URL is not an https origin, or http on this machine: auth will not start$/u,
+    );
   });
 
   it("enables email and password", () => {
@@ -192,9 +196,29 @@ describe("the deployment's origin", () => {
     }
   });
 
-  it("passes any other one as it is, an http one included", () => {
-    expect(deploymentOrigin("https://dialed.run")).toBe("https://dialed.run");
-    expect(deploymentOrigin("http://localhost")).toBe("http://localhost");
+  it.each([
+    "https://dialed.run",
+    "https://app.dialed.run:8443",
+    "http://localhost",
+    "http://localhost:3000",
+    "http://127.0.0.1:4123",
+  ])("passes %s as it is", (origin) => {
+    expect(deploymentOrigin(origin)).toBe(origin);
+  });
+
+  it.each([
+    // Joined, because a lint fixer upgrades an http:// literal to https://
+    // — which is exactly the case under test.
+    ["plain http to a real host", ["http:", "//dialed.run"].join("")],
+    ["an upper-case scheme", "HTTPS://dialed.run"],
+    ["an upper-case http scheme to this machine", "HTTP://localhost:3000"],
+    ["a bare host", "dialed.run"],
+    ["a scheme with no host", "https://"],
+    ["another scheme to this machine", "ftp://localhost"],
+  ])("refuses %s", (_label, origin) => {
+    expect(() => deploymentOrigin(origin)).toThrow(
+      /^BETTER_AUTH_URL is not an https origin, or http on this machine: auth will not start$/u,
+    );
   });
 });
 

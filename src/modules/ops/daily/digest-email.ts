@@ -22,7 +22,7 @@ import { calendarDay, dayLabel } from "../../../lib/dates";
 import type { EmailTemplate } from "../../../lib/contracts/email";
 import { columnWhere } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
-import { emailDebt } from "../../email";
+import { operatorEmailMessage } from "../../../lib/sql/outbox";
 import { adminUserIds } from "../../safety";
 import {
   DIGEST_OWED,
@@ -67,14 +67,13 @@ export interface DigestMail {
   readonly admins: () => readonly string[];
   readonly counts: () => Promise<TodayCounts>;
   /**
-   * The digest email's fast path, `settleOwedEmail` live. The shape of
-   * `OwedMail["settle"]` (`modules/account/verification/verification.ts`),
-   * so the shared test double (`test/email/helpers.ts`'s `owedTo`) serves
-   * both.
+   * The digest email's fast path, `settleOwedEmail` live. An operator's
+   * mail (design 232), so its row is `operator_email`: drained ahead of a
+   * runner's email, and never closed for the sender's refusals.
    */
   readonly settle: (
     db: Db,
-    debt: OutboxDebtOf<"email">,
+    debt: OutboxDebtOf<"operator_email">,
     report: typeof captureException,
   ) => Promise<void>;
 }
@@ -147,9 +146,9 @@ export async function oweDigestEmail(
     .filter((userId) => confirmed.has(userId))
     .map((userId) =>
       oweOutbox(
-        emailDebt(
+        operatorEmailMessage(
           { to: { userId }, template },
-          { dedupeKey: `digest:${template.day}:${userId}` },
+          `digest:${template.day}:${userId}`,
         ),
       ),
     );

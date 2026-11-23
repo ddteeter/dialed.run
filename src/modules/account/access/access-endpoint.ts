@@ -4,8 +4,9 @@
  * invite-only (D-173), so this is the public way in.
  *
  * The request goes through `requestAccess`, the same call Au5 makes.
- * Turnstile, the per-visitor limit, the region gate (design 144) and the
- * same-answer rule are all its, so this file adds no rule of its own. It
+ * Turnstile, the per-visitor limit, the region gate (design 144), the
+ * confirm link and the same-answer rule are all its, so this file adds no
+ * rule of its own. It
  * reads a form, names the host the challenge was solved on, and turns
  * `requestAccess`'s answer into one of round 31's 303s.
  */
@@ -15,7 +16,9 @@ import { z } from "zod";
 import { requestAccessSchema } from "../../../lib/contracts";
 import { blockedRegionOf } from "../../../lib/contracts/access";
 import { MARKETING_HOST, MARKETING_INVITE_URL } from "../../../lib/marketing";
+import type { EmailDeps } from "../../email";
 import type { TurnstileAttempt, TurnstileVerdict } from "../../ops";
+import type { Background } from "../verification";
 import { requestAccess, turnstileAttempt } from "./access";
 
 type Db = ReturnType<typeof drizzle>;
@@ -45,6 +48,10 @@ export interface AccessEndpointDeps {
   readonly db: Db;
   readonly verify: (attempt: TurnstileAttempt) => Promise<TurnstileVerdict>;
   readonly isLimited: boolean;
+  /**
+  The confirm link's send, after the answer.
+  */
+  readonly mail: Readonly<{ deps: EmailDeps; background: Background }>;
 }
 
 function seeOther(location: string): Response {
@@ -110,14 +117,14 @@ export async function receiveAccessRequest(
       blockedRegion: blockedRegionOf(request),
     },
     deps.verify,
+    deps.mail,
   );
   switch (result.status) {
     // Round 51 · 154.1 (#528): a request from a blocked state is taken
-    // and gets the same receipt, so the answer doesn't reveal the gate.
-    // The sent page's copy reads true either way ("Request sent." / "We
-    // hand out invites in small batches. If one comes your way, it'll
-    // arrive at {email}."); it is the marketing site's to show.
-    case "received": {
+    // and gets the same answer, so the answer doesn't reveal the gate.
+    // The ask waits on the link it sent; the sent page is the marketing
+    // site's to show.
+    case "sent": {
       return seeOther(`${MARKETING_INVITE_URL}/sent`);
     }
     case "refused": {

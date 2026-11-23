@@ -90,6 +90,8 @@ export const verification = /*#__PURE__*/ sqliteTable(
     // every reset scanned the table (task 126, ACC-4). Not unique: the
     // schema Better Auth documents does not promise it.
     index("verification_identifier").on(t.identifier),
+    // The hourly sweep deletes by expiry (`sweepExpiredStates`).
+    index("verification_expires_at").on(t.expiresAt),
   ],
 );
 

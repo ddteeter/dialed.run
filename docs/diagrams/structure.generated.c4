@@ -267,7 +267,6 @@ model {
   cf.app.onboarding -[imports]-> cf.app.weather
   cf.app.ops -[wiring]-> cf.app.auth
   cf.app.ops -[wiring]-> cf.app.safety
-  cf.app.ops.daily -[imports]-> cf.app.email
   cf.app.ops.daily -[imports]-> cf.app.ops.desk
   cf.app.ops.daily -[imports]-> cf.app.ops.outbox
   cf.app.ops.daily -[imports]-> cf.app.ops.owedEmail

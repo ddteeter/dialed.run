@@ -5,7 +5,7 @@ import { expect, type Page } from "@playwright/test";
 import { eq, sql } from "drizzle-orm";
 
 import { user, verification } from "../../src/db/schema-auth";
-import { emailVerifications } from "../../src/db/schema-core";
+import { accessAsks, emailVerifications } from "../../src/db/schema-core";
 import { firstColumnWhere } from "../../src/lib/sql/keyed-read";
 import { nowSeconds } from "../../src/lib/now";
 import { unsubscribeUrl } from "../../src/modules/email/unsubscribe";
@@ -31,7 +31,11 @@ import { withLocalDb } from "./local-db";
  *   still tries after the hashed one — so everything from opening the
  *   link on (the page, the endpoint, the single use) is the app's own;
  * - **the unsubscribe link** is signed with the dev server's secret by the
- *   app's own signer.
+ *   app's own signer;
+ * - **an access request's confirm link** is a fresh token whose SHA-256
+ *   replaces the address's newest ask's, as the app's own ask makes it;
+ *   everything from opening it on (`/account/confirm-access`, its one
+ *   button) is the app's own.
  */
 
 async function userIdOf(email: string): Promise<string> {
@@ -78,6 +82,24 @@ export async function confirmAddress(page: Page, email: string): Promise<void> {
   await expect(
     page.getByRole("heading", { name: "Email confirmed" }),
   ).toBeVisible({ timeout: 15_000 });
+}
+
+export async function accessConfirmLinkFor(email: string): Promise<string> {
+  const token = randomBytes(32).toString("hex");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  await withLocalDb(async ({ core }) => {
+    const newest = core
+      .select({ id: accessAsks.id })
+      .from(accessAsks)
+      .where(eq(accessAsks.email, email.toLowerCase()))
+      .orderBy(sql`${accessAsks.createdAt} DESC`)
+      .limit(1);
+    await core
+      .update(accessAsks)
+      .set({ tokenHash })
+      .where(sql`${accessAsks.id} IN ${newest}`);
+  });
+  return `/account/confirm-access?token=${token}`;
 }
 
 export async function resetLinkFor(email: string): Promise<string> {

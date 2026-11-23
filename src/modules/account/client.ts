@@ -7,6 +7,7 @@
  */
 export {
   ACCOUNT_SECTION_TITLES,
+  accessConfirmSearch,
   DELETE_REAUTH_RETURN,
   accountSectionOrNotFound,
   accountSectionSearch,

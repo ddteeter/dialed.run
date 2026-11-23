@@ -13,6 +13,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
+  STATE_SWEEP_BATCH,
   sweepExpiredAuthRows,
   sweepExpiredStates,
 } from "../../src/modules/auth/expired-rows/expired-rows";
@@ -235,6 +236,17 @@ describe("the sweep reads by index, not by scanning (D1 bills rows scanned)", ()
     expect(countsPlan).toMatch(/password_attempts_window/u);
     expect(countsPlan).not.toMatch(/SCAN\s+password_attempts\b/iu);
   });
+
+  it("finds expired verification rows through verification_expires_at", async () => {
+    const states = db
+      .delete(verification)
+      .where(lt(verification.expiresAt, new Date(NOW * 1000)))
+      .toSQL();
+
+    const statesPlan = await planOf(states.sql, states.params);
+    expect(statesPlan).toMatch(/verification_expires_at/u);
+    expect(statesPlan).not.toMatch(/SCAN\s+verification\b/iu);
+  });
 });
 
 /**
@@ -272,5 +284,20 @@ describe("sweepExpiredStates", () => {
     expect(await stateIds([expired, expiringNow, live])).toStrictEqual(
       [expiringNow, live].toSorted(byText),
     );
+  });
+
+  it("deletes every expired state in batches, however many there are", async () => {
+    const expired = await Promise.all(
+      [1, 2, 3, 4, 5].map((ago) => aState(NOW - ago)),
+    );
+    const live = await aState(NOW + 600);
+
+    await sweepExpiredStates(db, NOW, 2);
+
+    expect(await stateIds([...expired, live])).toStrictEqual([live]);
+  });
+
+  it("takes ten thousand rows a statement by default", () => {
+    expect(STATE_SWEEP_BATCH).toBe(10_000);
   });
 });

@@ -14,8 +14,12 @@ import {
   oweDigestEmail,
   type DigestMail,
 } from "../../src/modules/ops/daily/digest-email";
-import type { OutboxDebt } from "../../src/modules/ops/outbox/outbox";
-import { fakeMail, owedTo, seedUser } from "../email/helpers";
+import {
+  settleOutbox,
+  type OutboxDebt,
+} from "../../src/modules/ops/outbox/outbox";
+import { emailHandler } from "../../src/modules/ops/owed-email";
+import { fakeMail, seedUser } from "../email/helpers";
 
 /**
  * The morning digest by email (task 125 · OPS-11; Operator Screens D5):
@@ -111,14 +115,14 @@ async function owedDigests() {
   const rows = await db
     .select({ dedupeKey: outbox.dedupeKey })
     .from(outbox)
-    .where(eq(outbox.kind, "email"));
+    .where(eq(outbox.kind, "operator_email"));
   return rows
     .map((row) => row.dedupeKey)
     .toSorted((a, b) => a.localeCompare(b));
 }
 
 describe("oweDigestEmail", () => {
-  it("owes each operator the morning's digest, keyed by day and operator, and sends it now", async () => {
+  it("owes each operator the morning's digest as operator mail, keyed by day and operator, and sends it now", async () => {
     const settled: OutboxDebt[] = [];
     const now = nowSeconds();
     await oweDigestEmail(
@@ -136,7 +140,7 @@ describe("oweDigestEmail", () => {
     ]);
     expect(settled.map((debt) => debt.message)).toStrictEqual(
       ["op-a", "op-b"].map((userId) => ({
-        kind: "email",
+        kind: "operator_email",
         payload: {
           dedupeKey: `digest:${day}:${userId}`,
           email: { to: { userId }, template: digestTemplate(COUNTS, now) },
@@ -234,21 +238,23 @@ describe("oweDigestEmail", () => {
   it("reaches the operator's inbox, with Today's words", async () => {
     const { userId, email } = await seedUser();
     const mail = fakeMail();
-    const later = owedTo(mail);
-    const owing = oweDigestEmail(
+    const handlers = { operator_email: emailHandler(() => mail) };
+    await oweDigestEmail(
       db,
-      digestMail([userId], later.owed.settle, {
-        ...COUNTS,
-        waiting: 0,
-        decidedToday: 0,
-        oldestWaitingAt: undefined,
-        screenerUnfinished: 0,
-        gaveUp: 0,
-      }),
+      digestMail(
+        [userId],
+        (database, debt, report) =>
+          settleOutbox(database, debt, handlers, report),
+        {
+          ...COUNTS,
+          waiting: 0,
+          decidedToday: 0,
+          oldestWaitingAt: undefined,
+          screenerUnfinished: 0,
+          gaveUp: 0,
+        },
+      ),
     );
-    // The fast path is held until the test lets it go.
-    await later.settled();
-    await owing;
     expect(mail.sent).toHaveLength(1);
     expect(mail.sent[0]?.to).toBe(email);
     expect(mail.sent[0]?.subject).toMatch(

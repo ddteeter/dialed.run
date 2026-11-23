@@ -20,6 +20,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AccountSectionRouteImport } from './routes/account/$section'
 import { Route as AccountCheckEmailRouteImport } from './routes/account/check-email'
+import { Route as AccountConfirmAccessRouteImport } from './routes/account/confirm-access'
 import { Route as AccountForgotRouteImport } from './routes/account/forgot'
 import { Route as AccountLeavingRouteImport } from './routes/account/leaving'
 import { Route as AccountRequestAccessRouteImport } from './routes/account/request-access'
@@ -137,6 +138,11 @@ const AccountSectionRoute = AccountSectionRouteImport.update({
 const AccountCheckEmailRoute = AccountCheckEmailRouteImport.update({
   id: '/account/check-email',
   path: '/account/check-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountConfirmAccessRoute = AccountConfirmAccessRouteImport.update({
+  id: '/account/confirm-access',
+  path: '/account/confirm-access',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountForgotRoute = AccountForgotRouteImport.update({
@@ -468,6 +474,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
+  '/account/confirm-access': typeof AccountConfirmAccessRoute
   '/account/forgot': typeof AccountForgotRoute
   '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
@@ -543,6 +550,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
+  '/account/confirm-access': typeof AccountConfirmAccessRoute
   '/account/forgot': typeof AccountForgotRoute
   '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
@@ -620,6 +628,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
+  '/account/confirm-access': typeof AccountConfirmAccessRoute
   '/account/forgot': typeof AccountForgotRoute
   '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
@@ -698,6 +707,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/account/$section'
     | '/account/check-email'
+    | '/account/confirm-access'
     | '/account/forgot'
     | '/account/leaving'
     | '/account/request-access'
@@ -773,6 +783,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/account/$section'
     | '/account/check-email'
+    | '/account/confirm-access'
     | '/account/forgot'
     | '/account/leaving'
     | '/account/request-access'
@@ -849,6 +860,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/account/$section'
     | '/account/check-email'
+    | '/account/confirm-access'
     | '/account/forgot'
     | '/account/leaving'
     | '/account/request-access'
@@ -926,6 +938,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   AccountSectionRoute: typeof AccountSectionRoute
   AccountCheckEmailRoute: typeof AccountCheckEmailRoute
+  AccountConfirmAccessRoute: typeof AccountConfirmAccessRoute
   AccountForgotRoute: typeof AccountForgotRoute
   AccountLeavingRoute: typeof AccountLeavingRoute
   AccountRequestAccessRoute: typeof AccountRequestAccessRoute
@@ -1059,6 +1072,13 @@ declare module '@tanstack/react-router' {
       path: '/account/check-email'
       fullPath: '/account/check-email'
       preLoaderRoute: typeof AccountCheckEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/confirm-access': {
+      id: '/account/confirm-access'
+      path: '/account/confirm-access'
+      fullPath: '/account/confirm-access'
+      preLoaderRoute: typeof AccountConfirmAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/forgot': {
@@ -1545,6 +1565,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   AccountSectionRoute: AccountSectionRoute,
   AccountCheckEmailRoute: AccountCheckEmailRoute,
+  AccountConfirmAccessRoute: AccountConfirmAccessRoute,
   AccountForgotRoute: AccountForgotRoute,
   AccountLeavingRoute: AccountLeavingRoute,
   AccountRequestAccessRoute: AccountRequestAccessRoute,
