@@ -8,6 +8,7 @@ import {
   signUpSchemaFor,
   changeEmailSchema,
   CURRENT_PASSWORD_WRONG,
+  EMAIL_MAX_LENGTH,
   currentPasswordLimited,
   changePasswordSchema,
   newPasswordSchema,
@@ -61,6 +62,14 @@ function messagesFor(
 
 const signIn = { email: "runner@example.com", password: "hunter22" };
 
+/**
+ * A well-formed address exactly `length` characters long.
+ */
+function addressOfLength(length: number): string {
+  const domain = "@example.com";
+  return `${"a".repeat(length - domain.length)}${domain}`;
+}
+
 describe("signInSchema", () => {
   it("takes a well-formed credential pair", () => {
     expect(signInSchema.safeParse(signIn).success).toBe(true);
@@ -89,6 +98,22 @@ describe("signInSchema", () => {
     expect(
       messagesFor(signInSchema, { ...signIn, password: "" }, "password"),
     ).toStrictEqual(["Enter your password."]);
+  });
+
+  it("takes an address of 254 characters and refuses one of 255", () => {
+    expect(EMAIL_MAX_LENGTH).toBe(254);
+    const longest = addressOfLength(254);
+    expect(longest).toHaveLength(254);
+    expect(signInSchema.safeParse({ ...signIn, email: longest }).success).toBe(
+      true,
+    );
+    expect(
+      messagesFor(
+        signInSchema,
+        { ...signIn, email: addressOfLength(255) },
+        "email",
+      ),
+    ).toStrictEqual(["That does not look like an email address."]);
   });
 });
 
@@ -163,6 +188,30 @@ describe("requestAccessSchema (Au5)", () => {
     expect(
       messagesFor(requestAccessSchema, { email: "", note: "" }, "email"),
     ).toContain("Enter your email address.");
+  });
+
+  it("takes an address of 254 characters and refuses one of 255", () => {
+    expect(
+      requestAccessSchema.safeParse({ email: addressOfLength(254), note: "" })
+        .success,
+    ).toBe(true);
+    expect(
+      messagesFor(
+        requestAccessSchema,
+        { email: addressOfLength(255), note: "" },
+        "email",
+      ),
+    ).toStrictEqual(["That does not look like an email address."]);
+  });
+
+  it("refuses an over-long address once, without checking its format", () => {
+    expect(
+      messagesFor(
+        requestAccessSchema,
+        { email: "a".repeat(255), note: "" },
+        "email",
+      ),
+    ).toStrictEqual(["That does not look like an email address."]);
   });
 });
 

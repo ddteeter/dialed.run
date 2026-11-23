@@ -245,10 +245,21 @@ const layered = garmentBase.extend({
  * because this file already *is* that module: importable by both sides,
  * importing nothing from a server.
  */
+/**
+ * The longest address any field takes: 254 characters, the most a mail
+ * path can carry (RFC 5321). One number for every form that asks for an
+ * address. A longer one is refused with the format sentence, and the
+ * format check does not run on it.
+ */
+export const EMAIL_MAX_LENGTH = 254;
+
+const EMAIL_FORMAT_REFUSAL = "That does not look like an email address.";
+
 const emailField = z
   .string()
   .min(1, "Enter your email address.")
-  .check(z.email("That does not look like an email address."));
+  .max(EMAIL_MAX_LENGTH, { error: EMAIL_FORMAT_REFUSAL, abort: true })
+  .check(z.email(EMAIL_FORMAT_REFUSAL));
 
 export const signInSchema = z.object({
   email: emailField,
