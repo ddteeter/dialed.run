@@ -480,6 +480,53 @@ describe.each(["a11y-review.yml", "dependabot-pr.yml"])(
   },
 );
 
+describe("the Mutation matrix", () => {
+  const scopes = codeOf(jobIn(workflowNamed("mutation.yml"), "scopes"));
+  const mutate = codeOf(jobIn(workflowNamed("mutation.yml"), "mutate"));
+
+  it("is the selector's, which a push to main asks for in full", () => {
+    expect(scopes).toContain(
+      '          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then\n            list=$(npx tsx scripts/mutation-shards.ts)\n',
+    );
+    expect(scopes).not.toContain("nameOf");
+  });
+
+  it("is chosen on a PR from the diff against the PR's own base, every shard when the selector fails", () => {
+    expect(scopes).toContain(
+      "          BASE: ${{ github.event.pull_request.base.ref }}\n",
+    );
+    expect(scopes).toContain(
+      'git diff --name-status --no-renames "origin/$BASE...HEAD" >"$changes"',
+    );
+    expect(scopes).toContain(
+      '            if ! list=$(npx tsx scripts/mutation-shards.ts "$changes"); then\n              echo "::warning::could not choose the shards from the diff; running every shard"\n              list=$(npx tsx scripts/mutation-shards.ts)\n',
+    );
+  });
+
+  it("skips the shards only when it is empty", () => {
+    expect(scopes).toContain(
+      "      relevant: ${{ steps.read.outputs.relevant }}\n",
+    );
+    expect(scopes).toContain(
+      '          if [ "$list" = "[]" ]; then\n            echo "relevant=false" >> "$GITHUB_OUTPUT"\n          else\n            echo "relevant=true" >> "$GITHUB_OUTPUT"\n',
+    );
+    expect(mutate).toContain(
+      "    if: needs.scopes.outputs.relevant == 'true'\n",
+    );
+    expect(mutate).toContain(
+      "        include: ${{ fromJSON(needs.scopes.outputs.list) }}\n",
+    );
+  });
+
+  it("passes the gate when skipped, and fails it when a kept shard fails", () => {
+    const gate = codeOf(jobIn(workflowNamed("mutation.yml"), "gate"));
+    expect(gate).toContain("    needs: [scopes, mutate]\n    if: always()\n");
+    expect(gate).toContain(
+      'if [ "$shards" != "success" ] && [ "$shards" != "skipped" ]; then',
+    );
+  });
+});
+
 describe("a PR's mutation shard", () => {
   const mutate = codeOf(jobIn(workflowNamed("mutation.yml"), "mutate"));
 

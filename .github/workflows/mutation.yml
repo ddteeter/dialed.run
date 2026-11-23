@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       list: ${{ steps.read.outputs.list }}
-      relevant: ${{ steps.changed.outputs.relevant }}
+      relevant: ${{ steps.read.outputs.relevant }}
       deps: ${{ steps.deps.outputs.digest }}
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
@@ -89,31 +89,16 @@ jobs:
           # The fetch below is of a public repository and needs no token.
           persist-credentials: false
 
-      # Each scope gets a short, stable name, and the job name uses that
-      # rather than the glob. The glob is not a name: the components scope
-      # carries 24 route negations and runs to ~900 characters, which is
-      # unreadable in the checks list and — since a required context is
-      # matched by exact string — would change every time a route is added
-      # or removed. `slug` is the same name made safe for an artifact name.
-      # Both are derived, not restated, so they cannot drift from the
-      # scope they label.
-      - id: read
-        run: |
-          echo "list=$(node -p '
-            const scopes = require("./stryker.conf.json").mutate;
-            const nameOf = (scope) => {
-              const positive = scope.split(",")[0];
-              const extension = positive.slice(positive.lastIndexOf(".") + 1);
-              const [head] = positive.split("/**");
-              const base = head === positive ? head.replace(/\.[^./]+$/, "") : head;
-              return `${base.replace(/^src\//, "")} (${extension})`;
-            };
-            const slugOf = (name) => name.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
-            JSON.stringify(scopes.map((mutate) => {
-              const name = nameOf(mutate);
-              return { mutate, name, slug: slugOf(name) };
-            }));
-          ')" >> "$GITHUB_OUTPUT"
+      # The shard selector cruises the import graph with dependency-cruiser
+      # and runs under tsx, so this job installs what the shards do.
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          check-latest: true
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       # The cache key hashed the whole lockfile, which meant a prettier or
       # tailwind bump threw away every shard's stored verdicts and cost a
@@ -146,14 +131,32 @@ jobs:
             require("node:crypto").createHash("sha256").update(pinned).digest("hex").slice(0, 16);
           ')" >> "$GITHUB_OUTPUT"
 
-      # Mutation is the slowest thing in CI, so a PR that touches nothing
-      # it covers should not wait on it. This used to be a `paths:` filter
-      # on the trigger, which cannot work once the job is required: a
-      # workflow that does not run reports no context, and a required
-      # context that never arrives blocks the merge indefinitely.
+      # One shard per entry of stryker.conf.json's `mutate` array, and on a
+      # PR only the shards its diff can affect (design 259). Mutation is
+      # most of a PR's runner time, and most of that was shards with
+      # nothing to re-test.
       #
-      # A push to `main` is always relevant — that run exists to refresh
-      # the cold measurement, not to react to a diff.
+      # scripts/mutation-shards.ts prints the matrix. Each shard gets a
+      # short, stable name, and the job name uses that rather than the
+      # glob, which runs to ~900 characters and — since a required context
+      # is matched by exact string — would change every time a route is
+      # added or removed. `slug` is the name made safe for an artifact.
+      # Both are derived there, not restated here.
+      #
+      # On a PR it keeps a shard when a changed file is in its scope, a
+      # file in its scope imports a changed file, or a changed test reaches
+      # a file in its scope; it keeps every shard when the diff touches the
+      # toolchain or the test harness, or when the import graph cannot
+      # answer. An empty list skips `mutate`, and the `Mutation` job passes
+      # as it does for a docs-only PR. This used to be a `paths:` filter on
+      # the trigger, which cannot work once the job is required: a workflow
+      # that does not run reports no context, and a required context that
+      # never arrives blocks the merge indefinitely. If the selector itself
+      # fails, every shard runs.
+      #
+      # A push to `main` runs every shard — that run exists to refresh the
+      # cold measurement every PR is seeded from, not to react to a diff,
+      # and it is what catches a survivor a skipped shard would have hidden.
       #
       # The base is the PR's own (`pull_request.base.ref`), not
       # `github.base_ref`: in a GitHub stack, `base_ref` names the branch
@@ -161,24 +164,29 @@ jobs:
       # against `main` and mutated everything below it (#334, 2026-11-05).
       # Outside a stack the two are the same. A branch name is text the
       # PR's author chose, so it reaches the script through `env`.
-      - id: changed
+      - name: Choose the shards
+        id: read
         env:
           BASE: ${{ github.event.pull_request.base.ref }}
         run: |
+          set -euo pipefail
           if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git fetch --no-tags origin \
-            "+refs/heads/$BASE:refs/remotes/origin/$BASE"
-          # `package*.json` is in the list because a stryker or vitest bump
-          # changes what the ratchet measures while touching no source at
-          # all — which is exactly the change you would want re-measured.
-          if git diff --name-only "origin/$BASE...HEAD" \
-            | grep -qE '^(src/|test/|stryker\.conf\.json|vitest\.config\.ts|package(-lock)?\.json$|\.github/workflows/mutation\.yml$)'; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            list=$(npx tsx scripts/mutation-shards.ts)
           else
+            git fetch --no-tags origin \
+              "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+            changes="$RUNNER_TEMP/changes.txt"
+            git diff --name-status --no-renames "origin/$BASE...HEAD" >"$changes"
+            if ! list=$(npx tsx scripts/mutation-shards.ts "$changes"); then
+              echo "::warning::could not choose the shards from the diff; running every shard"
+              list=$(npx tsx scripts/mutation-shards.ts)
+            fi
+          fi
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+          if [ "$list" = "[]" ]; then
             echo "relevant=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
           fi
 
   mutate:
@@ -383,8 +391,8 @@ jobs:
           shards: ${{ needs.mutate.result }}
         run: |
           echo "scopes: $scopes · shards: $shards"
-          # `skipped` is the honest pass: this PR changed nothing the
-          # ratchet covers. Anything other than success or skipped —
+          # `skipped` is the honest pass: this PR changed nothing any
+          # shard's result depends on. Anything other than success or skipped —
           # including a cancelled shard — is not a pass.
           if [ "$scopes" != "success" ]; then
             echo "::error::Could not read the ratcheted scopes."
