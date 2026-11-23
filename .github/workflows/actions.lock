@@ -5,7 +5,7 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/a11y-review.yml':
         - 'actions/checkout@v7.0.1'
-        - 'anthropics/claude-code-action@v1.0.269'
+        - 'anthropics/claude-code-action@v1.0.276'
         - 'step-security/harden-runner@v2.22.4'
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
@@ -17,7 +17,7 @@ workflows:
         - 'actions/checkout@v7.0.1'
         - 'actions/create-github-app-token@v3.3.0'
         - 'actions/setup-node@v7.1.0'
-        - 'anthropics/claude-code-action@v1.0.269'
+        - 'anthropics/claude-code-action@v1.0.276'
         - 'dependabot/fetch-metadata@v3.1.0'
         - 'step-security/harden-runner@v2.22.4'
     '.github/workflows/diagrams-pages.yml':
@@ -101,9 +101,9 @@ dependencies:
         repo_id: 496012378
         uses:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
-    'anthropics/claude-code-action@v1.0.269':
-        ref: 'v1.0.269'
-        commit: 'sha1-61a9c274fa7110a66dfafc1bbbced03833eb25fe'
+    'anthropics/claude-code-action@v1.0.276':
+        ref: 'v1.0.276'
+        commit: 'sha1-f3b070c88125d33dbae5653df5f143101d4ea9dc'
         owner_id: 76263028
         repo_id: 986421638
         uses:

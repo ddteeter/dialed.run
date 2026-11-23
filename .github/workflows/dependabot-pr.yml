@@ -387,7 +387,7 @@ jobs:
       # The answer leaves as structured output, which the next step screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
-        uses: anthropics/claude-code-action@v1.0.269
+        uses: anthropics/claude-code-action@v1.0.276
         env:
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
         with:
