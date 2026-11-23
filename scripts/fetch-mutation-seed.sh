@@ -16,17 +16,12 @@
 # test.
 set -eu
 : "${GUARDRAILS_SEED_DIR:?}"
-for run in $(gh run list --workflow mutation.yml --branch main --event push \
-  --status completed --limit 10 --json databaseId,headSha \
-  --jq '.[] | "\(.databaseId):\(.headSha)"'); do
-  sha=${run#*:}
-  if git merge-base --is-ancestor "$sha" HEAD 2>/dev/null; then
-    # A run from before the upload step, or one whose every shard crashed,
-    # has no artifact; try the next older one.
-    if gh run download "${run%%:*}" --pattern 'stryker-incremental-*' \
-      --dir "$GUARDRAILS_SEED_DIR" 2>/dev/null; then
-      exit 0
-    fi
+for run in $(sh "$(dirname "$0")/main-mutation-runs.sh" HEAD 10); do
+  # A run from before the upload step, or one whose every shard crashed,
+  # has no artifact; try the next older one.
+  if gh run download "$run" --pattern 'stryker-incremental-*' \
+    --dir "$GUARDRAILS_SEED_DIR" 2>/dev/null; then
+    exit 0
   fi
 done
 echo "no completed mutation run on main that this branch contains has a seed" >&2

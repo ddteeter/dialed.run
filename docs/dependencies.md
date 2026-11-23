@@ -32,7 +32,10 @@ file explains them and does not restate them.
    that are all the App's and change the list alone. Every later push by
    Dependabot is classified again; when the answer is not a yes (a hold,
    or a classify that failed), the `disarm` job turns auto-merge off and
-   comments on the PR why it no longer merges itself.
+   comments on the PR why it no longer merges itself. The required
+   `Mutation` check backs it: on a Dependabot PR still set to merge
+   itself, it fails unless the newest Dependabot run for the head
+   answered yes, so a disarm that failed or never ran still holds the PR.
 4. **Anything else waits for you**: majors, 0.x minors, 0.0.x updates, a
    version under seven days old (a security update skips Dependabot's
    cooldown, not this one), a new publisher, and every GitHub Actions bump (Actions run with this repo's
@@ -51,10 +54,14 @@ file explains them and does not restate them.
 The checks that carry an unattended merge are the required set:
 `Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails`,
 `Mutation` and `Protected paths`. `Protected paths` runs from main and
-passes a PR that changes the checks' own inputs (the gate and Stryker
-configs, workflows, hooks, lint and build configs, the Claude settings,
-the guardrails-core pin) only with the `owner-approved` label, which the
-owner sets; `protected-paths.yml` lists the files. `e2e (build)` exists because the dev server never runs the
+passes a PR that changes the checks' own inputs (the gate, Stryker,
+lint, build, test and TypeScript configs under every name their tools
+look for, workflows, hooks, `scripts/`, `test/architecture/`, `.npmrc`,
+the Claude settings, package.json outside its dependency lists, the
+guardrails-core pin) only with the `owner-approved` label, which the
+owner sets; `protected-paths.yml` lists the files. The label covers one
+push: one added before the head was pushed does not count, so a later
+push, a Dependabot rebase included, needs it removed and added again. `e2e (build)` exists because the dev server never runs the
 production bundle, and the updates most likely to break the app
 (Vite, the Cloudflare plugin, TanStack Start, React) can break the build's
 server rendering while dev stays green.

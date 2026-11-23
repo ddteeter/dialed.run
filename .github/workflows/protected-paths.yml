@@ -4,10 +4,14 @@ name: Protected paths
 # owner's `owner-approved` label before this check passes. The files: the
 # guardrails config and its grants, the Stryker config, the workflows and
 # the git hooks, the ESLint, dependency-cruiser, lockfile-lint, knip,
-# fallow, Vite and Vitest configs, the Claude settings, and the
-# guardrails-core pin (its line in package.json, its entry in
-# package-lock.json). A rename or a deletion counts as a change. The
-# ruleset requires this check as "Protected paths".
+# fallow, Vite, Vitest, Playwright and TypeScript configs, `.npmrc`,
+# `scripts/`, `test/architecture/`, the Claude settings, and in
+# package.json everything outside its dependency lists (the scripts among
+# it), plus the guardrails-core pin (its line in package.json, its entry
+# in package-lock.json). Each config is listed under every file name its
+# tool looks for, not only the one this repository uses. A rename or a
+# deletion counts as a change. The ruleset requires this check as
+# "Protected paths".
 #
 # FROM MAIN. pull_request_target runs this file from main, so a pull
 # request cannot change the list it is checked against. It checks nothing
@@ -17,7 +21,9 @@ name: Protected paths
 #
 # THE LABEL. Labels are set by people with triage access or more. A fork's
 # PR cannot set it; for a branch pushed with write access, it makes a
-# change to these files visible on the PR before it can merge.
+# change to these files visible on the PR before it can merge. It covers
+# one push: added before the head was pushed, it does not count, and the
+# owner removes it and adds it again.
 #
 # PINS. Every `uses:` is a full version tag, locked to a commit in
 # `actions.lock` (D-182).
@@ -39,6 +45,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      # The label's events, and the runs that date the head.
+      issues: read
+      actions: read
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
@@ -52,11 +61,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           LABEL: owner-approved
-          PROTECTED: >-
-            ^(guardrails\.config\.json|stryker\.conf\.json|\.github/.+|\.githooks/.+|eslint\.config\.js|\.dependency-cruiser\.cjs|lockfile-lint\.config\.mjs|knip\.json|\.fallowrc\.jsonc|vite\.config\.ts|vitest\.config\.ts|\.claude/settings\.json)$
+          # One extended regular expression per line, matched against the
+          # whole path.
+          PROTECTED: |
+            guardrails\.config\.json
+            \.?stryker\.(conf|config)\.(json|[cm]?js)
+            \.github/.+
+            \.githooks/.+
+            eslint\.config\.[cm]?[jt]s
+            \.dependency-cruiser\.(json|[cm]?[jt]s)
+            lockfile-lint\.config\.[cm]?js
+            \.lockfile-lintrc(\.(json|ya?ml|[cm]?js))?
+            \.?knip\.jsonc?
+            knip(\.config)?\.[cm]?[jt]s
+            \.?fallow(rc)?\.(jsonc?|toml|ya?ml|[cm]?[jt]s)
+            vite\.config\.[cm]?[jt]s
+            vitest\.(config|workspace)\.[cm]?[jt]s
+            playwright(\.[a-z]+)?\.config\.[cm]?[jt]s
+            tsconfig(\..+)?\.json
+            \.npmrc
+            scripts/.+
+            test/architecture/.+
+            \.claude/settings\.json
         run: |
           set -euo pipefail
 
@@ -65,7 +94,8 @@ jobs:
           count=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .changed_files)
           files=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" \
             --jq '.[] | .filename, (.previous_filename // empty)')
-          touched=$(printf '%s\n' "$files" | grep -E "$PROTECTED" | sort -u || true)
+          printf '%s' "$PROTECTED" | sed '/^$/d' >"$RUNNER_TEMP/protected"
+          touched=$(printf '%s\n' "$files" | grep -Ex -f "$RUNNER_TEMP/protected" | sort -u || true)
           if [ "$count" -ge 3000 ]; then
             touched=$(printf '%s\n%s' "$touched" "(more than 3000 files: the list is incomplete)")
           fi
@@ -80,9 +110,23 @@ jobs:
               raw package-lock.json "$1" |
               jq -ce '.packages["node_modules/guardrails-core"] | [.resolved, .integrity]'
           }
-          merge_base=$(gh api "repos/$REPO/compare/$BASE_SHA...$HEAD_SHA" --jq .merge_base_commit.sha)
+          # The merge-base with the base branch as it is now, read by its
+          # full ref name so a tag of the same name cannot stand in.
+          base_tip=$(gh api "repos/$REPO/git/ref/heads/$BASE_REF" --jq .object.sha)
+          merge_base=$(gh api "repos/$REPO/compare/$base_tip...$HEAD_SHA" --jq .merge_base_commit.sha)
           if ! before=$(pin "$merge_base") || ! after=$(pin "$HEAD_SHA") || [ "$before" != "$after" ]; then
             touched=$(printf '%s\n%s' "$touched" "the guardrails-core pin in package.json or package-lock.json")
+          fi
+
+          # package.json outside its dependency lists: the scripts the
+          # checks run by name, the install hook, and any tool config kept
+          # there. Read the same way, keys sorted.
+          manifest() {
+            raw package.json "$1" |
+              jq -cSe 'del(.dependencies, .devDependencies, .optionalDependencies)'
+          }
+          if ! before=$(manifest "$merge_base") || ! after=$(manifest "$HEAD_SHA") || [ "$before" != "$after" ]; then
+            touched=$(printf '%s\n%s' "$touched" "package.json outside its dependency lists (its scripts among it)")
           fi
 
           touched=$(printf '%s\n' "$touched" | sed '/^$/d')
@@ -92,9 +136,25 @@ jobs:
           fi
           echo "This PR changes:"
           printf '%s\n' "$touched" | sed 's/^/  /'
-          if gh api "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name' | grep -qxF "$LABEL"; then
-            echo "The PR has the $LABEL label."
+          labels=$(gh api "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name')
+          if ! grep -qxF "$LABEL" <<<"$labels"; then
+            echo "::error::This PR changes protected paths; it needs the $LABEL label to pass."
+            exit 1
+          fi
+
+          # The label covers the head it was added for, so it must be newer
+          # than the head. The head's time is when GitHub created CI's
+          # newest pull_request run for this commit: opening, pushing and
+          # reopening start one, a label does not. Both times are GitHub's.
+          labelled=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/events?per_page=100" |
+            jq -r --arg label "$LABEL" \
+              '.[] | select(.event == "labeled" and .label.name == $label) | .created_at' |
+            sort | tail -n 1)
+          pushed=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=100" \
+            --jq '[.workflow_runs[].created_at] | max // empty')
+          if [ -n "$labelled" ] && [ -n "$pushed" ] && [[ "$labelled" > "$pushed" ]]; then
+            echo "The PR has the $LABEL label, added at $labelled, after this head ($pushed)."
             exit 0
           fi
-          echo "::error::This PR changes protected paths; it needs the $LABEL label to pass."
+          echo "::error::The $LABEL label (added ${labelled:-at no time found}) is older than this head (${pushed:-no CI run found yet}). It covers one push: remove it and add it again."
           exit 1

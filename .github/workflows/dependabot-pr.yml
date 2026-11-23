@@ -11,9 +11,11 @@ name: Dependabot PR
 #               turns auto-merge off and says why on the PR.
 #   review      everything that may not merge itself: Claude reads the
 #               release notes and how this repo uses the package, and
-#               returns an impact review. No write token, a fenced network.
-#   post        screens that review and posts it as a PR comment. No model.
-#               The review reaches it as a job output, never an artifact.
+#               returns an impact review, which a later step with no key
+#               screens as data and renders. No write token, a fenced
+#               network.
+#   post        posts the screened comment on the PR. No model. The
+#               comment reaches it as a job output, never an artifact.
 #
 # GATES. Every job is gated on the PR's AUTHOR and head repository, never
 # on `github.actor`: under pull_request_target the actor is whoever caused
@@ -234,6 +236,7 @@ jobs:
           permission-pull-requests: write
 
       - name: Turn auto-merge off
+        id: off
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ steps.app.outputs.token }}
@@ -246,6 +249,7 @@ jobs:
           else
             echo "Auto-merge was not on for $PR_URL"
           fi
+          echo "was_armed=$armed" >>"$GITHUB_OUTPUT"
 
       # The reasons are classify's text: they go to a file through the
       # environment, never into a script.
@@ -255,11 +259,16 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ steps.app.outputs.token }}
           HELD: ${{ needs.classify.outputs.held }}
+          WAS_ARMED: ${{ steps.off.outputs.was_armed }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
           {
-            echo "This push is held for a person, so auto-merge is off. [Run]($RUN_URL)"
+            if [ "$WAS_ARMED" = true ]; then
+              echo "This push is held for a person, so auto-merge is now off. [Run]($RUN_URL)"
+            else
+              echo "This push is held for a person; the PR does not merge itself. [Run]($RUN_URL)"
+            fi
             echo
             if [ -n "$HELD" ]; then
               printf '%s\n' "$HELD" | sed -E 's/@([A-Za-z0-9_-])/@\xe2\x80\x8b\1/g'
@@ -280,7 +289,7 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      review: ${{ steps.claude.outputs.structured_output }}
+      comment: ${{ steps.screen.outputs.comment }}
     steps:
       # Release notes are written by whoever publishes the package, so this
       # job reads text an attacker may have written. The fence is what keeps
@@ -375,7 +384,7 @@ jobs:
       # rules below cover the Read tool only. `--setting-sources user`
       # loads only the settings below, so the repository's own Claude
       # settings and their hooks are not loaded and run no command here.
-      # The answer leaves as structured output, which `post` screens.
+      # The answer leaves as structured output, which the next step screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
         uses: anthropics/claude-code-action@v1.0.269
@@ -452,37 +461,25 @@ jobs:
                every source URL. Be terse. If you could not read the release
                notes, say so in the summary and do not answer `safe to merge`.
 
-  post:
-    needs: review
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      pull-requests: write
-    steps:
-      # Audit first (design 196): reports the hosts this job reaches and
-      # blocks none. It moves to `block` once that list is known and short.
-      - uses: step-security/harden-runner@v2.22.4
-        with:
-          egress-policy: audit
-
-      # The review is model output that read attacker-written text, so it is
-      # checked as data before it is posted: under 64 KB, the agreed shape,
-      # nothing that looks like a credential, and no live @-mention (one
-      # could summon a bot or page a person). It arrives as `review`'s job
-      # output, through the environment, never into a script, and is not
-      # kept anywhere else. Rendering is ours, the summary escaped like the
-      # table cells.
-      - name: Screen and post the review
+      # The review as data, screened here, in a step that holds no key: it
+      # is read from the file the action writes for its run, never from
+      # the step's output, and must be under 64 KB, the agreed shape,
+      # nothing shaped like a credential, and hold no live @-mention (one
+      # could summon a bot or page a person). Rendering is ours, the
+      # summary escaped like the table cells. Only the finished comment
+      # leaves this job, as its output.
+      - name: Screen the review
+        id: screen
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          REVIEW: ${{ needs.review.outputs.review }}
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
           file="$RUNNER_TEMP/review.json"
-          printf '%s' "$REVIEW" >"$file"
-          if [ "$(stat -c %s "$file")" -gt 65536 ]; then
+          jq -e '[.[] | select(.type == "result")] | last
+            | select(.subtype == "success" and (.is_error | not)) | .structured_output' \
+            "$EXECUTION_FILE" >"$file" || { echo "::error::the run returned no review"; exit 1; }
+          if [ "$(wc -c <"$file")" -gt 65536 ]; then
             echo "::error::the review is over 64 KB"; exit 1
           fi
           jq -e '
@@ -510,7 +507,8 @@ jobs:
             echo "::error::the review contains something shaped like a credential; not posting it"; exit 1
           fi
           # A zero-width space after every @ keeps the text and drops the mention.
-          body=$(sed -E 's/@([A-Za-z0-9_-])/@\xe2\x80\x8b\1/g' <<<"$body")
+          zwsp=$(printf '\342\200\213')
+          body=$(sed -E "s/@([A-Za-z0-9_-])/@$zwsp\1/g" <<<"$body")
           {
             echo "### Dependency impact review"
             echo
@@ -518,4 +516,38 @@ jobs:
             echo
             printf '%s\n' "$body"
           } >"$RUNNER_TEMP/comment.md"
+          delimiter="REVIEW_$(openssl rand -hex 16)"
+          if grep -qF "$delimiter" "$RUNNER_TEMP/comment.md"; then
+            echo "::error::the review holds the output delimiter"; exit 1
+          fi
+          {
+            echo "comment<<$delimiter"
+            cat "$RUNNER_TEMP/comment.md"
+            echo "$delimiter"
+          } >>"$GITHUB_OUTPUT"
+
+  post:
+    needs: review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      # Audit first (design 196): reports the hosts this job reaches and
+      # blocks none. It moves to `block` once that list is known and short.
+      - uses: step-security/harden-runner@v2.22.4
+        with:
+          egress-policy: audit
+
+      # The review was screened in `review`, which hands over only the
+      # finished comment. It arrives through the environment, never into
+      # a script.
+      - name: Post the review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          COMMENT: ${{ needs.review.outputs.comment }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$COMMENT" >"$RUNNER_TEMP/comment.md"
           gh pr comment "$PR_URL" --body-file "$RUNNER_TEMP/comment.md"
