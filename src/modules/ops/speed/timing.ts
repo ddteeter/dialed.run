@@ -9,7 +9,7 @@
  */
 import { SERVER_FN_ROUTE } from "../../../lib/query-report";
 
-import { SERVER_FN_PREFIX } from "../edge";
+import { serverFnIdOf } from "../edge";
 import { captureException } from "../sentry";
 import { recordServerTiming } from "./vitals";
 import { knownRouteClause, UNMATCHED } from "./vitals-queries";
@@ -20,7 +20,7 @@ import { knownRouteClause, UNMATCHED } from "./vitals-queries";
  * route matches is `unmatched`, so a scanner's thousand paths are one
  * value rather than a thousand.
  */
-export type RequestNamer = (pathname: string) => string;
+export type RequestNamer = (url: URL) => string;
 
 const FAILED_SERVER_FN = `${SERVER_FN_ROUTE}failed`;
 
@@ -116,14 +116,6 @@ export function knownRoutes(
 }
 
 /**
- * The first segment after the prefix: the id TanStack Start calls, so a
- * path with anything after the id is named by the id alone.
- */
-function serverFnSegment(pathname: string): string {
-  return pathname.slice(SERVER_FN_PREFIX.length).replace(/\/.*/u, "");
-}
-
-/**
  * A namer over the router `makeRouter` builds. Nothing is built until the
  * first request asks, so `server.ts` can hold one at module scope; a
  * router that will not build is reported once and every page is named
@@ -135,8 +127,8 @@ export function requestNamer(
     captureException(error, { surface: "timing" });
   },
 ): RequestNamer {
-  let pageName: RequestNamer | undefined;
-  const namePage = (): RequestNamer => {
+  let pageName: ((pathname: string) => string) | undefined;
+  const namePage = (): ((pathname: string) => string) => {
     if (pageName !== undefined) return pageName;
     try {
       const router = makeRouter();
@@ -148,10 +140,15 @@ export function requestNamer(
     }
     return pageName;
   };
-  return (pathname) =>
-    pathname.startsWith(SERVER_FN_PREFIX)
-      ? `${SERVER_FN_ROUTE}${serverFnSegment(pathname)}`
-      : namePage()(pathname);
+  // A server function is named by the id TanStack Start calls: the first
+  // segment after the prefix of the decoded path (`serverFnIdOf`), so any
+  // spelling of one id, and anything after it, is that id's name.
+  return (url) => {
+    const id = serverFnIdOf(url);
+    return id === undefined
+      ? namePage()(url.pathname)
+      : `${SERVER_FN_ROUTE}${id}`;
+  };
 }
 
 /**
@@ -190,7 +187,7 @@ export async function timeRequest(
   const finish = (status: number): void => {
     const line: TimingLine = {
       kind: "timing",
-      route: timedName(deps.name(new URL(request.url).pathname), status),
+      route: timedName(deps.name(new URL(request.url)), status),
       method: request.method,
       status,
       ms: deps.now() - started,

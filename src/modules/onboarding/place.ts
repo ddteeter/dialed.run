@@ -73,20 +73,29 @@ export async function lookUpCity({
 const PLACE_PARTS = 3;
 
 /**
- * The provider's address as a place name: its last three comma parts,
- * each without the words that hold a digit (a house number, a postcode),
- * so a street address the provider resolved keeps only where it is.
- * `undefined` when nothing is left, as for an answer that is only
- * coordinates.
+The words of one comma part that hold no digit.
+*/
+function wordsWithoutDigits(part: string): string {
+  return part
+    .split(/\s/u)
+    .filter((word) => word !== "" && !/\d/u.test(word))
+    .join(" ");
+}
+
+/**
+ * The provider's address as a place name. Its first comma part, the
+ * street part, is dropped whole when any of its words holds a digit (a
+ * house number), so "10 Downing Street, London" is "London". Every later
+ * part loses only the words that hold a digit (a postcode), so "WI 53703"
+ * is "WI" and "10115 Berlin" is "Berlin". A first part with no digit is
+ * kept. Of what is left, the last three parts are kept. `undefined` when
+ * nothing is left, as for an answer that is only coordinates.
  */
 export function placeNameOf(address: string): string | undefined {
   const parts = address
     .split(",")
-    .map((part) =>
-      part
-        .split(/\s/u)
-        .filter((word) => word !== "" && !/\d/u.test(word))
-        .join(" "),
+    .map((part, index) =>
+      index === 0 && /\d/u.test(part) ? "" : wordsWithoutDigits(part),
     )
     .filter((part) => part !== "");
   return parts.length === 0 ? undefined : parts.slice(-PLACE_PARTS).join(", ");

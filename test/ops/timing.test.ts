@@ -49,49 +49,69 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/**
+A path on the app's origin, as the namer is handed it.
+*/
+function at(path: string): URL {
+  return new URL(path, "https://dialed.run");
+}
+
 describe("requestNamer", () => {
   it("names a page by the route TanStack matches, never its URL", () => {
     const name = requestNamer(() => testRouter());
-    expect(name("/")).toBe("/");
-    expect(name("/runs/abc")).toBe("/runs/$runId");
-    expect(name("/runs/backlog")).toBe("/runs/backlog");
-    expect(name("/desk")).toBe("/desk/");
-    expect(name("/desk/")).toBe("/desk/");
-    expect(name("/photo/a/b.webp")).toBe("/photo/$");
-    expect(name("/@ana")).toBe("/@{$handle}");
+    expect(name(at("/"))).toBe("/");
+    expect(name(at("/runs/abc"))).toBe("/runs/$runId");
+    expect(name(at("/runs/backlog"))).toBe("/runs/backlog");
+    expect(name(at("/desk"))).toBe("/desk/");
+    expect(name(at("/desk/"))).toBe("/desk/");
+    expect(name(at("/photo/a/b.webp"))).toBe("/photo/$");
+    expect(name(at("/@ana"))).toBe("/@{$handle}");
   });
 
   it("names a server function by its id", () => {
-    expect(requestNamer(() => testRouter())("/_serverFn/abc123")).toBe(
+    expect(requestNamer(() => testRouter())(at("/_serverFn/abc123"))).toBe(
       "serverFn:abc123",
     );
   });
 
   it("names a server function by its id alone, whatever follows it", () => {
     const name = requestNamer(() => testRouter());
-    expect(name("/_serverFn/abc123/x")).toBe("serverFn:abc123");
-    expect(name("/_serverFn/abc123/y/z")).toBe("serverFn:abc123");
-    expect(name("/_serverFn/abc123/")).toBe("serverFn:abc123");
+    expect(name(at("/_serverFn/abc123/x"))).toBe("serverFn:abc123");
+    expect(name(at("/_serverFn/abc123/y/z"))).toBe("serverFn:abc123");
+    expect(name(at("/_serverFn/abc123/"))).toBe("serverFn:abc123");
+  });
+
+  it("names an encoded spelling of an id by the id it calls", () => {
+    const name = requestNamer(() => testRouter());
+    expect(name(at("/_serverFn/%61bc123"))).toBe("serverFn:abc123");
+    expect(name(at("/_serverFn/abc%31%323"))).toBe("serverFn:abc123");
+    expect(name(at("/%5FserverFn/abc123"))).toBe("serverFn:abc123");
+  });
+
+  it("names an id with encoded spaces after it by the id it calls", () => {
+    const name = requestNamer(() => testRouter());
+    expect(name(at("/_serverFn/abc123%20"))).toBe("serverFn:abc123");
+    expect(name(at("/_serverFn/abc123%20%20%20"))).toBe("serverFn:abc123");
   });
 
   it("names every path no route covers alike", () => {
     const name = requestNamer(() => testRouter());
-    expect(name("/wp-admin")).toBe("unmatched");
-    expect(name("/x/_serverFn/abc")).toBe("unmatched");
+    expect(name(at("/wp-admin"))).toBe("unmatched");
+    expect(name(at("/x/_serverFn/abc"))).toBe("unmatched");
   });
 
   it("names a path too deep for its route by the route TanStack serves its not-found under", () => {
     // The 404 status in the same line keeps it apart from the screen's
     // real loads, and the checks judge 2xx only.
-    expect(requestNamer(() => testRouter())("/runs/a/b")).toBe("/runs/$runId");
+    expect(requestNamer(() => testRouter())(at("/runs/a/b"))).toBe("/runs/$runId");
   });
 
   it("builds the router only when first asked, and only once", () => {
     const makeRouter = vi.fn(() => testRouter());
     const name = requestNamer(makeRouter);
     expect(makeRouter).not.toHaveBeenCalled();
-    expect(name("/runs/abc")).toBe("/runs/$runId");
-    expect(name("/")).toBe("/");
+    expect(name(at("/runs/abc"))).toBe("/runs/$runId");
+    expect(name(at("/"))).toBe("/");
     expect(makeRouter).toHaveBeenCalledTimes(1);
   });
 
@@ -102,8 +122,8 @@ describe("requestNamer", () => {
       throw broken;
     }, report);
     expect(report).not.toHaveBeenCalled();
-    expect(name("/")).toBe("unmatched");
-    expect(name("/runs/abc")).toBe("unmatched");
+    expect(name(at("/"))).toBe("unmatched");
+    expect(name(at("/runs/abc"))).toBe("unmatched");
     expect(report).toHaveBeenCalledTimes(1);
     expect(report).toHaveBeenCalledWith(broken);
   });
@@ -113,7 +133,7 @@ describe("requestNamer", () => {
     const name = requestNamer(() => {
       throw new Error("no tree");
     }, report);
-    expect(name("/_serverFn/abc")).toBe("serverFn:abc");
+    expect(name(at("/_serverFn/abc"))).toBe("serverFn:abc");
     expect(report).not.toHaveBeenCalled();
   });
 
@@ -121,7 +141,7 @@ describe("requestNamer", () => {
     const error = vi.spyOn(console, "error").mockImplementation(nothing);
     requestNamer(() => {
       throw new Error("no tree");
-    })("/");
+    })(at("/"));
     expect(error).toHaveBeenCalledWith(
       "[sentry-disabled]",
       { surface: "timing" },

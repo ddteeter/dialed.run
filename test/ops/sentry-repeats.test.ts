@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -117,6 +118,38 @@ describe("the reporter for a request that threw", () => {
       ["fetch", "Error: x"],
       ["fetch", "Error: y"],
     ]);
+  });
+});
+
+/**
+A failed insert whose message carries the values bound to it.
+*/
+function failedInsert(values: readonly unknown[]): DrizzleQueryError {
+  return new DrizzleQueryError(
+    'insert into "places" ("user_id", "address") values (?, ?)',
+    [...values],
+    new Error("D1_ERROR: database is locked"),
+  );
+}
+
+describe("the reporter for a failed statement", () => {
+  it("keys and fingerprints it by the statement and reason, never its values", () => {
+    const { report, sent } = reporterAt([0]);
+    report(failedInsert(["user-1", "10 Elm Street"]));
+    expect(sent.map((one) => one.report.fingerprint)).toStrictEqual([
+      [
+        "fetch",
+        'Error: failed statement insert into "places": D1_ERROR: database is locked',
+      ],
+    ]);
+    expect(JSON.stringify(sent[0]?.report)).not.toMatch(/user-1|Elm Street/u);
+  });
+
+  it("counts two failures with different values as one kind", () => {
+    const { report, sent } = reporterAt([0, 1]);
+    report(failedInsert(["user-1", "10 Elm Street"]));
+    report(failedInsert(["user-2", "22 Oak Road"]));
+    expect(sent).toHaveLength(1);
   });
 });
 

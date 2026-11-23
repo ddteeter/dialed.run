@@ -28,7 +28,7 @@ const db = drizzle(env.DIALED_CORE);
 const DEVICE = "00000000-00000001-00000000-" + "0".repeat(32);
 const LATER = "00000000-00000002-00000000-" + "0".repeat(32);
 
-function harness(nameQueries?: (pathname: string) => string) {
+function harness(nameQueries?: (url: URL) => string) {
   const deferred: Promise<void>[] = [];
   const captured: { error: unknown; context: Record<string, string> }[] = [];
   const deps: D1RequestDeps = {
@@ -214,9 +214,9 @@ describe("respondInD1Scope", () => {
   });
 });
 
-const named = (pathname: string) => `route:${pathname}`;
+const named = (url: URL) => `route:${url.pathname}`;
 
-const asIs = (pathname: string) => pathname;
+const asIs = (url: URL) => url.pathname;
 
 describe("respondInD1Scope's query count", () => {
   it("says nothing unless the request is named, for a request that ran queries", async () => {
