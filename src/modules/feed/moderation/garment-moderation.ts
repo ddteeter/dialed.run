@@ -25,8 +25,12 @@ import { and, eq, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { photoScreenings, wardrobeItems } from "../../../db/schema-core";
-import { env } from "../../../env";
+import {
+  photoScreenings,
+  quarantinedContent,
+  wardrobeItems,
+} from "../../../db/schema-core";
+import { env, primaryCoreDb } from "../../../env";
 import { quarantineKeyFor } from "../../../lib/entry-photo-key";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
@@ -79,7 +83,8 @@ export interface HeldTo {
 /**
  * A takedown's failure, passed on as it came. Refused by its Review row,
  * a quarantine's copies made for a record that never landed go first, so
- * nothing is kept that nothing lists; any other failure keeps them.
+ * nothing is kept that nothing lists, except those a record that did land
+ * lists; any other failure keeps them.
  */
 export async function passedOn(
   error: unknown,
@@ -100,9 +105,10 @@ What a quarantine copied: a kit's photos or a garment's photo.
 type CopyKind = "kit-photo" | "garment-photo";
 
 /**
- * Deletes a refused quarantine's copies. A failure is reported by the
- * surface and the copies' kind, never a key, and leaves the refusal to be
- * answered as it would be.
+ * Deletes a refused quarantine's copies that no record lists, read from
+ * the primary. A failure is reported by the surface and the copies' kind,
+ * never a key, keeps the copies, and leaves the refusal to be answered as
+ * it would be.
  */
 async function dropCopies(
   copies: readonly string[],
@@ -110,10 +116,36 @@ async function dropCopies(
   report: Report,
 ): Promise<void> {
   try {
-    await env.MEDIA.delete([...copies]);
+    const unlisted = await copiesNoRecordLists(copies);
+    await env.MEDIA.delete(unlisted);
   } catch (error: unknown) {
     report(error, { surface: "refused-quarantine-copies", kind });
   }
+}
+
+/**
+ * Of a quarantine's copies, the ones no record lists, read from the
+ * primary. Every quarantine of a subject copies its photos under the same
+ * keys, so a copy a record lists is that record's, and stays. A record
+ * lists a copy when its snapshot holds the copy's key as a JSON string.
+ */
+export async function copiesNoRecordLists(
+  copies: readonly string[],
+): Promise<string[]> {
+  const db = primaryCoreDb();
+  const snapshot = quarantinedContent.photosSnapshot;
+  const [first, ...rest] = copies.map((key) =>
+    db
+      .select({ id: quarantinedContent.id })
+      .from(quarantinedContent)
+      .where(sql`instr(${snapshot}, ${JSON.stringify(key)}) > 0`)
+      .limit(1),
+  );
+  if (first === undefined) return [];
+  const listed = await db.batch([first, ...rest]);
+  return listed.flatMap((rows, index) =>
+    rows.length > 0 ? [] : copies.slice(index, index + 1),
+  );
 }
 
 /**

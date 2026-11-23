@@ -1,5 +1,11 @@
 import { eq, sql } from "drizzle-orm";
-import { anyShownRow, firstBatchAfter, shownRowOf } from "./helpers";
+import {
+  anyShownRow,
+  batchWithAfter,
+  copiesDeleted,
+  firstBatchAfter,
+  shownRowOf,
+} from "./helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -68,6 +74,7 @@ import {
 import {
   QUARANTINE_PAGE,
   QUARANTINE_RETENTION_SECONDS,
+  preservedKeysOf,
   quarantinedContentFor,
 } from "../../src/modules/safety/takedowns/quarantine";
 import {
@@ -1304,6 +1311,49 @@ describe("decideReview: the queue's Remove really deletes", () => {
     expect(await stored("quarantine/")).toStrictEqual([]);
   });
 
+  it("keeps the copies a landed quarantine lists when another of the subject is refused", async () => {
+    const { photoId, key } = await postedPhoto();
+    const queueId = await queued("photo", photoId);
+    const shown = await shownRowOf(queueId);
+    const landing = await openSubject(queueId, shown);
+    const refused = await openSubject(queueId, shown);
+    if (landing === undefined || refused === undefined) {
+      throw new Error("not open");
+    }
+    const quarantine = {
+      actorId: "rev",
+      action: "quarantine",
+      subjectType: "photo",
+      subjectId: photoId,
+      reason: "explicit",
+    } as const;
+    const deletes = vi.spyOn(env.MEDIA, "delete");
+
+    const taking = moderateContent(
+      batchWithAfter(refused.heldTo.statement, () =>
+        moderateContent(
+          core(),
+          { ...quarantine, heldTo: landing.heldTo },
+          quiet,
+        ),
+      ),
+      { ...quarantine, heldTo: refused.heldTo },
+      quiet,
+    );
+
+    await expect(taking).rejects.toThrow(
+      /NOT NULL[\s\S]*review_queue\.status/u,
+    );
+    expect(copiesDeleted(deletes)).toStrictEqual([]);
+    expect(await stored("quarantine/")).toStrictEqual([quarantineKeyFor(key)]);
+    const records = await core()
+      .select({ snapshot: quarantinedContent.photosSnapshot })
+      .from(quarantinedContent);
+    expect(
+      records.map(({ snapshot }) => preservedKeysOf(snapshot)),
+    ).toStrictEqual([{ ok: true, keys: [quarantineKeyFor(key)] }]);
+  });
+
   it("answers a refused quarantine as before when its copy will not delete", async () => {
     const { photoId } = await postedPhoto();
     const queueId = await queued("photo", photoId);
@@ -1398,7 +1448,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     );
 
     await expect(taking).rejects.toThrow(/NOT NULL/u);
-    expect(deletes).not.toHaveBeenCalled();
+    expect(copiesDeleted(deletes)).toStrictEqual([]);
     expect(report).not.toHaveBeenCalled();
     expect(await stored("entries/")).toContain(key);
   });

@@ -29,6 +29,7 @@ import {
   usernameHistory,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { quarantineKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import type {
@@ -213,4 +214,37 @@ export function firstBatchAfter(before: () => Promise<unknown>) {
     },
   );
   return db;
+}
+
+/**
+ * A handle on the core database whose batch holding `statement` first
+ * lets `before` land: another takedown of the same subject landing after
+ * this one copied its photos and before its own batch.
+ */
+export function batchWithAfter(
+  statement: unknown,
+  before: () => Promise<unknown>,
+) {
+  const db = drizzle(env.DIALED_CORE);
+  const batch = db.batch.bind(db);
+  Reflect.set(
+    db,
+    "batch",
+    async (...statements: Parameters<typeof db.batch>) => {
+      if (statements[0].some((each) => each === statement)) await before();
+      return batch(...statements);
+    },
+  );
+  return db;
+}
+
+/**
+The quarantine copies a spy on R2's delete saw deleted, in order.
+*/
+export function copiesDeleted(deletes: {
+  mock: { calls: readonly (readonly [string | string[]])[] };
+}): string[] {
+  return deletes.mock.calls
+    .flatMap(([keys]) => keys)
+    .filter((key) => key.startsWith(quarantineKeyFor("")));
 }
