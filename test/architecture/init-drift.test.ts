@@ -23,12 +23,28 @@ describe("what a forced guardrails init would remove", () => {
     expect(sanctions).toBeGreaterThan(gate);
   });
 
+  it("runs build, test and diagrams:check in the pre-push hook, before the gate", () => {
+    const gate = prePush.indexOf('node "$cli" gate --mode=push');
+    const steps = prePush.indexOf(
+      'for step in "npm run build" "npm test" "npm run diagrams:check"; do',
+    );
+    expect(steps).toBeGreaterThan(-1);
+    expect(steps).toBeLessThan(gate);
+  });
+
+  it("runs none of them for a push that only deletes refs", () => {
+    expect(prePush).toContain("*[!0]*) pushes_commits=yes ;;");
+    expect(prePush).toContain('if [ "$pushes_commits" = yes ]; then');
+  });
+
   it("names a full version tag on every action in guardrails.yml, not the template's floating major", () => {
     const uses = guardrailsWorkflow
       .split("\n")
       .filter((line) => /^\s*(- )?uses:/.test(line));
     expect(uses.length).toBeGreaterThan(0);
-    expect(uses.filter((line) => !/@v\d+\.\d+\.\d+$/.test(line.trim()))).toEqual([]);
+    expect(
+      uses.filter((line) => !/@v\d+\.\d+\.\d+$/.test(line.trim())),
+    ).toEqual([]);
   });
 
   it.each([

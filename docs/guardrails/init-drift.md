@@ -31,7 +31,10 @@ and the plan reports the file as unchanged again.
 
 - **`.githooks/pre-push`** runs `sanctions-check` after the gate. The
   template does not, and without it a copied Stryker directive passes every
-  local gate and fails CI an hour later.
+  local gate and fails CI an hour later. It also runs `npm run build`,
+  `npm test` and `npm run diagrams:check` before the gate, skipping a push
+  that only deletes refs (owner, 2026-11-23): they are what CI's first job
+  runs and the gate does not, so a branch that skipped one spent a CI lap.
 - **`.github/workflows/guardrails.yml`** names a full version tag on every
   action, locked in `actions.lock` (D-182), and has a concurrency group, a
   Chromium install and a MediaPipe staging step. The template has floating
