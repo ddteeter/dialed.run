@@ -13,7 +13,7 @@ import { coreDb } from "../../env";
 import { pinPrimary } from "../../lib/sql/d1-session";
 import type { ManualSky } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
-import { runnerWeatherBudget } from "./budget";
+import { isWeatherBudgetSpent, runnerWeatherBudget } from "./budget";
 import type { SpendWeatherCall } from "./budget";
 import { weatherProvider } from "./provider";
 import {
@@ -142,6 +142,10 @@ type AttachOutcome =
   | "attached"
   | "manual"
   | "pending"
+  // Pending because its runner's day's budget is spent, not because the
+  // provider failed: the cron fails it at the window's end without
+  // listing it on the Desk's Gave up.
+  | "budget-spent"
   // Every settled hour is in, and at least one hour has not settled yet
   // (D-156): the run stays `pending` for the cron, which is not a failure.
   | "awaiting-hours"
@@ -224,7 +228,7 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
       runId,
       error: error instanceof Error ? error.message : String(error),
     });
-    outcome = "pending";
+    outcome = isWeatherBudgetSpent(error) ? "budget-spent" : "pending";
   }
   await setStatus(runId, outcome === "attached" ? "attached" : "pending");
   return outcome;
@@ -348,8 +352,17 @@ interface RetryCronResult {
  */
 type Report = (error: unknown, context: Record<string, string>) => void;
 
+interface AttachedEach {
+  readonly attached: number;
+  /**
+  The runs only their runner's spent budget held back.
+  */
+  readonly budgetHeld: ReadonlySet<string>;
+}
+
 /**
- * One attach for each candidate, and how many settled.
+ * One attach for each candidate: how many settled, and which only a
+ * spent budget held back.
  *
  * **The `try` is inside the loop on purpose and must stay there** (#892).
  * A provider failure never reaches it: the attach absorbs that and leaves
@@ -362,19 +375,22 @@ type Report = (error: unknown, context: Record<string, string>) => void;
 async function attachEach(
   runIds: readonly string[],
   report: Report,
-): Promise<number> {
+): Promise<AttachedEach> {
   let attached = 0;
+  const budgetHeld = new Set<string>();
   for (const runId of runIds) {
     try {
       const outcome = await resolveAndAttach(runId as Ulid);
       if (outcome === "attached" || outcome === "manual") {
         attached += 1;
+      } else if (outcome === "budget-spent") {
+        budgetHeld.add(runId);
       }
     } catch (error) {
       report(error, { surface: "weather-retry", runId });
     }
   }
-  return attached;
+  return { attached, budgetHeld };
 }
 
 /**
@@ -419,7 +435,7 @@ export async function retryPendingWeather(
   // until it settles, and settling it below writes a fresh one.
   const runIds = candidates.map((candidate) => candidate.id);
   await clearWeatherHalves(db, runIds);
-  const attached = await attachEach(runIds, report);
+  const { attached, budgetHeld } = await attachEach(runIds, report);
 
   const now = nowSeconds();
   const toFail = candidates
@@ -438,7 +454,9 @@ export async function retryPendingWeather(
   // still `pending`: a run this pass attached, or one its runner saved a
   // band for since, is settled and must not be overwritten — nor listed,
   // so a row this batch wrote for a run it did not fail is taken back in
-  // the same batch. What the update returns is what failed.
+  // the same batch. What the update returns is what failed. A run only its
+  // runner's spent budget held back is failed and not listed: it is the
+  // runner's to set or try again, not the system's give-up.
   const toFailIds = toFail.map((c) => c.id);
   const stillPending = and(
     inArray(runs.id, toFailIds),
@@ -458,13 +476,15 @@ export async function retryPendingWeather(
       .set({ weatherStatus: "failed" })
       .where(stillPending)
       .returning({ id: runs.id }),
-    ...toFail.map((c) =>
-      gaveUpUpsert(db, {
-        kind: "weather",
-        subjectId: c.id,
-        ...giveUpFact(c.age),
-      }),
-    ),
+    ...toFail
+      .filter((c) => !budgetHeld.has(c.id))
+      .map((c) =>
+        gaveUpUpsert(db, {
+          kind: "weather",
+          subjectId: c.id,
+          ...giveUpFact(c.age),
+        }),
+      ),
     db.delete(gaveUp).where(listedButNotFailed),
   ]);
   const failedIds = failed.map((row) => row.id);

@@ -872,7 +872,7 @@ describe("the runner's weather budget (SA-M13)", () => {
     const fetchSpy = mockVisualCrossing();
     const runId = await insertRun({ userId, lat: 51.22, lng: -71.22 });
 
-    expect(await attachObservation(runId)).toBe("pending");
+    expect(await attachObservation(runId)).toBe("budget-spent");
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(await statusOf(runId)).toBe("pending");
