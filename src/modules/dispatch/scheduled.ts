@@ -272,25 +272,28 @@ async function runCron(
     }
     case "weather-retry": {
       return runHourly(cronName, reporter, (anomalies) => [
-        // docs/tasks/103-weather.md requirement 4/5: the hourly
-        // pending-observation retry, claim-then-work at the module level.
-        () => retryPendingWeather(captureException),
-        () => upkeep.sweepExports(anomalies),
-        // C6's 40-hour reminder: hourly, so it lands before the deadline
-        // the daily digest could miss (`removal-reminders.ts`).
+        // First the steps whose work is bounded and on a clock. C6's
+        // 40-hour reminder: hourly, so it lands before the deadline the
+        // daily digest could miss (`removal-reminders.ts`).
         () => oweRemovalReminders(coreDb()),
         // A removal request still waiting on its confirm past its 48
         // hours is declined (`takedown-requests.ts`).
         () => declineLapsedRequests(coreDb()),
-        () => drainOwedEmail(anomalies),
-        () => drainProductLinks(anomalies, upkeep),
         // Better Auth's expired sign-in states and reset links, every
-        // hour (owner, 2026-11-21).
+        // hour (owner, 2026-11-21), a bounded number of batches.
         () => sweepExpiredStates(),
         // Rate-limit counts past their window, ours and Better Auth's:
         // every hour, a bounded number of batches each.
         () => sweepRateLimits(coreDb()),
         () => sweepExpiredCounts(),
+        // Then the steps whose work grows with what runners have queued:
+        // the export sweep, owed email, the product links, and the
+        // pending-observation retry (docs/tasks/103-weather.md
+        // requirement 4/5, claim-then-work at the module level).
+        () => upkeep.sweepExports(anomalies),
+        () => drainOwedEmail(anomalies),
+        () => drainProductLinks(anomalies, upkeep),
+        () => retryPendingWeather(captureException),
         // Profiles whose zone lookup failed when the place was saved
         // (design 142): a NULL zone beside coordinates is the marker.
         // Last, because its lookups can wait on Visual Crossing.

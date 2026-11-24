@@ -15,6 +15,7 @@ import { nowSeconds } from "../../src/lib/now";
 import {
   COUNT_SWEEP_PASSES,
   STATE_SWEEP_BATCH,
+  STATE_SWEEP_PASSES,
   sweepExpiredAuthRows,
   sweepExpiredCounts,
   sweepExpiredStates,
@@ -345,7 +346,21 @@ describe("sweepExpiredStates", () => {
     expect(await stateIds([...expired, live])).toStrictEqual([live]);
   });
 
-  it("takes ten thousand rows a statement by default", () => {
+  it("stops after its passes, and the next firing finishes the work", async () => {
+    await db.delete(verification);
+    const expired = await Promise.all(
+      [1, 2, 3, 4, 5].map((ago) => aState(NOW - ago)),
+    );
+
+    await sweepExpiredStates(db, NOW, 2, 2);
+    expect(await stateIds(expired)).toHaveLength(1);
+
+    await sweepExpiredStates(db, NOW, 2, 2);
+    expect(await stateIds(expired)).toStrictEqual([]);
+  });
+
+  it("takes ten thousand rows a statement and twenty statements a call by default", () => {
     expect(STATE_SWEEP_BATCH).toBe(10_000);
+    expect(STATE_SWEEP_PASSES).toBe(20);
   });
 });

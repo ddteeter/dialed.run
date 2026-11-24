@@ -1612,16 +1612,19 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
     ]);
   });
 
-  it("throws every failure together when more than one step fails", async () => {
-    const boom = new Error("database gone");
+  it("runs its steps in order, and throws every failure together", async () => {
     const sweep = new Error("sweep fell over");
-    // The heartbeat lands; every core statement after it fails, so the
-    // weather retry and the drain both throw around the sweep.
+    // The heartbeat lands; every core statement after it fails with the
+    // name of the first table it reads, so each step's error says which
+    // step it was.
     const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
     let statements = 0;
     vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
       statements += 1;
-      if (statements > 1) throw boom;
+      if (statements > 1) {
+        const table = /(?:from|into|update)\s+"(\w+)"/iu.exec(query);
+        throw new Error(table?.[1]);
+      }
       return prepare(query);
     });
     let swept = 0;
@@ -1638,13 +1641,26 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
     );
 
     await expect(firing).rejects.toBeInstanceOf(AggregateError);
-    // The weather retry, the sweep, the removal reminders (C6), the
-    // lapsed removal requests' decline, the email drain, the product-link
-    // drain (D-113 Q1), the expired-state sweep, the two count sweeps and
-    // the zone fill (design 142), in that order.
+    // The removal reminders, the lapsed removal requests' decline, the
+    // expired-state sweep and the two count sweeps; then the export sweep, the email drain, the product-link
+    // drain and the weather retry; the zone fill last.
+    const steps = [
+      "cron_checkpoints",
+      "takedown_requests",
+      "verification",
+      "rate_limits",
+      "rate_limit",
+      "sweep fell over",
+      "outbox",
+      "outbox",
+      "runs",
+      "user_profiles",
+    ];
     await expect(firing).rejects.toMatchObject({
       message: "several upkeep steps failed",
-      errors: [boom, sweep, boom, boom, boom, boom, boom, boom, boom, boom],
+      errors: steps.map((message): unknown =>
+        expect.objectContaining({ message }),
+      ),
     });
     expect(swept).toBe(1);
   });
