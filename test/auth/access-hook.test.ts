@@ -136,6 +136,7 @@ function signUpRequest(
   email: string,
   headers: Record<string, string>,
   cf: Partial<Placed> = {},
+  more: Record<string, string> = {},
 ): Request {
   return new Request(`${ORIGIN}/api/auth/sign-up/email`, {
     cf,
@@ -146,7 +147,12 @@ function signUpRequest(
       "x-birth-date": ADULT,
       ...headers,
     },
-    body: JSON.stringify({ email, password: PASSWORD, name: "Maya Runner" }),
+    body: JSON.stringify({
+      email,
+      password: PASSWORD,
+      name: "Maya Runner",
+      ...more,
+    }),
   });
 }
 
@@ -158,7 +164,7 @@ async function refusal(response: Response) {
 
 async function accountFor(email: string) {
   const [row] = await db
-    .select({ id: user.id, name: user.name })
+    .select({ id: user.id, name: user.name, image: user.image })
     .from(user)
     .where(eq(user.email, email));
   return row;
@@ -189,6 +195,49 @@ describe("email sign-up through the gate", () => {
     expect(spent?.email).toBe(email);
     // …and once it was written, the use is the account's for good.
     expect(spent?.confirmedAt).toBeGreaterThan(0);
+  });
+
+  it("keeps no image a sign-up sends", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = await freshCode();
+    await seedCode(code);
+    const email = address();
+    const response = await auth.handler(
+      signUpRequest(
+        email,
+        { "x-invite-code": code, "x-turnstile-token": "token" },
+        {},
+        { image: "https://example.test/maya.jpg" },
+      ),
+    );
+    expect(response.status).toBe(200);
+    const account = await accountFor(email);
+    expect(account?.name).toBe("");
+    expect(account?.image).toBeNull();
+  });
+
+  it("makes an account for an address of 254 characters, and refuses 255 before spending a code", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const domain = "@example.test";
+    const at = (length: number) => domain.padStart(length, "a");
+    const code = await freshCode();
+    const codeId = await seedCode(code);
+    const headers = { "x-invite-code": code, "x-turnstile-token": "token" };
+
+    const tooLong = await auth.handler(signUpRequest(at(255), headers));
+    expect(tooLong.status).toBe(400);
+    expect(await refusal(tooLong)).toMatchObject({ code: "INVALID_EMAIL" });
+    expect(await accountFor(at(255))).toBeUndefined();
+    expect(
+      await db
+        .select()
+        .from(inviteRedemptions)
+        .where(eq(inviteRedemptions.codeId, codeId)),
+    ).toStrictEqual([]);
+
+    const longest = await auth.handler(signUpRequest(at(254), headers));
+    expect(longest.status).toBe(200);
+    expect(await accountFor(at(254))).toBeDefined();
   });
 
   it("keeps a single-use code spent after its account is deleted", async () => {
@@ -370,6 +419,7 @@ function googleIdToken(email: string): string {
     email,
     email_verified: true,
     name: "Maya Runner",
+    picture: "https://lh3.example.test/maya.jpg",
     iat: now,
     exp: now + 3600,
   };
@@ -491,8 +541,10 @@ describe("Google sign-up through the gate", () => {
     );
     expect(landing?.pathname).toBe("/");
     const account = await accountFor(email);
-    // Google's profile name is not kept: a runner is their handle.
+    // Google's profile name and picture are not kept: a runner is their
+    // handle.
     expect(account?.name).toBe("");
+    expect(account?.image).toBeNull();
     const [spent] = await db
       .select({ userId: inviteRedemptions.userId })
       .from(inviteRedemptions)

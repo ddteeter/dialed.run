@@ -16,7 +16,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import * as authSchema from "../../db/schema-auth";
 import { newUlid } from "../../lib/ids";
 import { changeLinkWithdrawal, type AuthMail } from "../account";
-import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "../../lib/contracts";
 import { outboxInsertWhere, oweOutbox } from "../ops";
 import {
   admitSignUp,
@@ -371,6 +371,9 @@ export function createAuth({
       // short password before the round trip, and this is what makes the
       // server refuse the same one when the form is bypassed.
       minPasswordLength: PASSWORD_MIN_LENGTH,
+      // And its ceiling, Better Auth's own default, said here so the forms'
+      // `PASSWORD_MAX_LENGTH` and the server cannot drift apart.
+      maxPasswordLength: PASSWORD_MAX_LENGTH,
       // Every email sign-up ends on Au4, "Check your email" (round 26
       // #11), whether the address is new or registered, and the page must
       // not be able to tell the two apart. Signing a new account in would

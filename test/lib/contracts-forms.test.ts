@@ -12,7 +12,9 @@ import {
   currentPasswordLimited,
   changePasswordSchema,
   newPasswordSchema,
+  PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
+  accountDeletionSchema,
   resetRequestSchema,
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
@@ -331,14 +333,16 @@ describe("accountDeletionInput", () => {
     });
   });
 
-  it("holds the password to a ceiling of 1024 characters, not a floor", () => {
+  it("holds the password to every password field's ceiling, not a floor", () => {
     expect(
-      accountDeletionInput.safeParse({ currentPassword: "a".repeat(1024) })
-        .success,
+      accountDeletionInput.safeParse({
+        currentPassword: "a".repeat(PASSWORD_MAX_LENGTH),
+      }).success,
     ).toBe(true);
     expect(
-      accountDeletionInput.safeParse({ currentPassword: "a".repeat(1025) })
-        .success,
+      accountDeletionInput.safeParse({
+        currentPassword: "a".repeat(PASSWORD_MAX_LENGTH + 1),
+      }).success,
     ).toBe(false);
   });
 });
@@ -514,4 +518,65 @@ describe("usernameSchema (round 26 #7)", () => {
     // A message drawn in plain words has no second form.
     expect(spokenFormOf("Add a name.")).toBeUndefined();
   });
+});
+
+describe("every password field's ceiling", () => {
+  const longest = "a".repeat(PASSWORD_MAX_LENGTH);
+  const tooLong = "a".repeat(PASSWORD_MAX_LENGTH + 1);
+  const email = "runner@example.com";
+  const signUp = {
+    birthDate: "1990-01-01",
+    email,
+    inviteCode: "DIAL-7K3P",
+  };
+  const fields: readonly [
+    string,
+    z.ZodType,
+    Record<string, unknown>,
+    string,
+  ][] = [
+    ["sign-in", signInSchema, { email }, "password"],
+    ["sign-up", signUpSchemaFor(false), signUp, "password"],
+    ["a reset's new password", newPasswordSchema, {}, "password"],
+    [
+      "a change's current password",
+      changePasswordSchema,
+      { password: "a".repeat(PASSWORD_MIN_LENGTH) },
+      "currentPassword",
+    ],
+    [
+      "a change's new password",
+      changePasswordSchema,
+      { currentPassword: "a" },
+      "password",
+    ],
+    [
+      "an email change's current password",
+      changeEmailSchema,
+      { email },
+      "currentPassword",
+    ],
+    [
+      "deletion's current password",
+      accountDeletionSchema,
+      {},
+      "currentPassword",
+    ],
+  ];
+
+  it("is 128 characters, Better Auth's own", () => {
+    expect(PASSWORD_MAX_LENGTH).toBe(128);
+  });
+
+  it.each(fields)(
+    "takes 128 characters and refuses 129 on %s",
+    (_, schema, rest, field) => {
+      expect(schema.safeParse({ ...rest, [field]: longest }).success).toBe(
+        true,
+      );
+      expect(
+        messagesFor(schema, { ...rest, [field]: tooLong }, field),
+      ).toStrictEqual(["Use at most 128 characters."]);
+    },
+  );
 });

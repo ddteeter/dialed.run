@@ -33,6 +33,7 @@ import {
   addOAuthServerContext,
   getOAuthState,
 } from "better-auth/api";
+import { BASE_ERROR_CODES } from "better-auth";
 import { z } from "zod";
 
 import {
@@ -57,6 +58,7 @@ import {
   isOldEnough,
   isoDayOf,
 } from "../../lib/contracts/age";
+import { EMAIL_MAX_LENGTH } from "../../lib/contracts/garments";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
@@ -332,19 +334,33 @@ async function isAgeCheckedForCreate(
 
 /**
  * The user create hook: every account is made with no name (owner,
- * 2026-09-27 — a runner is their handle), and, with invite-only on, only
- * by spending a code.
+ * 2026-09-27 — a runner is their handle) and no image, from an address of
+ * at most `EMAIL_MAX_LENGTH` characters, and, with invite-only on, only
+ * by spending a code. Better Auth runs it for every user row it makes:
+ * email sign-up and Google's first sign-in both go through its
+ * `createWithHooks`.
  *
  * The account's id is minted here rather than by Better Auth, so the
  * claim can be written against it before the row exists: Better Auth
  * makes the user, so no batch of ours can hold both, and the claim's
  * hold (`invite_redemptions.held_until`) is what covers the gap.
  */
+/**
+ * What every account is made without: a name, and an image (a sign-up's
+ * or Google's picture). The profile is the app's (`user_profiles`).
+ */
+const unnamed = { name: "", image: undefined } as const;
+
 export function claimInvite(gate: AccessGate) {
   return async (
     user: { email: string } & Record<string, unknown>,
     context: HookRequest | null,
   ) => {
+    // An address the app's own fields would refuse is refused here too,
+    // whichever endpoint sent it: at most `EMAIL_MAX_LENGTH` characters.
+    if (user.email.length > EMAIL_MAX_LENGTH) {
+      throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_EMAIL);
+    }
     // Every account, before anything else: an email sign-up from a
     // blocked state never gets here, Google's callback is read here.
     if (isFromBlockedRegion(context?.request)) refuseRegion();
@@ -353,12 +369,12 @@ export function claimInvite(gate: AccessGate) {
     if (gate.checksAge && !(await isAgeCheckedForCreate(context))) {
       refuseMissingAge();
     }
-    if (!gate.isInviteOnly) return { data: { ...user, name: "" } };
+    if (!gate.isInviteOnly) return { data: { ...user, ...unnamed } };
     const code = await codeForCreate(context);
     if (code === undefined) refuse("missing");
     const id = newUlid();
     const claimed = await gate.claim({ code, userId: id, email: user.email });
     if (claimed !== "redeemed") refuse("invalid");
-    return { data: { ...user, id, name: "" } };
+    return { data: { ...user, id, ...unnamed } };
   };
 }

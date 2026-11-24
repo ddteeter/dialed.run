@@ -5,7 +5,10 @@ import { z } from "zod";
 
 import { env } from "../../src/env";
 import { ACCESS_HEADERS, mintInviteCode } from "../../src/lib/contracts/access";
-import { PASSWORD_MIN_LENGTH } from "../../src/lib/contracts";
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";
 import { BREACHED_CODE } from "../../src/modules/auth/breached-password";
@@ -104,6 +107,7 @@ describe("createAuth", () => {
       // The form's floor, handed to the server: the two refuse the same
       // passwords because they read one number.
       minPasswordLength: PASSWORD_MIN_LENGTH,
+      maxPasswordLength: PASSWORD_MAX_LENGTH,
       // Au4 for everyone: sign-up signs nobody in (ACC-3).
       autoSignIn: false,
       // A registered address's answer has a new account's shape.

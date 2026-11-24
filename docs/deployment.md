@@ -457,9 +457,12 @@ needs its own Strava app, not a second subscription.
   rule of their own, and they must not match the daily rule, which fires
   on every event.
 - **A Sentry issue-frequency rule**: an issue alert on "the issue is seen
-  more than 20 times in one hour". The default rule fires once, when an
+  more than 5 times in one hour". The default rule fires once, when an
   issue is new. Without this rule, a storm of an error Sentry already knows
-  about pages nobody.
+  about pages nobody. The number is low because the reporter sends one
+  kind of caught error at most once a minute in an isolate
+  (`src/modules/ops/sentry/repeats.ts`), so a storm reaches Sentry as a
+  few events an hour from each isolate, not one per request.
 - **A Cloudflare monitor for what Sentry cannot see** (R-170). Sentry hears
   only from code that is still running. It hears nothing when the platform
   kills a Worker for CPU or memory, and nothing when the app returns a 5xx
