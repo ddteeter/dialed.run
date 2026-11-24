@@ -334,6 +334,7 @@ model {
   cf.app.safety.confirmRequest -> cf.coreDb 'claims the confirmation and hides'
   cf.app.cronHourly00 -[recovery]-> cf.app.ops.owedEmail 'sends owed alerts, receipts and answers'
   cf.app.cronHourly00 -> cf.coreDb 'owes the Desk its removal reminders'
+  cf.app.ops.owedEmail -> operator 'emails the Desk its alerts'
   operator -> cf.app.feed.decideRemoval 'decides a removal request'
   cf.app.feed.decideRemoval -> cf.coreDb 'takes down or gives back, and claims the request'
   cf.app.feed.decideRemoval -> cf.app.ops.outbox 'deletes the photos now'

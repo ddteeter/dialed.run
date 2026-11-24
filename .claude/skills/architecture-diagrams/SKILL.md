@@ -233,6 +233,13 @@ commands from `docs/diagrams/`; the npm scripts run from the repo root.
 Lay nothing out by hand. If a view is tangled, it has too many elements:
 split it.
 
+The story layout places boxes by how the arrows connect them, not by step
+number. A step whose two elements touch nothing else in the view is an
+island, and lands wherever the layout puts it, often at the top. Tie it in
+with the step that really comes before or after it: the email that tells
+the operator before the Desk's decision, the purge's claim on the database
+after the cron that starts it.
+
 ## The PR video
 
 A reviewer watches the change instead of reading `.c4`.

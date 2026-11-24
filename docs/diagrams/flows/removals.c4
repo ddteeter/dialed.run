@@ -67,6 +67,12 @@ views {
         Nothing ends a hold on a timer. The due time is a clock for the Desk: the subject stays hidden until a person decides.
       '''
     }
+    // source: src/modules/ops/owed-email/owed-email.ts owedEmailHandlers, operator_email; src/modules/safety/takedowns/takedown-requests.ts operatorAlerts
+    cf.app.ops.owedEmail -> operator 'emails the Desk the alert, and the reminder if it is still undecided' {
+      notes '''
+        One email to each operator. The request waits in Review until one of them decides it.
+      '''
+    }
     // source: src/modules/feed/functions.ts decideRemovalRequestAction; src/modules/feed/moderation/removal-requests.ts decideRemovalRequest
     operator -> cf.app.feed.decideRemoval 'decides the request on the Desk' {
       navigateTo removalDecision
