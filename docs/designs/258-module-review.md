@@ -620,6 +620,8 @@ proposal 11, knip for 14, and the cruiser's `no-circular` for 3, 4 and 5.
 
 ## Questions for the owner
 
+The owner answered these on 2026-11-23. The rulings are in design 261.
+
 1. **Do other modules import the narrowest door?** Proposal 13 is the only
    way `safety`'s door reaches 45, and it is a relabel. Yes means 13, then
    the same for `account` and `ops`, and a line in CLAUDE.md's
@@ -641,12 +643,13 @@ proposal 11, knip for 14, and the cruiser's `no-circular` for 3, 4 and 5.
    parent door gains a name. It could live in the ratchet (a parent door
    may only shrink) or in `.dependency-cruiser.cjs`; both are the owner's
    files.
-6. **Five names with no caller in `src`**: `searchProducts`,
+6. **Four names with no caller in `src`**: `searchProducts`,
    `getProductAttributeDefaults`, `getProductComposition`
-   (`src/modules/products/service.ts`), `isVerified`
-   (`account/verification/email-links.ts:267`) and `forecast`
-   (`weather/index.ts:20`). Kept for work not built, or deleted with
-   proposal 14?
+   (`src/modules/products/service.ts`) and `isVerified`
+   (`account/verification/email-links.ts:267`). Kept for work not built,
+   or deleted with proposal 14? (Corrected by design 261: this list first
+   included `forecast`, which `src/modules/weather/zone.ts` calls. Only
+   its export on `weather/index.ts:20` is unused.)
 7. **Scripts that import past a door** (finding 3): leave uncounted, or
    count them?
 
