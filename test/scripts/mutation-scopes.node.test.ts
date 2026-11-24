@@ -64,7 +64,7 @@ const { checkout, measured } = (() => {
   const work = path.join(root, "work");
   const origin = path.join(root, "origin.git");
   mkdirSync(work);
-  git(root, "init", "--quiet", "--bare", origin);
+  git(root, "init", "--quiet", "--bare", "--initial-branch=main", origin);
   git(work, "init", "--quiet", "--initial-branch=main");
   commitFile(work, "src/a.ts", "A");
   const m = commitFile(work, "src/measured.ts", "M");
@@ -72,7 +72,7 @@ const { checkout, measured } = (() => {
   git(work, "remote", "add", "origin", origin);
   git(work, "push", "--quiet", "origin", "refs/heads/main");
   const pr = path.join(root, "checkout");
-  git(root, "clone", "--quiet", "--no-tags", origin, pr);
+  git(root, "clone", "--quiet", "--no-tags", "--branch", "main", origin, pr);
   // Beside the PR's tree, untracked, as the step's checkout has them.
   mkdirSync(path.join(pr, "scripts"));
   for (const script of ["main-mutation-runs.sh", "main-mutation-reports.sh"])
@@ -147,7 +147,7 @@ function changes() {
 describe("the shards a PR runs are chosen from", () => {
   it("the PR's own files by their real names, however git would quote them", () => {
     const run = chooseShards(routes());
-    expect(run.status).toBe(0);
+    expect(run.status, run.stderr).toBe(0);
     expect(changes()).toContainEqual({
       path: 'src/café "x".ts',
       deleted: false,
@@ -156,7 +156,7 @@ describe("the shards a PR runs are chosen from", () => {
 
   it("the files main changed after the commit its reports measured", () => {
     const run = chooseShards(routes());
-    expect(run.status).toBe(0);
+    expect(run.status, run.stderr).toBe(0);
     expect(run.output).toContain('list=[{"name":"some"}]');
     const paths = changes().map((change) => change.path);
     expect(paths).toContain("src/later.ts");
@@ -166,7 +166,7 @@ describe("the shards a PR runs are chosen from", () => {
 
   it("the PR's own files alone when main has no report to read", () => {
     const run = chooseShards({ ...routes(), "run list": [] });
-    expect(run.status).toBe(0);
+    expect(run.status, run.stderr).toBe(0);
     expect(run.calls.some((call) => call.startsWith("run view"))).toBe(false);
     expect(changes().map((change) => change.path)).not.toContain(
       "src/later.ts",
@@ -178,7 +178,7 @@ describe("the shards a PR runs are chosen from", () => {
       ...routes(),
       [`run view ${String(RUN)}`]: FAILS,
     });
-    expect(run.status).toBe(0);
+    expect(run.status, run.stderr).toBe(0);
     expect(run.stdout).toContain(
       "::warning::could not read the commit main's reports measured; running every shard",
     );
