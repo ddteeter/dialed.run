@@ -4,10 +4,11 @@ name: Protected paths
 # owner's `owner-approved` label before this check passes. The files: the
 # guardrails config and its grants, the Stryker config, the workflows and
 # the git hooks, the ESLint, dependency-cruiser, lockfile-lint, knip,
-# fallow, Vite, Vitest, Playwright and TypeScript configs, `.npmrc`,
-# `scripts/`, `test/architecture/`, the Claude settings, and in
-# package.json everything outside its dependency lists (the scripts among
-# it), plus the guardrails-core pin (its line in package.json, its entry
+# fallow, Vite, Vitest, Playwright and TypeScript configs (the ESLint and
+# TypeScript ones, `jsconfig.json` among them, in any folder), `.npmrc`,
+# `scripts/`, `test/architecture/`, the Claude settings, the Codex hooks,
+# and in package.json everything outside its dependency lists (the
+# scripts among it), plus the guardrails-core pin (its line in package.json, its entry
 # in package-lock.json). Each config is listed under every file name its
 # tool looks for, not only the one this repository uses. A rename or a
 # deletion counts as a change. The ruleset requires this check as
@@ -71,7 +72,7 @@ jobs:
             \.?stryker\.(conf|config)\.(json|[cm]?js)
             \.github/.+
             \.githooks/.+
-            eslint\.config\.[cm]?[jt]s
+            (.+/)?eslint\.config\.[cm]?[jt]s
             \.dependency-cruiser\.(json|[cm]?[jt]s)
             lockfile-lint\.config\.[cm]?js
             \.lockfile-lintrc(\.(json|ya?ml|[cm]?js))?
@@ -81,11 +82,12 @@ jobs:
             vite\.config\.[cm]?[jt]s
             vitest\.(config|workspace)\.[cm]?[jt]s
             playwright(\.[a-z]+)?\.config\.[cm]?[jt]s
-            tsconfig(\..+)?\.json
+            (.+/)?[jt]sconfig(\.[^/]+)?\.json
             \.npmrc
             scripts/.+
             test/architecture/.+
             \.claude/settings\.json
+            \.codex/hooks\.json
         run: |
           set -euo pipefail
 
