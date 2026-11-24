@@ -32,6 +32,12 @@ describe("what a forced guardrails init would remove", () => {
     expect(steps).toBeLessThan(gate);
   });
 
+  it("runs the preflight steps without git's hook variables", () => {
+    expect(prePush).toContain(
+      "env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_PREFIX -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY $step >&2 || {",
+    );
+  });
+
   it("runs none of them for a push that only deletes refs", () => {
     expect(prePush).toContain("*[!0]*) pushes_commits=yes ;;");
     expect(prePush).toContain('if [ "$pushes_commits" = yes ]; then');

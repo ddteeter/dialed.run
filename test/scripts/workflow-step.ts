@@ -17,6 +17,8 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { withoutGitEnv } from "./git-env";
+
 const STEP_INDENT = "      - name: ";
 const RUN_INDENT = 10;
 const ENV_INDENT = 10;
@@ -215,7 +217,7 @@ export function runStep(
       encoding: "utf8",
       maxBuffer: 1 << 26,
       env: {
-        ...process.env,
+        ...withoutGitEnv(process.env),
         PATH: `${bin}:${process.env.PATH ?? ""}`,
         STUB_DIR: directory,
         RUNNER_TEMP: temporary,

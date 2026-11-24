@@ -19,6 +19,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { withoutGitEnv } from "./git-env";
+
 const SCRIPT = path.resolve("scripts/mutation-main-alert.sh");
 const TITLE = "Mutation is red on main";
 const BOT = { login: "app/github-actions" };
@@ -77,7 +79,7 @@ function runAlert(scenario: Scenario): string[] {
   const run = spawnSync("/bin/sh", [SCRIPT, "42", scenario.result, "abc123"], {
     encoding: "utf8",
     env: {
-      ...process.env,
+      ...withoutGitEnv(process.env),
       PATH: `${directory}:${process.env.PATH ?? ""}`,
       STUB_DIR: directory,
       GH_REPO: "owner/repo",

@@ -35,6 +35,9 @@ and the plan reports the file as unchanged again.
   `npm test` and `npm run diagrams:check` before the gate, skipping a push
   that only deletes refs (owner, 2026-11-23): they are what CI's first job
   runs and the gate does not, so a branch that skipped one spent a CI lap.
+  It runs them without git's hook variables (`GIT_DIR`, `GIT_INDEX_FILE`
+  and the rest), so a test's git call in a temp repo cannot write to this
+  one (owner, 2026-11-23).
 - **`.github/workflows/guardrails.yml`** names a full version tag on every
   action, locked in `actions.lock` (D-182), and has a concurrency group, a
   Chromium install and a MediaPipe staging step. The template has floating
