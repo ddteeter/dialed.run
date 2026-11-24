@@ -700,16 +700,17 @@ export function releaseHoldWrites(
     eq(reviewQueue.subjectId, subject.subjectId),
     inArray(reviewQueue.status, ["pending", "reviewing"]),
   );
-  const otherPending = and(
-    eq(takedownRequests.subjectType, subject.subjectType),
-    eq(takedownRequests.subjectId, subject.subjectId),
-    requestHolds(),
-    ne(takedownRequests.id, request.id),
+  const otherHolds = requestHolds(
+    sql`${and(
+      eq(takedownRequests.subjectType, subject.subjectType),
+      eq(takedownRequests.subjectId, subject.subjectId),
+      ne(takedownRequests.id, request.id),
+    )}`,
   );
   const when = and(
     exists(rowsWhere(db, takedownRequests, thisDeclined)),
     notExists(rowsWhere(db, reviewQueue, reviewOpen)),
-    notExists(rowsWhere(db, takedownRequests, otherPending)),
+    sql`not ${otherHolds}`,
   );
   return [
     visibilityWrites[subject.subjectType](db, subject.subjectId, {

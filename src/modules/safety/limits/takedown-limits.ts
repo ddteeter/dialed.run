@@ -118,13 +118,13 @@ export function blockedSql(keys: RequesterKeys): SQL {
 }
 
 /**
- * A removal request that holds its subject: still pending, and it held
- * it at filing or at its confirm (`held_at`). One blocked, unconfirmed or
- * quieted by the valve while its subject was public held nothing, and
- * holds nothing. Read on `takedown_requests` itself.
+ * Whether a removal request `names` picks out holds its subject: still
+ * pending, and it held it at filing or at its confirm (`held_at`). One
+ * blocked, unconfirmed, or quieted by the valve while its subject was
+ * public held nothing, and holds nothing.
  */
-export function requestHolds(): SQL {
-  return sql`(${takedownRequests.status} = 'pending' and ${takedownRequests.heldAt} is not null)`;
+export function requestHolds(names: SQL): SQL {
+  return sql`exists (select 1 from ${takedownRequests} where ${qualified(takedownRequests, takedownRequests.status)} = 'pending' and ${qualified(takedownRequests, takedownRequests.heldAt)} is not null and ${names})`;
 }
 
 /**
