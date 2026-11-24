@@ -1638,12 +1638,13 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
     );
 
     await expect(firing).rejects.toBeInstanceOf(AggregateError);
-    // The weather retry, the sweep, the removal reminders (C6), the email
-    // drain, the product-link drain (D-113 Q1), the expired-state sweep,
-    // the two count sweeps and the zone fill (design 142), in that order.
+    // The weather retry, the sweep, the removal reminders (C6), the
+    // lapsed removal requests' decline, the email drain, the product-link
+    // drain (D-113 Q1), the expired-state sweep, the two count sweeps and
+    // the zone fill (design 142), in that order.
     await expect(firing).rejects.toMatchObject({
       message: "several upkeep steps failed",
-      errors: [boom, sweep, boom, boom, boom, boom, boom, boom, boom],
+      errors: [boom, sweep, boom, boom, boom, boom, boom, boom, boom, boom],
     });
     expect(swept).toBe(1);
   });
