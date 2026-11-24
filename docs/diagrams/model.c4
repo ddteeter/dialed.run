@@ -131,6 +131,14 @@ model {
     }
   }
 
+  // The outbox: a debt to another system, written with its change.
+  extend cf.app.closet {
+    removePhoto = inRequest 'removePhotoFn' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Removes a garment\'s photo: clears the row and owes the bytes\' delete'
+    }
+  }
+
   // The systems we call and do not run.
   provider = external 'Visual Crossing' {
     description 'Weather provider, behind an adapter'
@@ -278,4 +286,14 @@ model {
   cf.app.cronHourly15 -[recovery]-> cf.coreDb 'reads pending photos, opens Review rows for stuck ones'
   cf.app.cronHourly15 -> cf.mediaBucket 'fetches each pending photo'
   cf.app.cronHourly15 -> sentry 'names photos still pending'
+
+  runner -> cf.app.closet.removePhoto 'removes a garment\'s photo'
+  cf.app.closet.removePhoto -> cf.coreDb 'clears the photo and owes its delete'
+  cf.app.closet.removePhoto -> cf.app.ops.outbox 'pays the debt now: the fast path'
+  cf.app.ops.outbox -> cf.mediaBucket 'deletes owed photo objects'
+  cf.app.ops.outbox -> cf.coreDb 'claims and deletes outbox rows'
+  cf.app.ops.outbox -> cf.app.ops.owedEmail 'sends an owed email'
+  cf.app.cronHourly00 -[recovery]-> cf.app.ops.outbox 'drains owed email and product links'
+  cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'claims due outbox rows'
+  cf.app.cronDaily1200 -> sentry 'names the outbox backlog in the digest'
 }

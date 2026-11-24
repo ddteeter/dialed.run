@@ -1,0 +1,146 @@
+views {
+  dynamic view outboxStory {
+    title 'A debt to another system is written with its change, and paid at once'
+
+    include
+      runner with {
+        description 'Removes a garment\'s photo'
+      }
+    include
+      cf.coreDb with {
+        description 'Each outbox row is a debt still owed'
+      }
+
+    // source: src/modules/closet/functions.ts removePhotoFn; src/modules/closet/photos.ts removeItemPhoto; src/lib/sql/outbox.ts outboxMessageSchema, outboxKinds; src/modules/dispatch/outbox-handlers.ts outboxHandlers
+    runner -> cf.app.closet.removePhoto 'removes a garment\'s photo' {
+      notes '''
+        The worked example. Every write that owes work to another system has this shape: a deleted kit\'s photos, a run file, a runner\'s email, a deleted run\'s condition band.
+      '''
+    }
+    // source: src/modules/closet/photos.ts removeItemPhoto (db.batch, outboxInsert); src/modules/ops/outbox/outbox.ts oweOutbox, outboxInsert, outboxRow, takeOver, OUTBOX_FAST_PATH_GRACE_S
+    cf.app.closet.removePhoto -> cf.coreDb 'clears the photo and owes its delete, in one batch' {
+      notes '''
+        **Not atomic with R2.** D1 and the bucket are two systems, so the debt is a row, and the row lands with the change or not at all.
+
+        **Guard: one row a debt.** A second debt for the same work takes the row over with its own id, so the first writer\'s fast path cannot settle the second\'s.
+
+        **This row is the recovery marker.** No drain may take it for 15 minutes, so the fast path and a drain never work one debt at once.
+      '''
+    }
+    // source: src/modules/closet/photos.ts removeItemPhoto (settleOutbox); src/modules/ops/outbox/outbox.ts settleOutbox, runToSettle
+    cf.app.closet.removePhoto -> cf.app.ops.outbox 'pays the debt now: the fast path' {
+      notes '''
+        **Degrade, don\'t fail.** The fast path never throws: the change has committed, so a failure is reported and the row stays for a drain.
+      '''
+      navigateTo outboxRecovery
+    }
+    // source: src/modules/ops/outbox/storage-handlers.ts photoDeleteHandler, reconcileItemPhotos, isLiveObject
+    cf.app.ops.outbox -> cf.mediaBucket 'deletes what the photo\'s prefix holds beyond what its row names' {
+      notes '''
+        Reconciled against the row, not a list of keys, so a repeat deletes nothing more and an object a row still names is kept.
+      '''
+    }
+    // source: src/modules/ops/outbox/outbox.ts runToSettle
+    cf.app.ops.outbox -> cf.coreDb 'deletes the debt, by its own id' {
+      notes '''
+        **Guard: the row\'s own id.** A row a newer write took over while this ran is that writer\'s to settle, and stays.
+      '''
+    }
+    // source: src/modules/closet/photos.ts removeItemPhoto
+    runner <- cf.app.closet.removePhoto 'answers' {
+      notes '''
+        **Timing boundary: the request ends here.** The photo is gone from the closet whatever the fast path did.
+      '''
+    }
+    // source: src/modules/dispatch/scheduled.ts runCron, drainOwedEmail, drainProductLinks; src/modules/ops/desk/crons.ts cronRegistry (0 * * * *, 15 * * * *, 30 * * * *)
+    cf.app.cronHourly00 -[recovery]-> cf.app.ops.outbox 'drains owed email three times an hour' {
+      notes '''
+        **Timing boundary: up to 30 minutes after a row falls due.** At :00, :15 and :30.
+      '''
+      navigateTo outboxRecovery
+    }
+    // source: src/modules/dispatch/scheduled.ts runDailyDigest (drainOutbox, checkOutboxBacklog); src/modules/ops/desk/crons.ts cronRegistry (0 12 * * *)
+    cf.app.cronDaily1200 -[recovery]-> cf.app.ops.outbox 'drains every kind once a day, then names what is left' {
+      notes '''
+        **Timing boundary: the next noon, UTC.** The digest\'s drain is the one that takes a failed photo or file delete.
+      '''
+      navigateTo outboxRecovery
+    }
+  }
+
+  dynamic view outboxRecovery {
+    title 'When a fast path does not pay its debt'
+
+    include
+      cf.coreDb with {
+        description 'Each outbox row is a debt still owed'
+      }
+
+    try {
+      // source: src/modules/closet/photos.ts removeItemPhoto (settleOutbox); src/modules/ops/outbox/outbox.ts settleOutbox
+      cf.app.closet.removePhoto -> cf.app.ops.outbox 'pays the debt on the fast path'
+      // source: src/modules/ops/outbox/storage-handlers.ts reconcileItemPhotos
+      cf.app.ops.outbox -> cf.mediaBucket 'deletes the photo\'s objects'
+    }
+    catch 'the fast path fails, or the Worker stops before it' {
+      // source: src/modules/dispatch/scheduled.ts runDailyDigest; src/modules/ops/outbox/outbox.ts drainOutbox, claimDue, dueRowsOf, backoffSeconds, OUTBOX_DRAIN_CAP (50), OUTBOX_DRAIN_CAPS
+      cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'claims each kind\'s due rows, oldest first' {
+        notes '''
+          **Guard: claim, then work.** Each row is claimed on the due time this run read, so an overlapping run claims nothing. The claim counts the attempt and moves the row to its backoff: an hour, doubling, at most a week.
+
+          **Bounded.** 50 rows a kind a run, so one kind\'s backlog cannot starve the others; 5 for product links, each of which is many calls.
+        '''
+      }
+      // source: src/modules/ops/outbox/outbox.ts workClaimed, workRow, readOutboxRow; src/modules/dispatch/outbox-handlers.ts outboxHandlers
+      cf.app.cronDaily1200 -[recovery]-> cf.app.ops.outbox 'works each claimed row with its kind\'s handler' {
+        notes '''
+          Every handler is idempotent, so a row worked twice does its work once. A failure is reported with the row\'s ids, never its payload, and the row waits its backoff.
+
+          A kind this build cannot read is never claimed: a newer deploy wrote it, and a newer deploy drains it.
+        '''
+      }
+      // source: src/modules/ops/outbox/outbox.ts runToSettle, OWED_AGAIN
+      cf.app.ops.outbox -> cf.coreDb 'deletes each row it settled' {
+        notes '''
+          A handler that did part of a long job and owes the rest leaves its row with its attempts back at none, so the job never reads as failing.
+        '''
+      }
+    }
+    loop 'every hour, at :00, :15 and :30' {
+      // source: src/modules/dispatch/scheduled.ts drainOwedEmail, runCron; src/modules/ops/outbox/outbox.ts drainOutbox, stillDueOf; src/modules/runs/strava/reminder-email.ts REMINDER_EMAIL_DELAY_S
+      cf.app.cronHourly00 -[recovery]-> cf.app.ops.outbox 'drains owed email: the operators\' first, then the runners\'' {
+        notes '''
+          So a reminder held back 20 minutes goes out within the quarter hour it falls due, and a notice whose fast path failed is sent again within the hour. Each firing says only what did not settle, and what it left due.
+        '''
+      }
+      // source: src/modules/ops/owed-email/owed-email.ts emailHandler, deliverOwedEmail; src/modules/ops/outbox/outbox.ts workRow (sentAt)
+      cf.app.ops.outbox -> cf.app.ops.owedEmail 'sends it, and marks it sent as the send lands' {
+        notes '''
+          **Guard: the sent mark.** The sender takes no idempotency key, so a row whose Worker died before its delete is deleted by the next drain, not sent again. Only a Worker that dies between the send and the mark sends twice.
+        '''
+      }
+    }
+    opt 'a confirmed runner\'s garments are owed their product links' {
+      // source: src/modules/dispatch/scheduled.ts drainProductLinks; src/lib/sql/outbox.ts scheduledOutboxKinds; src/modules/ops/outbox/outbox.ts OUTBOX_DRAIN_CAPS
+      cf.app.cronHourly00 -[recovery]-> cf.app.ops.outbox 'links them, 5 rows a firing' {
+        notes '''
+          Owed on purpose, not by a failure: no fast path works a product link, so the hourly drain at :00 is how soon they link.
+        '''
+      }
+    }
+    opt 'debt is left once the daily drain has run' {
+      // source: src/modules/ops/outbox/outbox.ts checkOutboxBacklog, stillDueOf, OUTBOX_TERMINAL_ATTEMPTS (5)
+      cf.app.cronDaily1200 -> cf.coreDb 'counts rows past 5 attempts, of a kind this build cannot read, or still due' {
+        notes '''
+          The drain keeps trying a row past 5 attempts, at the longest backoff: a runner\'s photo is worth deleting late.
+        '''
+      }
+      // source: src/modules/ops/outbox/outbox.ts stillDueLine, drainLine; src/modules/dispatch/scheduled.ts runDailyDigest
+      cf.app.cronDaily1200 -> sentry 'puts each in the digest, with how long the oldest has waited' {
+        notes '''
+          No threshold to tune: a healthy drain leaves nothing due, so one row left is the cap at work, and its age says how far behind the drain is.
+        '''
+      }
+    }
+  }
+}

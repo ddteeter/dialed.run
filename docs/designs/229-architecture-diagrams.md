@@ -518,6 +518,15 @@ One PR a flow, each drawn as the code stands on `main` when it branched.
   first step's note rather than drawn twice. New entry point
   `cf.app.feed.photoUpload`; the hand-drawn `safety -> openai` arrow now
   starts at `safety/screening`.
+- **`flows/outbox.c4`**: `outboxStory` (one debt, worked through a
+  garment photo's Remove: the debt written in the change's batch, the
+  fast path, the delete by the row's own id, and the hourly and daily
+  drains) and `outboxRecovery` (a `try` for a fast path that fails, the
+  daily drain's claim and handlers, the hourly email `loop`, the product
+  links, and the digest's backlog lines). The generic outbox has no one
+  writer, so the story uses Remove photo as its example and names the
+  other kinds in the first note. New entry point
+  `cf.app.closet.removePhoto`.
 
 ## Open questions
 

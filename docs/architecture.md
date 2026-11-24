@@ -471,8 +471,9 @@ What picks up a lost step is drawn per flow in the model in
 [`enrichmentRecovery`](https://ddteeter.github.io/dialed.run/#/view/enrichmentRecovery/),
 [`publicPhotosRecovery`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosRecovery/),
 [`exportRecovery`](https://ddteeter.github.io/dialed.run/#/view/exportRecovery/),
-[`deletionRecovery`](https://ddteeter.github.io/dialed.run/#/view/deletionRecovery/) and
-[`screeningRecovery`](https://ddteeter.github.io/dialed.run/#/view/screeningRecovery/). The rest is below, in
+[`deletionRecovery`](https://ddteeter.github.io/dialed.run/#/view/deletionRecovery/),
+[`screeningRecovery`](https://ddteeter.github.io/dialed.run/#/view/screeningRecovery/) and
+[`outboxRecovery`](https://ddteeter.github.io/dialed.run/#/view/outboxRecovery/). The rest is below, in
 words.
 
 - **Queues**: `max_retries: 3` with delayed retry; DLQ bound and consumed —
@@ -530,7 +531,9 @@ words.
   `weather`. `ops/outbox` imports none of them, so any module may owe and
   settle. A fast path passes a map of its own kinds' handlers to
   `settleOutbox`, and the dispatch assembles the full registry for the
-  drains (`dispatch/outbox-handlers.ts`).
+  drains (`dispatch/outbox-handlers.ts`). Drawn as
+  [`outboxStory`](https://ddteeter.github.io/dialed.run/#/view/outboxStory/)
+  and [`outboxRecovery`](https://ddteeter.github.io/dialed.run/#/view/outboxRecovery/).
 - **A copyright hold** (D-130, design 149) is **reconciliation**: the
   `copyright_holds` row is the marker. A takedown hides and writes it in
   one batch; the daily firing (the dispatch's `DailyUpkeep.sweepCopyrightHolds`, `feed`'s)
