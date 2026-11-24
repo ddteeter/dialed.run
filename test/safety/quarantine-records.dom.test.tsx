@@ -54,7 +54,9 @@ describe("QuarantineRecords", () => {
   type RecordFn = Parameters<typeof QuarantineRecords>[0]["recordReport"];
 
   it("lists what is held, with its clock, and that it is not yet reported", () => {
-    render(<QuarantineRecords records={[held()]} recordReport={vi.fn()} />);
+    render(
+      <QuarantineRecords records={[held()]} total={1} recordReport={vi.fn()} />,
+    );
 
     expect(
       screen.getByRole("heading", { name: "Quarantine · 1" }),
@@ -78,6 +80,7 @@ describe("QuarantineRecords", () => {
     render(
       <QuarantineRecords
         records={[held({ ncmecReportedAt: SEP_10_2026, ncmecReportId: "42" })]}
+        total={1}
         recordReport={vi.fn()}
       />,
     );
@@ -96,7 +99,9 @@ describe("QuarantineRecords", () => {
   });
 
   it("heads a record as a queue card heads its row (R55·199, R2-DESK-08)", () => {
-    render(<QuarantineRecords records={[held()]} recordReport={vi.fn()} />);
+    render(
+      <QuarantineRecords records={[held()]} total={1} recordReport={vi.fn()} />,
+    );
 
     const record = part("quarantine-record");
     expect(record).toHaveClass(
@@ -133,7 +138,11 @@ describe("QuarantineRecords", () => {
       retainUntil: SEP_10_2026 + YEAR,
     });
     render(
-      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+      <QuarantineRecords
+        records={[held()]}
+        total={1}
+        recordReport={recordReport}
+      />,
     );
     const user = userEvent.setup();
 
@@ -168,7 +177,11 @@ describe("QuarantineRecords", () => {
       .fn<RecordFn>()
       .mockReturnValue(new Promise(neverSettles));
     render(
-      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+      <QuarantineRecords
+        records={[held()]}
+        total={1}
+        recordReport={recordReport}
+      />,
     );
 
     await userEvent
@@ -188,7 +201,11 @@ describe("QuarantineRecords", () => {
       retainUntil: SEP_10_2026 + YEAR,
     });
     render(
-      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+      <QuarantineRecords
+        records={[held()]}
+        total={1}
+        recordReport={recordReport}
+      />,
     );
 
     await userEvent
@@ -208,7 +225,11 @@ describe("QuarantineRecords", () => {
   it("refuses a number that is not one, before the round trip", async () => {
     const recordReport = vi.fn<RecordFn>();
     render(
-      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+      <QuarantineRecords
+        records={[held()]}
+        total={1}
+        recordReport={recordReport}
+      />,
     );
     const user = userEvent.setup();
 
@@ -234,7 +255,11 @@ describe("QuarantineRecords", () => {
       .fn<RecordFn>()
       .mockResolvedValue({ outcome: "gone" });
     render(
-      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+      <QuarantineRecords
+        records={[held()]}
+        total={1}
+        recordReport={recordReport}
+      />,
     );
 
     await userEvent
@@ -257,8 +282,20 @@ describe("QuarantineRecords", () => {
     expect(screen.queryAllByRole("status")).toHaveLength(0);
   });
 
+  it("heads a page that holds only some of the records with how many there are", () => {
+    const shown = [held(), held({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })];
+
+    render(
+      <QuarantineRecords records={shown} total={140} recordReport={vi.fn()} />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Quarantine · 2 of 140" }),
+    ).toBeVisible();
+  });
+
   it("says nothing is held under QUARANTINE · 0, rather than going (round 39 #68)", () => {
-    render(<QuarantineRecords records={[]} recordReport={vi.fn()} />);
+    render(<QuarantineRecords records={[]} total={0} recordReport={vi.fn()} />);
     expect(part("quarantine-record")).toBeNull();
     const heading = screen.getByRole("heading", { name: "Quarantine · 0" });
     const empty = screen.getByText("Nothing is in quarantine.");
@@ -274,7 +311,9 @@ describe("QuarantineRecords", () => {
 describe("QuarantineRecords: a lapsed session (Au7, D-155)", () => {
   it("carries page to log-in", () => {
     carriedSince();
-    render(<QuarantineRecords records={[held()]} recordReport={vi.fn()} />);
+    render(
+      <QuarantineRecords records={[held()]} total={1} recordReport={vi.fn()} />,
+    );
 
     expect(carriedSince()).toEqual(["page"]);
   });

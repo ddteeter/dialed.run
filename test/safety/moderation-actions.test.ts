@@ -38,7 +38,10 @@ import {
   decideReview,
   moderateContent,
 } from "../../src/modules/feed/moderation/moderation";
-import type { Report } from "../../src/modules/feed/entries/retract";
+import {
+  deleteEntryPhoto,
+  type Report,
+} from "../../src/modules/feed/entries/retract";
 import { runDayOf } from "../../src/modules/feed/moderation/run-day";
 import {
   photoResponse,
@@ -1253,10 +1256,63 @@ describe("decideReview: the queue's Remove really deletes", () => {
     ).rejects.toThrow("D1 is down");
   });
 
-  it("deletes a refused quarantine's copy, and answers as before", async () => {
-    const { entryId, photoId, key } = await postedPhoto();
+  it("records a quarantine whose photo its owner deleted while it was in flight, with its copy", async () => {
+    const { author, photoId, key } = await postedPhoto();
+    const queueId = await queued("photo", photoId);
+    const subject = await openSubject(queueId, await shownRowOf(queueId));
+    if (subject === undefined) throw new Error("not open");
+
+    const outcome = await moderateContent(
+      batchWithAfter(subject.heldTo.statement, () =>
+        deleteEntryPhoto(core(), author, photoId, quiet, noPurge),
+      ),
+      {
+        actorId: "rev",
+        action: "quarantine",
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "explicit",
+        heldTo: subject.heldTo,
+      },
+      quiet,
+    );
+
+    expect(outcome).toBe("removed");
+    expect(await stored("quarantine/")).toStrictEqual([quarantineKeyFor(key)]);
+    const records = await core()
+      .select({
+        subjectId: quarantinedContent.subjectId,
+        uploaderId: quarantinedContent.uploaderId,
+        actionId: quarantinedContent.moderationActionId,
+        snapshot: quarantinedContent.photosSnapshot,
+      })
+      .from(quarantinedContent);
+    expect(
+      records.map(({ snapshot, subjectId, uploaderId }) => ({
+        subjectId,
+        uploaderId,
+        copies: preservedKeysOf(snapshot),
+      })),
+    ).toStrictEqual([
+      {
+        subjectId: photoId,
+        uploaderId: author,
+        copies: { ok: true, keys: [quarantineKeyFor(key)] },
+      },
+    ]);
+    const audit = await auditFor(photoId);
+    const quarantines = audit.filter((row) => row.action === "quarantine");
+    expect(quarantines).toMatchObject([
+      { id: records[0]?.actionId, actorId: "rev", subjectOwnerId: author },
+    ]);
+    expect(await noticesFor(author)).toStrictEqual([]);
+  });
+
+  it("records nothing for a refused quarantine whose row another reviewer decided, and keeps its copy", async () => {
+    const { photoId, key } = await postedPhoto();
     const queueId = await queued("photo", photoId);
     const shown = await shownRowOf(queueId);
+    const deletes = vi.spyOn(env.MEDIA, "delete");
 
     const outcome = await decideReview(
       firstBatchAfter(() => decided(queueId)),
@@ -1265,50 +1321,10 @@ describe("decideReview: the queue's Remove really deletes", () => {
     );
 
     expect(outcome).toBe("already_resolved");
-    expect(await stored("quarantine/")).toStrictEqual([]);
-    expect(await stored(`entries/`)).toContain(key);
-    expect(await auditFor(photoId)).toStrictEqual([]);
+    expect(copiesDeleted(deletes)).toStrictEqual([]);
+    expect(await stored("quarantine/")).toStrictEqual([quarantineKeyFor(key)]);
     expect(await core().select().from(quarantinedContent)).toStrictEqual([]);
-    expect(
-      await core()
-        .select({ id: entryPhotos.id })
-        .from(entryPhotos)
-        .where(eq(entryPhotos.entryId, entryId)),
-    ).toStrictEqual([{ id: photoId }]);
-  });
-
-  it("deletes only the copies a refused quarantine made when one photo's object was already gone", async () => {
-    const { author, entryId, key } = await postedPhoto();
-    const goneId = newUlid();
-    await core()
-      .insert(entryPhotos)
-      .values({
-        id: goneId,
-        entryId,
-        photoKey: entryPhotoKeyFor(author, entryId, goneId),
-        position: 1,
-        screenStatus: "pass",
-      });
-    const queueId = await queued("entry", entryId);
-    const subject = await openSubject(queueId, await shownRowOf(queueId));
-    const deletes = vi.spyOn(env.MEDIA, "delete");
-
-    const taking = moderateContent(
-      firstBatchAfter(() => decided(queueId)),
-      {
-        actorId: "rev",
-        action: "quarantine",
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "explicit",
-        heldTo: subject?.heldTo,
-      },
-      quiet,
-    );
-
-    await expect(taking).rejects.toThrow(/NOT NULL/u);
-    expect(deletes.mock.calls).toStrictEqual([[[quarantineKeyFor(key)]]]);
-    expect(await stored("quarantine/")).toStrictEqual([]);
+    expect(await auditFor(photoId)).toStrictEqual([]);
   });
 
   it("keeps the copies a landed quarantine lists when another of the subject is refused", async () => {
@@ -1352,53 +1368,6 @@ describe("decideReview: the queue's Remove really deletes", () => {
     expect(
       records.map(({ snapshot }) => preservedKeysOf(snapshot)),
     ).toStrictEqual([{ ok: true, keys: [quarantineKeyFor(key)] }]);
-  });
-
-  it("answers a refused quarantine as before when its copy will not delete", async () => {
-    const { photoId } = await postedPhoto();
-    const queueId = await queued("photo", photoId);
-    const shown = await shownRowOf(queueId);
-    vi.spyOn(env.MEDIA, "delete").mockRejectedValue(new Error("R2 is down"));
-
-    const outcome = await decideReview(
-      firstBatchAfter(() => decided(queueId)),
-      "rev",
-      { queueId, shown, action: "quarantine", reason: "explicit" },
-    );
-
-    expect(outcome).toBe("already_resolved");
-  });
-
-  it("tells Sentry the surface and the key's kind, never the key, when a refused quarantine's copy will not delete", async () => {
-    const { photoId, key } = await postedPhoto();
-    const queueId = await queued("photo", photoId);
-    const subject = await openSubject(queueId, await shownRowOf(queueId));
-    const failure = new Error("R2 is down");
-    vi.spyOn(env.MEDIA, "delete").mockRejectedValue(failure);
-    const report = vi.fn<Report>();
-
-    const taking = moderateContent(
-      firstBatchAfter(() => decided(queueId)),
-      {
-        actorId: "rev",
-        action: "quarantine",
-        subjectType: "photo",
-        subjectId: photoId,
-        reason: "explicit",
-        heldTo: subject?.heldTo,
-      },
-      report,
-    );
-
-    await expect(taking).rejects.toThrow(
-      /NOT NULL[\s\S]*review_queue\.status/u,
-    );
-    expect(report.mock.calls).toStrictEqual([
-      [failure, { surface: "refused-quarantine-copies", kind: "kit-photo" }],
-    ]);
-    expect(JSON.stringify(report.mock.calls)).not.toContain(
-      quarantineKeyFor(key),
-    );
   });
 
   it("keeps a quarantine's copy when its batch fails for any other cause", async () => {

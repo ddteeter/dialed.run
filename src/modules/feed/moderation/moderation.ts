@@ -90,6 +90,7 @@ import {
 import {
   moderateGarmentPhoto,
   passedOn,
+  type QuarantineLanding,
   preserveObject,
   type HeldTo,
 } from "./garment-moderation";
@@ -280,7 +281,6 @@ async function preservation(
   actionId: string,
 ): Promise<{
   preservedKey: string;
-  copies: string[];
   record: BatchItem<"sqlite">;
 }> {
   const copyOf = await copyBytes(target.photoKeys);
@@ -296,9 +296,6 @@ async function preservation(
   );
   return {
     preservedKey,
-    copies: Array.from(copyOf.values(), (copy) => copy?.preservedKey).filter(
-      (key) => key !== undefined,
-    ),
     record: quarantineInsert(db, {
       moderationActionId: actionId,
       subjectType: input.subjectType,
@@ -428,6 +425,27 @@ async function authorNotice(
 }
 
 /**
+ * What a quarantine writes if its owner's delete refuses its batch
+ * (`passedOn`): its audit row and its record. Nothing for a Remove or a
+ * takedown.
+ */
+function landingOf(
+  input: ModerateInput,
+  target: Target,
+  audit: BatchItem<"sqlite">,
+  kept: { record: BatchItem<"sqlite"> } | undefined,
+): QuarantineLanding | undefined {
+  return (
+    kept && {
+      subjectType: input.subjectType,
+      subjectId: input.subjectId,
+      ownerId: target.ownerId,
+      statements: [audit, kept.record],
+    }
+  );
+}
+
+/**
  * Takes the subject down and records it — one batch, then the bytes. A
  * Remove or takedown tells its author; a quarantine preserves instead,
  * and tells nobody.
@@ -474,24 +492,24 @@ export async function moderateContent(
         };
   const words = removalStatements[input.reason];
   const takenDown = plan.statements(actionId);
+  const audit = moderationActionInsert(db, {
+    id: actionId,
+    actorId: input.actorId,
+    action: input.action,
+    subjectType: input.subjectType,
+    subjectId: input.subjectId,
+    subjectOwnerId: target.ownerId,
+    reason: input.notice === undefined ? words : `${words} — ${input.notice}`,
+    preservedKey: kept?.preservedKey,
+    // Read before the delete, in `targetOf`: once the batch lands the
+    // entry is gone, and this is how its author's run still finds it.
+    runId: target.runId,
+  });
   try {
     await commit(
       db,
       [
-        moderationActionInsert(db, {
-          id: actionId,
-          actorId: input.actorId,
-          action: input.action,
-          subjectType: input.subjectType,
-          subjectId: input.subjectId,
-          subjectOwnerId: target.ownerId,
-          reason:
-            input.notice === undefined ? words : `${words} — ${input.notice}`,
-          preservedKey: kept?.preservedKey,
-          // Read before the delete, in `targetOf`: once the batch lands the
-          // entry is gone, and this is how its author's run still finds it.
-          runId: target.runId,
-        }),
+        audit,
         ...(input.heldTo === undefined ? [] : [input.heldTo.statement]),
         // Before the delete in `takenDown`, which they read.
         ...fingerprintWrites(db, input, target, actionId),
@@ -510,7 +528,13 @@ export async function moderateContent(
       report,
     );
   } catch (error: unknown) {
-    await passedOn(error, input.heldTo, kept?.copies, "kit-photo", report);
+    await passedOn(
+      db,
+      error,
+      input.heldTo,
+      landingOf(input, target, audit, kept),
+      report,
+    );
   }
   purgeTakenDown(target, purge);
   return "removed";

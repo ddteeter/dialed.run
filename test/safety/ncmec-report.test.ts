@@ -4,12 +4,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { quarantinedContent } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { quarantineKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { AdminRequiredError } from "../../src/modules/safety/rules/admin";
 import {
   purgeExpiredQuarantine,
+  QUARANTINE_PAGE,
   QUARANTINE_RETENTION_SECONDS,
+  quarantineCount,
   quarantinedContentFor,
   recordNcmecReport,
 } from "../../src/modules/safety/takedowns/quarantine";
@@ -193,7 +196,55 @@ describe("recordNcmecReport", () => {
   });
 });
 
+/**
+ * A handle on the core database whose first batch, the purge's claim,
+ * lets `after` land once it has: a report recorded inside the firing.
+ */
+function afterFirstBatch(after: () => Promise<unknown>) {
+  const db = core();
+  const batch = db.batch.bind(db);
+  const seen = { batches: 0 };
+  Reflect.set(
+    db,
+    "batch",
+    async (...statements: Parameters<typeof db.batch>) => {
+      const result = await batch(...statements);
+      seen.batches += 1;
+      if (seen.batches === 1) await after();
+      return result;
+    },
+  );
+  return db;
+}
+
 describe("the purge, against the report's year", () => {
+  it("keeps a record and its copy when the report is recorded after the purge claimed it", async () => {
+    const now = nowSeconds();
+    const id = await quarantinedAtTime(now - YEAR - DAY);
+    const copy = quarantineKeyFor(`entries/u/e/${newUlid()}`);
+    await env.MEDIA.put(copy, "bytes");
+    await core()
+      .update(quarantinedContent)
+      .set({ photosSnapshot: JSON.stringify([{ preservedKey: copy }]) })
+      .where(eq(quarantinedContent.id, id));
+
+    const purge = await purgeExpiredQuarantine(
+      afterFirstBatch(() =>
+        recordNcmecReport(core(), ADMIN, { recordId: id, reportId: "9" }, now),
+      ),
+      env.MEDIA,
+      now,
+    );
+
+    expect(purge).toStrictEqual({ purged: 0, failed: [] });
+    expect(await recordOf(id)).toMatchObject({
+      ncmecReportedAt: now,
+      ncmecReportId: "9",
+      retainUntil: now + YEAR,
+    });
+    expect(await env.MEDIA.head(copy)).not.toBeNull();
+  });
+
   it("keeps a reported record past the quarantine's year, and purges it at the report's", async () => {
     const now = nowSeconds();
     const reportedAt = now - 300 * DAY;
@@ -233,6 +284,50 @@ describe("the purge, against the report's year", () => {
 });
 
 describe("Review's read of the quarantine", () => {
+  it("counts every record, for an admin only", async () => {
+    await quarantinedAtTime(nowSeconds());
+    await quarantinedAtTime(nowSeconds() - DAY);
+
+    expect(await quarantineCount(core(), ADMIN)).toBe(2);
+    await expect(quarantineCount(core(), "someone-else")).rejects.toThrow(
+      AdminRequiredError,
+    );
+  });
+
+  it("lists a record still owed a report ahead of newer reported ones", async () => {
+    const now = nowSeconds();
+    const owed = await quarantinedAtTime(now - 30 * DAY);
+    const [first, ...rest] = Array.from(
+      { length: QUARANTINE_PAGE },
+      (_, index) =>
+        core()
+          .insert(quarantinedContent)
+          .values({
+            id: newUlid(),
+            moderationActionId: newUlid(),
+            subjectType: "photo",
+            subjectId: newUlid(),
+            uploaderId: newUlid(),
+            entrySnapshot: "{}",
+            photosSnapshot: "[]",
+            quarantinedAt: now - index,
+            retainUntil: now + YEAR,
+            ncmecReportedAt: now,
+          }),
+    );
+    if (first === undefined) throw new Error("a page of records");
+    await core().batch([first, ...rest]);
+
+    const listed = await quarantinedContentFor(core(), ADMIN);
+
+    expect(listed).toHaveLength(QUARANTINE_PAGE);
+    expect(listed[0]?.id).toBe(owed);
+    expect(listed[1]?.quarantinedAt).toBe(now);
+    expect(listed[QUARANTINE_PAGE - 1]?.quarantinedAt).toBe(
+      now - (QUARANTINE_PAGE - 2),
+    );
+  });
+
   it("carries the report and the clock, and none of the content", async () => {
     const now = nowSeconds();
     const id = await quarantinedAtTime(now);

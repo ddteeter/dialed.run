@@ -27,13 +27,14 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import {
   photoScreenings,
-  quarantinedContent,
+  reviewQueue,
   wardrobeItems,
 } from "../../../db/schema-core";
 import { env, primaryCoreDb } from "../../../env";
 import { quarantineKeyFor } from "../../../lib/entry-photo-key";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
+import { hasRowWhere } from "../../../lib/sql/keyed-read";
 import { emailDebt } from "../../email";
 import { notificationRaise } from "../../notifications";
 import { captureException, oweOutbox } from "../../ops";
@@ -81,70 +82,57 @@ export interface HeldTo {
 }
 
 /**
- * A takedown's failure, passed on as it came. Refused by its Review row,
- * a quarantine's copies made for a record that never landed go first, so
- * nothing is kept that nothing lists, except those a record that did land
- * lists; any other failure keeps them.
+ * What a quarantine writes if its batch is refused because the subject's
+ * owner deleted it in the meantime: the audit row and the record, as the
+ * batch held them, with the copies already made.
+ */
+export interface QuarantineLanding {
+  readonly subjectType: "entry" | "photo" | "garment";
+  readonly subjectId: string;
+  readonly ownerId: string;
+  readonly statements: Statements;
+}
+
+/**
+ * A takedown's failure, passed on as it came — except a quarantine refused
+ * by its Review row because the subject's owner deleted the subject, which
+ * settled the row: its audit row and record are written all the same, and
+ * nothing else, since the owner's delete took the rows. The copies of any
+ * other refused quarantine stay until the quarantine purge's sweep of
+ * copies no record lists.
  */
 export async function passedOn(
+  db: Db,
   error: unknown,
   heldTo: HeldTo | undefined,
-  copies: readonly string[] | undefined,
-  kind: CopyKind,
-  report: Report,
-): Promise<never> {
-  if (copies !== undefined && heldTo?.refused(error) === true) {
-    await dropCopies(copies, kind, report);
-  }
-  throw error;
-}
-
-/**
-What a quarantine copied: a kit's photos or a garment's photo.
-*/
-type CopyKind = "kit-photo" | "garment-photo";
-
-/**
- * Deletes a refused quarantine's copies that no record lists, read from
- * the primary. A failure is reported by the surface and the copies' kind,
- * never a key, keeps the copies, and leaves the refusal to be answered as
- * it would be.
- */
-async function dropCopies(
-  copies: readonly string[],
-  kind: CopyKind,
+  landing: QuarantineLanding | undefined,
   report: Report,
 ): Promise<void> {
-  try {
-    const unlisted = await copiesNoRecordLists(copies);
-    await env.MEDIA.delete(unlisted);
-  } catch (error: unknown) {
-    report(error, { surface: "refused-quarantine-copies", kind });
+  if (
+    landing === undefined ||
+    heldTo?.refused(error) !== true ||
+    !(await wasSettledByOwner(landing))
+  ) {
+    throw error;
   }
+  await commit(db, landing.statements, [], report);
 }
 
 /**
- * Of a quarantine's copies, the ones no record lists, read from the
- * primary. Every quarantine of a subject copies its photos under the same
- * keys, so a copy a record lists is that record's, and stays. A record
- * lists a copy when its snapshot holds the copy's key as a JSON string.
+ * Whether the subject's owner settled a Review row on it as removed: what
+ * their own delete does to an open row. Read from the primary.
  */
-export async function copiesNoRecordLists(
-  copies: readonly string[],
-): Promise<string[]> {
-  const db = primaryCoreDb();
-  const snapshot = quarantinedContent.photosSnapshot;
-  const [first, ...rest] = copies.map((key) =>
-    db
-      .select({ id: quarantinedContent.id })
-      .from(quarantinedContent)
-      .where(sql`instr(${snapshot}, ${JSON.stringify(key)}) > 0`)
-      .limit(1),
-  );
-  if (first === undefined) return [];
-  const listed = await db.batch([first, ...rest]);
-  return listed.flatMap((rows, index) =>
-    rows.length > 0 ? [] : copies.slice(index, index + 1),
+async function wasSettledByOwner(landing: QuarantineLanding): Promise<boolean> {
+  return hasRowWhere(
+    primaryCoreDb(),
+    reviewQueue,
+    reviewQueue.id,
+    and(
+      eq(reviewQueue.subjectType, landing.subjectType),
+      eq(reviewQueue.subjectId, landing.subjectId),
+      eq(reviewQueue.status, "removed"),
+      eq(reviewQueue.resolvedBy, landing.ownerId),
+    ),
   );
 }
 
@@ -271,25 +259,26 @@ async function quarantineWrites(
   const copies = await copyVersion(photoKey);
   const id = newUlid();
   const preservedKey = quarantineKeyFor(photoKey);
-  const statements: Statements = [
-    ...takedownWrites(db, input, found, { id, preservedKey }),
-    quarantineInsert(db, {
-      moderationActionId: id,
+  const writes = takedownWrites(db, input, found, { id, preservedKey });
+  const record = quarantineInsert(db, {
+    moderationActionId: id,
+    subjectType: "garment",
+    subjectId: item.id,
+    uploaderId: item.userId,
+    entrySnapshot: JSON.stringify({ item, screenings }),
+    photosSnapshot: JSON.stringify(copies),
+    uploaderSnapshot: await uploaderContextOf(db, item.userId),
+    quarantinedAt: nowSeconds(),
+  });
+  return {
+    statements: [...writes, record] satisfies Statements,
+    debts: [],
+    landing: {
       subjectType: "garment",
       subjectId: item.id,
-      uploaderId: item.userId,
-      entrySnapshot: JSON.stringify({ item, screenings }),
-      photosSnapshot: JSON.stringify(copies),
-      uploaderSnapshot: await uploaderContextOf(db, item.userId),
-      quarantinedAt: nowSeconds(),
-    }),
-  ];
-  return {
-    statements,
-    debts: [],
-    copies: copies
-      .map((copy) => copy.preservedKey)
-      .filter((key) => key !== undefined),
+      ownerId: item.userId,
+      statements: [writes[0], record],
+    } satisfies QuarantineLanding,
   };
 }
 
@@ -351,10 +340,10 @@ export async function moderateGarmentPhoto(
       : "not_found";
   }
   const { userId, id: itemId } = found.item;
-  const { statements, debts, copies } =
+  const { statements, debts, landing } =
     input.action === "quarantine"
       ? await quarantineWrites(db, input, found)
-      : { ...(await removalWrites(db, input, found)), copies: undefined };
+      : { ...(await removalWrites(db, input, found)), landing: undefined };
   const { heldTo } = input;
   const held: Statements =
     heldTo === undefined ? statements : [heldTo.statement, ...statements];
@@ -369,7 +358,7 @@ export async function moderateGarmentPhoto(
       report,
     );
   } catch (error: unknown) {
-    await passedOn(error, heldTo, copies, "garment-photo", report);
+    await passedOn(db, error, heldTo, landing, report);
   }
   return "removed";
 }

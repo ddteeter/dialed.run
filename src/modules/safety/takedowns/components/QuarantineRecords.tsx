@@ -34,7 +34,18 @@ function yearDayLabel(epochSeconds: number): string {
 }
 
 /**
- * Review's quarantine (C12): what is held for NCMEC, newest first, and
+ * The section's head: how many are shown, and of how many when the page
+ * holds only some (owner, 2026-11-24).
+ */
+function quarantineTitle(shown: number, total: number): string {
+  return shown < total
+    ? `Quarantine · ${String(shown)} of ${String(total)}`
+    : `Quarantine · ${String(shown)}`;
+}
+
+/**
+ * Review's quarantine (C12): what is held for NCMEC, those still owed a
+ * report first, and
  * whether each has been reported. Recording the report starts the year
  * the law asks it be kept from the report (18 U.S.C. §2258A(h)(1)), so
  * the row says when it may go. Round 39 (#68) confirmed the words; at
@@ -43,14 +54,19 @@ function yearDayLabel(epochSeconds: number): string {
  */
 export function QuarantineRecords({
   records,
+  total,
   recordReport,
 }: Readonly<{
   records: readonly QuarantineSummary[];
+  /**
+  How many records there are, of which `records` is the page shown.
+  */
+  total: number;
   recordReport: RecordReport;
 }>): JSX.Element | undefined {
   return (
     <ListSection
-      title={`Quarantine · ${String(records.length)}`}
+      title={quarantineTitle(records.length, total)}
       items={records}
       hasCards
       whenEmpty={

@@ -11,14 +11,15 @@ import {
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/dispatch";
-import { copiesNoRecordLists } from "../../src/modules/feed/moderation/garment-moderation";
 import {
   claimQuarantine,
+  copiesNoRecordLists,
   dueQuarantine,
   preservedKeysOf,
   purgeExpiredQuarantine,
   QUARANTINE_PURGE_CAP,
   QUARANTINE_PURGE_LEASE_SECONDS,
+  QUARANTINE_SWEEP_PAGES,
 } from "../../src/modules/safety/takedowns/quarantine";
 
 /**
@@ -92,6 +93,22 @@ async function recordOf(id: string) {
     .from(quarantinedContent)
     .where(eq(quarantinedContent.id, id));
   return row;
+}
+
+/**
+ * A handle on the core database whose first delete fails: a record's
+ * purge that stops before anything is deleted.
+ */
+function deleteFailsOnce() {
+  const db = core();
+  const remove = db.delete.bind(db);
+  const seen = { deletes: 0 };
+  Reflect.set(db, "delete", (...args: Parameters<typeof db.delete>) => {
+    seen.deletes += 1;
+    if (seen.deletes === 1) throw new Error("D1 unavailable");
+    return remove(...args);
+  });
+  return db;
 }
 
 beforeEach(async () => {
@@ -183,19 +200,20 @@ describe("purgeExpiredQuarantine", () => {
     expect(await recordOf(record.id)).toBeUndefined();
   });
 
-  it("keeps the record when R2 refuses, due again once the lease has passed", async () => {
+  it("keeps the record when its delete fails, due again once the lease has passed", async () => {
     const now = nowSeconds();
     const record = await quarantined({ retainUntil: now - DAY });
-    const refusal = new Error("R2 unavailable");
-    const failing = { delete: vi.fn().mockRejectedValue(refusal) };
 
-    const purge = await purgeExpiredQuarantine(core(), failing, now);
+    const purge = await purgeExpiredQuarantine(
+      deleteFailsOnce(),
+      env.MEDIA,
+      now,
+    );
 
     expect(purge).toStrictEqual({
       purged: 0,
-      failed: [{ id: record.id, error: refusal }],
+      failed: [{ id: record.id, error: new Error("D1 unavailable") }],
     });
-    expect(failing.delete).toHaveBeenCalledWith(record.keys);
     expect(await recordOf(record.id)).toMatchObject({
       retainUntil: now + QUARANTINE_PURGE_LEASE_SECONDS,
     });
@@ -216,6 +234,29 @@ describe("purgeExpiredQuarantine", () => {
     );
     expect(nextDay).toStrictEqual({ purged: 1, failed: [] });
     expect(await recordOf(record.id)).toBeUndefined();
+    for (const key of record.keys) expect(await isStored(key)).toBe(false);
+  });
+
+  it("leaves the copies to the sweep when R2 refuses them after the record has gone", async () => {
+    const now = nowSeconds();
+    const record = await quarantined({ retainUntil: now - DAY });
+    const refusal = new Error("R2 unavailable");
+    const failing = {
+      delete: vi.fn().mockRejectedValue(refusal),
+      list: env.MEDIA.list.bind(env.MEDIA),
+    };
+
+    const purge = await purgeExpiredQuarantine(core(), failing, now);
+
+    expect(purge).toStrictEqual({
+      purged: 0,
+      failed: [{ id: record.id, error: refusal }],
+    });
+    expect(failing.delete).toHaveBeenCalledWith(record.keys);
+    expect(await recordOf(record.id)).toBeUndefined();
+    for (const key of record.keys) expect(await isStored(key)).toBe(true);
+
+    await purgeExpiredQuarantine(core(), env.MEDIA, now + 2 * DAY);
     for (const key of record.keys) expect(await isStored(key)).toBe(false);
   });
 
@@ -267,13 +308,16 @@ describe("purgeExpiredQuarantine", () => {
   it("gives a second purge at the same moment nothing, once the first has moved the record on", async () => {
     const now = nowSeconds();
     const record = await quarantined({ retainUntil: now - DAY });
-    const refusing = { delete: vi.fn().mockRejectedValue(new Error("R2")) };
     const deletes = vi.fn().mockResolvedValue(undefined);
 
-    const first = await purgeExpiredQuarantine(core(), refusing, now);
+    const first = await purgeExpiredQuarantine(
+      deleteFailsOnce(),
+      env.MEDIA,
+      now,
+    );
     const second = await purgeExpiredQuarantine(
       core(),
-      { delete: deletes },
+      { delete: deletes, list: env.MEDIA.list.bind(env.MEDIA) },
       now,
     );
 
@@ -290,8 +334,11 @@ describe("purgeExpiredQuarantine", () => {
     // at once. The lease must be over by then, or a failure waits two days.
     const firing = nowSeconds();
     const record = await quarantined({ retainUntil: firing - DAY });
-    const refusing = { delete: vi.fn().mockRejectedValue(new Error("R2")) };
-    await purgeExpiredQuarantine(core(), refusing, firing + 60 * 60);
+    await purgeExpiredQuarantine(
+      deleteFailsOnce(),
+      env.MEDIA,
+      firing + 60 * 60,
+    );
 
     const tomorrow = await purgeExpiredQuarantine(
       core(),
@@ -321,11 +368,120 @@ describe("purgeExpiredQuarantine", () => {
     const kept = await quarantined({ retainUntil: nowSeconds() + DAY });
     const deletes = vi.fn();
 
-    const purge = await purgeExpiredQuarantine(core(), { delete: deletes });
+    const purge = await purgeExpiredQuarantine(core(), {
+      delete: deletes,
+      list: env.MEDIA.list.bind(env.MEDIA),
+    });
 
     expect(purge).toStrictEqual({ purged: 0, failed: [] });
     expect(deletes).not.toHaveBeenCalled();
     expect(await recordOf(kept.id)).toBeDefined();
+  });
+});
+
+describe("a copy two records list", () => {
+  it("stays while the other record lists it, and goes with the last", async () => {
+    const now = nowSeconds();
+    const first = await quarantined({ retainUntil: now - DAY, photos: 1 });
+    const snapshot = JSON.stringify(
+      first.keys.map((preservedKey) => ({ preservedKey })),
+    );
+    const second = await quarantined({
+      retainUntil: now + DAY,
+      photos: 0,
+      snapshot,
+    });
+
+    expect(await purgeExpiredQuarantine(core(), env.MEDIA, now)).toStrictEqual({
+      purged: 1,
+      failed: [],
+    });
+    expect(await recordOf(first.id)).toBeUndefined();
+    for (const key of first.keys) expect(await isStored(key)).toBe(true);
+
+    await purgeExpiredQuarantine(core(), env.MEDIA, now + 2 * DAY);
+    expect(await recordOf(second.id)).toBeUndefined();
+    for (const key of first.keys) expect(await isStored(key)).toBe(false);
+  });
+});
+
+describe("copies no record lists", () => {
+  it("are deleted by the purge once a day old, and kept until then", async () => {
+    const copy = unlisted(newUlid());
+    await env.MEDIA.put(copy, "bytes");
+    const madeAt = nowSeconds();
+
+    await purgeExpiredQuarantine(core(), env.MEDIA, madeAt + DAY - 60);
+    expect(await isStored(copy)).toBe(true);
+
+    expect(
+      await purgeExpiredQuarantine(core(), env.MEDIA, madeAt + DAY + 60),
+    ).toStrictEqual({ purged: 0, failed: [] });
+    expect(await isStored(copy)).toBe(false);
+  });
+
+  it("keeps an old copy a record lists, and deletes nothing outside the prefix", async () => {
+    const now = nowSeconds();
+    const kept = await quarantined({ retainUntil: now + 3 * DAY });
+    const live = entryPhotoKeyFor("u", "e", newUlid());
+    await env.MEDIA.put(live, "bytes");
+
+    await purgeExpiredQuarantine(core(), env.MEDIA, now + 2 * DAY);
+
+    for (const key of kept.keys) expect(await isStored(key)).toBe(true);
+    expect(await isStored(live)).toBe(true);
+    await env.MEDIA.delete(live);
+  });
+
+  it("goes through every page of the prefix", async () => {
+    const copies = Array.from({ length: 101 }, () => unlisted(newUlid()));
+    for (const copy of copies) await env.MEDIA.put(copy, "bytes");
+
+    await purgeExpiredQuarantine(core(), env.MEDIA, nowSeconds() + 2 * DAY);
+
+    expect(await env.MEDIA.list({ prefix: "quarantine/" })).toMatchObject({
+      objects: [],
+    });
+  });
+
+  it("says so, and throws nothing, when the prefix cannot be listed", async () => {
+    const refusal = new Error("R2 unavailable");
+    const media = {
+      delete: vi.fn(),
+      list: vi.fn().mockRejectedValue(refusal),
+    };
+
+    expect(await purgeExpiredQuarantine(core(), media)).toStrictEqual({
+      purged: 0,
+      failed: [{ id: "unlisted-copies", error: refusal }],
+    });
+    expect(media.delete).not.toHaveBeenCalled();
+  });
+
+  it(`says so after ${String(QUARANTINE_SWEEP_PAGES)} pages, when more remain`, async () => {
+    const media = {
+      delete: vi.fn(),
+      list: vi
+        .fn()
+        .mockResolvedValue({ objects: [], truncated: true, cursor: "next" }),
+    };
+
+    const purge = await purgeExpiredQuarantine(core(), media);
+
+    expect(media.list).toHaveBeenCalledTimes(QUARANTINE_SWEEP_PAGES);
+    expect(media.list).toHaveBeenLastCalledWith({
+      prefix: quarantineKeyFor(""),
+      limit: 100,
+      cursor: "next",
+    });
+    expect(purge.failed).toStrictEqual([
+      {
+        id: "unlisted-copies",
+        error: new Error(
+          `more copies than ${String(QUARANTINE_SWEEP_PAGES)} pages`,
+        ),
+      },
+    ]);
   });
 });
 
