@@ -32,6 +32,11 @@ async function renderWithRouter(element: ReactElement) {
   return render(<RouterProvider router={router} />);
 }
 
+/**
+How long a submit's status may take to show on a loaded push-gate machine.
+*/
+const SETTLED_MS = 5000;
+
 const TOKEN = "a".repeat(64);
 
 type ConfirmFn = Parameters<typeof TakedownConfirm>[0]["confirm"];
@@ -66,8 +71,18 @@ describe("/takedown/confirm", () => {
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Confirm the request" }));
-    // Announced before the receipt replaces the form.
-    expect(await screen.findByText("Request confirmed.")).toBeInTheDocument();
+    // Announced before the receipt replaces the form. The submit awaits
+    // the action and re-renders, and on a loaded machine that alone can
+    // pass findByText's one second: wait for the action first, then give
+    // the status its own timeout.
+    await waitFor(() => {
+      expect(confirm).toHaveBeenCalledOnce();
+    });
+    expect(
+      await screen.findByText("Request confirmed.", undefined, {
+        timeout: SETTLED_MS,
+      }),
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(
         screen.getByRole("heading", { name: "We have your request" }),

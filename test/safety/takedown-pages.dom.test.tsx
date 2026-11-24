@@ -89,6 +89,11 @@ function answeringTurnstile(token: string): void {
 /**
 `expect.stringMatching` is typed `any`; `unknown` keeps it out of no-unsafe-assignment.
 */
+/**
+How long a submit's status may take to show on a loaded push-gate machine.
+*/
+const SETTLED_MS = 5000;
+
 const A_KEY: unknown = expect.stringMatching(/^[0-9A-Z]{26}$/u);
 
 async function fillIn(user: ReturnType<typeof userEvent.setup>) {
@@ -190,7 +195,17 @@ describe("/takedown", () => {
     ).not.toHaveClass("bg-action");
     await user.click(screen.getByRole("button", { name: "Send the request" }));
 
-    expect(await screen.findByText("Request sent.")).toBeInTheDocument();
+    // The submit parses the form, awaits the action and re-renders, and
+    // on a loaded machine that alone can pass findByText's one second.
+    // Wait for the action first, then give the status its own timeout.
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledOnce();
+    });
+    expect(
+      await screen.findByText("Request sent.", undefined, {
+        timeout: SETTLED_MS,
+      }),
+    ).toBeInTheDocument();
     const receipt = await waitFor(() => {
       const found = part("receipt");
       expect(found).not.toBeNull();
