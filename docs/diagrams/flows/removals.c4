@@ -26,7 +26,7 @@ views {
 
         **This row is the recovery marker.** The subject is hidden pending review and its author is told in the app. The Desk has 48 hours.
 
-        **Bounded.** A requester with requests already pending confirms by email first, and past the hour\'s site-wide hides a request alerts the Desk without hiding.
+        **Bounded.** A requester with requests already pending confirms by email first, and past the hour\'s site-wide hides a request alerts the Desk without hiding. A blocked requester\'s request is recorded as declined.
       '''
     }
     // source: src/modules/safety/takedowns/takedown-requests.ts purgeIfHeld, subjectCacheTagsOf; src/modules/ops/public-web/edge-purge.ts purgePublicPagesFor; src/modules/safety/functions.ts REMOVAL_REQUESTS_PURGE_KEY
@@ -59,12 +59,12 @@ views {
         '''
       }
     }
-    // source: src/modules/dispatch/scheduled.ts runCron, oweRemovalReminders; src/modules/ops/daily/removal-reminders.ts oweRemovalReminders; src/modules/safety/reports/removal-reminders.ts undecidedRemovalsDue, REMOVAL_REMINDER_LEAD_SECONDS
+    // source: src/modules/dispatch/scheduled.ts runCron, oweRemovalReminders, declineLapsedRequests; src/modules/ops/daily/removal-reminders.ts oweRemovalReminders, summaryOwed; src/modules/safety/reports/removal-reminders.ts undecidedRemovalsDue, REMOVAL_REMINDER_LEAD_SECONDS; src/modules/safety/takedowns/takedown-requests.ts declineLapsedRequests
     cf.app.cronHourly00 -> cf.coreDb 'owes the Desk a reminder 8 hours before a request is due' {
       notes '''
-        **Guard: one reminder a request a person**, by its dedupe key.
+        **Guard: one reminder a request a person**, by its dedupe key, for a request that alerted one by one. The rest come in one summary a person an hour, which counts them.
 
-        Nothing ends a hold on a timer. The due time is a clock for the Desk: the subject stays hidden until a person decides.
+        Nothing ends a hold on a timer. The due time is a clock for the Desk: the subject stays hidden until a person decides. A request still waiting on its confirm when it is due is declined, since it held nothing.
       '''
     }
     // source: src/modules/ops/owed-email/owed-email.ts owedEmailHandlers, operator_email; src/modules/safety/takedowns/takedown-requests.ts operatorAlerts
@@ -121,10 +121,10 @@ views {
     opt 'Decline' {
       // source: src/modules/feed/functions.ts decideRemovalRequestAction; src/modules/feed/moderation/removal-requests.ts RemovalDecision
       operator -> cf.app.feed.decideRemoval 'presses Decline, with a reason'
-      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (db.batch); src/modules/safety/takedowns/takedown-requests.ts releaseHoldWrites, giveBacks
+      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (db.batch); src/modules/safety/takedowns/takedown-requests.ts releaseHoldWrites, giveBacks; src/modules/safety/limits/takedown-limits.ts requestHolds
       cf.app.feed.decideRemoval -> cf.coreDb 'claims the request as declined, owes the answer, and gives the subject back, in one batch' {
         notes '''
-          **Guard: the give-back waits for every other hold.** The subject comes back only if no review is open on it and no other pending request names it.
+          **Guard: the give-back waits for every other hold.** The subject comes back only if no review is open on it and no other request still holds it.
 
           A kit goes back to public. A photo goes back to pending, so the screener sees it again before anyone else does.
         '''
