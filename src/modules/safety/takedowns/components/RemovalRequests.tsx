@@ -21,7 +21,7 @@ import {
 import type { FormShell } from "../../../../ui";
 import { blockRequesterInput } from "../../inputs";
 import type { HoldState } from "../../limits/takedown-limits";
-import type { PendingTakedownRequest } from "../takedown-requests";
+import type { BlockResult, PendingTakedownRequest } from "../takedown-requests";
 import { ACTION_BAR } from "../../components/DeskForm";
 import { DueClock } from "../../components/DueClock";
 import { shortId } from "../../components/short-id";
@@ -64,7 +64,25 @@ function requestId(request: PendingTakedownRequest): string {
   return request.id;
 }
 
-type Block = (input: { data: { requestId: string } }) => Promise<unknown>;
+type Block = (input: { data: { requestId: string } }) => Promise<BlockResult>;
+
+/**
+ * Block and decline all's answer, as the page says it: how many it
+ * declined, from the server's count. Placeholder words (design deltas).
+ */
+function blockedSaid(result: BlockResult): string {
+  if (result.status === "not_found") return "That request is no longer open.";
+  const { declined } = result;
+  return `Blocked. ${String(declined)} ${declined === 1 ? "request" : "requests"} declined.`;
+}
+
+/**
+ * The requests that leave the list after a block: those it declined, or,
+ * when it found nothing open, the one it was asked about, which is gone.
+ */
+function goneAfter(result: BlockResult, requestId: string): readonly string[] {
+  return result.status === "blocked" ? result.declinedIds : [requestId];
+}
 
 /**
  * What filing decided, as Review says it (design 137). Placeholder words
@@ -96,12 +114,23 @@ function ignoreRow(): void {
  */
 export function RemovalRequests({
   requests,
+  pending = requests.length,
   asOf,
   decide,
   block,
   decideMatch,
+  onChanged,
 }: Readonly<{
   requests: readonly PendingTakedownRequest[];
+  /**
+   * How many requests are pending in all, when the page was read: more
+   * than `requests` once they run past the list (`pendingTakedownCount`).
+   */
+  pending?: number;
+  /**
+  After a decision or a block, so the route reads the list again.
+  */
+  onChanged?: (() => void) | undefined;
   /**
   When the page was read, for each request's clock (R55·197).
   */
@@ -121,37 +150,59 @@ export function RemovalRequests({
   // Back from a kit, the request it was opened from is focused (round 52
   // #155.5).
   useReturnToRow("request", ignoreRow);
+  const waiting = pending - (requests.length - remaining.length);
   return (
-    <ListSection
-      title={`Removal requests · ${String(remaining.length)}`}
-      items={remaining}
-      hasCards
-    >
-      {(request) => (
-        <RemovalRequestRow
-          key={request.id}
-          request={request}
-          asOf={asOf}
-          actions={{ decide, block, decideMatch }}
-          hasFocus={focusId === request.id}
-          onFocused={() => {
-            setFocusId(undefined);
-          }}
-          onDecided={() => {
-            settle(request.id);
-          }}
-          onBlocked={() => {
-            const gone = new Set([request.id, ...request.relatedIds]);
-            for (const id of gone) settle(id);
-            // The first request left, or none when the block took them all.
-            const [next] = remaining
-              .filter((row) => !gone.has(row.id))
-              .map((row) => row.id);
-            setFocusId(next);
-          }}
-        />
-      )}
-    </ListSection>
+    <>
+      <ListSection
+        title={`Removal requests · ${String(waiting)}`}
+        items={remaining}
+        hasCards
+      >
+        {(request) => (
+          <RemovalRequestRow
+            key={request.id}
+            request={request}
+            asOf={asOf}
+            actions={{ decide, block, decideMatch }}
+            hasFocus={focusId === request.id}
+            onFocused={() => {
+              setFocusId(undefined);
+            }}
+            onDecided={() => {
+              settle(request.id);
+              onChanged?.();
+            }}
+            onBlocked={(declined) => {
+              const gone = new Set(declined);
+              for (const id of gone) settle(id);
+              // The first request left, or none when the block took them all.
+              const [next] = remaining
+                .filter((row) => !gone.has(row.id))
+                .map((row) => row.id);
+              setFocusId(next);
+              onChanged?.();
+            }}
+          />
+        )}
+      </ListSection>
+      <ShownOf shown={remaining.length} waiting={waiting} />
+    </>
+  );
+}
+
+/**
+ * How many of the pending requests are listed, when not all are.
+ * Placeholder words (design deltas).
+ */
+function ShownOf({
+  shown,
+  waiting,
+}: Readonly<{ shown: number; waiting: number }>): JSX.Element | undefined {
+  if (shown === 0 || shown >= waiting) return undefined;
+  return (
+    <p className="m-0 text-body text-quiet" data-part="requests-shown">
+      {`Showing ${String(shown)} of ${String(waiting)}. The rest come in as these are decided.`}
+    </p>
   );
 }
 
@@ -189,7 +240,7 @@ type RowProps = Readonly<{
   hasFocus: boolean;
   onFocused: () => void;
   onDecided: () => void;
-  onBlocked: () => void;
+  onBlocked: (declined: readonly string[]) => void;
 }>;
 
 /**
@@ -371,7 +422,7 @@ function RequestActions({
     decide: Decide;
     block: Block;
     onDecided: () => void;
-    onBlocked: () => void;
+    onBlocked: (declined: readonly string[]) => void;
   }>;
 }>): JSX.Element {
   const { decide, block, onDecided, onBlocked } = acts;
@@ -385,11 +436,13 @@ function RequestActions({
       <BlockQuestion
         requestId={request.id}
         count={request.relatedIds.length + 1}
-        block={block}
-        onBlocked={onBlocked}
-        onCancel={() => {
-          setAsking(undefined);
-          blockedFrom.restore();
+        acts={{
+          block,
+          onBlocked,
+          onCancel: () => {
+            setAsking(undefined);
+            blockedFrom.restore();
+          },
         }}
       />
     );
@@ -516,22 +569,28 @@ function QuestionInPlace({
 function BlockQuestion({
   requestId,
   count,
-  block,
-  onBlocked,
-  onCancel,
+  acts,
 }: Readonly<{
   requestId: string;
   count: number;
-  block: Block;
-  onBlocked: () => void;
-  onCancel: () => void;
+  /**
+  What sends the block, what follows it, and the way back.
+  */
+  acts: Readonly<{
+    block: Block;
+    onBlocked: (declined: readonly string[]) => void;
+    onCancel: () => void;
+  }>;
 }>): JSX.Element {
+  const { block, onBlocked, onCancel } = acts;
   const form = useFormSubmit({
     carry: "page",
     schema: blockRequesterInput,
     action: (values) => block({ data: values }),
-    successMessage: `Blocked. ${String(count)} ${count === 1 ? "request" : "requests"} declined.`,
-    onSuccess: onBlocked,
+    successMessage: blockedSaid,
+    onSuccess: (result) => {
+      onBlocked(goneAfter(result, requestId));
+    },
   });
   return (
     <QuestionInPlace

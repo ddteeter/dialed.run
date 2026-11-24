@@ -401,6 +401,17 @@ type DecideFn = Parameters<typeof RemovalRequests>[0]["decide"];
 
 type BlockFn = Parameters<typeof RemovalRequests>[0]["block"];
 
+/**
+What Block and decline all answers for the requests it declined.
+*/
+function blockedAnswer(declinedIds: string[]) {
+  return {
+    status: "blocked" as const,
+    declined: declinedIds.length,
+    declinedIds,
+  };
+}
+
 describe("Review · removal requests", () => {
   it("draws the photo a request names, served as the Desk's tiles are (SA-M24)", async () => {
     await renderWithRouter(
@@ -967,7 +978,14 @@ describe("Review · removal requests", () => {
   });
 
   it("asks before it blocks, can be cancelled, and takes every request of theirs off the list", async () => {
-    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    const block = vi
+      .fn<BlockFn>()
+      .mockResolvedValue(
+        blockedAnswer([
+          "01JABCDEFGHJKMNPQRSTVWXYZ1",
+          "01JABCDEFGHJKMNPQRSTVWXYZ2",
+        ]),
+      );
     await renderWithRouter(
       <RemovalRequests
         asOf={0}
@@ -1201,7 +1219,9 @@ describe("Review · removal requests", () => {
   });
 
   it("takes the last request off the list, with nothing left to focus", async () => {
-    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    const block = vi
+      .fn<BlockFn>()
+      .mockResolvedValue(blockedAnswer(["01JABCDEFGHJKMNPQRSTVWXYZ1"]));
     await renderWithRouter(
       <RemovalRequests
         asOf={0}
@@ -1224,7 +1244,9 @@ describe("Review · removal requests", () => {
   });
 
   it("says one request declined, and moves focus to the next request left", async () => {
-    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    const block = vi
+      .fn<BlockFn>()
+      .mockResolvedValue(blockedAnswer(["01JABCDEFGHJKMNPQRSTVWXYZ1"]));
     await renderWithRouter(
       <RemovalRequests
         asOf={0}
@@ -1264,7 +1286,9 @@ describe("Review · removal requests", () => {
   });
 
   it("lands focus once: the list drawn again after another decision leaves it", async () => {
-    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    const block = vi
+      .fn<BlockFn>()
+      .mockResolvedValue(blockedAnswer(["01JABCDEFGHJKMNPQRSTVWXYZ1"]));
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
       <RemovalRequests
@@ -1385,5 +1409,152 @@ describe("takedown pages: a lapsed session (Au7, D-155)", () => {
     );
 
     expect(carriedSince()).toEqual([undefined]);
+  });
+});
+
+describe("Review · removal requests, past the page", () => {
+  it("counts every pending request, and says how many are listed when not all are", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[pending()]}
+        pending={61}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(screen.getByText("Removal requests · 61")).toBeInTheDocument();
+    expect(part("requests-shown")).toHaveTextContent(
+      /^Showing 1 of 61\. The rest come in as these are decided\.$/u,
+    );
+  });
+
+  it("says nothing more when every pending request is listed", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[pending()]}
+        pending={1}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(screen.getByText("Removal requests · 1")).toBeInTheDocument();
+    expect(part("requests-shown")).toBeNull();
+  });
+
+  it("counts down as requests are decided, and asks for the list again", async () => {
+    const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
+    const onChanged = vi.fn<() => void>();
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[
+          pending(),
+          pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ2", signature: "Next" }),
+        ]}
+        pending={61}
+        decide={decide}
+        block={vi.fn<BlockFn>()}
+        onChanged={onChanged}
+      />,
+    );
+    await userEvent.setup().click(
+      within(rows()[0] ?? document.body).getByRole("button", {
+        name: "Take it down",
+      }),
+    );
+    await waitFor(() => {
+      expect(onChanged).toHaveBeenCalledOnce();
+    });
+    expect(screen.getByText("Removal requests · 60")).toBeInTheDocument();
+    expect(part("requests-shown")).toHaveTextContent(/^Showing 1 of 60\./u);
+  });
+
+  it("says what the block really declined, and keeps the requests it did not", async () => {
+    const block = vi
+      .fn<BlockFn>()
+      .mockResolvedValue(blockedAnswer(["01JABCDEFGHJKMNPQRSTVWXYZ1"]));
+    const onChanged = vi.fn<() => void>();
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[
+          pending({
+            id: "01JABCDEFGHJKMNPQRSTVWXYZ1",
+            relatedIds: ["01JABCDEFGHJKMNPQRSTVWXYZ2"],
+          }),
+          pending({
+            id: "01JABCDEFGHJKMNPQRSTVWXYZ2",
+            signature: "Same Network",
+            relatedIds: ["01JABCDEFGHJKMNPQRSTVWXYZ1"],
+          }),
+        ]}
+        decide={vi.fn<DecideFn>()}
+        block={block}
+        onChanged={onChanged}
+      />,
+    );
+    const user = userEvent.setup();
+    const row = within(rows()[0] ?? document.body);
+    await user.click(
+      row.getByRole("button", { name: "Block and decline all" }),
+    );
+    await user.click(
+      row.getByRole("button", { name: "Block and decline all" }),
+    );
+
+    expect(
+      await screen.findByText("Blocked. 1 request declined."),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(rows()).toHaveLength(1);
+    });
+    expect(rows()[0]).toHaveTextContent("Same Network");
+    expect(onChanged).toHaveBeenCalledOnce();
+  });
+
+  it("says nothing of the rest while none is listed", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[]}
+        pending={5}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("requests-shown")).toBeNull();
+  });
+
+  it("says a request already gone when the block finds nothing, and takes it off the list", async () => {
+    const block = vi
+      .fn<BlockFn>()
+      .mockResolvedValue({ status: "not_found" as const });
+    const onChanged = vi.fn<() => void>();
+    await renderWithRouter(
+      <RemovalRequests
+        asOf={0}
+        requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
+        decide={vi.fn<DecideFn>()}
+        block={block}
+        onChanged={onChanged}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+
+    expect(
+      await screen.findByText("That request is no longer open."),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(onChanged).toHaveBeenCalledOnce();
+    });
+    expect(rows()).toHaveLength(0);
   });
 });
