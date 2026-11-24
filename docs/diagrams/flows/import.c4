@@ -273,12 +273,12 @@ views {
       cf.app.weather -> provider 'asks for the hours settled since'
       // source: src/modules/weather/attach.ts resolveAndAttach, setStatus
       cf.app.weather -> cf.coreDb 'the run is settled'
-      // source: src/modules/weather/attach.ts retryPendingWeather, windowOpensAt, FAIL_AFTER_SECONDS; src/db/gave-up.ts gaveUpUpsert
+      // source: src/modules/weather/attach.ts retryPendingWeather, attachEach, windowOpensAt, FAIL_AFTER_SECONDS; src/db/gave-up.ts gaveUpUpsert
       cf.app.weather -[recovery]-> cf.coreDb 'gives up on a run after five hours of tries' {
         notes '''
           The five hours count from the later of two moments: when the run entered (its import\'s creation, or else its start), and when its last sampled hour settles. The give-up comes on the first hourly pass after them.
 
-          One batch, and only for a run still `pending`: the run is marked `failed` and listed on the Desk\'s Gave up.
+          One batch, and only for a run still `pending`: the run is marked `failed` and listed on the Desk\'s Gave up. A run whose last try was held only by its runner\'s spent day of calls is marked `failed` and not listed: the runner\'s own run shows it has no conditions.
         '''
       }
     }
