@@ -197,6 +197,7 @@ describe("on Review's rows", () => {
     };
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[request]}
         decide={vi.fn()}

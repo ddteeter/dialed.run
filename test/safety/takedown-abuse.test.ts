@@ -2092,6 +2092,37 @@ describe("a blocked requester's request", () => {
     expect(await entryStatus(entryId)).toBe("ok");
     expect(await owed()).toHaveLength(before.length);
   });
+
+  it("is declined at its confirm by its address's block when it was filed with no key of its own", async () => {
+    const { entryId, request } = await pastTheCap();
+    const token = await confirmTokenFor(request.id);
+    await core()
+      .update(takedownRequests)
+      .set({ requesterKey: NOT_SET, ipKey: NOT_SET })
+      .where(eq(takedownRequests.id, request.id));
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: requesterKey(request.requesterEmail),
+        kind: "email",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+
+    await confirmTakedownRequest(
+      core(),
+      token,
+      { oweWhere: oweInCoreWhere, purge: noPurge },
+      NOW + 60,
+    );
+
+    expect(await requestRow(request.id)).toMatchObject({
+      holdState: "blocked",
+      status: "declined",
+      declineReason: "Blocked as abuse",
+    });
+    expect(await entryStatus(entryId)).toBe("ok");
+  });
 });
 
 describe("a request still waiting on its confirm", () => {

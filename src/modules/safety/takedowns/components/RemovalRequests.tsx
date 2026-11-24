@@ -130,7 +130,7 @@ export function RemovalRequests({
   /**
   After a decision or a block, so the route reads the list again.
   */
-  onChanged?: (() => void) | undefined;
+  onChanged: () => void;
   /**
   When the page was read, for each request's clock (R55·197).
   */
@@ -170,7 +170,7 @@ export function RemovalRequests({
             }}
             onDecided={() => {
               settle(request.id);
-              onChanged?.();
+              onChanged();
             }}
             onBlocked={(declined) => {
               const gone = new Set(declined);
@@ -180,7 +180,7 @@ export function RemovalRequests({
                 .filter((row) => !gone.has(row.id))
                 .map((row) => row.id);
               setFocusId(next);
-              onChanged?.();
+              onChanged();
             }}
           />
         )}

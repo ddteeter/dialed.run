@@ -416,6 +416,7 @@ describe("Review · removal requests", () => {
   it("draws the photo a request names, served as the Desk's tiles are (SA-M24)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending({ subjectPhotoKey: "entries/u/k/p" })]}
         decide={vi.fn<DecideFn>()}
@@ -430,6 +431,7 @@ describe("Review · removal requests", () => {
   it("draws no tile when the request names no photo (SA-M24)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -442,6 +444,7 @@ describe("Review · removal requests", () => {
   it("names the subject, then the clock right, who signed, what they said, and opens the kit (round 35 #58e)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending({ description: "a photo of me" })]}
         decide={vi.fn<DecideFn>()}
@@ -481,6 +484,7 @@ describe("Review · removal requests", () => {
     try {
       await renderWithRouter(
         <RemovalRequests
+          onChanged={vi.fn()}
           asOf={0}
           requests={[pending()]}
           decide={vi.fn<DecideFn>()}
@@ -496,6 +500,7 @@ describe("Review · removal requests", () => {
   it("leaves out the description's line when there is none", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -508,6 +513,7 @@ describe("Review · removal requests", () => {
   it("opens a reported photo's kit, and says when a link is not ours", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[
           pending({
@@ -543,6 +549,7 @@ describe("Review · removal requests", () => {
   it("draws an overdue request's clock as the filled tag, and names the owner (R55·197)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={5}
         requests={[
           // Due at this very second: out, so the filled tag.
@@ -564,6 +571,7 @@ describe("Review · removal requests", () => {
   it("draws the real owner in the head and the requester's handle in the body, as their word", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[
           pending({ owner: "real_owner", posterUsername: "someone_else" }),
@@ -585,6 +593,7 @@ describe("Review · removal requests", () => {
   it("says nothing of a handle the requester did not type", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending({ owner: "real_owner" })]}
         decide={vi.fn<DecideFn>()}
@@ -597,6 +606,7 @@ describe("Review · removal requests", () => {
   it("keeps a typed handle out of a link-not-ours head, and says it below", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending({ subject: undefined, posterUsername: "a_b" })]}
         decide={vi.fn<DecideFn>()}
@@ -612,6 +622,7 @@ describe("Review · removal requests", () => {
   it("draws the head in the cased mono step, truncating (R55·197)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -673,6 +684,7 @@ describe("Review · removal requests", () => {
     async ({ overrides, heard }) => {
       await renderWithRouter(
         <RemovalRequests
+          onChanged={vi.fn()}
           asOf={0}
           requests={[pending(overrides)]}
           decide={vi.fn<DecideFn>()}
@@ -685,10 +697,12 @@ describe("Review · removal requests", () => {
     },
   );
 
-  it("takes it down, says so, and only that request leaves the list", async () => {
+  it("takes it down, says so, only that request leaves the list, and the page reads it again", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
+    const onChanged = vi.fn();
     await renderWithRouter(
       <RemovalRequests
+        onChanged={onChanged}
         asOf={0}
         requests={[
           pending(),
@@ -720,11 +734,13 @@ describe("Review · removal requests", () => {
     expect(decide).toHaveBeenCalledWith({
       data: { requestId: "01JREQUEST0000000000000001", outcome: "removed" },
     });
+    expect(onChanged).toHaveBeenCalledOnce();
   });
 
   it("draws its decisions as one bar, Take it down first, and Block's question in its place (round 44)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -766,6 +782,7 @@ describe("Review · removal requests", () => {
       .mockRejectedValue(new TypeError("Failed to fetch"));
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={decide}
@@ -791,6 +808,7 @@ describe("Review · removal requests", () => {
   it("wraps a long requester address rather than cutting it (P3-05)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -805,6 +823,7 @@ describe("Review · removal requests", () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={decide}
@@ -867,6 +886,7 @@ describe("Review · removal requests", () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={decide}
@@ -928,6 +948,7 @@ describe("Review · removal requests", () => {
     async (holdState, words) => {
       await renderWithRouter(
         <RemovalRequests
+          onChanged={vi.fn()}
           asOf={0}
           requests={[pending({ holdState })]}
           decide={vi.fn<DecideFn>()}
@@ -941,6 +962,7 @@ describe("Review · removal requests", () => {
   it("says nothing of a hold for a link that hides nothing, nor of others when there are none", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending({ holdState: undefined })]}
         decide={vi.fn<DecideFn>()}
@@ -954,6 +976,7 @@ describe("Review · removal requests", () => {
   it("says what intimate means on every request (D-161)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -968,6 +991,7 @@ describe("Review · removal requests", () => {
   it("names the requester's other open requests", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending({ relatedIds: ["a", "b"] })]}
         decide={vi.fn<DecideFn>()}
@@ -988,6 +1012,7 @@ describe("Review · removal requests", () => {
       );
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[
           pending({
@@ -1066,6 +1091,7 @@ describe("Review · removal requests", () => {
   it("asks about the one request when the requester has no other", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -1085,6 +1111,7 @@ describe("Review · removal requests", () => {
   it("opens the question on Cancel, and Cancel or Esc hands focus back (round 37 #59f)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -1118,6 +1145,7 @@ describe("Review · removal requests", () => {
   it("keeps the question open for a key that is not Esc", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -1140,6 +1168,7 @@ describe("Review · removal requests", () => {
     // may not hold focus when it leaves; Cancel still returns there.
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -1162,6 +1191,7 @@ describe("Review · removal requests", () => {
   it("hands focus back to Decline on Cancel even when the click did not take it", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -1185,6 +1215,7 @@ describe("Review · removal requests", () => {
     const never = Promise.withResolvers<never>().promise;
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
         decide={vi.fn<DecideFn>().mockReturnValue(never)}
@@ -1209,6 +1240,7 @@ describe("Review · removal requests", () => {
   it("takes focus only from script: a row is not a tab stop", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -1224,6 +1256,7 @@ describe("Review · removal requests", () => {
       .mockResolvedValue(blockedAnswer(["01JABCDEFGHJKMNPQRSTVWXYZ1"]));
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
         decide={vi.fn<DecideFn>()}
@@ -1243,12 +1276,14 @@ describe("Review · removal requests", () => {
     expect(block).toHaveBeenCalledOnce();
   });
 
-  it("says one request declined, and moves focus to the next request left", async () => {
+  it("says one request declined, moves focus to the next request left, and the page reads it again", async () => {
     const block = vi
       .fn<BlockFn>()
       .mockResolvedValue(blockedAnswer(["01JABCDEFGHJKMNPQRSTVWXYZ1"]));
+    const onChanged = vi.fn();
     await renderWithRouter(
       <RemovalRequests
+        onChanged={onChanged}
         asOf={0}
         requests={[
           pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" }),
@@ -1279,6 +1314,7 @@ describe("Review · removal requests", () => {
       expect(part("removal-request")).toHaveFocus();
     });
     expect(part("removal-request")).toHaveTextContent("Next Asker");
+    expect(onChanged).toHaveBeenCalledOnce();
     // Focus lands once: a later render of the row leaves it where it is.
     await user.click(screen.getByRole("button", { name: "Decline" }));
     expect(screen.getByLabelText("Why not")).not.toBe(document.body);
@@ -1292,6 +1328,7 @@ describe("Review · removal requests", () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[
           pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" }),
@@ -1332,6 +1369,7 @@ describe("Review · removal requests", () => {
   it("names the poster in the line for a link that is not ours (round 37 #59g)", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[
           pending({
@@ -1354,6 +1392,7 @@ describe("Review · removal requests", () => {
   it("renders nothing when nothing is waiting", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[]}
         decide={vi.fn<DecideFn>()}
@@ -1370,6 +1409,7 @@ describe("takedown pages: a lapsed session (Au7, D-155)", () => {
     carriedSince();
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -1387,6 +1427,7 @@ describe("takedown pages: a lapsed session (Au7, D-155)", () => {
   it("carries Block's question as the page", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         decide={vi.fn<DecideFn>()}
@@ -1416,6 +1457,7 @@ describe("Review · removal requests, past the page", () => {
   it("counts every pending request, and says how many are listed when not all are", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         pending={61}
@@ -1432,6 +1474,7 @@ describe("Review · removal requests, past the page", () => {
   it("says nothing more when every pending request is listed", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[pending()]}
         pending={1}
@@ -1517,6 +1560,7 @@ describe("Review · removal requests, past the page", () => {
   it("says nothing of the rest while none is listed", async () => {
     await renderWithRouter(
       <RemovalRequests
+        onChanged={vi.fn()}
         asOf={0}
         requests={[]}
         pending={5}
