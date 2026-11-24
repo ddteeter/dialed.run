@@ -41,4 +41,9 @@ export type ExportRowState =
       readonly token: string;
       readonly expiresAt: number;
     }
-  | { readonly state: "failed" };
+  | { readonly state: "failed" }
+  // A second export failed within the day: the next may be asked for a
+  // day after the latest.
+  | { readonly state: "failed-wait" }
+  // Too large to build here: an operator makes the copy by hand.
+  | { readonly state: "too-large" };

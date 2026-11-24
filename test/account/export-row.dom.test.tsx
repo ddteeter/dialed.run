@@ -209,6 +209,28 @@ describe("ExportRow", () => {
     ).toBeNull();
   });
 
+  it("says to wait for tomorrow once a second export failed in a day — no button", async () => {
+    await renderRow({ state: "failed-wait" });
+    expect(
+      within(row()).getByText(
+        "Your export didn't work again. You can ask for another tomorrow.",
+      ),
+    ).toBeInTheDocument();
+    expect(within(row()).queryByRole("button")).toBeNull();
+    expect(within(row()).queryByRole("link")).toBeNull();
+  });
+
+  it("says a copy too large to build is made by hand — no button", async () => {
+    await renderRow({ state: "too-large" });
+    expect(
+      within(row()).getByText(
+        "Your data is too large for a copy here. We'll make one by hand and email it to you.",
+      ),
+    ).toBeInTheDocument();
+    expect(within(row()).queryByRole("button")).toBeNull();
+    expect(within(row()).queryByRole("link")).toBeNull();
+  });
+
   it("says a refused link is dead on an idle row, and nowhere else (round 28 #15)", async () => {
     const dead = "That link doesn't work any more. Get a copy for a new one.";
     const { unmount } = await renderWithRouter(
