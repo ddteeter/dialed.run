@@ -245,8 +245,12 @@ describe("the adapter says why it is unavailable", () => {
     expect(error.cause).toBeDefined();
   });
 
-  it("wraps a transport failure and keeps the original as the cause", async () => {
-    const boom = new Error("connect ECONNREFUSED");
+  it("wraps a transport failure by the rejection's name alone, never its message", async () => {
+    // What the runtime rejects a redirect loop with: the request's URL,
+    // query string and all.
+    const boom = new TypeError(
+      "Too many redirects: https://weather.visualcrossing.com/x?key=test-key",
+    );
     const provider = createVisualCrossingProvider("test-key", () =>
       Promise.reject(boom),
     );
@@ -254,8 +258,28 @@ describe("the adapter says why it is unavailable", () => {
     const error = await rejectionFrom(
       provider.observation(44.98, -93.27, new Date()),
     );
-    expect(error.message).toMatch(/request failed/);
-    expect(error.cause).toBe(boom);
+    expect(error).toBeInstanceOf(WeatherUnavailableError);
+    expect(error.message).toBe(
+      "Visual Crossing observation request failed: TypeError",
+    );
+    expect(error.cause).toBeUndefined();
+    expect(
+      JSON.stringify(error, Object.getOwnPropertyNames(error)),
+    ).not.toContain("test-key");
+  });
+
+  it("names a rejection that is not an Error by its type", async () => {
+    const provider = createVisualCrossingProvider(
+      "test-key",
+      vi.fn<typeof fetch>().mockRejectedValue(new Response()),
+    );
+
+    const error = await rejectionFrom(
+      provider.observation(44.98, -93.27, new Date()),
+    );
+    expect(error.message).toBe(
+      "Visual Crossing observation request failed: object",
+    );
   });
 });
 
@@ -615,8 +639,8 @@ describe("visual crossing resolves a typed place (E2-lite's city)", () => {
       Promise.reject(boom),
     );
     const error = await rejectionFrom(provider.resolvePlace("Portland"));
-    expect(error.message).toBe("Visual Crossing place request failed");
-    expect(error.cause).toBe(boom);
+    expect(error.message).toBe("Visual Crossing place request failed: Error");
+    expect(error.cause).toBeUndefined();
   });
 
   it("says the key is missing, without asking", async () => {

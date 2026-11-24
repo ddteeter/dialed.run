@@ -19,6 +19,7 @@ import {
   makeUser,
   resetTables,
 } from "../feed/helpers";
+import { WeatherBudgetSpentError } from "../../src/modules/weather/budget";
 import { zonesAnswering } from "./zone-deps";
 
 function coreDb() {
@@ -48,6 +49,31 @@ const AUSTIN = {
 /**
 A lookup that fails as an unavailable provider does.
 */
+/**
+ * The fill's deps from one lookup: every runner's lookup is the same one,
+ * and the runners it was asked for are recorded.
+ */
+function everyRunner(zones: ZoneDeps) {
+  const askedFor: string[] = [];
+  return {
+    zoneAtFor: (userId: string) => {
+      askedFor.push(userId);
+      return zones.zoneAt;
+    },
+    report: zones.report,
+    askedFor,
+  };
+}
+
+/**
+What `timeZoneAtFor` throws past the runner's day's budget.
+*/
+function zonesOverBudget() {
+  const zones = zonesAnswering(undefined);
+  zones.zoneAt.mockRejectedValue(new WeatherBudgetSpentError());
+  return zones;
+}
+
 function zonesFailing() {
   const outage = new Error("Visual Crossing place request failed");
   const zones = zonesAnswering(undefined);
@@ -170,6 +196,18 @@ describe("a failed lookup still saves the place (law 5)", () => {
       surface: "onboarding.fillMissingTimeZones",
       userId,
     });
+  });
+
+  it("does not report a lookup the runner's budget refused, and leaves the marker", async () => {
+    const userId = newUlid();
+    const zones = zonesOverBudget();
+
+    await savePlace(coreDb(), userId, PORTLAND, zones);
+    await zones.settled();
+
+    expect(zones.zoneAt).toHaveBeenCalledOnce();
+    expect(zones.report).not.toHaveBeenCalled();
+    expect(await zoneOf(userId)).toBeNull();
   });
 
   it("saves O1's calibration and place with no zone", async () => {
@@ -312,10 +350,32 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
     const userId = await owedAt({ lat: 45.52, lng: -122.68 });
     const zones = zonesAnswering("America/Los_Angeles");
 
-    await fillMissingTimeZones(coreDb(), zones);
+    await fillMissingTimeZones(coreDb(), everyRunner(zones));
 
     expect(zones.zoneAt).toHaveBeenCalledExactlyOnceWith(45.52, -122.68);
     expect(await zoneOf(userId)).toBe("America/Los_Angeles");
+  });
+
+  it("asks each owed row's lookup as that row's own runner", async () => {
+    const first = await owedAt({ lat: 45.52, lng: -122.68 });
+    const second = await owedAt({ lat: 51.5, lng: -0.12 });
+    const zones = everyRunner(zonesAnswering("Europe/London"));
+
+    await fillMissingTimeZones(coreDb(), zones);
+
+    expect(zones.askedFor).toHaveLength(2);
+    expect(new Set(zones.askedFor)).toStrictEqual(new Set([first, second]));
+  });
+
+  it("leaves a row whose runner's budget is spent for a later firing, unreported", async () => {
+    const userId = await owedAt({ lat: 45.52, lng: -122.68 });
+    const zones = zonesOverBudget();
+
+    await fillMissingTimeZones(coreDb(), everyRunner(zones));
+
+    expect(zones.zoneAt).toHaveBeenCalledOnce();
+    expect(zones.report).not.toHaveBeenCalled();
+    expect(await zoneOf(userId)).toBeNull();
   });
 
   it("asks nothing for a profile that already has its zone", async () => {
@@ -323,7 +383,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
     await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
     const zones = zonesAnswering("Europe/London");
 
-    await fillMissingTimeZones(coreDb(), zones);
+    await fillMissingTimeZones(coreDb(), everyRunner(zones));
 
     expect(zones.zoneAt).not.toHaveBeenCalled();
     expect(await zoneOf(userId)).toBe("America/Los_Angeles");
@@ -339,7 +399,10 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
     }
     const userId = await owedAt({ lat: 45.52, lng: -122.68 });
 
-    await fillMissingTimeZones(coreDb(), zonesAnswering("America/Los_Angeles"));
+    await fillMissingTimeZones(
+      coreDb(),
+      everyRunner(zonesAnswering("America/Los_Angeles")),
+    );
 
     expect(await zoneOf(userId)).toBe("America/Los_Angeles");
   });
@@ -348,7 +411,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
     const userId = await owedAt({ lat: 45.52, lng: -122.68 });
     const zones = zonesFailing();
 
-    await fillMissingTimeZones(coreDb(), zones);
+    await fillMissingTimeZones(coreDb(), everyRunner(zones));
 
     expect(await zoneOf(userId)).toBeNull();
     expect(zones.report).toHaveBeenCalledExactlyOnceWith(zones.outage, {
@@ -361,7 +424,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
     const userId = await owedAt({ lat: 45.52, lng: -122.68 });
     const zones = zonesAnswering(undefined);
 
-    await fillMissingTimeZones(coreDb(), zones);
+    await fillMissingTimeZones(coreDb(), everyRunner(zones));
 
     expect(await zoneOf(userId)).toBeNull();
     expect(zones.report).toHaveBeenCalledOnce();
@@ -383,7 +446,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
     const zones = zonesAnswering(undefined);
 
     for (let firing = 0; firing < 40; firing += 1) {
-      await fillMissingTimeZones(coreDb(), zones);
+      await fillMissingTimeZones(coreDb(), everyRunner(zones));
     }
 
     const asked = new Set(zones.zoneAt.mock.calls.map(([lat]) => lat));
@@ -411,7 +474,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
         report: vi.fn<ZoneDeps["report"]>(),
       };
 
-      await fillMissingTimeZones(coreDb(), zones);
+      await fillMissingTimeZones(coreDb(), everyRunner(zones));
 
       expect(await zoneOf(userId)).toBeNull();
     },
@@ -430,7 +493,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
       report: vi.fn<ZoneDeps["report"]>(),
     };
 
-    await fillMissingTimeZones(coreDb(), zones);
+    await fillMissingTimeZones(coreDb(), everyRunner(zones));
 
     expect(await zoneOf(userId)).toBe("America/Vancouver");
   });
@@ -443,7 +506,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
     const zones = zonesAnswering(undefined);
     zones.zoneAt.mockResolvedValueOnce("America/Los_Angeles");
 
-    await fillMissingTimeZones(coreDb(), zones);
+    await fillMissingTimeZones(coreDb(), everyRunner(zones));
 
     const filled = [await zoneOf(first), await zoneOf(second)].filter(
       (zone) => zone === "America/Los_Angeles",
@@ -464,7 +527,7 @@ describe("the fill reads by index, not by scanning (D1 bills rows scanned)", () 
       },
     });
 
-    await fillMissingTimeZones(logged, zonesAnswering(undefined));
+    await fillMissingTimeZones(logged, everyRunner(zonesAnswering(undefined)));
 
     const owed = queries.find(({ sql }) => sql.startsWith("select"));
     expect(owed).toBeDefined();

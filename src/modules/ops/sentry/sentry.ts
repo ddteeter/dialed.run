@@ -100,6 +100,13 @@ function toucanFor(
 }
 
 /**
+Whether a target has a DSN to send to.
+*/
+function isSending(target: SentryTarget): boolean {
+  return target.dsn !== undefined && target.dsn !== "";
+}
+
+/**
  * The reporting decision, with the target and the keep-alive handed in rather
  * than read.
  *
@@ -133,16 +140,46 @@ export function reportException(
 }
 
 /**
+ * The reporter for an error a caller caught, over a gate, a target and a
+ * send handed in. While there is a DSN, one surface's one kind of error
+ * (`./repeats`, read with its bound values removed) is sent once per
+ * window; a repeat inside it is written to the console with its context
+ * and not sent. With no DSN every report is the console line already, so
+ * the gate is not asked.
+ */
+export function exceptionReporter(
+  isDue: RepeatGate,
+  target: () => SentryTarget,
+  send: (target: SentryTarget, error: unknown, report: SentryReport) => void,
+  now: () => number = Date.now,
+): (error: unknown, context: Record<string, string>) => void {
+  return (error, context) => {
+    const to = target();
+    if (isSending(to)) {
+      const held = withoutBoundValues(error);
+      const kind = `${context.surface ?? ""}|${errorKind(held)}`;
+      if (!isDue(kind, now())) {
+        console.error("[sentry-repeat]", context, held);
+        return;
+      }
+    }
+    send(to, error, { context, tags: {} });
+  };
+}
+
+/**
  * Error reporting (CLAUDE.md law 7): context enough to act on, never
  * tokens, file contents, or request bodies. No-op locally when
  * SENTRY_DSN is unset — a missing reporter must never fail the app.
+ * `exceptionReporter` over this isolate's gate and the Worker's target.
  */
-export function captureException(
-  error: unknown,
-  context: Record<string, string>,
-): void {
-  reportException(workerTarget(), waitUntil, error, { context, tags: {} });
-}
+export const captureException = exceptionReporter(
+  repeatGate(),
+  workerTarget,
+  (target, error, report) => {
+    reportException(target, waitUntil, error, report);
+  },
+);
 
 /**
  * The reporter for requests that threw out of the Worker, over a gate and

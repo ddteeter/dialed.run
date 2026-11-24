@@ -9,6 +9,7 @@ import {
 } from "../../src/modules/ops/sentry/repeats";
 import {
   captureRequestException,
+  exceptionReporter,
   requestReporter,
   type SentryReport,
 } from "../../src/modules/ops/sentry/sentry";
@@ -176,5 +177,124 @@ describe("what server.ts reports a thrown request with", () => {
       { surface: "fetch" },
       error,
     );
+  });
+});
+
+const SENDING = {
+  dsn: "https://key@o0.ingest.sentry.io/1",
+  environment: "development",
+} as const;
+const NOT_SENDING = { dsn: undefined, environment: "development" } as const;
+
+function exceptionsAt(
+  times: number[],
+  target: { dsn: string | undefined; environment: "development" } = SENDING,
+) {
+  const sent: { error: unknown; report: SentryReport }[] = [];
+  let index = 0;
+  const asked: string[] = [];
+  const isDue = repeatGate(1000, 8);
+  const report = exceptionReporter(
+    (kind, now) => {
+      asked.push(kind);
+      return isDue(kind, now);
+    },
+    () => target,
+    (_target, error, details) => {
+      sent.push({ error, report: details });
+    },
+    () => times[index++] ?? 0,
+  );
+  return { report, sent, asked };
+}
+
+describe("the reporter for a caught error", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("sends one surface's kind once per window, with the context it was given", () => {
+    const { report, sent } = exceptionsAt([0, 500, 1000]);
+    const first = new Error("x");
+    report(first, { surface: "handle-screen", userId: "a" });
+    report(new Error("x"), { surface: "handle-screen", userId: "b" });
+    report(new Error("x"), { surface: "handle-screen", userId: "c" });
+    expect(sent.map((one) => one.report)).toStrictEqual([
+      { context: { surface: "handle-screen", userId: "a" }, tags: {} },
+      { context: { surface: "handle-screen", userId: "c" }, tags: {} },
+    ]);
+    expect(sent[0]?.error).toBe(first);
+  });
+
+  it("keys the gate by the surface and the kind", () => {
+    const { report, asked } = exceptionsAt([0]);
+    report(new Error("x"), { surface: "zone", userId: "a" });
+    report(new Error("x"), {});
+    expect(asked).toStrictEqual(["zone|Error: x", "|Error: x"]);
+  });
+
+  it("sends a different surface or a different kind inside the window", () => {
+    const { report, sent } = exceptionsAt([0, 1, 2]);
+    report(new Error("x"), { surface: "a" });
+    report(new Error("x"), { surface: "b" });
+    report(new Error("y"), { surface: "a" });
+    expect(sent).toHaveLength(3);
+  });
+
+  it("keys a failed statement by the statement and reason, never its values", () => {
+    const { report, sent } = exceptionsAt([0, 1]);
+    report(failedInsert(["user-1", "10 Elm Street"]), { surface: "s" });
+    report(failedInsert(["user-2", "22 Oak Road"]), { surface: "s" });
+    expect(sent).toHaveLength(1);
+  });
+
+  it("logs a held repeat with its context instead of sending it", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {
+      /*
+       * The held line is what is asserted.
+       */
+    });
+    const { report, sent } = exceptionsAt([0, 1]);
+    report(new Error("x"), { surface: "dlq", messageId: "m1" });
+    report(failedInsert(["user-2", "22 Oak Road"]), {
+      surface: "dlq",
+      messageId: "m2",
+    });
+    report(failedInsert(["user-3", "22 Oak Road"]), {
+      surface: "dlq",
+      messageId: "m3",
+    });
+    expect(sent).toHaveLength(2);
+    expect(logged).toHaveBeenCalledTimes(1);
+    expect(logged).toHaveBeenCalledWith(
+      "[sentry-repeat]",
+      { surface: "dlq", messageId: "m3" },
+      expect.any(Error),
+    );
+    expect(
+      JSON.stringify(
+        logged.mock.calls[0]?.[2],
+        Object.getOwnPropertyNames(logged.mock.calls[0]?.[2]),
+      ),
+    ).not.toMatch(/user-3|Oak Road/u);
+  });
+
+  it("asks no gate and holds nothing when there is no DSN to send to", () => {
+    const { report, sent, asked } = exceptionsAt([0, 1], NOT_SENDING);
+    report(new Error("x"), { surface: "a" });
+    report(new Error("x"), { surface: "a" });
+    expect(asked).toStrictEqual([]);
+    expect(sent).toHaveLength(2);
+  });
+
+  it("treats an empty DSN as no DSN", () => {
+    const { report, sent, asked } = exceptionsAt([0, 1], {
+      dsn: "",
+      environment: "development",
+    });
+    report(new Error("x"), { surface: "a" });
+    report(new Error("x"), { surface: "a" });
+    expect(asked).toStrictEqual([]);
+    expect(sent).toHaveLength(2);
   });
 });

@@ -204,8 +204,11 @@ async function timelineJson<TSchema extends z.ZodType>(
 }
 
 /**
-The request itself, under the timeout, with a failure named for what it was.
-*/
+ * The request itself, under the timeout, with a failure named for what it
+ * was. The rejection is named by its kind alone (`TypeError`,
+ * `TimeoutError`) and is not kept as the cause: a rejection's message can
+ * carry the request's URL, and the URL carries the key.
+ */
 async function timelineFetch(
   url: URL,
   what: string,
@@ -214,9 +217,9 @@ async function timelineFetch(
   try {
     return await fetchImpl(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
   } catch (error) {
+    const kind = error instanceof Error ? error.name : typeof error;
     throw new WeatherUnavailableError(
-      `Visual Crossing ${what} request failed`,
-      { cause: error },
+      `Visual Crossing ${what} request failed: ${kind}`,
     );
   }
 }
@@ -356,6 +359,12 @@ async function resolveLabel(
  */
 const WINTER_PROBE_DAY = "01-15";
 const SUMMER_PROBE_DAY = "07-15";
+
+/**
+ * How many provider requests one normals read makes: one per probe day.
+ * The budget counts each (`modules/weather/normals.ts`).
+ */
+export const NORMALS_REQUESTS = [WINTER_PROBE_DAY, SUMMER_PROBE_DAY].length;
 
 function probeDate(now: Date, monthDay: string): string {
   return `${String(now.getUTCFullYear())}-${monthDay}`;

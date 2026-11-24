@@ -13,6 +13,8 @@ import { env } from "../../../env";
 import type { WeatherProvider } from "../../../lib/contracts";
 import { createVisualCrossingProvider } from "./visual-crossing";
 
+export { NORMALS_REQUESTS } from "./visual-crossing";
+
 export function weatherProvider(): WeatherProvider {
   return createVisualCrossingProvider(env.VISUAL_CROSSING_API_KEY);
 }
