@@ -5,7 +5,7 @@
  *   tsx scripts/mutation-shards.ts                      every shard (a push to main)
  *   tsx scripts/mutation-shards.ts <changes> <reports>  the shards a PR's diff can affect
  *
- * `<changes>` holds `git diff --name-status --no-renames` output, and
+ * `<changes>` holds `git diff -z --name-status --no-renames` output, and
  * `<reports>` is where `scripts/main-mutation-reports.sh` put main's shard
  * reports (a missing one keeps its shard). Prints the
  * matrix as one line of JSON, `[{ mutate, name, slug }]`, and says on stderr

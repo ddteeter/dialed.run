@@ -496,10 +496,10 @@ describe("the Mutation matrix", () => {
       "          BASE: ${{ github.event.pull_request.base.ref }}\n",
     );
     expect(scopes).toContain(
-      'git diff --name-status --no-renames "origin/$BASE...HEAD" >"$changes"',
+      'git diff -z --name-status --no-renames "origin/$BASE...HEAD" >"$changes"',
     );
     expect(scopes).toContain(
-      '            if ! list=$(npx tsx scripts/mutation-shards.ts "$changes" "$reports"); then\n              echo "::warning::could not choose the shards from the diff; running every shard"\n              list=$(npx tsx scripts/mutation-shards.ts)\n',
+      '            elif ! list=$(npx tsx scripts/mutation-shards.ts "$changes" "$reports"); then\n              echo "::warning::could not choose the shards from the diff; running every shard"\n              list=$(npx tsx scripts/mutation-shards.ts)\n',
     );
   });
 
@@ -511,7 +511,10 @@ describe("the Mutation matrix", () => {
       "          DEPS: ${{ steps.deps.outputs.digest }}\n",
     );
     expect(scopes).toContain(
-      '            if ! sh scripts/main-mutation-reports.sh "$DEPS" "$reports"; then\n              echo "::notice::could not list main\'s runs; every shard runs"\n',
+      '            if ! found=$(sh scripts/main-mutation-reports.sh "$DEPS" "$reports"); then\n              echo "::notice::could not list main\'s runs; every shard runs"\n',
+    );
+    expect(scopes).toContain(
+      '              echo "::warning::could not read the commit main\'s reports measured; running every shard"\n              list=$(npx tsx scripts/mutation-shards.ts)\n',
     );
   });
 
