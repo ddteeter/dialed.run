@@ -123,6 +123,14 @@ model {
     }
   }
 
+  // Photo screening: a photo is classified before strangers see it.
+  extend cf.app.feed {
+    photoUpload = inRequest 'uploadPhotoAction' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Adds a photo to a kit: stores it, writes it pending, screens it inline'
+    }
+  }
+
   // The systems we call and do not run.
   provider = external 'Visual Crossing' {
     description 'Weather provider, behind an adapter'
@@ -167,7 +175,7 @@ model {
   cf.app.ops -> cf.vitalsDataset 'writes the speed beacon, reads the daily rollup'
   cf.app.ops -> cf.opsDb 'writes the daily speed rollup'
   cf.app.ops -> cf.mediaBackupBucket 'copies new and changed photos daily'
-  cf.app.safety -> openai 'screens photos'
+  cf.app.safety.screening -> openai 'screens photos'
   cf.app.email -> cf.emailSending 'sends every message'
 
   runner -> cf.app.runs.upload 'uploads a run file'
@@ -259,4 +267,15 @@ model {
   cf.app.account.purge -> cf.importsBucket 'deletes the run files and export ZIPs'
   cf.app.account.purge -> sentry 'reports a failed purge'
   cf.app.cronDaily1200 -[recovery]-> cf.app.ops.outbox 'drains the owed deletes and email'
+
+  runner -> cf.app.feed.photoUpload 'adds a photo to a kit'
+  cf.app.feed.photoUpload -> cf.mediaBucket 'stores the photo'
+  cf.app.feed.photoUpload -> cf.coreDb 'writes the photo row: pending'
+  cf.app.feed.photoUpload -> cf.app.safety.screening 'screens it inline'
+  cf.app.feed.photoUpload -[async]-> cf.app.ops.publicWeb.sync 'copies a passed photo on a PUBLIC kit'
+  cf.app.safety.screening -> cf.coreDb 'writes the verdict, the visibility and any review'
+  cf.app.cronHourly15 -[recovery]-> cf.app.safety.screening 'screens what is still pending'
+  cf.app.cronHourly15 -[recovery]-> cf.coreDb 'reads pending photos, opens Review rows for stuck ones'
+  cf.app.cronHourly15 -> cf.mediaBucket 'fetches each pending photo'
+  cf.app.cronHourly15 -> sentry 'names photos still pending'
 }

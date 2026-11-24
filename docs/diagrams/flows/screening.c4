@@ -1,0 +1,164 @@
+views {
+  dynamic view screeningStory {
+    title 'A runner\'s photo is screened before anyone else sees it'
+
+    include
+      runner with {
+        description 'Adds a photo to a kit'
+      }
+    include
+      cf.coreDb with {
+        description 'The photo\'s pending status is the durable marker'
+      }
+
+    // source: src/modules/feed/functions.ts uploadPhotoAction; src/modules/feed/entries/photos.ts uploadPhoto, uploadPhotoAnswer, idempotencyKey; src/lib/photo-pipeline.ts photoRefusal; src/modules/closet/photos.ts uploadItemPhoto
+    runner -> cf.app.feed.photoUpload 'adds a photo to a kit, with an idempotency key' {
+      notes '''
+        **Guard: the idempotency key.** A repeat answers the photo the first one stored, and takes no second place in the kit.
+
+        The type, the size and the pixel count are read from the header before anything decodes the file.
+
+        A garment\'s photo takes the same path from the closet, and is screened from the original bytes the runner sent.
+      '''
+    }
+    // source: src/modules/feed/entries/photos.ts uploadPhoto (env.MEDIA.put), reencoded, entryPhotoKeyFor
+    cf.app.feed.photoUpload -> cf.mediaBucket 'stores the photo, re-encoded' {
+      notes '''
+        **Not atomic with the row.** R2 and D1 are two systems.
+
+        **If the row fails:** the upload errors and the runner sends it again. What is left is an object under a random key nothing names.
+      '''
+    }
+    // source: src/modules/feed/entries/photos.ts storeRow, insertWhileRoom, isHeldAsRemovedCopy, MAX_PHOTOS_PER_ENTRY (4)
+    cf.app.feed.photoUpload -> cf.coreDb 'writes the photo\'s row: pending, while the kit has room' {
+      notes '''
+        **Guard: the count and the insert are one statement**, so uploads racing for one kit cannot make a fifth photo.
+
+        **This row is the recovery marker.** `pending` shows the photo to its owner and to nobody else: every public read needs a pass.
+
+        A copy of an image removed as intimate is written hidden instead, with its Review row and its uploader\'s notice in the same batch. It waits for a person, not the classifier.
+      '''
+    }
+    // source: src/modules/feed/entries/photos.ts uploadPhoto (screenPhoto, classifierFromEnv); src/modules/safety/screening/screening.ts screenPhoto, configuredHolds
+    cf.app.feed.photoUpload -> cf.app.safety.screening 'screens it before answering' {
+      notes '''
+        Inline, so a photo that passes is visible at once rather than appearing and then vanishing for its own author.
+
+        **Degrade, don\'t fail.** Screening never throws for the classifier: with no key, no thresholds, or a slow or dead upstream, the photo stays `pending` and the save goes through.
+      '''
+      navigateTo screeningRecovery
+    }
+    // source: src/modules/safety/screening/classifier/moderation.ts classifyImage, MODERATION_MODEL, moderationResponseSchema; src/modules/safety/screening/classifier/from-env.ts classifierFromEnv
+    cf.app.safety.screening -> openai 'asks the moderation model about the image' {
+      notes '''
+        **Bounded.** 10 seconds, and the answer is parsed before it is read.
+
+        **If it fails:** the photo stays `pending`, and the hourly sweep screens it again.
+      '''
+    }
+    // source: src/modules/safety/screening/screening.ts screenPhoto (db.batch), screeningInsert, visibilityWrite, updateWhilePending, queueWritesFor, holdNoticeFor
+    cf.app.safety.screening -> cf.coreDb 'writes the verdict, the visibility and any review, in one batch' {
+      notes '''
+        A pass publishes. The middle band publishes too, and puts the photo in front of a person. A flag hides it, puts it in front of a person, and tells its author.
+
+        **Guard: only over `pending`.** A report or a removal that hid the photo while the classifier was answering is never undone by a late pass.
+
+        **Guard: the verdict is written only while the photo exists**, so an answer that lands after the runner deleted it writes nothing.
+      '''
+    }
+    // source: src/modules/feed/entries/photos.ts uploadPhoto (publish, syncPublicPhotosLater)
+    cf.app.feed.photoUpload -[async]-> cf.app.ops.publicWeb.sync 'copies it out if it passed on a PUBLIC kit, after the response' {
+      notes '''
+        **Timing boundary: the upload has answered.** The sync reads the rule itself, so a photo still pending, hidden or on a kit that is not PUBLIC is left alone.
+      '''
+      navigateTo publicPhotosStory
+    }
+    // source: src/modules/feed/entries/photos.ts uploadPhotoAnswer, uploadPhoto
+    runner <- cf.app.feed.photoUpload 'answers with the photo' {
+      notes '''
+        **Timing boundary: the request ends here.** The owner sees their photo whatever the verdict.
+      '''
+    }
+    // source: src/modules/dispatch/scheduled.ts runCron, runScreeningRetry; src/modules/ops/desk/crons.ts cronRegistry (15 * * * *); src/modules/safety/screening/retry.ts retryPendingScreenings
+    cf.app.cronHourly15 -[recovery]-> cf.app.safety.screening 'screens every photo still pending' {
+      notes '''
+        **Timing boundary: up to an hour later.** Every hour at quarter past, for as long as a photo is `pending`.
+      '''
+      navigateTo screeningRecovery
+    }
+  }
+
+  dynamic view screeningRecovery {
+    title 'When a photo\'s screening does not finish'
+
+    include
+      cf.coreDb with {
+        description 'The photo\'s pending status is the durable marker'
+      }
+
+    try {
+      // source: src/modules/feed/entries/photos.ts uploadPhoto (screenPhoto); src/modules/closet/photos.ts uploadItemPhoto
+      cf.app.feed.photoUpload -> cf.app.safety.screening 'screens the photo on upload'
+      // source: src/modules/safety/screening/classifier/moderation.ts classifyImage
+      cf.app.safety.screening -> openai 'asks the moderation model'
+    }
+    catch 'no key or thresholds, the model fails or is slow, or the Worker stops' {
+      // source: src/modules/dispatch/scheduled.ts runScreeningRetry; src/modules/safety/screening/retry.ts retryPendingScreenings; src/modules/safety/screening/screening.ts pendingEntryPhotos, pendingGarmentPhotos
+      cf.app.cronHourly15 -[recovery]-> cf.coreDb 'reads up to 50 pending kit photos and 50 pending garment photos, in random order' {
+        notes '''
+          **Bounded.** A backlog drains over several firings rather than one firing timing out. Random, so photos that never get an answer cannot fill every firing\'s read.
+
+          Photos uploaded before the key existed are `pending` too, and the first firing after it is set screens them.
+        '''
+      }
+      // source: src/modules/safety/screening/retry.ts screenOne, contentTypeOf; src/modules/safety/screening/screening.ts pendingGarmentFrom
+      cf.app.cronHourly15 -> cf.mediaBucket 'fetches each photo\'s bytes' {
+        notes '''
+          A garment\'s original, as the upload screens it. A photo whose object is missing is not guessed at: it stays `pending`, hidden from everyone but its owner.
+        '''
+      }
+      // source: src/modules/safety/screening/retry.ts retryPendingScreenings, screenOne, countedAs; src/modules/safety/screening/screening.ts screenPhoto
+      cf.app.cronHourly15 -[recovery]-> cf.app.safety.screening 'screens each again, with the upload\'s guards' {
+        notes '''
+          **Degrade, don\'t fail.** The sweep counts what each photo came to and never throws, so a failure on one does not cost the rest. The digest names the photos still pending, by id.
+        '''
+      }
+    }
+    opt 'no key or thresholds are set' {
+      // source: src/modules/dispatch/scheduled.ts runScreeningRetry, runHourly; src/modules/safety/screening/thresholds.ts thresholdsAnomaly; src/modules/safety/screening/retry.ts retryPendingScreenings (OPENAI_API_KEY)
+      cf.app.cronHourly15 -> sentry 'says how many photos wait, and why, every hour' {
+        notes '''
+          Once, not once a photo. Nothing is screened by a guess in the meantime.
+        '''
+      }
+    }
+    opt 'the classifier flags more than the hour\'s ceiling' {
+      // source: src/modules/safety/screening/screening.ts screenPhoto (held_back), isClassifierOver, ceilingReading; src/modules/safety/limits/breakers.ts classifierCeiling
+      cf.app.safety.screening -> cf.coreDb 'writes only the screening, held back, and leaves the photo pending' {
+        notes '''
+          **Bounded.** A flag hides a runner\'s photo, so it is the answer the breaker limits: a fault in the model cannot hide photos in bulk. The breaker resets as the hour drains, and the sweep screens the photo again.
+        '''
+      }
+    }
+    opt 'a photo is still pending a day after upload' {
+      // source: src/modules/safety/screening/stuck.ts escalateStuck, isStuck, STUCK_AFTER_SECONDS, sourceOf, heldFlagsAmong; src/modules/safety/screening/retry.ts missingWhen
+      cf.app.cronHourly15 -[recovery]-> cf.coreDb 'puts it in front of a person, in Review' {
+        notes '''
+          As a missing file, as unscreened, or as the classifier\'s when the breaker held its flag back. Its day is read from the id the upload minted.
+
+          **Guard: one Review row a photo.** An open row is left alone, and one a person settled within the day stays settled, so a photo comes back once a day, not every hour.
+        '''
+      }
+      // source: src/modules/safety/screening/retry.ts retryPendingScreenings, namesOf
+      cf.app.cronHourly15 -> sentry 'names the photos it sent to the Desk, by id'
+    }
+    opt 'a pass lands after the photo went to the Desk as stuck' {
+      // source: src/modules/safety/screening/screening.ts queueWritesFor, stuckSources
+      cf.app.safety.screening -> cf.coreDb 'settles that Review row as approved' {
+        notes '''
+          Only a row the sweep opened. One that reports opened is a person\'s question, and stays.
+        '''
+      }
+    }
+  }
+}
