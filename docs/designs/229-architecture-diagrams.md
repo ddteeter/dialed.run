@@ -508,6 +508,16 @@ One PR a flow, each drawn as the code stands on `main` when it branched.
   waiting count, a copyright hold and the outbox's drain). New entry
   points `cf.app.account.deletionRequest` and `cf.app.account.keep`; the
   purge is the generated `account/purge`.
+- **`flows/screening.c4`**: `screeningStory` (a kit photo from upload to
+  verdict: stored, written `pending` while the kit has room, screened
+  inline, the verdict, visibility and review in one batch, the public
+  copy after the response, and the `:15` sweep) and `screeningRecovery`
+  (a `try` for no key, no thresholds or a failed classifier, and `opt`s
+  for the breaker, a photo stuck a day, and a late pass settling its
+  Review row). The garment photo takes the same path and is named in the
+  first step's note rather than drawn twice. New entry point
+  `cf.app.feed.photoUpload`; the hand-drawn `safety -> openai` arrow now
+  starts at `safety/screening`.
 
 ## Open questions
 

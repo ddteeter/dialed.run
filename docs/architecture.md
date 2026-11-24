@@ -470,8 +470,9 @@ What picks up a lost step is drawn per flow in the model in
 `docs/diagrams/`: [`importRecovery`](https://ddteeter.github.io/dialed.run/#/view/importRecovery/),
 [`enrichmentRecovery`](https://ddteeter.github.io/dialed.run/#/view/enrichmentRecovery/),
 [`publicPhotosRecovery`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosRecovery/),
-[`exportRecovery`](https://ddteeter.github.io/dialed.run/#/view/exportRecovery/) and
-[`deletionRecovery`](https://ddteeter.github.io/dialed.run/#/view/deletionRecovery/). The rest is below, in
+[`exportRecovery`](https://ddteeter.github.io/dialed.run/#/view/exportRecovery/),
+[`deletionRecovery`](https://ddteeter.github.io/dialed.run/#/view/deletionRecovery/) and
+[`screeningRecovery`](https://ddteeter.github.io/dialed.run/#/view/screeningRecovery/). The rest is below, in
 words.
 
 - **Queues**: `max_retries: 3` with delayed retry; DLQ bound and consumed —
@@ -495,7 +496,9 @@ words.
   screening never gives up: its sweep retries `pending` forever, and a
   photo still pending a day after upload goes to the Desk's review queue
   instead of Gave up (D-157, `safety/screening/stuck.ts`), as `unscreened` or
-  `missing_file`, since Review is where photos are decided.
+  `missing_file`, since Review is where photos are decided. Drawn as
+  [`screeningStory`](https://ddteeter.github.io/dialed.run/#/view/screeningStory/)
+  and [`screeningRecovery`](https://ddteeter.github.io/dialed.run/#/view/screeningRecovery/).
 - **Two systems, one outbox** (law 8c): a write that owes work to another
   system records the debt in the generic `outbox` table in the same
   `db.batch()` as the change, runs the work as a fast path, and deletes the
