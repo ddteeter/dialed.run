@@ -32,6 +32,7 @@ import { flaggedAtOf } from "../../src/modules/safety/runners/account-flags";
 import { oweInCore } from "../queue-fakes";
 import type { Classify } from "../../src/modules/safety";
 import {
+  isHeldAsRemovedCopy,
   removedMatchOf,
   removedMatchesOf,
 } from "../../src/modules/safety/review/removed-fingerprints";
@@ -742,11 +743,15 @@ describe("removedMatchOf", () => {
   it("matches at 5 bits and not at 6 (design 164)", async () => {
     await aKept(BASE, 100);
 
-    expect(await removedMatchOf(core(), "00000000ffffffe0")).toStrictEqual({
+    expect(
+      await removedMatchOf(core(), "00000000ffffffe0", "anyone"),
+    ).toStrictEqual({
       distance: 5,
       removedAt: 100,
     });
-    expect(await removedMatchOf(core(), "00000000ffffffc0")).toBeUndefined();
+    expect(
+      await removedMatchOf(core(), "00000000ffffffc0", "anyone"),
+    ).toBeUndefined();
   });
 
   it("answers with the nearest, and the earliest of equals", async () => {
@@ -754,7 +759,7 @@ describe("removedMatchOf", () => {
     await aKept("00000000fffffffc", 200);
     await aKept("00000000fffffffc", 100);
 
-    expect(await removedMatchOf(core(), BASE)).toStrictEqual({
+    expect(await removedMatchOf(core(), BASE, "anyone")).toStrictEqual({
       distance: 2,
       removedAt: 100,
     });
@@ -763,11 +768,15 @@ describe("removedMatchOf", () => {
   it("matches nothing by a fingerprint too plain to tell from others (design 164)", async () => {
     await aKept("0000000000000000", 100);
 
-    expect(await removedMatchOf(core(), "0000000000000000")).toBeUndefined();
+    expect(
+      await removedMatchOf(core(), "0000000000000000", "anyone"),
+    ).toBeUndefined();
   });
 
   it("refuses a value that is not a fingerprint, rather than spell it into SQL", async () => {
-    await expect(removedMatchOf(core(), "'; drop table x")).rejects.toThrow();
+    await expect(
+      removedMatchOf(core(), "'; drop table x", "anyone"),
+    ).rejects.toThrow();
   });
 });
 
@@ -820,7 +829,7 @@ describe("an owner's delete under review (design 232)", () => {
     ]);
     const flagged = await flaggedAtOf(core(), [first.userId]);
     expect(flagged.has(first.userId)).toBe(true);
-    const again = await posted(await copyOf(bytes));
+    const again = await posted(await copyOf(bytes), first);
     expect(await photoRow(again.photoId)).toStrictEqual({
       screenStatus: "hidden_pending_review",
     });
@@ -876,12 +885,46 @@ describe("an owner's delete under review (design 232)", () => {
         dueAt: nowSeconds() + 3600,
         createdAt: nowSeconds(),
         idempotencyKey: newUlid(),
+        holdState: "held",
+        heldAt: nowSeconds(),
       });
 
     await deleteEntryPhoto(core(), first.userId, first.photoId, quiet, noPurge);
 
     expect(await withdrawals()).toMatchObject([{ subjectId: first.photoId }]);
   });
+
+  it.each(["confirm", "valve", "blocked"] as const)(
+    "keeps nothing under a pending removal request in %s, which holds nothing",
+    async (holdState) => {
+      const first = await posted(await sceneJpeg(4));
+      await core()
+        .insert(takedownRequests)
+        .values({
+          id: newUlid(),
+          requesterEmail: "sam@example.com",
+          signature: "Sam",
+          location: "https://dialed.run/x",
+          subjectType: "photo",
+          subjectId: first.photoId,
+          dueAt: nowSeconds() + 3600,
+          createdAt: nowSeconds(),
+          idempotencyKey: newUlid(),
+          holdState,
+        });
+
+      await deleteEntryPhoto(
+        core(),
+        first.userId,
+        first.photoId,
+        quiet,
+        noPurge,
+      );
+
+      expect(await withdrawals()).toStrictEqual([]);
+      expect(await keptRows()).toStrictEqual([]);
+    },
+  );
 
   it("keeps nothing for an ordinary delete, or one under a review no removal clock opened", async () => {
     const plain = await posted(await sceneJpeg(4));
@@ -926,5 +969,138 @@ describe("an owner's delete under review (design 232)", () => {
     await deleteEntryPhoto(core(), first.userId, first.photoId, quiet, noPurge);
 
     expect(await withdrawals()).toStrictEqual([]);
+  });
+});
+
+/**
+The fingerprint an owner's delete kept, the only one kept.
+*/
+async function theKept(): Promise<string> {
+  const [row] = await keptRows();
+  if (row === undefined) throw new Error("nothing kept");
+  return row.fingerprint;
+}
+
+/**
+An operator's Close account on `ownerId`, as its audit row, at `createdAt`.
+*/
+async function closed(ownerId: string, createdAt: number): Promise<void> {
+  await core().insert(moderationActions).values({
+    id: newUlid(),
+    actorId: "op",
+    action: "ban",
+    subjectType: "profile",
+    subjectId: ownerId,
+    subjectOwnerId: ownerId,
+    reason: "closed",
+    createdAt,
+  });
+}
+
+async function withdrawnAt(): Promise<number> {
+  const [row] = await core()
+    .select({ at: moderationActions.createdAt })
+    .from(moderationActions)
+    .where(eq(moderationActions.action, "withdrawn"));
+  if (row === undefined) throw new Error("no withdrawn row");
+  return row.at;
+}
+
+/**
+A photo reported as an intimate image, on itself or its kit, and then deleted by its owner.
+*/
+async function withdrawnUnderReport(subject: "photo" | "entry") {
+  const first = await posted(await sceneJpeg(4));
+  await reportedAs(
+    "intimate",
+    subject,
+    subject === "photo" ? first.photoId : first.entryId,
+  );
+  await deleteEntryPhoto(core(), first.userId, first.photoId, quiet, noPurge);
+  return { ...first, print: await theKept() };
+}
+
+describe("a fingerprint an owner's own delete kept", () => {
+  it("holds that owner's own re-upload", async () => {
+    const kept = await withdrawnUnderReport("photo");
+
+    expect(
+      await isHeldAsRemovedCopy(core(), kept.print, kept.userId, nowSeconds()),
+    ).toBe(true);
+  });
+
+  it("holds no other runner's upload while the account stands", async () => {
+    const kept = await withdrawnUnderReport("photo");
+    const other = await makeUser();
+
+    expect(await removedMatchOf(core(), kept.print, other)).toBeUndefined();
+    expect(
+      await isHeldAsRemovedCopy(core(), kept.print, other, nowSeconds()),
+    ).toBe(false);
+  });
+
+  it("holds nobody else after repeated deletes on one reported kit", async () => {
+    const kept = await withdrawnUnderReport("entry");
+    const second = await posted(await sceneJpeg(3), kept);
+    await deleteEntryPhoto(core(), kept.userId, second.photoId, quiet, noPurge);
+    const rows = await keptRows();
+    const prints = rows.map((row) => row.fingerprint);
+    expect(prints).toHaveLength(2);
+    const other = await makeUser();
+
+    for (const print of prints) {
+      expect(await removedMatchOf(core(), print, other)).toBeUndefined();
+    }
+  });
+
+  it("holds everyone once the account is closed at or after it", async () => {
+    const kept = await withdrawnUnderReport("photo");
+    await closed(kept.userId, await withdrawnAt());
+    const other = await makeUser();
+
+    expect(await removedMatchOf(core(), kept.print, other)).toMatchObject({
+      distance: 0,
+    });
+  });
+
+  it("is not opened to everyone by a close from before it", async () => {
+    const kept = await withdrawnUnderReport("photo");
+    await closed(kept.userId, (await withdrawnAt()) - 1);
+    const other = await makeUser();
+
+    expect(await removedMatchOf(core(), kept.print, other)).toBeUndefined();
+  });
+
+  it("is not opened to everyone by another account's close", async () => {
+    const kept = await withdrawnUnderReport("photo");
+    const other = await makeUser();
+    await closed(other, (await withdrawnAt()) + 1);
+
+    expect(await removedMatchOf(core(), kept.print, other)).toBeUndefined();
+  });
+
+  it("leaves a person's Remove holding everyone", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await removed("photo", first.photoId);
+
+    expect(
+      await removedMatchOf(core(), await theKept(), await makeUser()),
+    ).toMatchObject({ distance: 0 });
+  });
+
+  it("looks the owner's Close account up through moderation_actions_subject, as account_close", async () => {
+    const kept = await withdrawnUnderReport("photo");
+    const { prepared } = await queriesDuring(async () => {
+      await removedMatchOf(core(), kept.print, await makeUser());
+    });
+    const read = prepared.find((query) => query.includes("account_close"));
+    if (read === undefined) throw new Error("no read names account_close");
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${read}`)
+      .bind(...Array.from(read.matchAll(/\?/g), () => 0))
+      .all<{ detail: string }>();
+
+    expect(plan.results.map((row) => row.detail)).toContain(
+      "SEARCH account_close USING INDEX moderation_actions_subject (subject_type=? AND subject_id=?)",
+    );
   });
 });

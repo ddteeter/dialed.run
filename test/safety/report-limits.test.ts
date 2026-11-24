@@ -191,19 +191,34 @@ describe("what a report may name (design 232)", () => {
     expect(await core().select().from(reports)).toStrictEqual([]);
   });
 
-  it("takes a report of the reporter's own private kit", async () => {
-    const author = await makeUser();
-    const ownKit = await kit("private", author);
+  it.each(["private", "runners"] as const)(
+    "refuses the reporter's own %s kit and its photo, filing, queuing and counting nothing",
+    async (audience) => {
+      const author = await makeUser();
+      const ownKit = await kit(audience, author);
+      const photo = await photoOn(ownKit);
 
-    const result = await report({
-      reporterId: author,
-      subjectType: "entry",
-      subjectId: ownKit,
-      reason: "intimate",
-    });
+      const onKit = await report({
+        reporterId: author,
+        subjectType: "entry",
+        subjectId: ownKit,
+        reason: "intimate",
+      });
+      const onPhoto = await report({
+        reporterId: author,
+        subjectType: "photo",
+        subjectId: photo,
+        reason: "intimate",
+      });
 
-    expect(result).toMatchObject({ status: "filed", reporterCount: 1 });
-  });
+      expect(onKit).toStrictEqual({ status: "not_found" });
+      expect(onPhoto).toStrictEqual({ status: "not_found" });
+      expect(await core().select().from(reports)).toStrictEqual([]);
+      expect(await core().select().from(reviewQueue)).toStrictEqual([]);
+      expect(await core().select().from(rateLimits)).toStrictEqual([]);
+      expect(await statusOf(ownKit)).toBe("ok");
+    },
+  );
 
   it("takes a report of a photo on a shared kit", async () => {
     const photo = await photoOn(await kit());

@@ -64,7 +64,7 @@ import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import { removedMatchesOf, type RemovedImage } from "./removed-fingerprints";
 import { heldPhotoStatus, publicPhotoStatus } from "../rules";
-import { reportHidingAtOnce } from "../limits";
+import { reportHidingAtOnce, requestHolds } from "../limits";
 
 function db() {
   return coreDb();
@@ -1553,17 +1553,15 @@ function unlessRequestHolds<T extends SQLiteTable & { id: SQLiteColumn }>(
 }
 
 /**
- * No pending removal request holds this kit or photo (SA-M23): one that
- * held it at filing or at its confirm (`held_at`), whether it hid it then
- * or it was already out of public view. A request that was blocked, past
- * the valve or unconfirmed held nothing, so it pins nothing. Any other
- * subject type is never a request's.
+ * No pending removal request holds this kit or photo
+ * (`requestHolds`). Any other subject type is never a request's.
  */
 function notHeldByRequest(
   subjectType: ReviewSubjectType,
   subjectId: string,
 ): SQL {
-  return sql`not exists (select 1 from ${takedownRequests} where ${takedownRequests.subjectType} = ${subjectType} and ${takedownRequests.subjectId} = ${subjectId} and ${takedownRequests.status} = 'pending' and ${takedownRequests.heldAt} is not null)`;
+  const names = sql`${qualified(takedownRequests, takedownRequests.subjectType)} = ${subjectType} and ${qualified(takedownRequests, takedownRequests.subjectId)} = ${subjectId}`;
+  return sql`not ${requestHolds(names)}`;
 }
 
 type ApprovedPhotoStatus = typeof publicPhotoStatus | "pending";

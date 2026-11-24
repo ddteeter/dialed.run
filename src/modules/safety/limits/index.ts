@@ -19,6 +19,7 @@ export {
   holdStateSql,
   newConfirmToken,
   requesterMatches,
+  requestHolds,
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
   valveShutSql,
