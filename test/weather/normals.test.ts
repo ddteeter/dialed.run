@@ -50,3 +50,43 @@ describe("climateNormals", () => {
     }
   });
 });
+
+describe("climateNormals' count against the budget", () => {
+  it("spends one count for each request the provider makes", async () => {
+    const fetchImpl = vi.fn(() =>
+      Promise.resolve(Response.json(visualCrossingWinterStatsFixture)),
+    );
+    vi.stubGlobal("fetch", fetchImpl);
+    const spend = vi.fn(() => Promise.resolve());
+
+    try {
+      await climateNormals(
+        { kind: "coordinates", lat: 44.98, lng: -93.27 },
+        spend,
+      );
+      expect(spend).toHaveBeenCalledTimes(2);
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("asks the provider nothing once the budget refuses", async () => {
+    const fetchImpl = vi.fn(() =>
+      Promise.resolve(Response.json(visualCrossingWinterStatsFixture)),
+    );
+    vi.stubGlobal("fetch", fetchImpl);
+    const refused = new Error("spent");
+
+    try {
+      await expect(
+        climateNormals({ kind: "coordinates", lat: 44.98, lng: -93.27 }, () =>
+          Promise.reject(refused),
+        ),
+      ).rejects.toBe(refused);
+      expect(fetchImpl).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

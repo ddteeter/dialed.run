@@ -7,9 +7,9 @@
  * mean inventing a bucket that means "the statistical period", which is a
  * schema lie a later reader would have to unpick.
  *
- * The cost that cache exists to control is held another way: each read is
- * counted against the runner's day's budget (`./budget`, SA-M27), the
- * starter list asks only on a request the app's own page started, and
+ * The cost that cache exists to control is held another way: each of a
+ * read's provider requests is counted against the runner's day's budget
+ * (`./budget`), the starter list asks only on a request the app's own page started, and
  * `resolveClimateBand` degrades to latitude when the provider is slow,
  * down or not asked (law 5). So the worst case is a starter list that is
  * plausible rather than right — not a blocked signup.
@@ -17,13 +17,14 @@
 import type { ClimateNormals, ClimatePlace } from "../../lib/contracts";
 import type { SpendWeatherCall } from "./budget";
 import { runnerWeatherBudget } from "./budget";
-import { weatherProvider } from "./provider";
+import { NORMALS_REQUESTS, weatherProvider } from "./provider";
 
 export async function climateNormals(
   place: ClimatePlace,
   spend: SpendWeatherCall,
 ): Promise<ClimateNormals> {
-  await spend();
+  // One count for each request the read makes upstream.
+  await Promise.all(Array.from({ length: NORMALS_REQUESTS }, () => spend()));
   return weatherProvider().climateNormals(place);
 }
 

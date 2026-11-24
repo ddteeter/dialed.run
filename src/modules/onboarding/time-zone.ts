@@ -19,7 +19,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { runs, userProfiles } from "../../db/schema-core";
 import { ulidSchema } from "../../lib/ids";
-import { observationsForRuns } from "../weather";
+import { isWeatherBudgetSpent, observationsForRuns } from "../weather";
 
 /**
  * What `zoneForPlace` needs: `modules/weather`'s `timeZoneAt`, and where a
@@ -28,6 +28,16 @@ import { observationsForRuns } from "../weather";
 export interface ZoneDeps {
   readonly zoneAt: (lat: number, lng: number) => Promise<string | undefined>;
   readonly report: (error: unknown, context: Record<string, string>) => void;
+}
+
+/**
+ * What the hourly fill needs: each owed row's lookup as its own runner's
+ * (`modules/weather`'s `timeZoneAtFor`), so a row is counted against the
+ * runner whose place it is, and where a failed lookup is reported.
+ */
+export interface FillZoneDeps {
+  readonly zoneAtFor: (userId: string) => ZoneDeps["zoneAt"];
+  readonly report: ZoneDeps["report"];
 }
 
 /**
@@ -50,7 +60,9 @@ export interface SaveZoneDeps extends ZoneDeps {
  * is still saved. A NULL zone beside coordinates is the marker
  * `fillMissingTimeZones` re-drives. A provider that answers with no zone is
  * reported the same way (law 6), because the marker would otherwise be
- * re-driven forever in silence.
+ * re-driven forever in silence. A lookup the runner's day's budget
+ * refused is not reported: the marker stays, and a later firing asks
+ * again once the budget allows.
  */
 async function zoneForPlace(
   place: Readonly<{
@@ -74,7 +86,12 @@ async function zoneForPlace(
     }
     return zone;
   } catch (error: unknown) {
-    deps.report(error, { surface: "onboarding.fillMissingTimeZones", userId });
+    if (!isWeatherBudgetSpent(error)) {
+      deps.report(error, {
+        surface: "onboarding.fillMissingTimeZones",
+        userId,
+      });
+    }
     return undefined;
   }
 }
@@ -124,7 +141,8 @@ const FILL_BATCH = 10;
 
 /**
  * The re-drive (law 8c, reconciliation): profiles with coordinates and no
- * zone, looked up again. Rides the hourly `weather-retry` firing.
+ * zone, looked up again. Rides the hourly `weather-retry` firing. Each
+ * row is asked as its own runner, so it counts against that runner's day.
  *
  * **Compare-and-set, not a claim.** Each write lands only while the row
  * still holds the coordinates that were looked up and still has no zone.
@@ -141,7 +159,7 @@ const FILL_BATCH = 10;
  */
 export async function fillMissingTimeZones(
   db: DrizzleD1Database,
-  deps: ZoneDeps,
+  deps: FillZoneDeps,
 ): Promise<void> {
   const owed = await db
     .select({
@@ -162,7 +180,14 @@ export async function fillMissingTimeZones(
     // the owed rows were never reached. The owed set is small (design 142).
     .orderBy(sql`random()`)
     .limit(FILL_BATCH);
-  await Promise.all(owed.map((row) => fillOne(db, row, deps)));
+  await Promise.all(
+    owed.map((row) =>
+      fillOne(db, row, {
+        zoneAt: deps.zoneAtFor(row.userId),
+        report: deps.report,
+      }),
+    ),
+  );
 }
 
 async function fillOne(

@@ -28,7 +28,7 @@ import { sweepRateLimits } from "../email";
 import { sweepCopyrightHolds } from "../feed/moderation";
 import { fillMissingTimeZones } from "../onboarding";
 import { importJob, pruneStravaIds } from "../runs";
-import { retryPendingWeather, timeZoneAt } from "../weather";
+import { retryPendingWeather, timeZoneAtFor } from "../weather";
 import {
   backUpMedia,
   oweDigestEmail,
@@ -284,7 +284,7 @@ async function runCron(
         // Last, because its lookups can wait on Visual Crossing.
         () =>
           fillMissingTimeZones(coreDb(), {
-            zoneAt: timeZoneAt,
+            zoneAtFor: timeZoneAtFor,
             report: captureException,
           }),
       ]);
