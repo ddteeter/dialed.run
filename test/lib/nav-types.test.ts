@@ -119,6 +119,13 @@ describe("which type an edge resolves to", () => {
     expect(navTypeFor("/feed", "/desk/kit/e1", false)).toBe("cut");
   });
 
+  it("types Desk · Access explicitly, as a cut", () => {
+    // Its page links re-read it with a new `after`. Asked of navTypeFor,
+    // for the reason the Runners test gives.
+    expect(navTypeFor("/feed", "/desk/access", false)).toBe("cut");
+    expect(navTypeFor("/desk/access", "/desk/access", false)).toBe("cut");
+  });
+
   it("cuts when the path has not changed", () => {
     // A new search param or hash on the screen you are already on. Nothing
     // moved, so nothing should move.
