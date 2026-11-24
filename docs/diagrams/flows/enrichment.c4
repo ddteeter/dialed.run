@@ -184,7 +184,7 @@ views {
       // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, stalledPending, ENRICHMENT_STALL_GRACE_S, runHourly, hourlyReport (limit 100); src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'finds products pending for 15+ minutes' {
         notes '''
-          Fifteen minutes of grace, counted from when the product was made, so the sweep rarely races a send still in flight. At most 100 a firing, taken in no fixed order, so past 100 waiting each firing sends a different hundred.
+          Fifteen minutes of grace, counted from when the product was made, so the sweep rarely races a send still in flight. At most 100 a firing, drawn at random, so past 100 waiting each firing sends a random hundred and a product may wait more than one firing.
 
           **No age or try ceiling on `pending`.** A product the consumer cannot finish (the page budget is spent, or the dead-letter mark throws) is sent again every hour, and each firing\'s report counts it, until the consumer runs. Then a failure past the first day goes straight to Gave up.
         '''
@@ -199,8 +199,10 @@ views {
       cf.enrichmentQueue -[async]-> cf.app.enrichment.consumer 'delivers EnrichJob'
       // source: src/modules/enrichment/consume.ts processEnrichJob
       cf.app.enrichment.consumer -> cf.coreDb 'reads the product, or stops'
-      // source: src/modules/enrichment/consume.ts extractPending, latestSnapshot, REUSE_WINDOW_MS
-      cf.app.enrichment.consumer -> cf.mediaBucket 'reads the page stored in the last hour, or not yet read'
+      // source: src/modules/enrichment/consume.ts extractPending, latestSnapshot, reusableSnapshot, REUSE_WINDOW_MS
+      cf.app.enrichment.consumer -> cf.mediaBucket 'reads the page stored in the last hour, or not yet read' {
+        notes 'A job a person asked for (a paste, a garment save or the Desk\'s Retry) carries `askedAt` and reads only a page stored since then, so its retries reuse its own fetch and nothing older. The sweep\'s re-send carries none, so it takes the last hour\'s page or one not yet read.'
+      }
     }
     opt 'every retry failed' {
       // source: wrangler.jsonc queues.consumers, max_retries, dead_letter_queue (3)

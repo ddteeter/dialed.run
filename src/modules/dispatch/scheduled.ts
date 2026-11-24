@@ -936,8 +936,8 @@ async function redispatchStalledEnrichments(
       id: products.id,
       pending: extractionPending(),
       createdAt: products.createdAt,
-      // In no fixed order, so past a hundred waiting each firing takes a
-      // different hundred and every product is sent in turn.
+      // Drawn at random, so past a hundred waiting each firing takes a
+      // random hundred, and a product may wait more than one firing.
       order: sql`random()`,
     },
     ENRICHMENT_STALL_GRACE_S,

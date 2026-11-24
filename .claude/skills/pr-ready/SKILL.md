@@ -53,13 +53,17 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    **"Diagrams"**. It needs ffmpeg and macOS, as the demo does. When it says no
    view changed (a comment or formatting edit), there is nothing to
    attach.
-8. **Run** `npm run verify && npm test && npm run diagrams:check && npm run build`. `build` is a gate:
-   `postbuild` runs `check:bundle`. **A lane dispatched by a coordinator
-   skips `verify`** (owner, 2026-10-24): it has no flag to drop its Stryker
-   analyzer, the push gate runs that pass in full, and the commit gate has
-   run the other analyzers on each commit. The lane runs
-   `npm run lint`, `npm run typecheck`, `npm test`, `npm run
-diagrams:check` (the stale-structure check left `npm test` under design 229) and `npm run build`.
+8. **The push runs CI's first job for you.** `.githooks/pre-push` runs
+   `npm run build`, `npm test` and `npm run diagrams:check` before the
+   gate (owner, 2026-11-23), and the gate runs lint, typecheck and the
+   other analyzers over the branch. Together that is what CI's "Lint,
+   typecheck, test, build" job runs, so don't run them again by hand
+   before shipping; run one only to work a failure. `build` is a gate
+   too: `postbuild` runs `check:bundle`. A lane dispatched by a
+   coordinator never runs `verify` (owner, 2026-10-24): it has no flag
+   to drop its Stryker analyzer, and the push gate runs that pass in
+   full. A branch that is behind main or conflicts with it is refused by
+   `guardrails ship` itself before the push.
    It doesn't run Stryker over all its changed files before shipping
    (owner, 2026-11-13). The push gate mutates the same files, seeded
    from main's CI run, so a cold local pass over them costs the same
@@ -106,6 +110,12 @@ queues pushes; you never wait for another lane yourself.
   clean, `conflicting` (with the files in `failing`) when it would not.
   Both mean: rebase onto `origin/main`, then ship again. The gate measures
   from the merge-base, so local `main` does not need to be current.
+- `ship` titles a new PR from `--title=<t>`, or from a `# <title>` first
+  line of the body file (which it strips from the body), and otherwise
+  from the last commit's subject. Give the title whenever the branch has
+  more than one commit, so it names the whole change, prefixed by the
+  diff's main kind. `ship` warns when the last commit's type differs
+  from the branch's.
 - `ship` force-pushes only when asked. A branch you rebased after its first
   push ships with `npm run ship -- --body-file=<f> --force-with-lease`;
   without the flag, git's rejection comes back as `error`.

@@ -29,6 +29,31 @@ cli="./node_modules/guardrails-core/dist/cli.mjs"
   exit 1
 }
 
+# CI parity, before the gate and so before its lock (owner, 2026-11-23). These
+# are the checks CI's "Lint, typecheck, test, build" job runs that the gate
+# does not; a lane that skipped one spent a two-hour CI lap finding out. They
+# run first because they fail in minutes and need no lock. A push that only
+# deletes refs (every local sha zero) runs none of them. `pr-ready` tells
+# lanes not to run them again by hand before shipping.
+refs=$(cat)
+pushes_commits=no
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  case "$local_sha" in
+    *[!0]*) pushes_commits=yes ;;
+  esac
+done <<EOF
+$refs
+EOF
+if [ "$pushes_commits" = yes ]; then
+  for step in "npm run build" "npm test" "npm run diagrams:check"; do
+    echo "guardrails: preflight: $step" >&2
+    $step >&2 || {
+      echo "guardrails: push blocked — '$step' failed. CI's first job runs it too." >&2
+      exit 1
+    }
+  done
+fi
+
 node "$cli" gate --mode=push
 status=$?
 

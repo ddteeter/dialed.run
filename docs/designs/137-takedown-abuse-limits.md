@@ -25,10 +25,20 @@ requester.
 - **Filing decides whether the request hides**, reading before its batch:
   1. **Blocked** (either key is in `takedown_blocks`): recorded, receipt
      as usual, no hide, no operator alert.
-  2. **Valve**: if 10 requests have hidden something in the last hour, the
-     request is recorded and hides nothing. The request that trips it
-     sends one "possible abuse" alert per hour, with a dedupe key per
-     hour bucket.
+  2. **Valve**: the valve counts kits, the distinct kits that something a
+     request newly hid in the last hour is on, a kit photo counting as its
+     kit, so a kit and its photos take one place between them. Once they
+     are 10, a request whose subject is on none of them is recorded and
+     hides nothing; one whose subject is already out of public view still
+     holds it. A request the valve quiets alerts no one by itself; the
+     operators get one "possible abuse" alert per hour, with a dedupe key
+     per hour bucket.
+     A request that newly hides nothing (a link that is not ours, one
+     naming nothing a hold could move, or one holding a subject already out
+     of public view) alerts every operator one by one only while fewer than
+     10 such alerts went out in the hour, site-wide. Past that it owes the
+     valve's hourly alert, and one that holds its subject still holds it.
+     Such requests never count toward the valve, which counts hides.
   3. **Cap**: if this requester (either key) already has 2 pending
      requests, hidden or not, the request waits for a confirm before it
      hides or alerts. Counting every open request, not only hidden ones,
