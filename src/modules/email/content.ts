@@ -524,7 +524,7 @@ const CONTENT: {
           label: isWaitingOnConfirm(template)
             ? "Confirm the request"
             : "Confirm it's me",
-          href: `${origin}/takedown/confirm?token=${template.confirmToken}`,
+          href: `${origin}/takedown/confirm?token=${template.confirmToken}${isWaitingOnConfirm(template) ? "" : "&for=address"}`,
         },
       }),
       // The app's own host (D-99), read from the origin every link uses.

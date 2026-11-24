@@ -394,7 +394,7 @@ describe("emailContent", () => {
         body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. Confirming tells us this address is yours. The image is already hidden while we look. This email is about the request for https://dialed.run/kit/01K. Only confirm it if that is the link you sent us.",
         button: {
           label: "Confirm it's me",
-          href: `${ORIGIN}/takedown/confirm?token=abc123`,
+          href: `${ORIGIN}/takedown/confirm?token=abc123&for=address`,
         },
         foot: "Sent because someone asked at dialed.test/takedown with this address.",
         footer: LEGAL,
@@ -414,7 +414,7 @@ describe("emailContent", () => {
         body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. Confirming tells us this address is yours.",
         button: {
           label: "Confirm it's me",
-          href: `${ORIGIN}/takedown/confirm?token=abc123`,
+          href: `${ORIGIN}/takedown/confirm?token=abc123&for=address`,
         },
         foot: "Sent because someone asked at dialed.test/takedown with this address.",
         footer: LEGAL,

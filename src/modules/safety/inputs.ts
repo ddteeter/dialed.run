@@ -368,13 +368,18 @@ const confirmTokenSchema = z.string().regex(/^[\da-f]{64}$/u);
 export const takedownConfirmInput = z.object({ token: confirmTokenSchema });
 
 /**
-`/takedown/confirm?token=`: the token when it is one, and nothing otherwise.
-*/
+ * `/takedown/confirm?token=`: the token when it is one, and nothing
+ * otherwise; and whether the receipt sent it as a link that proves an
+ * address (`for=address`), which chooses only the page's words.
+ */
 export function takedownConfirmSearch(
   search: Readonly<Record<string, unknown>>,
-): { token?: string | undefined } {
+): { token?: string | undefined; isForAddress: boolean } {
   const parsed = confirmTokenSchema.safeParse(search.token);
-  return { token: parsed.success ? parsed.data : undefined };
+  return {
+    token: parsed.success ? parsed.data : undefined,
+    isForAddress: search.for === "address",
+  };
 }
 
 export const removalDecisionInput = z.discriminatedUnion("outcome", [

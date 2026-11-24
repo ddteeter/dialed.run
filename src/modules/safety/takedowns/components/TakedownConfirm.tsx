@@ -15,14 +15,23 @@ type Confirm = (input: {
 }) => Promise<{ outcome: TakedownConfirmResult }>;
 
 /**
- * `/takedown/confirm` (design 137): a request past the requester cap
- * waits for this before it hides anything, asking before it confirms
+ * `/takedown/confirm` (design 137): every receipt's link proves its
+ * request's address, and a request past the requester cap waits for it
+ * before it hides anything. It asks before it confirms
  * (`ConfirmRequestPanel`). Placeholder words (design deltas).
  */
 export function TakedownConfirm({
   token,
+  isForAddress = false,
   confirm,
-}: Readonly<{ token: string | undefined; confirm: Confirm }>): JSX.Element {
+}: Readonly<{
+  token: string | undefined;
+  /**
+  The receipt's link for a request that already acts, which proves its address and hides nothing.
+  */
+  isForAddress?: boolean;
+  confirm: Confirm;
+}>): JSX.Element {
   const { form, outcome } = useConfirmRequest({
     schema: takedownConfirmInput,
     confirm,
@@ -43,11 +52,7 @@ export function TakedownConfirm({
             : "We have your request"
         }
       >
-        <p className="m-0 text-body">
-          {outcome === "decided"
-            ? "We've emailed you what we decided."
-            : "We'll decide within 48 hours and email you either way."}
-        </p>
+        <p className="m-0 text-body">{receiptSaid(outcome, isForAddress)}</p>
         {/* DONE only (round 41 #85): a decided request has had its
             answer, and the other sites are for one still open. */}
         {outcome === "decided" ? undefined : <ElsewhereHelp />}
@@ -62,9 +67,23 @@ export function TakedownConfirm({
       }}
     >
       <p className="m-0 text-body">
-        Confirm that you asked us to remove an image. Then we hide it while we
-        look.
+        {isForAddress
+          ? "Confirm that you asked us to remove an image at this address."
+          : "Confirm that you asked us to remove an image. Then we hide it while we look."}
       </p>
     </ConfirmRequestPanel>
   );
+}
+
+/**
+What the receipt says once the confirm is answered.
+*/
+function receiptSaid(
+  outcome: TakedownConfirmResult,
+  isForAddress: boolean,
+): string {
+  if (outcome === "decided") return "We've emailed you what we decided.";
+  return isForAddress
+    ? "Thanks, that's confirmed."
+    : "We'll decide within 48 hours and email you either way.";
 }
