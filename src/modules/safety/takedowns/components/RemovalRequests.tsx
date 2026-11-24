@@ -68,7 +68,7 @@ type Block = (input: { data: { requestId: string } }) => Promise<BlockResult>;
 
 /**
  * Block and decline all's answer, as the page says it: how many it
- * declined, from the server's count. Placeholder words (design deltas).
+ * declined, from the server's count.
  */
 function blockedSaid(result: BlockResult): string {
   if (result.status === "not_found") return "That request is no longer open.";
@@ -192,7 +192,6 @@ export function RemovalRequests({
 
 /**
  * How many of the pending requests are listed, when not all are.
- * Placeholder words (design deltas).
  */
 function ShownOf({
   shown,

@@ -468,8 +468,7 @@ const CONTENT: {
     };
   },
   removal_reminder_summary: (template, { origin }) => {
-    // C6, for the requests that did not alert one by one: placeholder
-    // words (design deltas).
+    // C6, for the requests that did not alert one by one.
     const requests = template.count === 1 ? "request" : "requests";
     return {
       subject: `${String(template.count)} removal ${requests} still undecided`,
