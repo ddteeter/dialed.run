@@ -1,5 +1,5 @@
 {
-  "guardrailsVersion": "0.15.0",
+  "guardrailsVersion": "0.16.0",
   "files": {
     ".claude/agents/guardrail-fixer-thorough.md": "sha256-06c1ef6d8bfdbeb6264bf62745734fe6836261785fd52f461d214101c7e353de",
     ".claude/agents/guardrail-fixer.md": "sha256-4bc9cab1dd60f0da165a5acd8ed7afd5b81c8268a93706568e6e65296e532ead",
@@ -14,12 +14,13 @@
     ".github/hooks/guardrails.json": "sha256-0ba400a9dfcb197cc4a2989e1c8f100bb5834b859212f44991b8efbbc8f5b000",
     ".github/workflows/guardrails.yml": "sha256-4fe0411fbef645d11eb2cf9c34e0ac3a3a87b88fe7822576774c4da2fb37a836",
     "docs/guardrails/boundary-validation.md": "sha256-48e286a6a7edc7385818bd66561abfdc35925aee1faf7ab58844ee6fa6ff0ecb",
-    "docs/guardrails/crushing-mutants.md": "sha256-ab8e7d2d2a8ffbcda443d87184d96d2509f941ccc4d7e99b7ba8f4f817a1de5e"
+    "docs/guardrails/crushing-mutants.md": "sha256-1b5cafc5e6be8e664c29eacda7cca25a73eec6ef01da8fe93b8a04d8c0a01617"
   },
   "fingerprints": {
     ".claude/skills/crushing-mutants/SKILL.md": "words-sha256-b3d30da39daa7a68ea78ec0b58a79dd75f409b6f254b5498b98e5a6d4f1ad066",
     ".codex/agents/guardrail-fixer.toml": "words-sha256-36e2da6430090d208c960b406a15b6739e1fa667228bd6d047ce9c64732c1546",
     ".githooks/pre-commit": "words-sha256-84d7c0c5accd16392d9e2897f5327331002aeee8e2333a990e79df509746d732",
-    ".github/agents/guardrail-fixer.agent.md": "words-sha256-951300fd7f613583e4f10303344d0372af47937b3f16ff7f3bf81b2bd1ec163a"
+    ".github/agents/guardrail-fixer.agent.md": "words-sha256-951300fd7f613583e4f10303344d0372af47937b3f16ff7f3bf81b2bd1ec163a",
+    "docs/guardrails/crushing-mutants.md": "words-sha256-72997b77305716d15a6aac47ced6ba699126a3b22262d1e11c91800241aa60c1"
   }
 }
