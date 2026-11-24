@@ -29,6 +29,8 @@ import {
 } from "../../scripts/mutation-shards/select";
 import strykerConfig from "../../stryker.conf.json";
 
+import { withoutGitEnv } from "./git-env";
+
 const SHARDS = shardsOf([
   "src/lib/a.ts,src/lib/b.ts",
   "src/modules/x/**/*.ts,!src/modules/x/functions.ts",
@@ -396,7 +398,7 @@ describe("this repository's graph", () => {
         const run = spawnSync(
           path.resolve("node_modules/.bin/tsx"),
           ["scripts/mutation-shards.ts", changes, reports],
-          { encoding: "utf8" },
+          { encoding: "utf8", env: withoutGitEnv(process.env) },
         );
         expect(run.status).toBe(0);
         const names = z
