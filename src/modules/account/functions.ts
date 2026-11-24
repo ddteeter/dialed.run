@@ -73,6 +73,7 @@ import type { LegalSlug } from "./inputs";
 import { legalPage, readerBellState } from "./terms/legal";
 import { openSourcePage } from "./terms/open-source";
 import {
+  deskAccessSearch,
   homeIfNothingToSay,
   legalDocOrNotFound,
   leavingSearch,
@@ -303,12 +304,12 @@ export const confirmAccessFn = createServerFn({ method: "POST" })
 /**
 Desk D7 · Access: requests and codes, for an operator only.
 */
-export const accessDeskQuery = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const accessDeskQuery = createServerFn({ method: "GET" })
+  .validator((data: unknown) => deskAccessSearch.parse(data ?? {}))
+  .handler(async ({ data }) => {
     requireAdmin(await verifiedUserId());
-    return accessDesk(db());
-  },
-);
+    return accessDesk(db(), data.after);
+  });
 
 /**
 D7's New code.

@@ -193,7 +193,7 @@ async function seededExport(n: number) {
 }
 
 describe("accessDesk", () => {
-  it("asks one batch of three, whatever the desk holds", async () => {
+  it("asks one batch of four, whatever the desk holds", async () => {
     const one = await seededAccess(1);
     const many = await seededAccess(25);
 
@@ -203,7 +203,7 @@ describe("accessDesk", () => {
     expect(many.result.codes.every((code) => code.usedBy.length === 1)).toBe(
       true,
     );
-    expect(one.counts.core).toBe(3);
+    expect(one.counts.core).toBe(4);
     expectFlat(one.counts, many.counts);
   });
 });

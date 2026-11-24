@@ -539,6 +539,8 @@ function code(overrides: Partial<DeskCode> = {}): DeskCode {
 }
 
 const DESK: AccessDesk = {
+  waiting: 2,
+  next: undefined,
   requests: [
     {
       id: "r1",
@@ -572,6 +574,10 @@ type RowFn = (input: { data: { id: string } }) => Promise<unknown>;
 
 interface DeskProps {
   desk: AccessDesk;
+  /**
+  The page the list starts after, as the route's search carries it.
+  */
+  after?: string;
   asOf: number;
   /**
   The browser's clipboard write, which Codes calls for Copy link.
@@ -617,6 +623,9 @@ async function desk(overrides: Partial<DeskProps> = {}) {
         <div data-page="access">
           <DeskAccess
             requests={props.desk.requests}
+            waiting={props.desk.waiting}
+            next={props.desk.next}
+            after={props.after}
             asOf={props.asOf}
             sendInvite={props.sendInvite}
             decline={props.decline}
@@ -687,6 +696,35 @@ describe("D7 · Access", () => {
     const j = within(rowOf("j@example.com"));
     expect(j.getByText("No note.")).toHaveClass("text-muted");
     expect(j.getByText("2d")).toBeVisible();
+  });
+
+  it("counts every request waiting, not the ones on the page", async () => {
+    await desk({ desk: { ...DESK, waiting: 1204 } });
+    expect(
+      screen.getByRole("heading", {
+        level: 2,
+        name: "Requests · 1204 waiting · oldest first",
+      }),
+    ).toBeVisible();
+  });
+
+  it("links the next page while there is one, and none on the last", async () => {
+    await desk({ desk: { ...DESK, waiting: 9, next: "7.R2" } });
+    expect(screen.getByRole("link", { name: "Next 2 →" })).toHaveAttribute(
+      "href",
+      "/desk/access?after=7.R2",
+    );
+    expect(
+      screen.queryByRole("link", { name: "← Back to the oldest" }),
+    ).toBeNull();
+  });
+
+  it("links back to the oldest from a later page", async () => {
+    await desk({ after: "7.R2" });
+    expect(
+      screen.getByRole("link", { name: "← Back to the oldest" }),
+    ).toHaveAttribute("href", "/desk/access");
+    expect(screen.queryByRole("link", { name: /^Next/u })).toBeNull();
   });
 
   it("titles each page: Access over its Requests, and Codes on its own (G-15, R55·194)", async () => {

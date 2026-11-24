@@ -7,6 +7,8 @@ import {
   noteSessionOwner,
 } from "../../src/lib/browser/session-memo";
 
+import { proseDayLabel } from "../../src/lib/dates";
+import { MAX_RUN_START } from "../../src/lib/contracts";
 import { takenMessage } from "../../src/modules/account/handles/handle-copy";
 import {
   ACCOUNT_SECTION_TITLES,
@@ -15,6 +17,7 @@ import {
   checkEmailSearch,
   checkEmailView,
   accountSectionSearch,
+  deskAccessSearch,
   DELETE_REAUTH_RETURN,
   gateOnHandle,
   homeIfNothingToSay,
@@ -223,6 +226,36 @@ describe("the terms gate (ACC-6)", () => {
   });
 });
 
+describe("deskAccessSearch", () => {
+  const id = "01M87EV825A9N7M79ADD8TRPHD";
+
+  it("reads the page D7 Access starts after", () => {
+    expect(deskAccessSearch.parse({ after: `7.${id}` })).toStrictEqual({
+      after: `7.${id}`,
+    });
+    expect(deskAccessSearch.parse({})).toStrictEqual({});
+  });
+
+  it("drops anything not a time and a request's id, and is then the first page", () => {
+    for (const after of [
+      id,
+      `x.${id}`,
+      `7.${id.toLowerCase()}`,
+      `7.${id}9`,
+      `${"9".repeat(17)}.${id}`,
+      `-7.${id}`,
+      7,
+    ]) {
+      expect(deskAccessSearch.parse({ after })).toStrictEqual({
+        after: undefined,
+      });
+    }
+    expect(
+      deskAccessSearch.parse({ after: `${"9".repeat(16)}.${id}` }),
+    ).toStrictEqual({ after: `${"9".repeat(16)}.${id}` });
+  });
+});
+
 describe("leavingSearch and homeIfNothingToSay", () => {
   it("reads the date a request answered, and drops anything else", () => {
     expect(leavingSearch.parse({ on: "1760000000" })).toStrictEqual({
@@ -234,6 +267,16 @@ describe("leavingSearch and homeIfNothingToSay", () => {
     for (const on of ["soon", -5, 0, 1.5, undefined]) {
       expect(leavingSearch.parse({ on })).toStrictEqual({ on: undefined });
     }
+  });
+
+  it("reads a date up to the last one a day label can name, and drops one past it", () => {
+    expect(leavingSearch.parse({ on: MAX_RUN_START })).toStrictEqual({
+      on: MAX_RUN_START,
+    });
+    expect(proseDayLabel(MAX_RUN_START, "UTC")).not.toBe("");
+    expect(
+      leavingSearch.parse({ on: String(MAX_RUN_START + 1) }),
+    ).toStrictEqual({ on: undefined });
   });
 
   it("keeps the home zone the redirect carried, and drops one that is not a short string (R-96 (3))", () => {
