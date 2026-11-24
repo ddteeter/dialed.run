@@ -313,8 +313,15 @@ export const keepAccountAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => keepAccountInput.parse(input))
   .handler(async ({ data }) => {
     const actorId = requireAdmin(await verifiedUserId());
-    await keepAccount(coreDb(), data.userId, actorId);
-    return { kept: true };
+    // Held to the flag the page showed: a newer one writes no Keep, and
+    // the reloaded page shows it.
+    const outcome = await keepAccount(
+      coreDb(),
+      data.userId,
+      actorId,
+      data.flaggedAt,
+    );
+    return { kept: outcome === "kept" };
   });
 
 /**

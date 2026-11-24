@@ -25,7 +25,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { moderationActions } from "../../../db/schema-core";
 
 import { removalStatements } from "../rules";
-import { moderationActionInsert } from "../rules";
+import { moderationActionInsertWhere } from "../rules";
 
 type Db = ReturnType<typeof drizzle<Record<string, never>>>;
 
@@ -106,21 +106,31 @@ export function flaggedCountOf(db: Db) {
 
 /**
  * Keep account (D-161 1): the operator looked and the account stays. Its
- * audit row is the decision that clears the flag.
+ * audit row is the decision that clears the flag. Held to the flag the
+ * page showed (`shownFlaggedAt`, `flaggedAtOf`'s time): a flagging
+ * removal recorded after it writes no Keep, and the account stays
+ * flagged with the newer date (`flagged_since`).
  */
 export async function keepAccount(
   db: Db,
   userId: string,
   actorId: string,
-): Promise<void> {
-  await moderationActionInsert(db, {
-    actorId,
-    action: "keep",
-    subjectType: "profile",
-    subjectId: userId,
-    subjectOwnerId: userId,
-    reason: "Kept after an intimate-image removal",
-  });
+  shownFlaggedAt: number,
+): Promise<"kept" | "flagged_since"> {
+  const newer = sql`${moderationActions.subjectOwnerId} = ${userId} AND ${moderationActions.createdAt} > ${shownFlaggedAt} AND ${unreviewedIntimateRemoval()}`;
+  const kept = await moderationActionInsertWhere(
+    db,
+    {
+      actorId,
+      action: "keep",
+      subjectType: "profile",
+      subjectId: userId,
+      subjectOwnerId: userId,
+      reason: "Kept after an intimate-image removal",
+    },
+    sql`NOT EXISTS (SELECT 1 FROM ${moderationActions} WHERE ${newer})`,
+  ).returning({ id: moderationActions.id });
+  return kept.length > 0 ? "kept" : "flagged_since";
 }
 
 export { eq as _unused } from "drizzle-orm";

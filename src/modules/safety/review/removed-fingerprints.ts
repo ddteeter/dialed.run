@@ -24,7 +24,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
+import { alias, type SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
@@ -140,10 +140,11 @@ export function keptGarmentFingerprint(
 }
 
 /**
- * The kept fingerprint nearest to `fingerprint`, when one is within the
- * hold's match distance: how many bits apart, and when the image it describes was
- * removed. Nothing when none is close, or when `fingerprint` is too plain
- * to match anything by (design 164).
+ * The kept fingerprint nearest to `fingerprint` that holds `uploaderId`'s
+ * upload, when one is within the hold's match distance: how many bits
+ * apart, and when the image it describes was removed. Nothing when none
+ * is close, or when `fingerprint` is too plain to match anything by
+ * (design 164).
  */
 export interface RemovedMatch {
   readonly distance: number;
@@ -153,6 +154,7 @@ export interface RemovedMatch {
 export async function removedMatchOf(
   db: Db,
   fingerprint: string,
+  uploaderId: string,
 ): Promise<RemovedMatch | undefined> {
   const near = keptNear(fingerprint);
   if (near === undefined) return undefined;
@@ -162,11 +164,33 @@ export async function removedMatchOf(
       removedAt: removedFingerprints.createdAt,
     })
     .from(removedFingerprints)
-    .where(near.within)
+    .innerJoin(
+      moderationActions,
+      eq(moderationActions.id, removedFingerprints.moderationActionId),
+    )
+    .where(and(near.within, holdsUploadsOf(uploaderId)))
     .orderBy(...near.nearestFirst)
     .limit(1);
   return nearest;
 }
+
+/**
+ * Whose uploads a kept row holds, over `removed_fingerprints` joined to
+ * the action that kept it. A person's Remove holds everyone's. An owner's
+ * own delete under review (`withdrawn`, design 232) holds that owner's
+ * only, until an operator closes the account at or after it; from then
+ * it holds everyone's (owner, 2026-11-23).
+ */
+function holdsUploadsOf(uploaderId: string): SQL {
+  const closed = sql`exists (select 1 from ${moderationActions} as ${sql.identifier(CLOSE)} where ${close.action} = 'ban' and ${close.subjectType} = 'profile' and ${close.subjectId} = ${moderationActions.subjectOwnerId} and ${close.createdAt} >= ${moderationActions.createdAt})`;
+  return sql`(${moderationActions.action} <> 'withdrawn' or ${moderationActions.subjectOwnerId} = ${uploaderId} or ${closed})`;
+}
+
+/**
+The same table again, for the Close account a kept row is checked against.
+*/
+const CLOSE = "account_close";
+const close = alias(moderationActions, CLOSE);
 
 /**
  * Whether `uploaderId`'s upload with `fingerprint` is held for review as a
@@ -187,7 +211,8 @@ export async function isHeldAsRemovedCopy(
   uploaderId: string,
   now: number,
 ): Promise<boolean> {
-  if ((await removedMatchOf(db, fingerprint)) === undefined) return false;
+  const match = await removedMatchOf(db, fingerprint, uploaderId);
+  if (match === undefined) return false;
   if (await hasFingerprintHoldThisHour(db, uploaderId, now)) return true;
   const reading = await ceilingReading(db, "fingerprint", now);
   return !reading.isOver;

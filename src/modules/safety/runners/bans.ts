@@ -31,7 +31,7 @@ import { emailDebt } from "../../email";
 import { followRowsNaming } from "../../notifications";
 
 import { closureRuleOf, type ClosureRule } from "../rules";
-import { moderationActionInsert } from "../rules";
+import { moderationActionInsert, moderationActionInsertWhere } from "../rules";
 import { reporterNotices } from "../notices";
 
 function db() {
@@ -205,25 +205,32 @@ export async function unbanUser(
     .set({ bannedAt: orSqlNull(undefined), banReason: orSqlNull(undefined) })
     .where(stillBanned.where)
     .returning({ userId: userProfiles.userId });
-  // The lift is recorded beside the ban it undoes.
-  const record = moderationActionInsert(db(), {
-    actorId: unbannedBy,
-    action: "unban",
-    subjectType: "profile",
-    subjectId: userId,
-    subjectOwnerId: userId,
-    reason: "Reopened from the Desk",
-  });
+  // The lift is recorded beside the ban it undoes, and only where there
+  // is one: ahead of the lift, while `banned_at` is still set, so a
+  // Reopen of an account that is not closed records nothing (an `unban`
+  // row is a decision on the account, and clears its flag).
+  const record = moderationActionInsertWhere(
+    db(),
+    {
+      actorId: unbannedBy,
+      action: "unban",
+      subjectType: "profile",
+      subjectId: userId,
+      subjectOwnerId: userId,
+      reason: "Reopened from the Desk",
+    },
+    sql`EXISTS (SELECT 1 FROM ${stillBanned.table} WHERE ${stillBanned.where})`,
+  );
   if (reopening === undefined) {
-    await db().batch([lift, record]);
+    await db().batch([record, lift]);
     return;
   }
-  const [, lifted] = await db().batch([
+  const written = await db().batch([
     reopening.owe(db(), stillBanned),
-    lift,
     record,
+    lift,
   ]);
-  if (lifted.length > 0) await reopening.settle();
+  if (written[2].length > 0) await reopening.settle();
 }
 
 /**

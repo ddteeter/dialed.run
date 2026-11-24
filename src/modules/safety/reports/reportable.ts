@@ -2,9 +2,11 @@
  * What a report may name, and how many one runner may file (design 232,
  * SA-M10).
  *
- * A report names a subject the reporter can see: a kit or kit photo that
- * is theirs or shared with runners, a runner in standing who is in no
- * block with them, or a product that exists.
+ * A report names a subject the reporter can see and is not theirs: a kit
+ * or kit photo of another runner's that is shared with runners, a runner
+ * in standing who is in no block with them, or a product that exists. A
+ * runner's own kit or kit photo is answered `not_found` (owner,
+ * 2026-11-23): they delete it instead.
  * The read has no moderation clause and no reported-by clause on purpose:
  * a kit already hidden for one reason may still be reported for another
  * (an intimate image's 48 hours start at its own report), and a repeat of
@@ -13,7 +15,7 @@
  * Read from whatever `coreDb()` is in scope: the report's server function
  * gates on `verifiedUserId`, which pins the primary.
  */
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -39,17 +41,17 @@ type Db = ReturnType<typeof drizzle>;
 const DAY_S = 24 * 60 * 60;
 
 /**
-The kit is the reporter's own or shared with runners.
+The kit is another runner's, shared with runners.
 */
 function seenBy(reporterId: string): SQL | undefined {
-  return or(
-    eq(outfitEntries.userId, reporterId),
+  return and(
+    ne(outfitEntries.userId, reporterId),
     sharedAudience(outfitEntries.audience),
   );
 }
 
 /**
-The kit `kitIs` names is the reporter's own or shared with runners.
+The kit `kitIs` names is another runner's, shared with runners.
 */
 function isSeenKit(db: Db, reporterId: string, kitIs: SQL): Promise<boolean> {
   return hasRowWhere(

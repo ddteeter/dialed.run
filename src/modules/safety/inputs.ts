@@ -262,9 +262,12 @@ export const unbanUserInput = z.object({
 });
 
 /**
-Keep account on a flagged runner (D-161 1): the same account by id.
-*/
-export const keepAccountInput = unbanUserInput;
+ * Keep account on a flagged runner (D-161 1): the account by id, and the
+ * time of the flag the page showed, which the Keep is held to.
+ */
+export const keepAccountInput = unbanUserInput.extend({
+  flaggedAt: z.number().int().nonnegative(),
+});
 
 /**
 The run whose removals its author's page shows (R-140). `runId` is bounded,

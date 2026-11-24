@@ -13,6 +13,10 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
+  claimForReview,
+  releaseReview,
+} from "../../src/modules/safety/review/review";
+import {
   burstsToRelease,
   RELEASE_BATCH,
   RELEASE_WINDOW_S,
@@ -250,6 +254,26 @@ describe("what a release may reach (SA-L12)", () => {
 
     expect(outcome).toStrictEqual({ released: 1, hasMore: false });
     expect(await statusesOf()).toStrictEqual(["approved", "pending"]);
+  });
+
+  it("approves nothing for a row a report of a reason that hides at once reached after the release read it", async () => {
+    const subjectId = await reportsRowWith("spam");
+    const [row] = await core().select({ id: reviewQueue.id }).from(reviewQueue);
+    if (row === undefined) throw new Error("nothing queued");
+    expect(await claimForReview(row.id, "op", "reports")).toBe("claimed");
+    await core()
+      .insert(reports)
+      .values({
+        id: newUlid(),
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId,
+        reason: "intimate",
+        createdAt: nowSeconds(),
+      });
+
+    expect(await releaseReview(row.id, "op")).toBe("already_resolved");
+    expect(await statusesOf()).toStrictEqual(["reviewing"]);
   });
 
   it("leaves a row whose cause changed after it was read", async () => {

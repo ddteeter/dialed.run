@@ -577,7 +577,9 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
 
     await user.click(screen.getByRole("button", { name: "Keep account" }));
 
-    expect(keep).toHaveBeenCalledWith({ data: { userId: "u-ada" } });
+    expect(keep).toHaveBeenCalledWith({
+      data: { userId: "u-ada", flaggedAt: FLAGGED_AT },
+    });
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalled();
     });
