@@ -1,0 +1,253 @@
+views {
+  dynamic view removalStory {
+    title 'A removal request hides its subject until a person decides'
+
+    include
+      requester with {
+        description 'Asks for a kit or a photo to come down'
+      }
+    include
+      cf.coreDb with {
+        description 'The takedown_requests row is the durable marker'
+      }
+
+    // source: src/modules/safety/functions.ts takedownRequestFn; src/modules/safety/takedowns/takedown-requests.ts fileTakedownRequest, idempotencyKey
+    requester -> cf.app.safety.takedownRequest 'asks for a page or a photo to come down, with an idempotency key' {
+      notes '''
+        **Guard: the idempotency key.** A repeat answers "received" and writes nothing.
+
+        No account is needed. The bot check is verified on the server first.
+      '''
+    }
+    // source: src/modules/safety/takedowns/takedown-requests.ts fileTakedownRequest (db.batch), decisionWrites, holdWrites, holdNotice, operatorAlerts, receipts; src/modules/safety/limits/takedown-limits.ts holdStateSql; src/modules/safety/rules/contracts.ts REMOVAL_DUE_SECONDS
+    cf.app.safety.takedownRequest -> cf.coreDb 'files the request, hides its subject, and owes the alerts and the receipt, in one batch' {
+      notes '''
+        **Guard: the request\'s own row decides.** Every other write in the batch is conditioned on what the row says, so a hide, an alert and a receipt land exactly as it records.
+
+        **This row is the recovery marker.** The subject is hidden pending review and its author is told in the app. The Desk has 48 hours.
+
+        **Bounded.** A requester with requests already pending confirms by email first, and past the hour\'s site-wide hides a request alerts the Desk without hiding.
+      '''
+    }
+    // source: src/modules/safety/takedowns/takedown-requests.ts purgeIfHeld, subjectCacheTagsOf; src/modules/ops/public-web/edge-purge.ts purgePublicPagesFor; src/modules/safety/functions.ts REMOVAL_REQUESTS_PURGE_KEY
+    cf.app.safety.takedownRequest -[async]-> cf.app.ops.publicWeb.purge 'purges the hidden subject\'s pages, after the response' {
+      notes '''
+        **Timing boundary: the request has answered.** Only when this request is the one that hid the subject. Its public photos follow the withdraw path.
+      '''
+      navigateTo publicPhotosWithdraw
+    }
+    // source: src/modules/safety/takedowns/takedown-requests.ts fileTakedownRequest
+    requester <- cf.app.safety.takedownRequest 'answers: received' {
+      notes '''
+        **Timing boundary: the request ends here.** The receipt comes by email.
+      '''
+    }
+    // source: src/modules/dispatch/scheduled.ts drainOwedEmail; src/lib/sql/outbox.ts scheduledOutboxKinds; src/modules/ops/outbox/outbox.ts OUTBOX_FAST_PATH_GRACE_S
+    cf.app.cronHourly00 -[recovery]-> cf.app.ops.owedEmail 'sends the Desk its alerts, then the requester\'s receipt' {
+      notes '''
+        No fast path sends these: the hourly drains do, at :00, :15 and :30. The Desk\'s mail is due at once, and the receipt once its 15 minutes have passed.
+      '''
+      navigateTo outboxRecovery
+    }
+    opt 'the requester has to confirm first' {
+      // source: src/modules/safety/functions.ts confirmTakedownFn; src/modules/safety/takedowns/takedown-requests.ts confirmTakedownRequest; src/modules/ops/owed-email/owed-email.ts withReceiptConfirmToken
+      requester -> cf.app.safety.confirmRequest 'opens the receipt\'s confirm link'
+      // source: src/modules/safety/takedowns/takedown-requests.ts confirmTakedownRequest, decisionWrites, holdWrites, purgeIfHeld
+      cf.app.safety.confirmRequest -> cf.coreDb 'claims the confirmation, and hides as filing would' {
+        notes '''
+          **Guard: claim, then work.** Only an unconfirmed, pending request is claimed, and only before it is due, so a second click does nothing.
+        '''
+      }
+    }
+    // source: src/modules/dispatch/scheduled.ts runCron, oweRemovalReminders; src/modules/ops/daily/removal-reminders.ts oweRemovalReminders; src/modules/safety/reports/removal-reminders.ts undecidedRemovalsDue, REMOVAL_REMINDER_LEAD_SECONDS
+    cf.app.cronHourly00 -> cf.coreDb 'owes the Desk a reminder 8 hours before a request is due' {
+      notes '''
+        **Guard: one reminder a request a person**, by its dedupe key.
+
+        Nothing ends a hold on a timer. The due time is a clock for the Desk: the subject stays hidden until a person decides.
+      '''
+    }
+    // source: src/modules/feed/functions.ts decideRemovalRequestAction; src/modules/feed/moderation/removal-requests.ts decideRemovalRequest
+    operator -> cf.app.feed.decideRemoval 'decides the request on the Desk' {
+      navigateTo removalDecision
+    }
+  }
+
+  dynamic view removalDecision {
+    title 'The Desk takes a removal request\'s subject down, or declines it'
+
+    include
+      cf.coreDb with {
+        description 'The takedown_requests row is the durable marker'
+      }
+
+    opt 'Take it down' {
+      // source: src/modules/feed/functions.ts decideRemovalRequestAction; src/modules/feed/moderation/removal-requests.ts decideRemovalRequest
+      operator -> cf.app.feed.decideRemoval 'presses Take it down'
+      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (moderateContent); src/modules/feed/moderation/moderation.ts moderateContent, keptFingerprints; src/modules/feed/entries/retract.ts commit, mediaDebts
+      cf.app.feed.decideRemoval -> cf.coreDb 'deletes the subject, keeps its fingerprint, tells its author and owes its bytes, in one batch' {
+        notes '''
+          First, and its own batch. The fingerprint is how a copy uploaded later is held for a person.
+
+          If a live copyright hold keeps the subject, it is recorded as taken down and kept out of sight instead, and deleted when the hold ends.
+        '''
+        navigateTo copyrightHoldStory
+      }
+      // source: src/modules/feed/entries/retract.ts commit (settleOutbox); src/modules/ops/outbox/storage-handlers.ts reconcileEntryPhotos
+      cf.app.feed.decideRemoval -> cf.app.ops.outbox 'deletes its photos now: the fast path' {
+        notes '''
+          **Degrade, don\'t fail.** A failure is reported and the debt stays for the daily drain.
+        '''
+        navigateTo outboxRecovery
+      }
+      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (db.batch, outboxInsertWhere, stillPending)
+      cf.app.feed.decideRemoval -> cf.coreDb 'claims the request as removed, and owes the requester\'s answer, in one batch' {
+        notes '''
+          **Guard: only a pending request is claimed**, and the answer is owed only where the claim landed, so the requester is told once.
+
+          **Not atomic with the takedown.** If this batch is lost, the request stays pending, and deciding again finds the subject already gone and claims.
+        '''
+        navigateTo removalRecovery
+      }
+      // source: src/modules/feed/moderation/moderation.ts moderateContent, purgeTakenDown; src/modules/ops/public-web/edge-purge.ts purgePublicPages
+      cf.app.feed.decideRemoval -[async]-> cf.app.ops.publicWeb.purge 'purges the subject\'s pages, after the response'
+    }
+    opt 'Decline' {
+      // source: src/modules/feed/functions.ts decideRemovalRequestAction; src/modules/feed/moderation/removal-requests.ts RemovalDecision
+      operator -> cf.app.feed.decideRemoval 'presses Decline, with a reason'
+      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (db.batch); src/modules/safety/takedowns/takedown-requests.ts releaseHoldWrites, giveBacks
+      cf.app.feed.decideRemoval -> cf.coreDb 'claims the request as declined, owes the answer, and gives the subject back, in one batch' {
+        notes '''
+          **Guard: the give-back waits for every other hold.** The subject comes back only if no review is open on it and no other pending request names it.
+
+          A kit goes back to public. A photo goes back to pending, so the screener sees it again before anyone else does.
+        '''
+      }
+    }
+    // source: src/modules/dispatch/scheduled.ts drainOwedEmail; src/modules/ops/owed-email/owed-email.ts emailHandler
+    cf.app.cronHourly00 -[recovery]-> cf.app.ops.owedEmail 'sends the requester the decision' {
+      notes '''
+        From the hourly drain, once the 15 minutes\' grace has passed. A Decline\'s email carries its reason.
+      '''
+    }
+  }
+
+  dynamic view copyrightHoldStory {
+    title 'A copyright takedown holds its material as evidence until the case ends'
+
+    include
+      cf.coreDb with {
+        description 'The copyright_holds row is the durable marker'
+      }
+
+    // source: src/modules/feed/functions.ts takedownAction; src/modules/feed/moderation/moderation.ts moderateContent; src/modules/safety/rules/contracts.ts isCopyrightTakedown
+    operator -> cf.app.feed.copyrightTakedown 'takes a kit or a photo down on a copyright notice'
+    // source: src/modules/safety/takedowns/copyright-holds.ts copyrightHoldWrites, hideWriters, isCopyrightHeld, COPYRIGHT_HOLD_SECONDS; src/modules/feed/entries/retract.ts commit, assertNotHeld; src/modules/account/purge/purge.ts liveHold
+    cf.app.feed.copyrightTakedown -> cf.coreDb 'opens the hold, hides the subject, records the action and tells the author, in one batch' {
+      notes '''
+        **Guard: one live hold a subject.** A second takedown answers that it is already removed.
+
+        **This row is the recovery marker.** Nothing is deleted for 30 days: the rows and the bytes are evidence. While the hold is live the runner cannot delete them, their account\'s purge waits, and any other takedown of them is recorded and kept.
+      '''
+    }
+    // source: src/modules/feed/moderation/moderation.ts moderateContent, purgeTakenDown; src/modules/ops/public-web/edge-purge.ts purgePublicPages
+    cf.app.feed.copyrightTakedown -[async]-> cf.app.ops.publicWeb.purge 'purges the subject\'s pages, after the response'
+    opt 'the author sends a counter-notice' {
+      // source: src/modules/safety/functions.ts counterNoticeAction; src/modules/safety/takedowns/copyright-holds.ts recordCounterNotice
+      operator -> cf.app.safety.counterNotice 'records the counter-notice'
+      // source: src/modules/safety/takedowns/copyright-holds.ts recordCounterNotice, restoreDayAfter, RESTORE_WEEKDAYS (12), recordCourtAction, heldForCase
+      cf.app.safety.counterNotice -> cf.coreDb 'sets the restore day: the 12th weekday on' {
+        notes '''
+          **Guard: once, and only while hidden.** A second counter-notice changes nothing.
+
+          If the claimant says it has gone to court, the Desk records that, and nothing restores or purges the material until the Desk closes the case.
+        '''
+      }
+    }
+    // source: src/modules/dispatch/scheduled.ts runDailyDigest, failuresOf; src/modules/feed/moderation/moderation.ts sweepCopyrightHolds; src/modules/safety/takedowns/copyright-holds.ts restoreDueHolds, restoreBatch, giveBacks
+    cf.app.cronDaily1200 -> cf.coreDb 'restores the holds whose restore day has come' {
+      notes '''
+        **Guard: claim, then work.** One batch claims each hold as restored and gives its subject back. A subject another request or review still holds goes back to review, not to the public, and its author is told.
+      '''
+    }
+    // source: src/modules/safety/takedowns/copyright-holds.ts sweepClaims, claimDuePurges, PURGE_LEASE_SECONDS
+    cf.app.cronDaily1200 -> cf.coreDb 'claims the holds 30 days old with no counter-notice' {
+      notes '''
+        **Guard: claim, then work.** A claim is held for an hour, so a purge that died is taken over by a later firing, never shared.
+      '''
+      navigateTo removalRecovery
+    }
+    // source: src/modules/feed/moderation/moderation.ts purgeHeld; src/modules/safety/takedowns/copyright-holds.ts purgedWrite; src/modules/feed/entries/retract.ts commit, mediaDebts
+    cf.app.cronDaily1200 -> cf.coreDb 'deletes the held material, marks the hold purged, and owes its bytes, in one batch'
+    // source: src/modules/feed/entries/retract.ts commit (settleOutbox); src/modules/ops/outbox/storage-handlers.ts reconcileEntryPhotos
+    cf.app.cronDaily1200 -> cf.mediaBucket 'deletes the bytes: the fast path' {
+      notes '''
+        **If it fails:** the debt stays, and the same firing\'s drain or the next one pays it.
+      '''
+    }
+    // source: src/modules/safety/takedowns/copyright-holds.ts takenDownSubjectsDue, TAKEN_DOWN_PER_SWEEP (50); src/modules/feed/moderation/moderation.ts deleteTakenDown
+    cf.app.cronDaily1200 -> cf.coreDb 'deletes what was taken down under a hold that has ended' {
+      notes '''
+        **Bounded.** 50 a firing. The rest wait for the next day.
+      '''
+    }
+    // source: src/modules/safety/reports/retention.ts sweepModerationRecords, MODERATION_RECORD_KEPT_SECONDS; src/modules/dispatch/scheduled.ts runDailyDigest
+    cf.app.cronDaily1200 -> cf.coreDb 'forgets requests answered and holds settled three years ago'
+  }
+
+  dynamic view removalRecovery {
+    title 'When a removal or a hold\'s step is lost'
+
+    include
+      cf.coreDb with {
+        description 'The request\'s and the hold\'s rows are the durable markers'
+      }
+
+    try {
+      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (moderateContent)
+      cf.app.feed.decideRemoval -> cf.coreDb 'takes the subject down'
+      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (db.batch)
+      cf.app.feed.decideRemoval -> cf.coreDb 'claims the request'
+    }
+    catch 'the Worker stops between the two' {
+      // source: src/modules/feed/functions.ts decideRemovalRequestAction; src/modules/feed/moderation/removal-requests.ts decideRemovalRequest
+      operator -[recovery]-> cf.app.feed.decideRemoval 'decides again: the request is still pending'
+      // source: src/modules/feed/moderation/moderation.ts moderateContent; src/modules/feed/moderation/removal-requests.ts decideRemovalRequest
+      cf.app.feed.decideRemoval -[recovery]-> cf.coreDb 'finds the subject already gone, and claims the request' {
+        notes '''
+          The requester is told once, by the claim\'s batch, and never about a decision that did not happen.
+        '''
+      }
+    }
+    opt 'a hold\'s purge stops part way' {
+      // source: src/modules/safety/takedowns/copyright-holds.ts claimDuePurges, PURGE_LEASE_SECONDS; src/modules/feed/moderation/moderation.ts purgeHeld
+      cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'takes the purging hold over the next day' {
+        notes '''
+          The hold stays live while it is purging, so the account\'s purge keeps waiting until the material is gone.
+        '''
+      }
+    }
+    opt 'a step of the sweep throws' {
+      // source: src/modules/dispatch/scheduled.ts runDailyDigest, failuresOf, throwAny
+      cf.app.cronDaily1200 -> sentry 'closes the daily check-in as an error' {
+        notes '''
+          The other daily sweeps still run. What the sweep did not reach is still due, and the next day\'s firing takes it.
+        '''
+      }
+    }
+    opt 'a fast path or an email fails' {
+      // source: src/modules/dispatch/scheduled.ts runDailyDigest (drainOutbox), drainOwedEmail
+      cf.app.cronDaily1200 -[recovery]-> cf.app.ops.outbox 'drains the owed photo deletes, and the hourly firings the email' {
+        navigateTo outboxRecovery
+      }
+    }
+    opt 'a page purge fails' {
+      // source: src/modules/ops/public-web/edge-purge.ts purgePublicPagesFor; src/modules/ops/public-web/public-cache.ts PUBLIC_PAGE_TTL_SECONDS (60)
+      cf.app.ops.publicWeb.purge -> sentry 'reports it, and the page expires within 60 seconds'
+      // source: src/modules/dispatch/scheduled.ts sweepPublicPhotoCopies
+      cf.app.cronHourly15 -[recovery]-> cf.app.ops.publicWeb.sync 'deletes any public copy the purge missed' {
+        navigateTo publicPhotosRecovery
+      }
+    }
+  }
+}

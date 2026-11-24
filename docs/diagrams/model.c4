@@ -9,6 +9,10 @@ model {
   operator = actor 'Operator' {
     description 'Works the Desk'
   }
+  requester = actor 'Requester' {
+    description 'Asks for something on dialed.run to come down; needs no account'
+  }
+
 
   cf = system 'Cloudflare' {
     description 'One Worker, SSR-first, on the Workers Paid plan'
@@ -136,6 +140,32 @@ model {
     removePhoto = inRequest 'removePhotoFn' {
       technology 'in the request: one attempt, the runner is waiting'
       description 'Removes a garment\'s photo: clears the row and owes the bytes\' delete'
+    }
+  }
+
+  // Removal requests and copyright holds.
+  extend cf.app.safety {
+    takedownRequest = inRequest 'takedownRequestFn' {
+      technology 'in the request: one attempt, the requester is waiting'
+      description 'The removal request form: files the request and hides its subject'
+    }
+    confirmRequest = inRequest 'confirmTakedownFn' {
+      technology 'in the request: one attempt, the requester is waiting'
+      description 'The receipt\'s confirm link, for a requester who must confirm first'
+    }
+    counterNotice = inRequest 'counterNoticeAction' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'Desk: records a copyright counter-notice and sets the restore day'
+    }
+  }
+  extend cf.app.feed {
+    decideRemoval = inRequest 'decideRemovalRequestAction' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'Desk: Take it down or Decline a removal request'
+    }
+    copyrightTakedown = inRequest 'takedownAction' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'Desk: takes content down on a copyright notice and opens its hold'
     }
   }
 
@@ -296,4 +326,25 @@ model {
   cf.app.cronHourly00 -[recovery]-> cf.app.ops.outbox 'drains owed email and product links'
   cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'claims due outbox rows'
   cf.app.cronDaily1200 -> sentry 'names the outbox backlog in the digest'
+
+  requester -> cf.app.safety.takedownRequest 'asks for something to come down'
+  cf.app.safety.takedownRequest -> cf.coreDb 'files the request and hides its subject'
+  cf.app.safety.takedownRequest -[async]-> cf.app.ops.publicWeb.purge 'purges the hidden subject\'s pages'
+  requester -> cf.app.safety.confirmRequest 'confirms the request'
+  cf.app.safety.confirmRequest -> cf.coreDb 'claims the confirmation and hides'
+  cf.app.cronHourly00 -[recovery]-> cf.app.ops.owedEmail 'sends owed alerts, receipts and answers'
+  cf.app.cronHourly00 -> cf.coreDb 'owes the Desk its removal reminders'
+  operator -> cf.app.feed.decideRemoval 'decides a removal request'
+  cf.app.feed.decideRemoval -> cf.coreDb 'takes down or gives back, and claims the request'
+  cf.app.feed.decideRemoval -> cf.app.ops.outbox 'deletes the photos now'
+  cf.app.feed.decideRemoval -[async]-> cf.app.ops.publicWeb.purge 'purges the subject\'s pages'
+  operator -> cf.app.feed.copyrightTakedown 'takes content down on a copyright notice'
+  cf.app.feed.copyrightTakedown -> cf.coreDb 'opens the hold and hides the subject'
+  cf.app.feed.copyrightTakedown -[async]-> cf.app.ops.publicWeb.purge 'purges the subject\'s pages'
+  operator -> cf.app.safety.counterNotice 'records a counter-notice'
+  cf.app.safety.counterNotice -> cf.coreDb 'sets the restore day'
+  cf.app.cronDaily1200 -> cf.coreDb 'restores, purges and forgets holds and requests'
+  cf.app.cronDaily1200 -> cf.mediaBucket 'deletes a purged hold\'s bytes'
+  cf.app.ops.publicWeb.purge -> sentry 'reports a failed purge'
+  cf.app.cronDaily1200 -> sentry 'closes the check-in as an error when a sweep throws'
 }

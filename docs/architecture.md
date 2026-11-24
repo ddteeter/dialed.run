@@ -472,8 +472,9 @@ What picks up a lost step is drawn per flow in the model in
 [`publicPhotosRecovery`](https://ddteeter.github.io/dialed.run/#/view/publicPhotosRecovery/),
 [`exportRecovery`](https://ddteeter.github.io/dialed.run/#/view/exportRecovery/),
 [`deletionRecovery`](https://ddteeter.github.io/dialed.run/#/view/deletionRecovery/),
-[`screeningRecovery`](https://ddteeter.github.io/dialed.run/#/view/screeningRecovery/) and
-[`outboxRecovery`](https://ddteeter.github.io/dialed.run/#/view/outboxRecovery/). The rest is below, in
+[`screeningRecovery`](https://ddteeter.github.io/dialed.run/#/view/screeningRecovery/),
+[`outboxRecovery`](https://ddteeter.github.io/dialed.run/#/view/outboxRecovery/) and
+[`removalRecovery`](https://ddteeter.github.io/dialed.run/#/view/removalRecovery/). The rest is below, in
 words.
 
 - **Queues**: `max_retries: 3` with delayed retry; DLQ bound and consumed —
@@ -541,7 +542,12 @@ words.
   debt and `purged` in one batch — a claim whose batch failed is taken
   over by the next sweep. A court action holds it from both (D-146) until
   the Desk's "Case over: delete", which claims it `purging` the same way,
-  or "Case over: restore".
+  or "Case over: restore". A removal request (design 136) holds its
+  subject the same way until the Desk takes it down or declines it. Drawn as
+  [`removalStory`](https://ddteeter.github.io/dialed.run/#/view/removalStory/),
+  [`removalDecision`](https://ddteeter.github.io/dialed.run/#/view/removalDecision/),
+  [`copyrightHoldStory`](https://ddteeter.github.io/dialed.run/#/view/copyrightHoldStory/)
+  and [`removalRecovery`](https://ddteeter.github.io/dialed.run/#/view/removalRecovery/).
 - **Account deletion** (task 126, ACC-9) is **reconciliation**, not an
   outbox: the claim row in `account_deletions` is the durable "not
   finished" marker. A request writes it with every session's deletion and
