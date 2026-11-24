@@ -14,6 +14,28 @@ is a debt with a remedy or the shape the module should have. This review
 measures every door, every cross-module import and the helpers beside the
 schema at one commit, and proposes what should move, in ranked order.
 
+## Scope
+
+This review takes the fourteen modules as given. Each reader was assigned
+existing modules, and each finding is measured against today's doors. It
+did not ask whether those fourteen are the right decomposition, did not
+measure which module reads and writes which table, and had no reader
+derive the areas from the tables, the vocabulary and the drawn flows
+without the layout in front of them. The two larger moves it weighed
+(`feed/moderation` into `safety`, a new top-level module) are under
+Considered and rejected, each judged as one move, not as part of another
+layout.
+
+The owner asked for that second review on 2026-11-23, as its own design
+doc, before any substantial restructure. Until it reports:
+
+- proposals 13 and 14 wait. They are the two large relabels, and a
+  different decomposition would redo them;
+- proposal 15's question, where the counters live, is one of the second
+  review's;
+- the other proposals each move a file towards the module that owns its
+  table or its words, and stand.
+
 ## How it was measured
 
 Pinned at `ac2a22eecc3885fbc49eb29877abe66ff6155558`. Every `path:line`
@@ -237,6 +259,8 @@ beside" names proposals that edit the same files.
 | 14  | Doors drop the names no source file imports              | relabel         | none; `closet` leaves its budget     | M    |
 | 15  | The `rate_limits` counters leave `email`                 | mixed           | fan-out `dispatch` 11 → 10, on paper | M    |
 | 16  | `turnstileAttempt` moves beside its type                 | relabel         | none                                 | S    |
+
+Proposals 13 and 14 wait on the second review (see Scope).
 
 ### 1. The purge forgets the enrichment count through `email`
 
