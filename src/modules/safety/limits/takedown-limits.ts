@@ -118,18 +118,6 @@ export function blockedSql(keys: RequesterKeys): SQL {
 }
 
 /**
- * Whether a removal request `names` picks out holds its subject: still
- * pending, and it held it at filing or at its confirm (`held_at`). One
- * blocked, unconfirmed, or quieted by the valve while its subject was
- * public held nothing, and holds nothing.
- */
-export function requestHolds(names: SQL): SQL {
-  const pending = sql`${qualified(takedownRequests, takedownRequests.status)} = 'pending'`;
-  const held = sql`${qualified(takedownRequests, takedownRequests.heldAt)} is not null`;
-  return sql`exists (select 1 from ${takedownRequests} where ${pending} and ${held} and ${names})`;
-}
-
-/**
  * Whether the valve is shut, as this statement runs, for a request naming
  * `subject`: the valve counts kits, the distinct kits that something a
  * request newly hid (`hid_at`, by its index) in the hour before `now` is
