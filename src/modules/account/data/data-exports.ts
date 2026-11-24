@@ -136,7 +136,8 @@ export function canRequest(
  * What the row shows for the runner's latest export. A copy is offered
  * for download on the day it was asked for — the day a new one cannot be
  * — and after that the row offers a fresh one; the emailed link still
- * works until it expires.
+ * works until it expires. An export too large to build says so for the
+ * same day.
  */
 export function rowState(
   latest: ExportRow | undefined,
@@ -151,6 +152,9 @@ export function rowState(
   }
   if ((IN_FLIGHT as readonly string[]).includes(latest.status)) {
     return { state: "preparing" };
+  }
+  if (latest.status === "too-large" && !canRequest(latest, now)) {
+    return { state: "too-large" };
   }
   if (
     latest.status === "ready" &&

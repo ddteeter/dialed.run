@@ -19,7 +19,7 @@ import {
   sweepOwed,
 } from "../enrichment";
 import { forgetAnsweredRequests } from "../account/access";
-import { sweepExports } from "../account/export-build";
+import { checkTooLargeExports, sweepExports } from "../account/export-build";
 import { rescreenHandlesFromEnv } from "../account/handles";
 import { purgeDueAccounts } from "../account/purge";
 import {
@@ -1019,6 +1019,7 @@ export const digestKinds = [
   "review-queue",
   "breaker-headroom",
   "screener-quiet",
+  "export-too-large",
   "account-deletion",
   "speed",
   "media-backup",
@@ -1080,6 +1081,7 @@ async function runDailyDigest(
     "review-queue": checkReviewQueueDepth,
     "breaker-headroom": checkBreakerHeadroom,
     "screener-quiet": checkQuietScreener,
+    "export-too-large": (anomalies) => checkTooLargeExports(anomalies),
     "account-deletion": async (anomalies) => {
       await upkeep.purgeAccounts(anomalies);
     },

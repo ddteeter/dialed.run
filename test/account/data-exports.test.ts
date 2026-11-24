@@ -245,6 +245,32 @@ describe("rowState", () => {
   });
 });
 
+describe("an export too large to build", () => {
+  it("shows as too large, with nothing to press, for the day it was asked for", async () => {
+    const tooLarge = await rowLike("too-large", NOW - EXPORT_EVERY_S + 1);
+    expect(rowState(tooLarge, NOW)).toStrictEqual({ state: "too-large" });
+    expect(canRequest(tooLarge, NOW)).toBe(false);
+  });
+
+  it("allows another a day after it was asked for", async () => {
+    const tooLarge = await rowLike("too-large", NOW - EXPORT_EVERY_S);
+    expect(rowState(tooLarge, NOW)).toStrictEqual({ state: "idle" });
+    expect(canRequest(tooLarge, NOW)).toBe(true);
+  });
+
+  it("makes nothing when asked again that day", async () => {
+    const userId = newUlid();
+    await seedExport(userId, "too-large", { requestedAt: NOW - 120 });
+    const { sent, effects: live } = effects();
+
+    expect(
+      await requestExport(db, { userId, idempotencyKey: newUlid() }, live, NOW),
+    ).toStrictEqual({ state: "too-large" });
+    expect(sent).toStrictEqual([]);
+    expect(await rowsOf(userId)).toHaveLength(1);
+  });
+});
+
 describe("exportRowState", () => {
   it("reads the runner's latest export, and only theirs", async () => {
     const userId = newUlid();

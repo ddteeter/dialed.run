@@ -5,11 +5,13 @@ import { dataExports } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { EXPORT_LINK_TTL_S } from "../../src/lib/contracts/data-export";
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
 import {
   exportKeyFor,
   newLinkToken,
 } from "../../src/modules/account/data/data-exports";
 import {
+  checkTooLargeExports,
   EXPORT_LEASE_S,
   EXPORT_STALL_S,
   EXPORT_SWEEP_CAP,
@@ -220,6 +222,18 @@ describe("sweepExports", () => {
     expect(await statusOf(recent.id)).toMatchObject({ status: "failed" });
   });
 
+  it("forgets an export too large to build after a week, and keeps a recent one", async () => {
+    const old = await seedExport("too-large", {
+      requestedAt: NOW - EXPORT_LINK_TTL_S - 1,
+    });
+    const recent = await seedExport("too-large", {
+      requestedAt: NOW - EXPORT_LINK_TTL_S,
+    });
+    await sweepExports([], deps().deps);
+    expect(await statusOf(old.id)).toBeUndefined();
+    expect(await statusOf(recent.id)).toMatchObject({ status: "too-large" });
+  });
+
   it("deletes a forgotten failure's ZIP with it: the put can finish before the ready batch fails", async () => {
     const staged = await stagedFor(
       await seedExport("failed", { requestedAt: NOW - EXPORT_LINK_TTL_S - 1 }),
@@ -395,6 +409,51 @@ describe("sweepExports", () => {
     ]);
     expect(anomalies).toStrictEqual([
       "2 data export(s) stalled and were re-sent",
+    ]);
+  });
+});
+
+const DAY_S = 24 * 60 * 60;
+
+describe("checkTooLargeExports", () => {
+  it("names each runner whose export was too large to build in the last day, oldest first", async () => {
+    const later = await seedExport("too-large", { claimedAt: NOW - 60 });
+    const earlier = await seedExport("too-large", {
+      claimedAt: NOW - DAY_S + 1,
+    });
+    await seedExport("too-large", { claimedAt: NOW - DAY_S });
+    await seedExport("failed", { claimedAt: NOW - 60 });
+    const anomalies: string[] = [];
+
+    await checkTooLargeExports(anomalies, { db, now: NOW });
+
+    expect(anomalies).toStrictEqual([
+      `A data export was too large to build for runner ${earlier.userId}: make it by hand`,
+      `A data export was too large to build for runner ${later.userId}: make it by hand`,
+    ]);
+  });
+
+  it("names at most a firing's cap", async () => {
+    for (let index = 0; index <= EXPORT_SWEEP_CAP; index += 1) {
+      await seedExport("too-large", { claimedAt: NOW - 60 });
+    }
+    const anomalies: string[] = [];
+
+    await checkTooLargeExports(anomalies, { db, now: NOW });
+
+    expect(anomalies).toHaveLength(EXPORT_SWEEP_CAP);
+  });
+
+  it("reads the live database on the live clock when no deps are handed in", async () => {
+    const recent = await seedExport("too-large", {
+      claimedAt: nowSeconds() - 60,
+    });
+    const anomalies: string[] = [];
+
+    await checkTooLargeExports(anomalies);
+
+    expect(anomalies).toStrictEqual([
+      `A data export was too large to build for runner ${recent.userId}: make it by hand`,
     ]);
   });
 });

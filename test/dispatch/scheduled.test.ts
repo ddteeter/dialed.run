@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   cronCheckpoints,
+  dataExports,
   rateLimits,
   entryPhotos,
   photoScreenings,
@@ -150,6 +151,8 @@ async function emptyTheTablesTheDigestReads(): Promise<void> {
   await db.delete(photoScreenings);
   await db.delete(entryPhotos);
   await db.delete(outfitEntries);
+  // The exports too large to build, which the digest names.
+  await db.delete(dataExports);
 }
 
 configuredDeployment();
@@ -753,7 +756,8 @@ async function seedAnomaly(
     | "outbox"
     | "review-queue"
     | "breaker-headroom"
-    | "screener-quiet",
+    | "screener-quiet"
+    | "export-too-large",
 ): Promise<void> {
   const db = coreDb();
   switch (kind) {
@@ -799,6 +803,18 @@ async function seedAnomaly(
     }
     case "screener-quiet": {
       await screened("pass", QUIET_FEWEST_SCREENED, nowSeconds() - HOUR);
+      return;
+    }
+    case "export-too-large": {
+      await db.insert(dataExports).values({
+        id: newUlid(),
+        userId: newUlid(),
+        idempotencyKey: newUlid(),
+        linkToken: newUlid(),
+        status: "too-large",
+        requestedAt: nowSeconds() - HOUR,
+        claimedAt: nowSeconds() - HOUR,
+      });
       return;
     }
   }
@@ -906,6 +922,7 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
     "review-queue",
     "breaker-headroom",
     "screener-quiet",
+    "export-too-large",
   ] as const)("reports %s under its own kind", async (kind) => {
     await seedAnomaly(kind);
     vi.spyOn(console, "error").mockImplementation(nothing);
@@ -944,6 +961,7 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       "review-queue",
       "breaker-headroom",
       "screener-quiet",
+      "export-too-large",
       "account-deletion",
       "speed",
       "media-backup",

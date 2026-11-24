@@ -24,6 +24,7 @@ import {
 } from "../../src/modules/account/data/data-exports";
 import {
   buildExport,
+  EXPORT_CAPS,
   exportConsumersFromEnv,
   type BuildDeps,
 } from "../../src/modules/account/export-build/export-build";
@@ -491,6 +492,130 @@ describe("buildExport", () => {
     const { zip } = await stagedZip(exported.id);
     expect(zip.names).toContain(`photos/closet/${seeded.garmentId}.jpg`);
     expect(pages.length).toBeGreaterThan(2);
+  });
+});
+
+/**
+The bytes `seedEverything` stores across both buckets.
+*/
+const SEEDED_BYTES =
+  "garment original".length +
+  "garment card".length +
+  "entry photo".length +
+  "<gpx/>".length;
+
+const ROOMY = { runs: 1, garments: 1, bytes: SEEDED_BYTES };
+
+describe("an export too large to build", () => {
+  it("is past 5,000 runs, 5,000 garments or 4 GiB of files", () => {
+    expect(EXPORT_CAPS).toStrictEqual({
+      runs: 5000,
+      garments: 5000,
+      bytes: 4 * 1024 * 1024 * 1024,
+    });
+  });
+
+  it("is built when every count sits exactly on its cap", async () => {
+    const userId = await seedRunner();
+    await seedEverything(userId);
+    const exported = await seedExport(userId, "pending");
+    const { deps } = depsWith({ caps: ROOMY });
+
+    await buildExport(deps, exported.id);
+
+    expect(await statusOf(exported.id)).toBe("ready");
+  });
+
+  it.each([
+    ["runs", { ...ROOMY, runs: 0 }],
+    ["garments", { ...ROOMY, garments: 0 }],
+    ["bytes", { ...ROOMY, bytes: SEEDED_BYTES - 1 }],
+  ])(
+    "is marked too large past its %s cap, with no ZIP, no email, no report and nothing thrown",
+    async (_cap, caps) => {
+      const userId = await seedRunner();
+      await seedEverything(userId);
+      const exported = await seedExport(userId, "pending");
+      const { deps, reports, settled } = depsWith({ caps });
+
+      await buildExport(deps, exported.id);
+
+      expect(await statusOf(exported.id)).toBe("too-large");
+      expect(await stagedKeys(userId, exported.id)).toStrictEqual([]);
+      expect(await owedFor(exported.id)).toStrictEqual([]);
+      expect(settled).toStrictEqual([]);
+      expect(reports).toStrictEqual([]);
+    },
+  );
+
+  it("counts only the runner's own runs and garments", async () => {
+    const userId = await seedRunner();
+    await seedEverything(userId);
+    await seedEverything(await seedRunner());
+    const exported = await seedExport(userId, "pending");
+    const { deps } = depsWith({ caps: { ...ROOMY, bytes: 10_000 } });
+
+    await buildExport(deps, exported.id);
+
+    expect(await statusOf(exported.id)).toBe("ready");
+  });
+
+  it("reads no file before it refuses", async () => {
+    const userId = await seedRunner();
+    await seedEverything(userId);
+    const exported = await seedExport(userId, "pending");
+    const fetched: string[] = [];
+    const { deps } = depsWith({
+      caps: { ...ROOMY, runs: 0 },
+      media: {
+        get: (key) => {
+          fetched.push(key);
+          return env.MEDIA.get(key);
+        },
+        list: (options) => env.MEDIA.list(options),
+      },
+    });
+
+    await buildExport(deps, exported.id);
+
+    expect(fetched).toStrictEqual([]);
+  });
+
+  it("leaves a claim another delivery took while it measured", async () => {
+    const userId = await seedRunner();
+    await seedEverything(userId);
+    const exported = await seedExport(userId, "pending");
+    const paused = pausedMedia();
+    const { deps } = depsWith({
+      caps: { ...ROOMY, runs: 0 },
+      media: paused.media,
+    });
+
+    const first = buildExport(deps, exported.id);
+    await paused.reached;
+    const otherClaim = newUlid();
+    await db
+      .update(dataExports)
+      .set({ claimId: otherClaim })
+      .where(eq(dataExports.id, exported.id));
+    paused.release();
+    await first;
+
+    const row = await rowOf(exported.id);
+    expect(row?.status).toBe("building");
+    expect(row?.claimId).toBe(otherClaim);
+  });
+
+  it("is not claimed again by a later delivery", async () => {
+    const userId = await seedRunner();
+    const exported = await seedExport(userId, "too-large");
+    const { deps } = depsWith();
+
+    await buildExport(deps, exported.id);
+
+    const row = await rowOf(exported.id);
+    expect(row?.status).toBe("too-large");
+    expect(row?.claimId).toBeNull();
   });
 });
 

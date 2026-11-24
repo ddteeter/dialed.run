@@ -13,11 +13,11 @@
  * (`predictLength`) from sizes the bucket listings report, and the ZIP is
  * piped through a `FixedLengthStream` of exactly that length.
  */
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import { makeZip, predictLength } from "client-zip";
 
-import { dataExports } from "../../../db/schema-core";
+import { dataExports, runs, wardrobeItems } from "../../../db/schema-core";
 import { coreDb, env } from "../../../env";
 import { EXPORT_LINK_TTL_S } from "../../../lib/contracts/data-export";
 import { entryPhotoPrefix } from "../../../lib/entry-photo-key";
@@ -56,7 +56,28 @@ export interface BuildDeps {
   */
   readonly settle: (db: Db, debt: OutboxDebtOf<"email">) => Promise<void>;
   readonly now: number;
+  /**
+  The largest export this builds; `EXPORT_CAPS` unless a test hands smaller.
+  */
+  readonly caps?: ExportCaps;
 }
+
+export interface ExportCaps {
+  readonly runs: number;
+  readonly garments: number;
+  readonly bytes: number;
+}
+
+/**
+ * The largest export a build makes: past any of these, the export is
+ * marked `too-large` and the daily digest names it, to be made by hand.
+ * Numbers the owner may retune.
+ */
+export const EXPORT_CAPS: ExportCaps = {
+  runs: 5000,
+  garments: 5000,
+  bytes: 4 * 1024 * 1024 * 1024,
+};
 
 /**
  * Every object under these prefixes, by key, with its size. R2, not D1:
@@ -73,6 +94,52 @@ async function sizesUnder(
     }
   }
   return sizes;
+}
+
+type StoredSizes = Record<"media" | "imports", Map<string, number>>;
+
+/**
+The runner's photos and run files, by bucket, with their listed sizes.
+*/
+async function storedSizesOf(
+  deps: BuildDeps,
+  userId: string,
+): Promise<StoredSizes> {
+  return {
+    media: await sizesUnder(deps.media, [
+      entryPhotoPrefix(userId),
+      garmentPhotoPrefix(userId),
+    ]),
+    imports: await sizesUnder(deps.imports, [importFilePrefix(userId)]),
+  };
+}
+
+/**
+ * Whether the runner's export is past any of `caps`: their runs and
+ * garments counted in one batch, and the files' listed bytes summed.
+ */
+async function isPastCaps(
+  db: Db,
+  userId: string,
+  stored: StoredSizes,
+  caps: ExportCaps,
+): Promise<boolean> {
+  const [runCounts, garmentCounts] = await db.batch([
+    db.select({ n: count() }).from(runs).where(eq(runs.userId, userId)),
+    db
+      .select({ n: count() })
+      .from(wardrobeItems)
+      .where(eq(wardrobeItems.userId, userId)),
+  ]);
+  let bytes = 0;
+  for (const size of [...stored.media.values(), ...stored.imports.values()]) {
+    bytes += size;
+  }
+  return (
+    runCounts.some((row) => row.n > caps.runs) ||
+    garmentCounts.some((row) => row.n > caps.garments) ||
+    bytes > caps.bytes
+  );
 }
 
 /**
@@ -175,6 +242,10 @@ async function writeZip(
  * the export ready under this claim. A build that finishes nothing deletes
  * the ZIP it wrote. So one export sends one email and leaves one ZIP,
  * whoever wins, and a row purged or failed mid-build gets neither.
+ *
+ * **Measured before it reads.** The files are listed and the rows counted
+ * first; an export past `EXPORT_CAPS` is marked `too-large` under the
+ * same claim guard and the job ends without a retry or a report.
  */
 export async function buildExport(
   deps: BuildDeps,
@@ -195,15 +266,27 @@ export async function buildExport(
   if (row === undefined) return;
   const { userId } = row;
   const key = exportKeyFor({ userId, id: exportId, claimId });
+  // This export, under this build's claim, in `status`.
+  const mine = (status: "building" | "ready") =>
+    sql.join(
+      [
+        eq(dataExports.id, exportId),
+        eq(dataExports.claimId, claimId),
+        eq(dataExports.status, status),
+      ],
+      sql` and `,
+    );
   try {
+    const stored = await storedSizesOf(deps, userId);
+    if (await isPastCaps(db, userId, stored, deps.caps ?? EXPORT_CAPS)) {
+      // Final, and acked: the digest names it for a copy made by hand.
+      await db
+        .update(dataExports)
+        .set({ status: "too-large" })
+        .where(mine("building"));
+      return;
+    }
     const data = await exportData(db, userId);
-    const stored = {
-      media: await sizesUnder(deps.media, [
-        entryPhotoPrefix(userId),
-        garmentPhotoPrefix(userId),
-      ]),
-      imports: await sizesUnder(deps.imports, [importFilePrefix(userId)]),
-    };
     await writeZip(deps, key, exportFiles(data, stored, now));
   } catch (error) {
     // The ids, never a file name or a byte (law 7); the queue retries.
@@ -219,16 +302,6 @@ export async function buildExport(
       { dedupeKey: `export_ready:${exportId}` },
     ),
   );
-  // This export, under this build's claim, in `status`.
-  const mine = (status: "building" | "ready") =>
-    sql.join(
-      [
-        eq(dataExports.id, exportId),
-        eq(dataExports.claimId, claimId),
-        eq(dataExports.status, status),
-      ],
-      sql` and `,
-    );
   const [readied] = await db.batch([
     db
       .update(dataExports)

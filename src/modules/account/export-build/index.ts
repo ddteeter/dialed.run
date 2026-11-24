@@ -5,4 +5,4 @@
  */
 export type { ExportConsumers } from "../data";
 export { exportConsumersFromEnv } from "./export-build";
-export { sweepExports } from "./export-sweep";
+export { checkTooLargeExports, sweepExports } from "./export-sweep";
