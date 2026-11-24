@@ -24,7 +24,7 @@
  * cycle dependency-cruiser refuses. The feed already reads `runs` for every
  * card it draws, and a run's deletion is mostly its entry's.
  */
-import { and, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
+import { and, eq, inArray, lte, ne, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
@@ -106,15 +106,16 @@ Everything of a runner's, or these ids of theirs.
 export type Scope = "all" | readonly string[];
 
 /**
- * The rows of `table` that are the runner's and in scope, as a subquery —
- * never read into memory, so "all" is the same one statement for a runner
- * with ten thousand entries as for one with one.
+ * The rows of `table` that are the runner's, in scope and matching `also`
+ * if given, as a subquery — never read into memory, so "all" is the same
+ * one statement for a runner with ten thousand entries as for one with one.
  */
 export function owned(
   db: Db,
   table: typeof outfitEntries | typeof runs,
   userId: string,
   scope: Scope,
+  also?: SQL,
 ) {
   return db
     .select({ id: table.id })
@@ -123,6 +124,7 @@ export function owned(
       and(
         eq(table.userId, userId),
         scope === "all" ? undefined : inArray(table.id, [...scope]),
+        also,
       ),
     );
 }
@@ -498,6 +500,41 @@ export function photoDeletion(
 }
 
 /**
+The runner's upload rows for these runs.
+*/
+function uploadsOf(userId: string, ownedRuns: ReturnType<typeof owned>) {
+  return and(eq(imports.userId, userId), inArray(imports.runId, ownedRuns));
+}
+
+/**
+ * What deleting these runs and these entries of theirs writes: the
+ * entries with everything on them (a photo under review keeps its
+ * fingerprint and its record, design 232), the runs' notifications,
+ * upload rows and copies, then the runs.
+ */
+async function runStatements(
+  db: Db,
+  userId: string,
+  ownedRuns: ReturnType<typeof owned>,
+  theirEntries: ReturnType<typeof owned>,
+): Promise<Statements> {
+  return [
+    ...keeping(
+      entryStatements(db, userId, theirEntries),
+      await withdrawnUnderReview(
+        db,
+        userId,
+        inArray(entryPhotos.entryId, theirEntries),
+      ),
+    ),
+    deleteNotificationsAbout(db, userId, ownedRuns),
+    db.delete(imports).where(uploadsOf(userId, ownedRuns)),
+    deleteRunCopies(db, ownedRuns),
+    db.delete(runs).where(inArray(runs.id, ownedRuns)),
+  ];
+}
+
+/**
  * Deletes a runner's runs — all, or the ones named — with everything hung
  * on them.
  *
@@ -528,26 +565,25 @@ export async function deleteRuns(
 ): Promise<void> {
   const effects = { report, purge };
   await retractScoped(db, runs, userId, scope, effects, async (ownedRuns) => {
-    const entryIds = await columnWhere(
-      db,
-      outfitEntries,
-      outfitEntries.id,
-      and(
-        eq(outfitEntries.userId, userId),
-        inArray(outfitEntries.runId, ownedRuns),
-      ),
-    );
-    const ofTheseRuns = and(
-      eq(imports.userId, userId),
-      inArray(imports.runId, ownedRuns),
-    );
+    const entryIds =
+      scope === "all"
+        ? []
+        : await columnWhere(
+            db,
+            outfitEntries,
+            outfitEntries.id,
+            and(
+              eq(outfitEntries.userId, userId),
+              inArray(outfitEntries.runId, ownedRuns),
+            ),
+          );
     const uploads =
       scope === "all"
         ? []
         : await db
             .select({ key: imports.r2Key })
             .from(imports)
-            .where(ofTheseRuns);
+            .where(uploadsOf(userId, ownedRuns));
     // Every entry hangs on a run of the same runner's, so "all runs" is
     // "all entries" — and saying so keeps the statement to one parameter,
     // where a list of every id would pass D1's hundred-parameter cap for
@@ -556,20 +592,7 @@ export async function deleteRuns(
     const bandRuns = scope === "all" ? [] : await ownedRuns;
     const theirEntries = owned(db, outfitEntries, userId, entryScope);
     return {
-      statements: [
-        ...keeping(
-          entryStatements(db, userId, theirEntries),
-          await withdrawnUnderReview(
-            db,
-            userId,
-            inArray(entryPhotos.entryId, theirEntries),
-          ),
-        ),
-        deleteNotificationsAbout(db, userId, ownedRuns),
-        db.delete(imports).where(ofTheseRuns),
-        deleteRunCopies(db, ownedRuns),
-        db.delete(runs).where(inArray(runs.id, ownedRuns)),
-      ],
+      statements: await runStatements(db, userId, ownedRuns, theirEntries),
       debts: [
         ...mediaDebts(userId, entryScope),
         ...uploads.map((upload) =>
@@ -588,6 +611,34 @@ export async function deleteRuns(
       tags: deletionCacheTags(userId, entryScope),
     };
   });
+}
+
+/**
+ * Deletes the runner's runs whose id is at most `lastRunId`, with their
+ * entries and everything on them, for account deletion's purge, which
+ * works through a runner's runs a page at a time. Owes nothing: the purge
+ * has forgotten these runs' bands itself, lists the runner's run-file
+ * prefix, and its final `deleteRuns(…, "all")` owes the runner's media
+ * prefix. Their public pages are purged.
+ */
+export async function deleteRunsThrough(
+  db: Db,
+  userId: string,
+  lastRunId: string,
+  report: Report = captureException,
+  purge: PurgeTags = purgePublicPages,
+): Promise<void> {
+  const ownedRuns = owned(db, runs, userId, "all", lte(runs.id, lastRunId));
+  const theirEntries = owned(
+    db,
+    outfitEntries,
+    userId,
+    "all",
+    inArray(outfitEntries.runId, ownedRuns),
+  );
+  const statements = await runStatements(db, userId, ownedRuns, theirEntries);
+  await commit(db, statements, [], report);
+  purge(deletionCacheTags(userId, "all"));
 }
 
 /**

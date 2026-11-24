@@ -1761,7 +1761,7 @@ function failBatch(n: number): void {
 type Footprint = Awaited<ReturnType<typeof footprint>>;
 
 /**
- * Each of `purgeAccount`'s six steps, stopped in turn: how to stop it,
+ * Each of `purgeAccount`'s seven steps, stopped in turn: how to stop it,
  * and what the rows say about where it stopped — the step before it done,
  * its own not — so each case proves it interrupted the step it names.
  */
@@ -1771,48 +1771,52 @@ const STEPS: readonly {
   readonly stoppedAt: (partial: Footprint, revoked: readonly string[]) => void;
 }[] = [
   {
-    step: "1 · the runner's bands in DIALED_WEATHER",
-    stop: () => depsAt(NOW, [], true),
-    stoppedAt: (partial, revoked) => {
-      expect(partial.manualConditions).toHaveLength(1);
-      expect(revoked).toStrictEqual([]);
-    },
-  },
-  {
-    step: "2 · the Strava grant",
+    step: "1 · the Strava grant",
     stop: (runner) => depsAt(NOW, [runner.userId]),
     stoppedAt: (partial, revoked) => {
-      expect(partial.manualConditions).toStrictEqual([]);
       expect(revoked).toHaveLength(1);
+      expect(partial.manualConditions).toHaveLength(1);
       expect(partial.screenings).toHaveLength(2);
     },
   },
   {
-    step: "3 · the photo screenings",
+    step: "2 · the photo screenings",
     stop: () => {
+      // The claim's batch is the first.
       failBatch(2);
       return depsAt(NOW);
     },
     stoppedAt: (partial, revoked) => {
       expect(revoked).toHaveLength(1);
       expect(partial.screenings).toHaveLength(2);
+      expect(partial.manualConditions).toHaveLength(1);
       expect(partial.runs).toHaveLength(2);
     },
   },
   {
-    step: "4 · the runs and entries",
+    step: "3 · a page's bands in DIALED_WEATHER",
+    stop: () => depsAt(NOW, [], true),
+    stoppedAt: (partial, revoked) => {
+      expect(revoked).toHaveLength(1);
+      expect(partial.screenings).toStrictEqual([]);
+      expect(partial.manualConditions).toHaveLength(1);
+      expect(partial.runs).toHaveLength(2);
+    },
+  },
+  {
+    step: "4 · a page's runs and entries",
     stop: () => {
       failBatch(3);
       return depsAt(NOW);
     },
     stoppedAt: (partial) => {
-      expect(partial.screenings).toStrictEqual([]);
+      expect(partial.manualConditions).toStrictEqual([]);
       expect(partial.runs).toHaveLength(2);
       expect(partial.garments).toHaveLength(2);
     },
   },
   {
-    step: "5 · the closet",
+    step: "5 · the entries left",
     stop: () => {
       failBatch(4);
       return depsAt(NOW);
@@ -1824,10 +1828,22 @@ const STEPS: readonly {
     },
   },
   {
-    step: "6 · the account itself",
+    step: "6 · the closet",
+    stop: () => {
+      failBatch(5);
+      return depsAt(NOW);
+    },
+    stoppedAt: (partial) => {
+      expect(partial.runs).toStrictEqual([]);
+      expect(partial.garments).toHaveLength(2);
+      expect(partial.user).toHaveLength(1);
+    },
+  },
+  {
+    step: "7 · the account itself",
     stop: () => {
       // Its last batch, after the closet's.
-      failBatch(5);
+      failBatch(6);
       return depsAt(NOW);
     },
     stoppedAt: (partial) => {

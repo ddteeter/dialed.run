@@ -38,6 +38,7 @@ export {
   deleteEntryPhoto,
   deleteRun,
   deleteRuns,
+  deleteRunsThrough,
   LIVE_HOLD,
   retractEntries,
   retractEntry,
