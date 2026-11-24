@@ -7,7 +7,7 @@
  * marks their own status (`db/gave-up.ts`). This file reads it and
  * acts on it; it never writes a failure.
  */
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, lte } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { sql } from "drizzle-orm";
 
@@ -195,16 +195,29 @@ async function subjectFacts(
 }
 
 /**
- * Today's Gave up rows, newest failure first, on `gave_up_last_failed`.
+ * Today's Gave up rows: the newest `GAVE_UP_LIST_LIMIT` of each kind, so
+ * one kind's rows never push another's off the list, newest failure
+ * first. One statement: each row is numbered within its kind, newest
+ * first, and the first `GAVE_UP_LIST_LIMIT` of each are read.
  */
 export async function gaveUpJobs(
   db: Db = coreDb(),
 ): Promise<readonly GaveUpJob[]> {
+  const ranked = db
+    .select({
+      ...getTableColumns(gaveUp),
+      place:
+        sql<number>`row_number() over (partition by ${gaveUp.kind} order by ${gaveUp.lastFailedAt} desc)`.as(
+          "place",
+        ),
+    })
+    .from(gaveUp)
+    .as("ranked");
   const rows = await db
     .select()
-    .from(gaveUp)
-    .orderBy(desc(gaveUp.lastFailedAt))
-    .limit(GAVE_UP_LIST_LIMIT);
+    .from(ranked)
+    .where(lte(ranked.place, GAVE_UP_LIST_LIMIT))
+    .orderBy(desc(ranked.lastFailedAt));
   const facts = await subjectFacts(db, rows);
   return rows.map((row) => ({
     id: row.id,
