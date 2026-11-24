@@ -194,9 +194,9 @@ describe("the sweep works a large table down in batches", () => {
     expect(await countedKeys(db)).toHaveLength(2);
   });
 
-  it("works in batches of ten thousand, twenty a call, by default", async () => {
+  it("works in batches of ten thousand, a hundred a call, by default", async () => {
     expect(RATE_LIMIT_SWEEP_BATCH).toBe(10_000);
-    expect(RATE_LIMIT_SWEEP_PASSES).toBe(20);
+    expect(RATE_LIMIT_SWEEP_PASSES).toBe(100);
     const old = await aCount(NOW - 3 * DAY);
     await sweepRateLimits(db, NOW);
     expect(await isKept(old)).toBe(false);

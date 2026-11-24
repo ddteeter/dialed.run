@@ -116,10 +116,12 @@ The most counts one statement of the sweep deletes.
 export const RATE_LIMIT_SWEEP_BATCH = 10_000;
 
 /**
- * The most statements one sweep sends, across its rules. A backlog larger
- * than this is worked down over later firings.
+ * The most statements one sweep sends, across its rules: with
+ * `RATE_LIMIT_SWEEP_BATCH`, up to a million counts an hourly firing. A
+ * backlog larger than this is worked down over later firings. A number the
+ * owner can retune.
  */
-export const RATE_LIMIT_SWEEP_PASSES = 20;
+export const RATE_LIMIT_SWEEP_PASSES = 100;
 
 /**
  * What the sweep deletes, one condition a rule, each served by an index:
