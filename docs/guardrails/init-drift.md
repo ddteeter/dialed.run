@@ -29,7 +29,10 @@ not expected: stop and ask the owner.
   runs and the gate does not, so a branch that skipped one spent a CI lap.
   It runs them without git's hook variables (`GIT_DIR`, `GIT_INDEX_FILE`
   and the rest), so a test's git call in a temp repo cannot write to this
-  one (owner, 2026-11-23).
+  one (owner, 2026-11-23). It runs them under the machine-wide gate lock,
+  re-entering itself with `GUARDRAILS_PREFLIGHT=1`, and releases the lock
+  before the gate takes it, so two full test suites never run side by side
+  (owner, 2026-11-24).
 - **`.github/workflows/guardrails.yml`** names a full version tag on every
   action, locked in `actions.lock` (D-182), and has a concurrency group, a
   Chromium install and a MediaPipe staging step. The template has floating

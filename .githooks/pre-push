@@ -22,6 +22,19 @@
 # a gate that did wait its whole wait exits 75 (EX_TEMPFAIL), which is worded
 # below apart from a block, because waiting is not a violation.
 cli="./node_modules/guardrails-core/dist/cli.mjs"
+
+# The preflight below re-enters this hook under the gate lock, with this set.
+# It runs CI's first job and exits; git's refs on stdin are not read here.
+if [ "${GUARDRAILS_PREFLIGHT:-}" = 1 ]; then
+  for step in "npm run build" "npm test" "npm run diagrams:check"; do
+    echo "guardrails: preflight: $step" >&2
+    $step >&2 || {
+      echo "guardrails: push blocked — '$step' failed. CI's first job runs it too." >&2
+      exit 1
+    }
+  done
+  exit 0
+fi
 # See .githooks/pre-commit: an uninstalled checkout is said as such, and still
 # blocks.
 [ -f "$cli" ] || {
@@ -29,10 +42,12 @@ cli="./node_modules/guardrails-core/dist/cli.mjs"
   exit 1
 }
 
-# CI parity, before the gate and so before its lock (owner, 2026-11-23). These
-# are the checks CI's "Lint, typecheck, test, build" job runs that the gate
-# does not; a lane that skipped one spent a two-hour CI lap finding out. They
-# run first because they fail in minutes and need no lock. A push that only
+# CI parity, before the gate (owner, 2026-11-23). These are the checks CI's
+# "Lint, typecheck, test, build" job runs that the gate does not; a lane that
+# skipped one spent a two-hour CI lap finding out. They run under the
+# machine-wide gate lock, released before the gate takes it again (owner,
+# 2026-11-24): two full test suites side by side timed out DOM tests and
+# blocked pushes for nothing. A push that only
 # deletes refs (every local sha zero) runs none of them. `pr-ready` tells
 # lanes not to run them again by hand before shipping. Git exports GIT_DIR
 # and GIT_INDEX_FILE to hooks, and a test that runs git in a temp repo with
@@ -47,13 +62,17 @@ done <<EOF
 $refs
 EOF
 if [ "$pushes_commits" = yes ]; then
-  for step in "npm run build" "npm test" "npm run diagrams:check"; do
-    echo "guardrails: preflight: $step" >&2
-    env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_PREFIX -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY $step >&2 || {
-      echo "guardrails: push blocked — '$step' failed. CI's first job runs it too." >&2
-      exit 1
-    }
-  done
+  lock="$HOME/.guardrails-gate.lock"
+  unset_git="env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_PREFIX -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY GUARDRAILS_PREFLIGHT=1"
+  echo "guardrails: preflight: waiting for the gate lock ($lock)" >&2
+  if command -v lockf >/dev/null 2>&1; then
+    lockf -k "$lock" $unset_git sh "$0" </dev/null || exit 1
+  elif command -v flock >/dev/null 2>&1; then
+    flock "$lock" $unset_git sh "$0" </dev/null || exit 1
+  else
+    echo "guardrails: push blocked — neither lockf nor flock is installed, so the preflight cannot take the gate lock." >&2
+    exit 1
+  fi
 fi
 
 node "$cli" gate --mode=push
