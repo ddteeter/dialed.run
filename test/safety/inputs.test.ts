@@ -16,6 +16,7 @@ import {
   counterNoticeInput,
   counterNoticeInputFor,
   ncmecReportInput,
+  keepAccountInput,
   runRemovalsInput,
   releaseHoldsInput,
   reportersInput,
@@ -430,6 +431,22 @@ describe("the run a page asks the removals of (R-140)", () => {
       runRemovalsInput.safeParse({ runId: "abc", since: 1.5 }).success,
     ).toBe(false);
     expect(runRemovalsInput.parse({ runId: "abc", since: 7 }).since).toBe(7);
+  });
+});
+
+describe("Keep account (D-161 1)", () => {
+  it("names the account and the time of the flag the page showed", () => {
+    expect(
+      keepAccountInput.parse({ userId: "u-ada", flaggedAt: 0 }),
+    ).toStrictEqual({ userId: "u-ada", flaggedAt: 0 });
+  });
+
+  it("refuses no time, and a time that is no time", () => {
+    for (const flaggedAt of [undefined, -1, 1.5, "500"]) {
+      expect(
+        keepAccountInput.safeParse({ userId: "u-ada", flaggedAt }).success,
+      ).toBe(false);
+    }
   });
 });
 

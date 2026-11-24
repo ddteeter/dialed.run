@@ -58,6 +58,12 @@ type Ban = (input: {
 Reopen account, and Keep account (D-161): an act on the account by id.
 */
 type OnAccount = (input: { data: { userId: string } }) => Promise<unknown>;
+/**
+Keep account names the flag the page showed, by its time.
+*/
+type OnFlag = (input: {
+  data: { userId: string; flaggedAt: number };
+}) => Promise<unknown>;
 
 const FILTERS: readonly { value: RunnersFilter["filter"]; label: string }[] = [
   { value: "all", label: "All" },
@@ -587,11 +593,13 @@ function ReopenPanel(props: Readonly<PanelProps<OnAccount>>): JSX.Element {
  */
 function FlaggedPanel({
   flaggedAt,
+  act,
   ...props
-}: Readonly<PanelProps<OnAccount> & { flaggedAt: number }>): JSX.Element {
+}: Readonly<PanelProps<OnFlag> & { flaggedAt: number }>): JSX.Element {
   return (
     <AccountActPanel
       {...props}
+      act={({ data }) => act({ data: { ...data, flaggedAt } })}
       words={{
         heading: "Flagged",
         said: `A takedown of an image they posted was upheld on ${monthDayLabel(flaggedAt)}. Nothing has happened to the account. Keep it, or ban it below.`,
@@ -642,7 +650,7 @@ function RunnerPanels({
     rename: Rename;
     ban: Ban;
     unban: OnAccount;
-    keep: OnAccount;
+    keep: OnFlag;
   }>;
   onDone: () => void;
   /**
@@ -706,7 +714,7 @@ export function DeskRunners({
   rename: Rename;
   ban: Ban;
   unban: OnAccount;
-  keep: OnAccount;
+  keep: OnFlag;
 }>): JSX.Element {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | undefined>();

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -203,7 +204,7 @@ describe("an intimate-image removal flags its poster (D-161 1)", () => {
   it("flags again on a later removal after a Keep", async () => {
     const poster = await runner("poster@example.com");
     await recorded(poster, "remove", INTIMATE, 500);
-    await keepAccount(core(), poster, "op");
+    await keepAccount(core(), poster, "op", 500);
     expect(await flaggedAt(poster)).toBeUndefined();
 
     const later = nowSeconds() + 60;
@@ -213,7 +214,7 @@ describe("an intimate-image removal flags its poster (D-161 1)", () => {
 
   it("records Keep account as the operator's decision on the profile", async () => {
     const poster = await runner("poster@example.com");
-    await keepAccount(core(), poster, "op");
+    await keepAccount(core(), poster, "op", 500);
 
     const rows = await core().select().from(moderationActions);
     expect(rows).toStrictEqual([
@@ -348,6 +349,54 @@ describe("D8 Runners: state and flag (PR#126-1, D-161 1)", () => {
     await unbanUser(poster, "op");
 
     expect(await listed("flagged")).toStrictEqual([]);
+  });
+
+  it("records no Reopen, and leaves the flag, on an account that was not closed", async () => {
+    const poster = await runner("poster@example.com");
+    await recorded(poster, "remove", INTIMATE, 500);
+
+    await unbanUser(poster, "op");
+
+    const unbans = await core()
+      .select()
+      .from(moderationActions)
+      .where(eq(moderationActions.action, "unban"));
+    expect(unbans).toStrictEqual([]);
+    expect(await flaggedAt(poster)).toBe(500);
+  });
+});
+
+describe("Keep account holds to the flag the page showed", () => {
+  it("clears the flag shown, and records the Keep", async () => {
+    const poster = await runner("poster@example.com");
+    await recorded(poster, "remove", INTIMATE, 500);
+
+    expect(await keepAccount(core(), poster, "op", 500)).toBe("kept");
+    expect(await flaggedAt(poster)).toBeUndefined();
+  });
+
+  it("clears nothing, and records nothing, when a removal flagged the account after the page was read", async () => {
+    const poster = await runner("poster@example.com");
+    await recorded(poster, "remove", INTIMATE, 500);
+    await recorded(poster, "withdrawn", INTIMATE, 501);
+
+    expect(await keepAccount(core(), poster, "op", 500)).toBe("flagged_since");
+    expect(await flaggedAt(poster)).toBe(501);
+    const keeps = await core()
+      .select()
+      .from(moderationActions)
+      .where(eq(moderationActions.action, "keep"));
+    expect(keeps).toStrictEqual([]);
+  });
+
+  it("is not held back by another account's later removal", async () => {
+    const poster = await runner("poster@example.com");
+    const other = await runner("other@example.com");
+    await recorded(poster, "remove", INTIMATE, 500);
+    await recorded(other, "remove", INTIMATE, 900);
+
+    expect(await keepAccount(core(), poster, "op", 500)).toBe("kept");
+    expect(await flaggedAt(poster)).toBeUndefined();
   });
 });
 
