@@ -87,10 +87,10 @@ views {
         description 'The account_deletions row is the durable marker'
       }
 
-    // source: src/modules/dispatch/scheduled.ts runDailyDigest (account-deletion); src/modules/account/purge/purge.ts purgeDueAccounts, PURGE_BUDGET_MS
-    cf.app.cronDaily1200 -> cf.app.account.purge 'purges the accounts past their week' {
+    // source: src/modules/dispatch/scheduled.ts runDailyDigest (account-deletion), PURGED_LAST; src/modules/account/purge/purge.ts purgeDueAccounts, PURGE_BUDGET_MS, PURGE_RUNS_PER_FIRING
+    cf.app.cronDaily1200 -> cf.app.account.purge 'purges the accounts past their week, after the rest of the daily upkeep' {
       notes '''
-        **Bounded.** It keeps claiming for 5 minutes at most, which leaves the rest of the daily upkeep its time.
+        **Bounded.** It runs last, after the digest email and the sweeps. It keeps claiming for 5 minutes at most, and deletes at most 8,000 runs a firing across every account it claims.
       '''
       navigateTo deletionRecovery
     }
@@ -102,14 +102,6 @@ views {
         An account a live copyright hold names is not claimed: the held material is evidence until the Desk settles it.
 
         A runner who signed in during the week and never kept the account is signed out here, so nothing can be written behind the purge.
-      '''
-    }
-    // source: src/modules/account/purge/purge.ts purgeAccount, forgetManualConditions; src/modules/weather/index.ts forgetManualBands
-    cf.app.account.purge -> cf.app.weather 'forgets the runner\'s own condition bands' {
-      notes '''
-        First, because once the runs are gone nothing names these rows.
-
-        **Not atomic with the rest.** They live in the weather database, a second system.
       '''
     }
     // source: src/modules/account/purge/purge.ts purgeAccount, liveDeps (revokeStrava); src/modules/runs/strava/oauth.ts disconnectStrava
@@ -124,10 +116,27 @@ views {
         Before the photos go, because the photos are how these rows are found.
       '''
     }
-    // source: src/modules/account/purge/purge.ts purgeAccount; src/modules/feed/entries/retract.ts deleteRuns, commit, mediaDebts
-    cf.app.account.purge -> cf.app.feed 'deletes every run and entry, and owes their photos and files' {
+    // source: src/modules/account/purge/purge.ts didDeleteEveryRun, PURGE_RUNS_PAGE; src/modules/weather/index.ts forgetManualBands
+    cf.app.account.purge -> cf.app.weather 'forgets the condition bands of the next page of runs' {
       notes '''
-        With their kit, tags, reactions, photos and notifications, in one batch with the debts. Each debt is worked at once, and the outbox drains what fails.
+        **Bounded.** A page is 400 runs, in id order, and the bands go in one batch. Before the page\'s runs, because once they are gone nothing names these rows.
+
+        **Not atomic with the next step.** The bands live in the weather database, a second system; a page that stops between them is read again next time.
+      '''
+    }
+    // source: src/modules/account/purge/purge.ts didDeleteEveryRun; src/modules/feed/entries/retract.ts deleteRunsThrough, runStatements, commit
+    cf.app.account.purge -> cf.app.feed 'deletes that page of runs and their entries, page after page' {
+      notes '''
+        With their kit, tags, reactions, photos and notifications, in one batch. Their photos and run files are left to the listings below, so nothing is owed a file at a time.
+
+        **If the firing\'s bound runs out:** the account keeps its claim, nothing is reported as failed, and the digest says how many purges continue on the next firing.
+      '''
+      navigateTo deletionRecovery
+    }
+    // source: src/modules/account/purge/purge.ts purgeAccount; src/modules/feed/entries/retract.ts deleteRuns, mediaDebts
+    cf.app.account.purge -> cf.app.feed 'owes the runner\'s entry photos as one prefix' {
+      notes '''
+        Once every run is gone. No run file is owed here: the listing below deletes them.
       '''
     }
     // source: src/modules/account/purge/purge.ts deleteCloset (photo_delete)
@@ -173,6 +182,14 @@ views {
       cf.app.cronDaily1200 -[recovery]-> cf.app.account.purge 'takes the claim again the next day' {
         notes '''
           Every step deletes what is left, so the next firing does only what the failure left undone. A claim a purge failed on goes behind every one not yet tried, so it cannot keep the others waiting.
+        '''
+      }
+    }
+    opt 'the firing\'s run bound runs out part way through an account' {
+      // source: src/modules/account/purge/purge.ts purgeDueAccounts (unfinished), didDeleteEveryRun
+      cf.app.cronDaily1200 -> sentry 'names how many purges continue on the next firing' {
+        notes '''
+          The claim is kept, and the next firing past its lease takes it again and goes on from the runs that are left.
         '''
       }
     }
