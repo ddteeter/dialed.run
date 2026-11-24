@@ -124,7 +124,9 @@ export function blockedSql(keys: RequesterKeys): SQL {
  * public held nothing, and holds nothing.
  */
 export function requestHolds(names: SQL): SQL {
-  return sql`exists (select 1 from ${takedownRequests} where ${qualified(takedownRequests, takedownRequests.status)} = 'pending' and ${qualified(takedownRequests, takedownRequests.heldAt)} is not null and ${names})`;
+  const pending = sql`${qualified(takedownRequests, takedownRequests.status)} = 'pending'`;
+  const held = sql`${qualified(takedownRequests, takedownRequests.heldAt)} is not null`;
+  return sql`exists (select 1 from ${takedownRequests} where ${pending} and ${held} and ${names})`;
 }
 
 /**
