@@ -193,6 +193,10 @@ export function runStep(
     Where the step runs; `$RUNNER_TEMP` when not given.
     */
     readonly cwd?: string;
+    /**
+    More stub commands on PATH beside `gh`: each name's shell script.
+    */
+    readonly commands?: Readonly<Record<string, string>>;
   },
 ): StepRun {
   const directory = mkdtempSync(path.join(tmpdir(), "workflow-step-"));
@@ -203,6 +207,11 @@ export function runStep(
     mkdirSync(temporary);
     writeFileSync(path.join(bin, "gh"), `#!${process.execPath}\n${STUB}`);
     chmodSync(path.join(bin, "gh"), 0o755);
+    const commands = Object.entries(options.commands ?? {});
+    for (const [name, script] of commands) {
+      writeFileSync(path.join(bin, name), `#!/bin/sh\n${script}`);
+      chmodSync(path.join(bin, name), 0o755);
+    }
     writeFileSync(
       path.join(directory, "routes.json"),
       JSON.stringify(options.routes ?? {}),

@@ -92,16 +92,34 @@ export interface Change {
 }
 
 /**
-`git diff --name-status --no-renames`: a status letter, a tab, the path.
+The status letters `git diff --name-status --no-renames` prints.
+*/
+const STATUS = /^[ACDMTUXB]$/u;
+
+/**
+`git diff -z --name-status --no-renames`: a status letter, a NUL, the path
+as its bytes are, a NUL. Anything else throws, and the workflow then runs
+every shard.
 */
 export function parseNameStatus(text: string): Change[] {
-  return text
-    .split("\n")
-    .filter((line) => line.includes("\t"))
-    .map((line) => {
-      const [status = "", path = ""] = line.split("\t", 2);
-      return { path, deleted: status === "D" };
-    });
+  if (text === "") return [];
+  if (!text.endsWith("\0")) {
+    throw new Error("git diff -z output does not end in NUL");
+  }
+  const fields = text.slice(0, -1).split("\0");
+  const changes: Change[] = [];
+  for (let index = 0; index < fields.length; index += 2) {
+    const status = fields[index] ?? "";
+    if (!STATUS.test(status)) {
+      throw new Error(`git diff -z status "${status}" is not one git prints`);
+    }
+    const path = fields[index + 1];
+    if (path === undefined) {
+      throw new Error(`git diff -z record "${status}" has no path`);
+    }
+    changes.push({ path, deleted: status === "D" });
+  }
+  return changes;
 }
 
 export type Selection =
@@ -188,6 +206,7 @@ reports can say which do.
 */
 function everyShardBecause(change: Change, graph: Graph): string | undefined {
   const { path } = change;
+  if (path.startsWith('"')) return `${path} is a path git quoted`;
   if (EVERY_SHARD.some((pattern) => pattern.test(path))) {
     return `${path} is what every shard runs on`;
   }

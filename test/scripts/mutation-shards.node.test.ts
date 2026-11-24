@@ -329,15 +329,51 @@ describe("the shards' names and slugs", () => {
   });
 });
 
-describe("git's name-status lines", () => {
-  it("read as paths, a D as deleted", () => {
+describe("git's name-status records", () => {
+  it("read as NUL-separated status and path pairs, a D as deleted", () => {
     expect(
-      parseNameStatus("M\tsrc/a.ts\nD\ttest/b.test.ts\nA\tdocs/c.md\n\n"),
+      parseNameStatus(
+        'M\0src/a.ts\0D\0test/b.test.ts\0A\0docs/c.md\0T\0src/café "x".ts\0',
+      ),
     ).toStrictEqual([
       { path: "src/a.ts", deleted: false },
       { path: "test/b.test.ts", deleted: true },
       { path: "docs/c.md", deleted: false },
+      { path: 'src/café "x".ts', deleted: false },
     ]);
+    expect(parseNameStatus("")).toStrictEqual([]);
+  });
+
+  it("are refused when they are not -z output", () => {
+    expect(() => parseNameStatus("M\tsrc/a.ts\n")).toThrow(
+      "git diff -z output does not end in NUL",
+    );
+    expect(() => parseNameStatus("M\tsrc/a.ts\0")).toThrow(
+      'git diff -z status "M\tsrc/a.ts" is not one git prints',
+    );
+    expect(() => parseNameStatus("R100\0src/a.ts\0src/b.ts\0")).toThrow(
+      'git diff -z status "R100" is not one git prints',
+    );
+    expect(() => parseNameStatus("M\0src/a.ts\0D\0")).toThrow(
+      'git diff -z record "D" has no path',
+    );
+  });
+});
+
+describe("a path git would print quoted", () => {
+  it("keeps every shard when it reaches the selector still quoted", () => {
+    expect(everyShardReason(changed('"src/modules/x/caf\\303\\251.ts"'))).toBe(
+      '"src/modules/x/caf\\303\\251.ts" is a path git quoted',
+    );
+  });
+
+  it("keeps its own shard when it reaches the selector raw", () => {
+    const file = "src/modules/x/café.ts";
+    const graph: Graph = {
+      imports: new Map([...Object.entries(IMPORTS), [file, []]]),
+      unseen: new Set(),
+    };
+    expect(keptNames(changed(file), graph)).toStrictEqual(["modules/x (ts)"]);
   });
 });
 
@@ -386,7 +422,7 @@ describe("this repository's graph", () => {
       const directory = mkdtempSync(path.join(tmpdir(), "mutation-shards-"));
       try {
         const changes = path.join(directory, "changes.txt");
-        writeFileSync(changes, "M\tsrc/modules/weather/index.ts\n");
+        writeFileSync(changes, "M\0src/modules/weather/index.ts\0");
         const reports = path.join(directory, "reports");
         for (const { slug } of shardsOf(strykerConfig.mutate)) {
           mkdirSync(path.join(reports, slug), { recursive: true });

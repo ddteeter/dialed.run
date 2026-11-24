@@ -154,7 +154,10 @@ jobs:
       # are what the shard's `--incremental` run re-tests, plus the import
       # a report cannot see. The reports are the ones a shard's seed reads,
       # found by scripts/main-mutation-reports.sh in one download; a shard
-      # with no report to read runs. It keeps every shard when the diff
+      # with no report to read runs. The changed files are the PR's and the
+      # ones main changed after the commit those reports measured, read
+      # with `-z` so git hands over every name as it is; if that commit
+      # cannot be read, every shard runs. It keeps every shard when the diff
       # touches the toolchain or the test harness, or when the import graph
       # cannot answer. An empty list skips `mutate`, and the `Mutation` job
       # passes as it does for a docs-only PR. This used to be a `paths:`
@@ -189,12 +192,25 @@ jobs:
               "+refs/heads/$BASE:refs/remotes/origin/$BASE"
             git fetch --quiet --no-tags origin +refs/heads/main:refs/remotes/origin/main
             changes="$RUNNER_TEMP/changes.txt"
-            git diff --name-status --no-renames "origin/$BASE...HEAD" >"$changes"
+            git diff -z --name-status --no-renames "origin/$BASE...HEAD" >"$changes"
             reports="$RUNNER_TEMP/reports"
-            if ! sh scripts/main-mutation-reports.sh "$DEPS" "$reports"; then
+            if ! found=$(sh scripts/main-mutation-reports.sh "$DEPS" "$reports"); then
               echo "::notice::could not list main's runs; every shard runs"
+              found=""
             fi
-            if ! list=$(npx tsx scripts/mutation-shards.ts "$changes" "$reports"); then
+            printf '%s\n' "$found" | sed '/^$/d'
+            # What main changed after the commit its reports measured counts
+            # as changed too, up to the newest main commit in this PR's
+            # history: those files are newer than every report.
+            run=$(printf '%s\n' "$found" | sed -n '1s/^[^ ]* //p')
+            if [ -n "$run" ] && ! {
+              measured=$(gh run view "$run" --json headSha --jq .headSha) &&
+                git diff -z --name-status --no-renames "$measured" \
+                  "$(git merge-base origin/main HEAD)" >>"$changes"
+            }; then
+              echo "::warning::could not read the commit main's reports measured; running every shard"
+              list=$(npx tsx scripts/mutation-shards.ts)
+            elif ! list=$(npx tsx scripts/mutation-shards.ts "$changes" "$reports"); then
               echo "::warning::could not choose the shards from the diff; running every shard"
               list=$(npx tsx scripts/mutation-shards.ts)
             fi
