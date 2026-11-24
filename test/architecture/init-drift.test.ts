@@ -34,8 +34,17 @@ describe("what a forced guardrails init would remove", () => {
 
   it("runs the preflight steps without git's hook variables", () => {
     expect(prePush).toContain(
-      "env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_PREFIX -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY $step >&2 || {",
+      'unset_git="env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_PREFIX -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY GUARDRAILS_PREFLIGHT=1"',
     );
+  });
+
+  it("runs the preflight steps under the gate lock, released before the gate", () => {
+    const gate = prePush.indexOf('node "$cli" gate --mode=push');
+    const locked = prePush.indexOf('lockf -k "$lock" $unset_git sh "$0"');
+    expect(prePush).toContain('lock="$HOME/.guardrails-gate.lock"');
+    expect(locked).toBeGreaterThan(-1);
+    expect(locked).toBeLessThan(gate);
+    expect(prePush).toContain('flock "$lock" $unset_git sh "$0"');
   });
 
   it("runs none of them for a push that only deletes refs", () => {
