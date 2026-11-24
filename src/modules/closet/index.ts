@@ -25,7 +25,7 @@ export {
   NotFoundError,
   retireItem,
   unretireItem,
-  updateItem,
+  updateItemWithProduct,
 } from "./service";
 export type { ClimateBand, TapListEntry, TapListSelection } from "./tap-list";
 export {

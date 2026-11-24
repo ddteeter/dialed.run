@@ -31,16 +31,23 @@ import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
 
 import { wardrobeItems } from "../../db/schema-core";
 import { isListedName } from "../../lib/contracts/profanity";
-import { normalizeIdentity } from "../../lib/normalize";
 import { ownedBy } from "../../lib/sql/owned";
 import { isUnconfirmed } from "../account";
 import { captureException } from "../ops";
-import { OWED_AGAIN, type OutboxHandler } from "../ops/outbox";
+import {
+  OWED_AGAIN,
+  outboxInsert,
+  oweOutbox,
+  type OutboxHandler,
+} from "../ops/outbox";
 import { createOrGetBrand } from "../products";
 import {
+  claimSharedRows,
   getOwnedItem,
+  isCatalogueName,
   productLinkFor,
   updateOwnedItem,
+  type OverSharedRows,
   type WardrobeItemRow,
 } from "./service";
 import { isTapListPlaceholder } from "./tap-list-placeholder";
@@ -69,23 +76,38 @@ type TypedRow = Readonly<{
  * The columns a link writes. A brand-only answer joins the shared brands,
  * in their spelling, and links no product (rule 04: resolving a product
  * from a brand and no model would invent one named after nothing);
- * anything else links its product as a save would.
+ * anything else links its product as a save would. Both are counted
+ * (`claimSharedRows`): past the runner's day's count no shared row is
+ * made, the columns are none, and `until` is when the count starts again.
  */
 async function linkedColumns(
   db: Db,
   userId: string,
   row: TypedRow,
   isBrandOnly: boolean,
-): Promise<SQLiteUpdateSetSource<typeof wardrobeItems>> {
+): Promise<LinkedColumns> {
   if (isBrandOnly) {
+    const claim = await claimSharedRows(db, userId, row.brand);
+    if (!claim.isAllowed) return { columns: {}, until: claim.until };
     const found = await createOrGetBrand(db, row.brand);
-    return { brand: found.name };
+    return { columns: { brand: found.name } };
   }
   const link = await productLinkFor(db, row, userId);
   // The runner's type wins (D-75, R-112): a type picked on F is what they
   // said the piece is, and the product only fills a blank — as a save
   // does (`withResolvedProduct`).
-  return { productId: link.productId, type: row.type ?? link.type };
+  return "until" in link
+    ? { columns: {}, until: link.until }
+    : { columns: { productId: link.productId, type: row.type ?? link.type } };
+}
+
+/**
+What a link writes, and when the runner's count starts again if it wrote
+nothing for being past it.
+*/
+interface LinkedColumns {
+  readonly columns: SQLiteUpdateSetSource<typeof wardrobeItems>;
+  readonly until?: number;
 }
 
 /**
@@ -141,7 +163,9 @@ export async function nameItem(
     { ...row, ...typed },
     model === "",
   );
-  return updateOwnedItem(db, userId, itemId, { ...typed, ...link });
+  // Past the runner's day's count of new shared rows the columns are
+  // none, so the row is saved as typed.
+  return updateOwnedItem(db, userId, itemId, { ...typed, ...link.columns });
 }
 
 /**
@@ -154,8 +178,7 @@ export async function nameItem(
  */
 function isLinkable(row: TypedRow): boolean {
   return (
-    normalizeIdentity(row.brand) !== "" &&
-    normalizeIdentity(row.name) !== "" &&
+    isCatalogueName(row.brand, row.name) &&
     // A listed word makes no shared row (design 232).
     !isListedName(row.brand) &&
     !isListedName(row.name)
@@ -180,6 +203,10 @@ export const LINK_BATCH = 25;
  * what is still unlinked, and a row that keeps failing reaches the digest
  * as a terminal outbox row (law 6).
  *
+ * **Counted** (`claimSharedRows`): past the runner's day's count of new
+ * shared rows the run stops and answers when the count starts again, and
+ * the handler owes the link from then.
+ *
  * **Bounded** (design 232, SA-L16): at most `LINK_BATCH` garments a run,
  * since each costs several D1 calls and the run shares a cron
  * invocation's budget. Past it the answer is `more`, and the handler owes
@@ -190,7 +217,7 @@ export async function linkTypedGarments(
   db: Db,
   userId: string,
   report: Report = captureException,
-): Promise<"linked" | "more"> {
+): Promise<LinkRun> {
   if (await isUnconfirmed(db, userId)) return "linked";
   // `wardrobe_user_category` leads on the runner, so this reads only
   // their rows.
@@ -221,9 +248,11 @@ export async function linkTypedGarments(
         row,
         isTapListPlaceholder(row),
       );
+      // Past the runner's day's count: the rest wait for it to start again.
+      if (link.until !== undefined) return { until: link.until };
       await db
         .update(wardrobeItems)
-        .set(link)
+        .set(link.columns)
         .where(ownedBy(wardrobeItems, { id: row.id, userId }));
     } catch (error) {
       failed += 1;
@@ -237,13 +266,17 @@ export async function linkTypedGarments(
 }
 
 /**
+ * What a link run answers: everything owed is linked, more are owed to the
+ * next drain, or the runner's count of new shared rows is spent until
+ * `until`.
+ */
+export type LinkRun = "linked" | "more" | OverSharedRows;
+
+/**
  * What links a newly confirmed runner's typed garments: `linkTypedGarments`
  * in production, and a test's own where it hands the firing one.
  */
-type ProductLinker = (
-  db: Db,
-  userId: string,
-) => Promise<"linked" | "more">;
+type ProductLinker = (db: Db, userId: string) => Promise<LinkRun>;
 
 /**
  * The `product_link` handler, bound to the linker it is given. With none, it
@@ -258,11 +291,23 @@ export function productLinkHandler(
       if (link === undefined) {
         throw new Error("product_link drained with no linker handed in");
       }
+      const run = await link(db, payload.userId);
+      // Over the runner's count: the debt is owed again from when the
+      // count starts over. The new debt takes this row over, so the
+      // settle's delete by this row's id leaves it.
+      if (typeof run === "object") {
+        await outboxInsert(
+          db,
+          oweOutbox(
+            { kind: "product_link", payload: { userId: payload.userId } },
+            run.until,
+          ),
+        );
+        return;
+      }
       // A bounded run that left garments unlinked owes the rest to the
       // next drain (design 232): not a failure.
-      return (await link(db, payload.userId)) === "more"
-        ? OWED_AGAIN
-        : undefined;
+      return run === "more" ? OWED_AGAIN : undefined;
     },
     context: (payload) => ({ userId: payload.userId }),
   };

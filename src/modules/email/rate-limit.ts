@@ -315,6 +315,13 @@ export const ACCESS_CONFIRMS_PER_ADDRESS_PER_DAY =
  */
 export const GOOGLE_STARTS_PER_HOUR = 500;
 
+/**
+ * How many new shared brand or product rows one runner's saves may make
+ * in a day, one count a row; past it a garment saves with what was typed
+ * and no shared row (owner, 2026-11-23; a number the owner can retune).
+ */
+export const NEW_SHARED_ROWS_PER_RUNNER_PER_DAY = 50;
+
 const DAY_S = 24 * 60 * 60;
 
 /**
@@ -322,8 +329,9 @@ const DAY_S = 24 * 60 * 60;
  * window: Resend per visitor (its IP), a runner's photo uploads (their
  * id), `/takedown`'s receipts per address (lowercased, as the request
  * is), a runner's "delete scheduled" emails (their id), Au5's
- * confirmed asks and confirm links per address (lowercased), and the
- * Google sign-ins started across everyone (`GLOBAL_SUBJECT`).
+ * confirmed asks and confirm links per address (lowercased), the
+ * Google sign-ins started across everyone (`GLOBAL_SUBJECT`), and the
+ * shared brand and product rows a runner's saves make (their id).
  */
 const LIMIT_OF = {
   "resend-visitor": {
@@ -339,6 +347,10 @@ const LIMIT_OF = {
     windowS: DAY_S,
   },
   "google-start": { limit: GOOGLE_STARTS_PER_HOUR, windowS: SEND_WINDOW_S },
+  "shared-row-runner": {
+    limit: NEW_SHARED_ROWS_PER_RUNNER_PER_DAY,
+    windowS: DAY_S,
+  },
 } as const satisfies Partial<
   Record<RateLimitKind, Readonly<{ limit: number; windowS: number }>>
 >;

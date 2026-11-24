@@ -60,8 +60,11 @@ import {
 import {
   getProductAttributeDefaultsBulk,
   getProductForDetail,
+  newRowsFor,
   resolveProduct,
 } from "../products";
+import { claimLimit, type SendClaim } from "../email";
+import { normalizeIdentity } from "../../lib/normalize";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
 import {
@@ -339,6 +342,23 @@ export async function updateItem(
 ): Promise<WardrobeItemRow> {
   await assertLinkAllowed(garment);
   return updateOwnedItem(db, userId, itemId, garmentRowValues(garment));
+}
+
+/**
+ * An edit as the server function makes it: the garment is read as the
+ * runner's first, so an id that is not theirs is not found before any
+ * shared row is resolved, then the product is resolved as a save's is
+ * (`withResolvedProduct`), then the row is written.
+ */
+export async function updateItemWithProduct(
+  db: Db,
+  userId: string,
+  itemId: string,
+  submitted: Garment,
+): Promise<WardrobeItemRow> {
+  await getOwnedItem(db, userId, itemId);
+  const garment = await withResolvedProduct(db, submitted, userId);
+  return updateItem(db, userId, itemId, garment);
 }
 
 /**
@@ -937,6 +957,41 @@ export async function getItemDetailWithPairs(
 }
 
 /**
+ * Whether the shared catalogue can take a brand and a name at all: both
+ * normalize to something ("?" does not).
+ */
+export function isCatalogueName(brand: string, name: string): boolean {
+  return normalizeIdentity(brand) !== "" && normalizeIdentity(name) !== "";
+}
+
+/**
+ * The count on the shared brand and product rows a runner's saves make
+ * (`shared-row-runner`, `NEW_SHARED_ROWS_PER_RUNNER_PER_DAY` a day).
+ *
+ * Every writer of a shared row in this module asks it before
+ * `createOrGetBrand` or `resolveProduct` runs: a save, the naming step and
+ * the link a confirmation owes. It spends one count for each new row the
+ * brand and (when given) the model would make, so a row that already
+ * exists costs nothing, and the first refused count refuses the whole.
+ * Past the count the caller makes no shared row and the garment keeps
+ * what was typed (law 5). Two saves racing on one new name can each spend
+ * a count.
+ */
+export async function claimSharedRows(
+  db: Db,
+  userId: string,
+  brand: string,
+  model?: string,
+): Promise<SendClaim> {
+  const rows = await newRowsFor(db, brand, model);
+  let claim: SendClaim = { isAllowed: true };
+  for (let spent = 0; spent < rows && claim.isAllowed; spent += 1) {
+    claim = await claimLimit(db, "shared-row-runner", userId);
+  }
+  return claim;
+}
+
+/**
  * Attaches a canonical product to a garment, at the write site.
  *
  * A garment is ideally a *product* — "Janji Rover Half-Zip", not "a long
@@ -961,14 +1016,14 @@ export async function withResolvedProduct(
   createdBy: string,
 ): Promise<Garment> {
   const garment = garmentSchema.parse({ ...submitted, productId: undefined });
-  const brand = garment.brand?.trim() ?? "";
+  const brand = garment.brand ?? "";
   // No brand or no name links nothing. Products are shared rows (D-26), so
   // an unconfirmed runner makes none (design 133, decision D-113 Q1): the
   // garment saves with what was typed and no product, and confirming owes
   // the link (`linkTypedGarments`). Nor does a listed word, ever (design 232).
+  // A name the catalogue cannot take ("?") saves as typed too.
   if (
-    brand === "" ||
-    garment.name.trim() === "" ||
+    !isCatalogueName(brand, garment.name) ||
     isListedName(brand) ||
     isListedName(garment.name) ||
     (await isUnconfirmed(db, createdBy))
@@ -988,14 +1043,35 @@ export async function withResolvedProduct(
     },
     createdBy,
   );
-  // The product lends its type only to a garment the runner gave none:
-  // F asks the type now (D-75), and what a runner enters is the floor.
+  // Past the runner's day's count of new shared rows the link has no
+  // product, so the garment saves as typed. The product lends its type
+  // only to a garment the runner gave none: F asks the type now (D-75),
+  // and what a runner enters is the floor.
   return garmentSchema.parse({
     ...garment,
     productId: link.productId,
     ...(garment.type === undefined &&
       link.type !== undefined && { type: link.type }),
   });
+}
+
+/**
+What a garment links to: its product, and the type the product lends.
+*/
+export interface ProductLink {
+  readonly productId: string;
+  readonly type: string | undefined;
+}
+
+/**
+ * A link refused because the runner's saves have made their day's count
+ * of new shared rows (`claimSharedRows`): no row was made, and `until` is
+ * when the count starts again, in epoch seconds.
+ */
+export interface OverSharedRows {
+  readonly until: number;
+  readonly productId?: undefined;
+  readonly type?: undefined;
 }
 
 /**
@@ -1013,6 +1089,10 @@ export async function withResolvedProduct(
  * must not be able to fail the save that asked for it (law 5), and the
  * row it leaves behind is what the retry cron re-drives.
  *
+ * **Counted** (`claimSharedRows`): the new shared rows the link would make
+ * are counted before any is written, and past the runner's day's count
+ * the answer is `OverSharedRows` and nothing is made.
+ *
  * The type is validated against the garment's category rather than
  * trusted: a product row could carry a type belonging to another category,
  * and the whole save would fail rather than a bad hint being ignored.
@@ -1026,7 +1106,9 @@ export async function productLinkFor(
     category: Garment["category"];
   }>,
   createdBy: string,
-): Promise<{ productId: string; type: string | undefined }> {
+): Promise<ProductLink | OverSharedRows> {
+  const claim = await claimSharedRows(db, createdBy, typed.brand, typed.name);
+  if (!claim.isAllowed) return { until: claim.until };
   const link = typed.productUrl ?? undefined;
   const { product } = await resolveProduct(db, {
     brandName: typed.brand,
