@@ -17,7 +17,7 @@ import {
   stravaRevocations,
   userProfiles,
 } from "../../src/db/schema-core";
-import { verification } from "../../src/db/schema-auth";
+import { rateLimit, verification } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
 import { configuredDeployment } from "../ops/configured-deployment";
 import type { RateLimitKind } from "../../src/lib/contracts/rate-limits";
@@ -1472,7 +1472,7 @@ describe("the digest runs every check, whichever throw (design 162)", () => {
   it("drains the outbox after a check before it throws, then throws", async () => {
     vi.spyOn(console, "error").mockImplementation(nothing);
     const id = await seedDueEmail();
-    const key = await staleCount();
+    const report = await expiredReport();
     const boom = new Error("weather read fell over");
     // Fail only the weather backlog's read: the first check in the list.
     const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
@@ -1489,7 +1489,7 @@ describe("the digest runs every check, whichever throw (design 162)", () => {
       { digest: "daily", digest_kind: "outbox" },
     ]);
     // The upkeep after the checks ran too.
-    expect(await isCountKept(key)).toBe(false);
+    expect(await isReportKept(report)).toBe(false);
     expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
       "in_progress",
       "error",
@@ -1639,11 +1639,11 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
 
     await expect(firing).rejects.toBeInstanceOf(AggregateError);
     // The weather retry, the sweep, the removal reminders (C6), the email
-    // drain, the product-link drain (D-113 Q1), the expired-state sweep
-    // and the zone fill (design 142), in that order.
+    // drain, the product-link drain (D-113 Q1), the expired-state sweep,
+    // the two count sweeps and the zone fill (design 142), in that order.
     await expect(firing).rejects.toMatchObject({
       message: "several upkeep steps failed",
-      errors: [boom, sweep, boom, boom, boom, boom, boom],
+      errors: [boom, sweep, boom, boom, boom, boom, boom, boom, boom],
     });
     expect(swept).toBe(1);
   });
@@ -2367,10 +2367,10 @@ describe("the product link a confirmation owes (design 133, D-113 Q1)", () => {
 });
 
 /**
- * The production call sites of the expired-row sweeps: the daily firing
- * sweeps the rate limits itself and runs the auth sweep it is handed
- * (`src/server.ts` hands `sweepExpiredAuthRows`), each whether the other
- * fails.
+ * The production call sites of the expired-row sweeps: the hourly firing
+ * sweeps the rate-limit counts, ours and Better Auth's, and the daily
+ * firing runs the auth sweep it is handed (`src/server.ts` hands
+ * `sweepExpiredAuthRows`), each whether the other fails.
  */
 type CountId = Readonly<{ kind: RateLimitKind; subject: string }>;
 
@@ -2422,9 +2422,8 @@ async function isReportKept(id: string): Promise<boolean> {
 }
 
 describe("the daily firing sweeps rows kept past any use", () => {
-  it("sweeps the rate limits and runs each sweep it is handed, once", async () => {
+  it("runs each sweep it is handed, once, and leaves the counts to the hourly firing", async () => {
     const key = await staleCount();
-    const enrichmentKey = await staleCount("enrich-runner");
     const report = await expiredReport();
     const swept: string[] = [];
 
@@ -2443,15 +2442,25 @@ describe("the daily firing sweeps rows kept past any use", () => {
       },
     });
 
-    expect(await isCountKept(key)).toBe(false);
-    expect(await isCountKept(enrichmentKey)).toBe(false);
+    expect(await isCountKept(key)).toBe(true);
     // The 3-year sweep is safety's own, imported rather than handed in.
     expect(await isReportKept(report)).toBe(false);
     expect(swept).toStrictEqual(["auth", "requests", "copyright holds"]);
   });
 
-  it("sweeps only on the daily firing", async () => {
+  it("sweeps the counts on the hourly firing, and nothing else", async () => {
     const key = await staleCount();
+    const enrichmentKey = await staleCount("enrich-runner");
+    const signIn = await staleCount("sign-in");
+    const libraryCount = newUlid();
+    await coreDb()
+      .insert(rateLimit)
+      .values({
+        id: libraryCount,
+        key: `203.0.113.7|/sign-in/email|${libraryCount}`,
+        count: 1,
+        lastRequest: (nowSeconds() - 72 * HOUR) * 1000,
+      });
     const report = await expiredReport();
     let swept = 0;
     const sweep = () => {
@@ -2465,7 +2474,14 @@ describe("the daily firing sweeps rows kept past any use", () => {
       { sweepAuthRows: sweep, forgetAnsweredRequests: sweep },
     );
 
-    expect(await isCountKept(key)).toBe(true);
+    expect(await isCountKept(key)).toBe(false);
+    expect(await isCountKept(enrichmentKey)).toBe(false);
+    expect(await isCountKept(signIn)).toBe(false);
+    const library = await coreDb()
+      .select({ id: rateLimit.id })
+      .from(rateLimit)
+      .where(eq(rateLimit.id, libraryCount));
+    expect(library).toStrictEqual([]);
     expect(await isReportKept(report)).toBe(true);
     expect(swept).toBe(0);
   });
@@ -2488,7 +2504,7 @@ describe("the daily firing sweeps rows kept past any use", () => {
       }),
     ).rejects.toBe(boom);
 
-    expect(await isCountKept(key)).toBe(false);
+    expect(await isCountKept(key)).toBe(true);
     expect(await isReportKept(report)).toBe(false);
     expect(forgot).toBe(1);
     expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([

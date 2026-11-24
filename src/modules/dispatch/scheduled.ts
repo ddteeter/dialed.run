@@ -22,7 +22,11 @@ import { forgetAnsweredRequests } from "../account/access";
 import { sweepExports } from "../account/export-build";
 import { rescreenHandlesFromEnv } from "../account/handles";
 import { purgeDueAccounts } from "../account/purge";
-import { sweepExpiredAuthRows, sweepExpiredStates } from "../auth/expired-rows";
+import {
+  sweepExpiredAuthRows,
+  sweepExpiredCounts,
+  sweepExpiredStates,
+} from "../auth/expired-rows";
 import { linkTypedGarments } from "../closet";
 import { sweepRateLimits } from "../email";
 import { sweepCopyrightHolds } from "../feed/moderation";
@@ -279,6 +283,10 @@ async function runCron(
         // Better Auth's expired sign-in states and reset links, every
         // hour (owner, 2026-11-21).
         () => sweepExpiredStates(),
+        // Rate-limit counts past their window, ours and Better Auth's:
+        // every hour, a bounded number of batches each.
+        () => sweepRateLimits(coreDb()),
+        () => sweepExpiredCounts(),
         // Profiles whose zone lookup failed when the place was saved
         // (design 142): a NULL zone beside coordinates is the marker.
         // Last, because its lookups can wait on Visual Crossing.
@@ -1124,14 +1132,13 @@ async function runDailyDigest(
   // D5: the morning email, every day, even when every number is zero
   // (task 125 · OPS-11, through task 126's email module).
   await oweDigestEmail(db, upkeep.digestMail);
-  // Rows kept past any use: counts whose window ended a day ago, sessions
-  // expired a month ago, access requests answered 90 days ago, moderation
+  // Rows kept past any use: password-try counts whose window ended a day
+  // ago, sessions expired a month ago, access requests answered 90 days ago, moderation
   // records whose 3 years are up (D-131). After the
   // email, so a sweep that throws costs only itself, and each runs whether
   // the others fail (law 5). A check that threw above is thrown with
   // them.
   const sweeps = await failuresOf([
-    () => sweepRateLimits(db),
     () => upkeep.sweepAuthRows(),
     () => upkeep.forgetAnsweredRequests(),
     () => upkeep.sweepCopyrightHolds(),

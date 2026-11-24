@@ -8,12 +8,15 @@
  * test could import the dispatch through it (design 253).
  */
 import { inArray, lt } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
+import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { rateLimit, session, verification } from "../../../db/schema-auth";
 import { passwordAttempts } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { nowSeconds } from "../../../lib/now";
+import { deleteInBatches } from "../../../lib/sql/batched-delete";
 import { PASSWORD_ATTEMPT_WINDOW_S } from "../password-check";
 
 type Db = ReturnType<typeof drizzle>;
@@ -65,13 +68,12 @@ const ATTEMPTS_KEPT_S = DAY_S;
 const RATE_LIMIT_KEPT_S = DAY_S;
 
 /**
- * Delete expired sessions past their thirty days, password-try counts a
- * day past their window, and Better Auth's rate-limit counts a day past
- * their last request, in one batch: one policy, so a failure leaves all
- * for tomorrow rather than part. Re-runnable (law 1): a second pass finds
- * nothing past any cutoff. Each reads through its own index
- * (`session_expires_at`, `password_attempts_window`,
- * `rate_limit_last_request`), not a scan.
+ * Delete expired sessions past their thirty days and password-try counts
+ * a day past their window, in one batch: one policy, so a failure leaves
+ * both for tomorrow rather than part. Re-runnable (law 1): a second pass
+ * finds nothing past either cutoff. Each reads through its own index
+ * (`session_expires_at`, `password_attempts_window`), not a scan. Better
+ * Auth's own counts are `sweepExpiredCounts`'s.
  */
 export async function sweepExpiredAuthRows(
   db: Db = coreDb(),
@@ -80,15 +82,60 @@ export async function sweepExpiredAuthRows(
   // `expires_at` is a timestamp column: drizzle stores the Date in seconds.
   const sessionsBefore = new Date((now - SESSION_KEPT_S) * 1000);
   const attemptsBefore = now - PASSWORD_ATTEMPT_WINDOW_S - ATTEMPTS_KEPT_S;
-  // `last_request` is epoch milliseconds, as Better Auth writes it.
-  const countsBefore = (now - RATE_LIMIT_KEPT_S) * 1000;
   await db.batch([
     db.delete(session).where(lt(session.expiresAt, sessionsBefore)),
     db
       .delete(passwordAttempts)
       .where(lt(passwordAttempts.windowStartedAt, attemptsBefore)),
-    db.delete(rateLimit).where(lt(rateLimit.lastRequest, countsBefore)),
   ]);
+}
+
+/**
+ * The most statements one `sweepExpiredCounts` call sends. A backlog
+ * larger than this is worked down over later firings.
+ */
+export const COUNT_SWEEP_PASSES = 20;
+
+/**
+ * Delete Better Auth's rate-limit counts a day past their last request,
+ * through `rate_limit_last_request`. Run on every hourly firing.
+ *
+ * **In batches of `batch`** by id, one statement each, until a statement
+ * deletes fewer, and at most `passes` statements a call, so one call
+ * always ends inside D1's time for a query. Re-runnable (law 1).
+ */
+export async function sweepExpiredCounts(
+  db: Db = coreDb(),
+  now = nowSeconds(),
+  batch = STATE_SWEEP_BATCH,
+  passes = COUNT_SWEEP_PASSES,
+): Promise<void> {
+  // `last_request` is epoch milliseconds, as Better Auth writes it.
+  const spent = lt(rateLimit.lastRequest, (now - RATE_LIMIT_KEPT_S) * 1000);
+  await deleteMatching(db, rateLimit, rateLimit.id, spent, batch, passes);
+}
+
+/**
+ * Delete the rows of `table` matching `where`, `batch` at a time picked by
+ * `id`, one statement each, for at most `passes` statements.
+ */
+async function deleteMatching(
+  db: Db,
+  table: SQLiteTable,
+  id: SQLiteColumn,
+  where: SQL,
+  batch: number,
+  passes: number,
+): Promise<void> {
+  await deleteInBatches(
+    async () => {
+      const some = db.select({ id }).from(table).where(where).limit(batch);
+      const result = await db.delete(table).where(inArray(id, some));
+      return result.meta.changes;
+    },
+    batch,
+    passes,
+  );
 }
 
 /**
@@ -120,16 +167,12 @@ export async function sweepExpiredStates(
 ): Promise<void> {
   // `expires_at` is a timestamp column: drizzle stores the Date in seconds.
   const expired = lt(verification.expiresAt, new Date(now * 1000));
-  let deleted: number;
-  do {
-    const some = db
-      .select({ id: verification.id })
-      .from(verification)
-      .where(expired)
-      .limit(batch);
-    const result = await db
-      .delete(verification)
-      .where(inArray(verification.id, some));
-    deleted = result.meta.changes;
-  } while (deleted === batch);
+  await deleteMatching(
+    db,
+    verification,
+    verification.id,
+    expired,
+    batch,
+    Infinity,
+  );
 }

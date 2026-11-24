@@ -23,6 +23,7 @@ import type {
 import { nowSeconds } from "../../lib/now";
 import { PHOTO_UPLOADS_PER_DAY } from "../../lib/photo-constraints";
 import { visitorAddress } from "../../lib/visitor-address";
+import { deleteInBatches } from "../../lib/sql/batched-delete";
 import {
   windowedCountSet,
   windowedCountUntil,
@@ -98,16 +99,47 @@ export function forgetRateLimit(db: Db, kind: RateLimitKind, subject: string) {
 }
 
 /**
- * How long a count is kept after its window ends: a day, then the daily
+ * How long a count is kept after its window ends: a day, then the hourly
  * sweep deletes it (`sweepRateLimits`).
  */
 const RATE_LIMIT_KEPT_S = 24 * 60 * 60;
 
 /**
- * Delete the counts whose window started more than an hour and a day ago
- * — an address, a visitor's IP or a runner's id, kept for nothing once
- * the window is over. No window is longer than a day, so a day's count is
- * over before the sweep can reach it.
+ * How long a `sign-in` or `verify` count is kept after its window ends:
+ * fifteen minutes. Every other kind keeps the day.
+ */
+export const SHORT_KEPT_S = 15 * 60;
+
+/**
+The most counts one statement of the sweep deletes.
+*/
+export const RATE_LIMIT_SWEEP_BATCH = 10_000;
+
+/**
+ * The most statements one sweep sends, across its rules. A backlog larger
+ * than this is worked down over later firings.
+ */
+export const RATE_LIMIT_SWEEP_PASSES = 20;
+
+/**
+ * What the sweep deletes, one condition a rule, each served by an index:
+ * any count whose window started more than an hour and a day ago, a
+ * `sign-in` count once its window and `SHORT_KEPT_S` are past, and a
+ * `verify` count once its hour and `SHORT_KEPT_S` are past.
+ */
+export function rateLimitSweepRules(now: number): readonly SQL[] {
+  const ofKindBefore = (kind: RateLimitKind, cutoff: number) =>
+    sql`${rateLimits.kind} = ${kind} and ${rateLimits.windowStartedAt} < ${cutoff}`;
+  return [
+    lt(rateLimits.windowStartedAt, now - SEND_WINDOW_S - RATE_LIMIT_KEPT_S),
+    ofKindBefore("sign-in", now - SIGN_IN_WINDOW_S - SHORT_KEPT_S),
+    ofKindBefore("verify", now - SEND_WINDOW_S - SHORT_KEPT_S),
+  ];
+}
+
+/**
+ * Delete the counts `rateLimitSweepRules` names, kept for nothing once
+ * their window is over.
  *
  * **Nothing reads such a row but to start it over.** Every write is
  * `countRate`'s upsert, whose `windowedCountSet` restarts an ended window
@@ -117,15 +149,37 @@ const RATE_LIMIT_KEPT_S = 24 * 60 * 60;
  * verdict, and the margin is there only so a row is never deleted near
  * the moment it could still count.
  *
- * Re-runnable (law 1): a second pass finds nothing past the cutoff. Reads
- * through `rate_limits_window`, not a scan.
+ * **In batches of `batch`**, by `rowid` (the table has no id column), one
+ * statement each, until a statement deletes fewer, and at most `passes`
+ * statements a call across every rule, so one call always ends inside
+ * D1's time for a query and a backlog is worked down over firings.
+ *
+ * Re-runnable (law 1): a second pass finds nothing past the cutoff.
  */
 export async function sweepRateLimits(
   db: Db,
   now = nowSeconds(),
+  batch = RATE_LIMIT_SWEEP_BATCH,
+  passes = RATE_LIMIT_SWEEP_PASSES,
 ): Promise<void> {
-  const cutoff = now - SEND_WINDOW_S - RATE_LIMIT_KEPT_S;
-  await db.delete(rateLimits).where(lt(rateLimits.windowStartedAt, cutoff));
+  let sent = 0;
+  for (const rule of rateLimitSweepRules(now)) {
+    sent += await deleteInBatches(
+      async () => {
+        const some = db
+          .select({ rowid: sql`rowid` })
+          .from(rateLimits)
+          .where(rule)
+          .limit(batch);
+        const result = await db
+          .delete(rateLimits)
+          .where(inArray(sql`rowid`, some));
+        return result.meta.changes;
+      },
+      batch,
+      passes - sent,
+    );
+  }
 }
 
 /**

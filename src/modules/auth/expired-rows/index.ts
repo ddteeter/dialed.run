@@ -1,1 +1,5 @@
-export { sweepExpiredAuthRows, sweepExpiredStates } from "./expired-rows";
+export {
+  sweepExpiredAuthRows,
+  sweepExpiredCounts,
+  sweepExpiredStates,
+} from "./expired-rows";

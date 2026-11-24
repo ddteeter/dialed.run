@@ -13,10 +13,13 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
+  COUNT_SWEEP_PASSES,
   STATE_SWEEP_BATCH,
   sweepExpiredAuthRows,
+  sweepExpiredCounts,
   sweepExpiredStates,
 } from "../../src/modules/auth/expired-rows/expired-rows";
+import { queriesDuring } from "../d1-spy";
 import { PASSWORD_ATTEMPT_WINDOW_S } from "../../src/modules/auth/password-check";
 
 /**
@@ -176,13 +179,13 @@ async function isLimitKept(id: string): Promise<boolean> {
   return rows.length === 1;
 }
 
-describe("sweepExpiredAuthRows: Better Auth's rate-limit counts (SA-M36)", () => {
+describe("sweepExpiredCounts: Better Auth's rate-limit counts", () => {
   it("deletes a count a day past its last request, and keeps the rest", async () => {
     const long = await aLimit(NOW - DAY - 1);
     const edge = await aLimit(NOW - DAY);
     const recent = await aLimit(NOW - 30);
 
-    await sweepExpiredAuthRows(db, NOW);
+    await sweepExpiredCounts(db, NOW);
 
     expect(await isLimitKept(long)).toBe(false);
     // A day exactly is not more than a day; the cutoff is in milliseconds.
@@ -195,10 +198,55 @@ describe("sweepExpiredAuthRows: Better Auth's rate-limit counts (SA-M36)", () =>
     const long = await aLimit(now - 2 * DAY);
     const kept = await aLimit(now - DAY + 60);
 
-    await sweepExpiredAuthRows();
+    await sweepExpiredCounts();
 
     expect(await isLimitKept(long)).toBe(false);
     expect(await isLimitKept(kept)).toBe(true);
+  });
+
+  it("deletes in batches until a statement finds fewer", async () => {
+    await db.delete(rateLimit);
+    const old = await Promise.all(
+      [1, 2, 3, 4, 5].map((ago) => aLimit(NOW - 2 * DAY - ago)),
+    );
+    const recent = await aLimit(NOW);
+
+    const tally = await queriesDuring(() => sweepExpiredCounts(db, NOW, 2));
+
+    const deletes = tally.statements.filter((sql) =>
+      /^delete from/iu.test(sql),
+    );
+    expect(deletes).toHaveLength(3);
+    for (const id of old) expect(await isLimitKept(id)).toBe(false);
+    expect(await isLimitKept(recent)).toBe(true);
+  });
+
+  it("stops after its passes, and the next firing finishes the work", async () => {
+    await db.delete(rateLimit);
+    const old = await Promise.all(
+      [1, 2, 3, 4, 5].map((ago) => aLimit(NOW - 2 * DAY - ago)),
+    );
+
+    await sweepExpiredCounts(db, NOW, 2, 2);
+    const left = await Promise.all(old.map((id) => isLimitKept(id)));
+    expect(left.filter(Boolean)).toHaveLength(1);
+
+    await sweepExpiredCounts(db, NOW, 2, 2);
+    const after = await Promise.all(old.map((id) => isLimitKept(id)));
+    expect(after.filter(Boolean)).toHaveLength(0);
+  });
+
+  it("takes ten thousand rows a statement and twenty statements a call by default", () => {
+    expect(COUNT_SWEEP_PASSES).toBe(20);
+    expect(STATE_SWEEP_BATCH).toBe(10_000);
+  });
+
+  it("is not part of the sessions' sweep, which leaves the counts alone", async () => {
+    const long = await aLimit(NOW - 2 * DAY);
+
+    await sweepExpiredAuthRows(db, NOW);
+
+    expect(await isLimitKept(long)).toBe(true);
   });
 });
 
