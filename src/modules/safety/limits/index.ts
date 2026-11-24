@@ -13,6 +13,7 @@ export {
 } from "./breakers";
 export {
   alertRoomSql,
+  blockedSql,
   confirmTokenHash,
   counted,
   type HoldState,

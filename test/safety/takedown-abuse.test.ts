@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -26,7 +26,9 @@ import {
 import {
   blockAndDeclineAll,
   confirmTakedownRequest,
+  declineLapsedRequests,
   fileTakedownRequest,
+  pendingTakedownCount,
   pendingTakedownRequests,
   REMOVAL_REQUESTS_PURGE_KEY,
 } from "../../src/modules/safety/takedowns/takedown-requests";
@@ -572,7 +574,6 @@ describe("the valve, counting kits", () => {
     const photos = await Promise.all(
       [0, 1, 2, 3].map((position) => photoOn(kit, "pass", position)),
     );
-    await file("kit@example.com", entryLink(kit), { ip: "198.51.100.30" });
     for (const [index, photoId] of photos.entries()) {
       const row = await file(
         `photo${String(index)}@example.com`,
@@ -583,6 +584,10 @@ describe("the valve, counting kits", () => {
       );
       expect(row).toMatchObject({ holdState: "held", hidAt: NOW });
     }
+    const whole = await file("kit@example.com", entryLink(kit), {
+      ip: "198.51.100.30",
+    });
+    expect(whole).toMatchObject({ holdState: "held", hidAt: NOW });
 
     const next = await sharedEntry();
     const row = await file("next@example.com", entryLink(next), {
@@ -594,8 +599,11 @@ describe("the valve, counting kits", () => {
   it("shuts for a new kit, and still lets a photo on a kit it counted hide", async () => {
     await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 1, NOW);
     const kit = await sharedEntry();
-    const photoId = await photoOn(kit, "pass");
-    await file("kit@example.com", entryLink(kit), { ip: "198.51.100.30" });
+    const photoId = await photoOn(kit, "pass", 0);
+    const secondPhoto = await photoOn(kit, "pass", 1);
+    await file("kit@example.com", photoLink(kit, photoId), {
+      ip: "198.51.100.30",
+    });
 
     const other = await sharedEntry();
     const otherPhoto = await photoOn(other, "pass");
@@ -604,7 +612,7 @@ describe("the valve, counting kits", () => {
     });
     expect(shut).toMatchObject({ holdState: "valve", hidAt: NOT_SET });
 
-    const same = await file("same@example.com", photoLink(kit, photoId), {
+    const same = await file("same@example.com", photoLink(kit, secondPhoto), {
       ip: "198.51.100.32",
     });
     expect(same).toMatchObject({ holdState: "held", hidAt: NOW });
@@ -688,9 +696,16 @@ describe("Block and decline all", () => {
       ip: "198.51.100.8",
     });
 
+    const blocked = await blockAndDeclineAll(
+      core(),
+      "op-one",
+      second.id,
+      NOW + 10,
+    );
+    expect(blocked).toMatchObject({ status: "blocked", declined: 2 });
     expect(
-      await blockAndDeclineAll(core(), "op-one", second.id, NOW + 10),
-    ).toStrictEqual({ status: "blocked", declined: 2 });
+      blocked.status === "blocked" ? blocked.declinedIds.toSorted(byText) : [],
+    ).toStrictEqual([first.id, second.id].toSorted(byText));
 
     const rows = await core().select().from(takedownRequests);
     const statusOf = (id: string) => rows.find((row) => row.id === id)?.status;
@@ -728,6 +743,7 @@ describe("Block and decline all", () => {
     expect(await blockAndDeclineAll(core(), "op-one", row.id, NOW)).toEqual({
       status: "blocked",
       declined: 1,
+      declinedIds: [row.id],
     });
     const blocks = await core().select().from(takedownBlocks);
     expect(blocks.map((block) => block.kind)).toStrictEqual(["email"]);
@@ -1010,6 +1026,7 @@ describe("requests filed before the keys existed", () => {
     expect(await blockAndDeclineAll(core(), "op-one", id, NOW)).toStrictEqual({
       status: "blocked",
       declined: 1,
+      declinedIds: [id],
     });
     const blocks = await core().select().from(takedownBlocks);
     expect(blocks.map((block) => block.key)).toStrictEqual(["me@example.com"]);
@@ -1021,7 +1038,7 @@ describe("Block and decline all, for a link that is not ours", () => {
     const row = await file("me@example.com", "https://elsewhere.example/x");
     expect(
       await blockAndDeclineAll(core(), "op-one", row.id, NOW),
-    ).toStrictEqual({ status: "blocked", declined: 1 });
+    ).toStrictEqual({ status: "blocked", declined: 1, declinedIds: [row.id] });
     const [after] = await core()
       .select({ status: takedownRequests.status })
       .from(takedownRequests)
@@ -1835,7 +1852,11 @@ describe("Block and decline all, on a shared address", () => {
 
     expect(
       await blockAndDeclineAll(core(), "op-one", theirs.id, NOW + 10),
-    ).toStrictEqual({ status: "blocked", declined: 1 });
+    ).toStrictEqual({
+      status: "blocked",
+      declined: 1,
+      declinedIds: [theirs.id],
+    });
 
     const [still] = await core()
       .select({ status: takedownRequests.status })
@@ -1994,5 +2015,252 @@ describe("the removal requests' purge count", () => {
     expect(ulidSchema.safeParse(REMOVAL_REQUESTS_PURGE_KEY).success).toBe(
       false,
     );
+  });
+});
+
+function byText(one: string, other: string): number {
+  return one.localeCompare(other);
+}
+
+async function photoStatus(photoId: string) {
+  const [row] = await core()
+    .select({ status: entryPhotos.screenStatus })
+    .from(entryPhotos)
+    .where(eq(entryPhotos.id, photoId));
+  return row?.status;
+}
+
+async function requestRow(id: string) {
+  const [row] = await core()
+    .select()
+    .from(takedownRequests)
+    .where(eq(takedownRequests.id, id));
+  return row;
+}
+
+describe("a blocked requester's request", () => {
+  it("is declined as it is filed, with the block's reason, and still gets the ordinary receipt", async () => {
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: requesterKey("me@example.com"),
+        kind: "email",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+    const kit = await sharedEntry();
+    const row = await file("me@example.com", entryLink(kit));
+
+    expect(row).toMatchObject({
+      holdState: "blocked",
+      status: "declined",
+      declineReason: "Blocked as abuse",
+      resolvedAt: NOW,
+      resolvedBy: NOT_SET,
+    });
+    expect(await entryStatus(kit)).toBe("ok");
+    expect(await kindsOwed()).toStrictEqual(["removal_request_received"]);
+  });
+
+  it("is declined at its confirm when its network was blocked while it waited", async () => {
+    const { entryId, request } = await pastTheCap();
+    const token = await confirmTokenFor(request.id);
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: z.string().parse(request.ipKey),
+        kind: "ip",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+    const before = await owed();
+
+    await confirmTakedownRequest(
+      core(),
+      token,
+      { oweWhere: oweInCoreWhere, purge: noPurge },
+      NOW + 60,
+    );
+
+    expect(await requestRow(request.id)).toMatchObject({
+      holdState: "blocked",
+      status: "declined",
+      declineReason: "Blocked as abuse",
+      resolvedAt: NOW + 60,
+      heldAt: NOT_SET,
+    });
+    expect(await entryStatus(entryId)).toBe("ok");
+    expect(await owed()).toHaveLength(before.length);
+  });
+});
+
+describe("a request still waiting on its confirm", () => {
+  it("is declined once its 48 hours have passed, and no other request is", async () => {
+    const { request } = await pastTheCap();
+    const others = await core()
+      .select({ id: takedownRequests.id })
+      .from(takedownRequests)
+      .where(ne(takedownRequests.id, request.id));
+
+    await declineLapsedRequests(core(), request.dueAt);
+    expect(await requestRow(request.id)).toMatchObject({ status: "pending" });
+
+    await declineLapsedRequests(core(), request.dueAt + 1);
+    expect(await requestRow(request.id)).toMatchObject({
+      status: "declined",
+      declineReason: "Not confirmed",
+      resolvedAt: request.dueAt + 1,
+      resolvedBy: NOT_SET,
+    });
+    const after = await core()
+      .select({ status: takedownRequests.status })
+      .from(takedownRequests)
+      .where(
+        inArray(
+          takedownRequests.id,
+          others.map((other) => other.id),
+        ),
+      );
+    expect(after.map((row) => row.status)).toStrictEqual([
+      "pending",
+      "pending",
+    ]);
+    expect(await kindsOwed()).not.toContain("removal_request_decided");
+  });
+
+  it("does not hold back a Decline's give-back, where one that holds does", async () => {
+    const kit = await sharedEntry();
+    const hid = await file("me@example.com", entryLink(kit));
+    const waiting = (heldAt: number | undefined) =>
+      core()
+        .insert(takedownRequests)
+        .values({
+          id: newUlid(),
+          requesterEmail: "you@example.com",
+          signature: "x",
+          location: entryLink(kit),
+          subjectType: "entry",
+          subjectId: kit,
+          dueAt: NOW + 172_800,
+          createdAt: NOW,
+          idempotencyKey: newUlid(),
+          requesterKey: "you@example.com",
+          holdState: heldAt === undefined ? "confirm" : "held",
+          heldAt,
+        });
+    await waiting(undefined);
+
+    await decideRemovalRequest(core(), "op-one", hid.id, {
+      outcome: "declined",
+      reason: "shoes",
+    });
+    expect(await entryStatus(kit)).toBe("ok");
+
+    const again = await file("they@example.com", entryLink(kit), {
+      ip: "198.51.100.20",
+    });
+    expect(await entryStatus(kit)).toBe("hidden_pending_review");
+    await waiting(NOW);
+    await decideRemovalRequest(core(), "op-one", again.id, {
+      outcome: "declined",
+      reason: "shoes",
+    });
+    expect(await entryStatus(kit)).toBe("hidden_pending_review");
+  });
+});
+
+/**
+Sixty requests from one network an hour before NOW, none naming a link of ours.
+*/
+async function junk(secret: string | undefined) {
+  for (let index = 0; index < 60; index += 1) {
+    await file(`junk${String(index)}@example.com`, `words ${String(index)}`, {
+      ip: "203.0.113.7",
+      now: NOW - 3600,
+      secret,
+    });
+  }
+}
+
+describe("Review's list, behind many requests that may not act", () => {
+  it("lists the requests that may act first, and counts every pending one", async () => {
+    await junk(SECRET);
+    const kit = await sharedEntry();
+    const real = await file("someone@example.com", entryLink(kit), {
+      ip: "198.51.100.9",
+    });
+
+    const listed = await pendingTakedownRequests(core(), NOW);
+    expect(listed).toHaveLength(50);
+    expect(
+      listed.slice(0, 3).map((request) => request.holdState),
+    ).not.toContain("confirm");
+    expect(listed.map((request) => request.id)).toContain(real.id);
+    expect(await pendingTakedownCount(core())).toBe(61);
+  });
+
+  it("counts what it cannot list when every request may act", async () => {
+    await junk(undefined);
+    await file("someone@example.com", entryLink(await sharedEntry()), {
+      ip: "198.51.100.9",
+      secret: undefined,
+    });
+
+    expect(await pendingTakedownRequests(core(), NOW)).toHaveLength(50);
+    expect(await pendingTakedownCount(core())).toBe(61);
+  });
+});
+
+describe("a request naming a photo on a kit already out of view", () => {
+  it("holds the photo itself while the valve is shut, so it stays hidden when the kit comes back", async () => {
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW);
+    const kit = await hiddenKit();
+    const photo = await photoOn(kit, "pass");
+
+    const row = await file("me@example.com", photoLink(kit, photo));
+
+    expect(row).toMatchObject({
+      holdState: "held",
+      heldAt: NOW,
+      hidAt: NOT_SET,
+    });
+    expect(await photoStatus(photo)).toBe("hidden_pending_review");
+    const queueId = newUlid();
+    await core().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "entry",
+      subjectId: kit,
+      source: "reports",
+      status: "pending",
+      createdAt: NOW,
+      openedAt: NOW,
+    });
+    await resolveReview(queueId, await makeUser(), "approve");
+    expect(await entryStatus(kit)).toBe("ok");
+    expect(await photoStatus(photo)).toBe("hidden_pending_review");
+
+    await decideRemovalRequest(core(), "op-one", row.id, {
+      outcome: "declined",
+      reason: "shoes",
+    });
+    expect(await photoStatus(photo)).toBe("pending");
+  });
+
+  it("holds the photo with the valve open too, taking no place in it", async () => {
+    const kit = await hiddenKit();
+    const photo = await photoOn(kit, "pass");
+    const spy = purgeSpy();
+
+    const row = await file("me@example.com", photoLink(kit, photo), {
+      purge: spy.purge,
+    });
+
+    expect(row).toMatchObject({
+      holdState: "held",
+      heldAt: NOW,
+      hidAt: NOT_SET,
+    });
+    expect(await photoStatus(photo)).toBe("hidden_pending_review");
+    expect(spy.calls).toStrictEqual([]);
   });
 });

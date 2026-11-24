@@ -360,16 +360,17 @@ describe("the open requests, as Review lists them", () => {
       deps,
       NOW,
     );
-    await fileTakedownRequest(core(), request(), deps, NOW - 10);
-    const filed = await core()
+    // Decided before the third is filed, so the third is under the cap
+    // and may act, as the other two may.
+    const [done] = await core()
       .select({ id: takedownRequests.id })
       .from(takedownRequests)
-      .orderBy(takedownRequests.createdAt);
-    const done = filed[2];
+      .where(eq(takedownRequests.createdAt, NOW + 60));
     await core()
       .update(takedownRequests)
       .set({ status: "declined" })
       .where(eq(takedownRequests.id, done?.id ?? ""));
+    await fileTakedownRequest(core(), request(), deps, NOW - 10);
 
     const listed = await pendingTakedownRequests(core(), NOW + 3600);
 
