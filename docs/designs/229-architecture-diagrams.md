@@ -501,6 +501,13 @@ One PR a flow, each drawn as the code stands on `main` when it branched.
   hand-drawn arrows between `account` and the queue. The download is a
   route handler, not a server function; it is drawn in `account/data`,
   which decides everything it answers.
+- **`flows/deletion.c4`**: `deletionStory` (the request, the week, Keep
+  in an `opt`, and the daily firing), `deletionPurge` (the claim and each
+  step in the order `purgeAccount` takes them, the claim deleted last) and
+  `deletionRecovery` (a `try` for a step that fails, and `opt`s for the
+  waiting count, a copyright hold and the outbox's drain). New entry
+  points `cf.app.account.deletionRequest` and `cf.app.account.keep`; the
+  purge is the generated `account/purge`.
 
 ## Open questions
 

@@ -111,6 +111,18 @@ model {
     }
   }
 
+  // Account deletion: a week to keep it, then the purge.
+  extend cf.app.account {
+    deletionRequest = inRequest 'requestDeletionFn' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Delete my account: writes the claim, signs the runner out, owes the email'
+    }
+    keep = inRequest 'keepAccountFn' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Keep my account: deletes the claim while the purge has not started'
+    }
+  }
+
   // The systems we call and do not run.
   provider = external 'Visual Crossing' {
     description 'Weather provider, behind an adapter'
@@ -230,4 +242,21 @@ model {
   cf.app.cronHourly00 -> cf.importsBucket 'deletes expired export ZIPs'
   runner -> cf.app.account.data.download 'downloads the export'
   cf.app.account.data.download -> cf.importsBucket 'reads the ZIP'
+
+  runner -> cf.app.account.deletionRequest 'asks to delete the account'
+  cf.app.account.deletionRequest -> cf.coreDb 'writes the claim, signs out, owes the email'
+  cf.app.account.deletionRequest -[async]-> cf.app.ops.owedEmail 'sends "delete scheduled"'
+  cf.app.account.deletionRequest -> cf.app.ops.publicWeb.purge 'purges the runner\'s public pages'
+  cf.app.account.deletionRequest -> cf.app.runs 'disconnects Strava'
+  runner -> cf.app.account.keep 'keeps the account'
+  cf.app.account.keep -> cf.coreDb 'deletes the claim before the purge starts'
+  cf.app.cronDaily1200 -> cf.app.account.purge 'purges the accounts past their week'
+  cf.app.cronDaily1200 -[recovery]-> cf.app.account.purge 'takes a failed purge again'
+  cf.app.account.purge -> cf.coreDb 'claims, then deletes the account\'s rows'
+  cf.app.account.purge -> cf.app.weather 'forgets the runner\'s own bands'
+  cf.app.account.purge -> cf.app.runs 'disconnects Strava'
+  cf.app.account.purge -> cf.app.feed 'deletes every run and entry'
+  cf.app.account.purge -> cf.importsBucket 'deletes the run files and export ZIPs'
+  cf.app.account.purge -> sentry 'reports a failed purge'
+  cf.app.cronDaily1200 -[recovery]-> cf.app.ops.outbox 'drains the owed deletes and email'
 }
