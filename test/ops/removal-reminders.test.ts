@@ -36,8 +36,9 @@ function core() {
 }
 
 /**
-A `/takedown` request filed `hoursAgo` hours before NOW, due 48 hours after it.
-*/
+ * A `/takedown` request filed `hoursAgo` hours before NOW, due 48 hours
+ * after it, that alerted every operator one by one when it was filed.
+ */
 async function request(
   hoursAgo: number,
   overrides: Partial<typeof takedownRequests.$inferInsert> = {},
@@ -55,6 +56,7 @@ async function request(
       createdAt,
       idempotencyKey: newUlid(),
       holdState: "held",
+      alertedAt: createdAt,
       ...overrides,
     });
   return id;
@@ -113,6 +115,21 @@ async function reminders() {
       return owedEmail.parse(read.message.payload);
     })
     .filter((email) => email.dedupeKey.startsWith("removal_reminder:"))
+    .toSorted((a, b) => a.dedupeKey.localeCompare(b.dedupeKey));
+}
+
+async function summaries() {
+  const rows = await core()
+    .select({ payload: outbox.payload })
+    .from(outbox)
+    .where(eq(outbox.kind, "operator_email"));
+  return rows
+    .map((row) => {
+      const read = readOutboxRow("operator_email", row.payload);
+      if (!read.ok) throw new Error(read.problem);
+      return owedEmail.parse(read.message.payload);
+    })
+    .filter((email) => email.dedupeKey.startsWith("removal_reminder_summary:"))
     .toSorted((a, b) => a.dedupeKey.localeCompare(b.dedupeKey));
 }
 
@@ -219,8 +236,8 @@ describe("the 40-hour reminder", () => {
     expect(await reminders()).toStrictEqual([]);
   });
 
-  it("reminds of a request the valve quieted, and one whose link is not ours", async () => {
-    const valve = await request(41, { holdState: "valve" });
+  it("reminds one by one of each request that alerted one by one, and one whose link is not ours", async () => {
+    const hid = await request(41, { alertedAt: undefined, hidAt: NOW });
     // A link that is not ours stores no hold state.
     const notOurs = await request(41, { holdState: undefined });
 
@@ -228,12 +245,42 @@ describe("the 40-hour reminder", () => {
 
     expect(await keys()).toStrictEqual(
       [
-        `removal_reminder:request:${valve}:op-one`,
-        `removal_reminder:request:${valve}:op-two`,
+        `removal_reminder:request:${hid}:op-one`,
+        `removal_reminder:request:${hid}:op-two`,
         `removal_reminder:request:${notOurs}:op-one`,
         `removal_reminder:request:${notOurs}:op-two`,
       ].toSorted((a, b) => a.localeCompare(b)),
     );
+    expect(await summaries()).toStrictEqual([]);
+  });
+
+  it("reminds of the requests that did not alert one by one in one summary an operator, however many", async () => {
+    for (let index = 0; index < 10; index += 1) await request(41);
+    await request(41, { holdState: "valve", alertedAt: undefined });
+    await request(41.5, { holdState: "valve", alertedAt: undefined });
+    // Held a subject already out of view past the hour's allowance.
+    await request(41, { alertedAt: undefined, heldAt: NOW - 41 * HOUR });
+
+    await oweRemovalReminders(core(), NOW);
+
+    expect(await reminders()).toHaveLength(20);
+    const hour = String(Math.floor(NOW / HOUR));
+    expect(await summaries()).toStrictEqual([
+      {
+        dedupeKey: `removal_reminder_summary:${hour}:op-one`,
+        email: {
+          to: { userId: "op-one" },
+          template: { kind: "removal_reminder_summary", count: 3 },
+        },
+      },
+      {
+        dedupeKey: `removal_reminder_summary:${hour}:op-two`,
+        email: {
+          to: { userId: "op-two" },
+          template: { kind: "removal_reminder_summary", count: 3 },
+        },
+      },
+    ]);
   });
 
   it("on its first firing, reminds of an overdue removal too", async () => {
@@ -334,6 +381,7 @@ describe("the hourly firing", () => {
         dueAt: now + 7 * HOUR,
         createdAt: now - 41 * HOUR,
         idempotencyKey: newUlid(),
+        alertedAt: now - 41 * HOUR,
       });
 
     // The firing's own drain sends operator mail at once (design 232); a
@@ -351,11 +399,31 @@ describe("the hourly firing", () => {
       // The failed sends are reported; keep the output quiet.
     });
 
+    const lapsed = newUlid();
+    await core()
+      .insert(takedownRequests)
+      .values({
+        id: lapsed,
+        requesterEmail: "you@example.com",
+        signature: "Sam Runner",
+        location: "https://elsewhere.example/img",
+        dueAt: now - HOUR,
+        createdAt: now - 49 * HOUR,
+        idempotencyKey: newUlid(),
+        holdState: "confirm",
+      });
+
     await handleScheduled({ cron: "0 * * * *" } as ScheduledController);
 
     expect(await keys()).toStrictEqual(
       operators.map((operator) => `removal_reminder:request:${id}:${operator}`),
     );
     expect(send).toHaveBeenCalledTimes(2);
+    // The same firing declines a request whose confirm link lapsed.
+    const [after] = await core()
+      .select({ status: takedownRequests.status })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, lapsed));
+    expect(after?.status).toBe("declined");
   });
 });

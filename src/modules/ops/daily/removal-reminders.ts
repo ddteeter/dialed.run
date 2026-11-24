@@ -17,6 +17,13 @@
  * batch. The move is a claim (law 2): it lands only if the mark is still
  * the one this firing read, and every reminder is owed only if it landed,
  * so two firings that overlap owe each reminder once between them.
+ *
+ * **One by one only for what alerted one by one.** A removal request the
+ * valve quieted, or one past the hour's one-by-one allowance, alerted
+ * through the hourly email; it is reminded of the same way, in one
+ * summary per operator per firing saying how many reached 40 hours. So
+ * the batch is as long as the first alerts were, however many requests
+ * arrive.
  */
 import { eq, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
@@ -66,7 +73,9 @@ export async function oweRemindersSince(
     table: cronCheckpoints,
     where: sql`${cronCheckpoints.cronName} = ${REMOVAL_REMINDERS} and ${cronCheckpoints.lastRunAt} = ${now}`,
   };
-  const reminders = due.flatMap((removal) =>
+  const oneByOne = due.filter((removal) => removal.isOneByOne);
+  const quieted = due.length - oneByOne.length;
+  const reminders = oneByOne.flatMap((removal) =>
     adminUserIds().map((userId) =>
       outboxInsertWhere(
         db,
@@ -85,7 +94,40 @@ export async function oweRemindersSince(
       ),
     ),
   );
-  await db.batch([claimStatement(db, last, now), ...reminders]);
+  const summaries =
+    quieted === 0
+      ? []
+      : adminUserIds().map((userId) =>
+          outboxInsertWhere(
+            db,
+            summaryOwed(userId, quieted, now),
+            claimed,
+            now,
+          ),
+        );
+  await db.batch([claimStatement(db, last, now), ...reminders, ...summaries]);
+}
+
+const HOUR_S = 60 * 60;
+
+function clockHour(now: number): string {
+  return String(Math.floor(now / HOUR_S));
+}
+
+/**
+ * One operator's summary of the `count` requests that did not alert one
+ * by one and reached 40 hours in this firing's hour, keyed by that hour.
+ */
+function summaryOwed(userId: string, count: number, now: number) {
+  return oweOutbox(
+    operatorEmailMessage(
+      {
+        to: { userId },
+        template: { kind: "removal_reminder_summary", count },
+      },
+      `removal_reminder_summary:${clockHour(now)}:${userId}`,
+    ),
+  );
 }
 
 /**

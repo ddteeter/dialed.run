@@ -82,7 +82,6 @@ export {
   removalRuleOf,
   removalStatements,
   requireAdmin,
-  runnerNotLeaving,
   wasModerated,
   worldVisibleEntry,
 } from "./rules";
@@ -109,6 +108,7 @@ export {
   type CaseOverOutcome,
   type ClaimedPurge,
   claimPurgeAfterCase,
+  declineLapsedRequests,
   mintReceiptConfirmToken,
   purgeExpiredQuarantine,
   purgedWrite,

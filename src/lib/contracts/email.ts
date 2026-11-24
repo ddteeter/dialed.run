@@ -26,6 +26,7 @@ import {
   digest,
   removalDue,
   removalReminder,
+  removalReminderSummary,
   removalRequestDecided,
   removalRequestReceived,
   removalRequested,
@@ -79,6 +80,7 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   removalRequestReceived,
   removalRequestDecided,
   removalReminder,
+  removalReminderSummary,
   takedownValve,
 ]);
 
@@ -133,6 +135,7 @@ const PREFERENCE_OF: Readonly<
   removal_request_received: undefined,
   removal_request_decided: undefined,
   removal_reminder: undefined,
+  removal_reminder_summary: undefined,
   takedown_valve: undefined,
   export_ready: undefined,
 };
@@ -167,6 +170,7 @@ const CONFIRMED_ADDRESS_REQUIRED: Readonly<Record<EmailKind, boolean>> = {
   removal_request_received: false,
   removal_request_decided: false,
   removal_reminder: false,
+  removal_reminder_summary: false,
   takedown_valve: false,
   export_ready: false,
 };

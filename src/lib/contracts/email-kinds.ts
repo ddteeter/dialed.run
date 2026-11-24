@@ -256,6 +256,16 @@ export const removalReminder = emailKind("removal_reminder", {
 });
 
 /**
+ * C6 for the removal requests that did not alert one by one when filed
+ * (the valve, or past the hour's one-by-one allowance): one per operator
+ * per clock hour, saying how many reached their 40th hour in it. Operator
+ * mail, so always sent. Placeholder words (design deltas).
+ */
+export const removalReminderSummary = emailKind("removal_reminder_summary", {
+  count: z.int().min(1),
+});
+
+/**
  * Design 136: the requester's receipt — what happens next and by when,
  * and whether the image is hidden (round 35 #58e). `confirmToken` is
  * design 137's: a request past the cap waits for its requester to confirm

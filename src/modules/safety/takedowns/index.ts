@@ -14,6 +14,7 @@ export {
 } from "./quarantine";
 export { requestSubjectOf } from "./request-subject";
 export {
+  declineLapsedRequests,
   mintReceiptConfirmToken,
   releaseHoldWrites,
 } from "./takedown-requests";
