@@ -71,7 +71,9 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    still score timeouts as kills that the gate calls survivors. Run
    Stryker on one file only while working a survivor (skill
    `crushing-mutants`). If the gate reports survivors, fix them and
-   ship again.
+   ship again. Since guardrails-core 0.16.0 the gate mutates the whole
+   function a hunk sits in, and any export whose last caller the diff
+   removed, so a survivor on a line you did not touch is still yours.
 
 ## Deferring is a write
 
