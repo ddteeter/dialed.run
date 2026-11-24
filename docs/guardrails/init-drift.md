@@ -16,16 +16,8 @@ This file is the repo's, not guardrails'. `init` does not write it.
   not the merge would write anything.
 - A warning that `core.hooksPath` is already set. The hooks are active.
 
-Checked on 0.14.0, 0.14.1, 0.14.2 and 0.15.0. A different list is not expected:
-stop and ask the owner.
-
-One exception is known. In a release that changes the crushing-mutants
-template, the plan also reports **`drift`** on
-`docs/guardrails/crushing-mutants.md`. The file matches the old template,
-but `.guardrails/scaffold.json` holds a hash recorded before a hand edit
-at 0.12.0, so `init` cannot tell that the file is unmodified. Take the
-template's new text by hand (it only adds; 0.15.0 added two paragraphs),
-and the plan reports the file as unchanged again.
+Checked on 0.14.0, 0.14.1, 0.14.2, 0.15.0 and 0.16.0. A different list is
+not expected: stop and ask the owner.
 
 ## Why each drifted file must stay as it is
 
@@ -64,14 +56,18 @@ only "drift". So compare, every time:
      it.
 4. Run `init --apply` (no `--force`) in a second scratch copy to see what
    the merges would write.
+5. Run `init --apply` once in the checkout, revert `.codex/hooks.json`
+   (below), and commit what it writes to `.guardrails/scaffold.json`.
 
 ## The one thing `--apply` writes that nobody wants
 
 `.codex/hooks.json`: `--apply` reorders the hook entries and changes none
-of them. It was reverted on the 0.11.1 and 0.12.0 upgrades. If you run
-`--apply` in the checkout, revert that file. If the diff is ever more than
-a reorder, read it as a real change.
+of them. It was reverted on the 0.11.1, 0.12.0 and 0.16.0 upgrades. If
+you run `--apply` in the checkout, revert that file. If the diff is ever
+more than a reorder, read it as a real change.
 
-`.guardrails/scaffold.json` still names the version whose templates were
-last written. `--force` is the only thing that rewrites it, so it lags the
-pin, and that is expected too.
+`.guardrails/scaffold.json` is the one file `--apply` in the checkout
+should change. Since 0.16.0 it records the new version and re-records the
+hash of an owned file that already matches its template, so a file brought
+up to a template by hand reads as unchanged at the next upgrade instead of
+as drift.
