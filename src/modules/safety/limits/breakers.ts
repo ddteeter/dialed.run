@@ -407,14 +407,17 @@ How far the reports' ceiling may rise from one hour to the next.
 const REPORT_CEILING_RISE_PER_HOUR = 2;
 
 /**
- * The reports' ceiling in force at clock hour `atHour`, from these hours'
- * counts, oldest first. Each hour's ceiling is four times the busiest
- * honest hour before it, but never more than twice the ceiling of the
- * hour before (owner, 2026-11-22); an hour whose count reached the
- * ceiling in force then is not honest, since the breaker held it back
- * (owner, 2026-11-21). An hour with no rows changes no count, so the
- * ceiling may still double across it. Hours before the baseline's first
- * are not read: the first starts at the floor, which errs low.
+ * The reports' ceiling a reading enforces once the baseline ends at clock
+ * hour `atHour`, from these hours' counts, oldest first: the ceiling in
+ * force in the hour after `atHour`, as `reportsCeilingFor` reads it. That
+ * ceiling is four times the busiest honest hour up to `atHour`, but never
+ * more than twice the one before it (owner, 2026-11-22). An hour is
+ * honest when its count stayed under the ceiling in force during it,
+ * which is this same reading taken over the hours before it (owner,
+ * 2026-11-21): an hour held at that ceiling raises nothing. An hour with
+ * no rows changes no count, so the ceiling may still double across it.
+ * Hours before the baseline's first are not read: the first starts at the
+ * floor, which errs low.
  */
 export function honestCeiling(
   hours: readonly { hour: number; n: number }[],
@@ -422,18 +425,19 @@ export function honestCeiling(
 ): number {
   let busiest = 0;
   let ceiling = REPORT_HIDES_FLOOR;
-  let since = hours[0]?.hour ?? atHour;
-  const inForceAt = (hour: number) =>
+  let since = (hours[0]?.hour ?? atHour) - 1;
+  const readAt = (hour: number) =>
     Math.min(
       reportCeiling(busiest),
       ceiling * REPORT_CEILING_RISE_PER_HOUR ** (hour - since),
     );
   for (const { hour, n } of hours) {
-    ceiling = inForceAt(hour);
+    const inForce = readAt(hour - 1);
+    ceiling = readAt(hour);
     since = hour;
-    if (n < ceiling) busiest = Math.max(busiest, n);
+    if (n < inForce) busiest = Math.max(busiest, n);
   }
-  return inForceAt(atHour);
+  return readAt(atHour);
 }
 
 /**

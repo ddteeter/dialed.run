@@ -1,6 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   notifications,
@@ -282,6 +282,29 @@ function report(
 }
 
 /**
+A second on from the faked clock.
+*/
+function later(): void {
+  vi.setSystemTime(Date.now() + 1000);
+}
+
+/**
+ * An entry hidden by ordinary reports, its row opened earlier, and the
+ * page a reviewer read now.
+ */
+async function readPage(entryId: string) {
+  for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+    await report(entryId, await makeUser(), "explicit");
+  }
+  await core()
+    .update(reviewQueue)
+    .set({ openedAt: nowSeconds() - 100 });
+  const [page] = await pendingReviewQueue();
+  if (page === undefined) throw new Error("nothing listed");
+  return page;
+}
+
+/**
  * An entry reported to the bar, approved, with its reports and the
  * Approve moved into the past so a report now is filed after both.
  */
@@ -414,28 +437,63 @@ describe("after a person approved it", () => {
     }
   });
 
-  it("lets a decision on a pending row land though a report re-opened it since the page was read", async () => {
-    const entryId = await reportableEntry();
-    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+  describe("a report filed after the page was read", () => {
+    beforeEach(() => {
+      // The page is read at this second, and each report after it a
+      // second later (`later`).
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-11-23T15:00:00Z"));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("lets an Approve land though a report of an ordinary reason re-opened the row", async () => {
+      const entryId = await reportableEntry();
+      const page = await readPage(entryId);
+
+      later();
       await report(entryId, await makeUser(), "explicit");
-    }
-    const [row] = await pendingReviewQueue();
-    if (row === undefined) throw new Error("nothing queued");
-    await core()
-      .update(reviewQueue)
-      .set({ openedAt: nowSeconds() - 100 });
-    const [page] = await pendingReviewQueue();
-    if (page === undefined) throw new Error("nothing listed");
 
-    await report(entryId, await makeUser(), "intimate");
+      expect(
+        await resolveReview(page.id, await makeUser(), "approve", page),
+      ).toBe("resolved");
+    });
 
-    expect(
-      await resolveReview(row.id, await makeUser(), "approve", {
-        openedAt: page.openedAt,
-        source: page.source,
-        readAt: page.readAt,
-      }),
-    ).toBe("resolved");
+    it("refuses an Approve after a report of a reason that hides at once, and the reloaded page shows it", async () => {
+      const entryId = await reportableEntry();
+      const page = await readPage(entryId);
+
+      later();
+      await report(entryId, await makeUser(), "intimate");
+
+      expect(
+        await resolveReview(page.id, await makeUser(), "approve", page),
+      ).toBe("already_resolved");
+      expect(await moderationStatusOf(entryId)).not.toBe("ok");
+      const [reloaded] = await pendingReviewQueue();
+      expect(reloaded?.id).toBe(page.id);
+      expect(reloaded?.reasons).toContain("intimate");
+
+      const [again] = await pendingReviewQueue();
+      if (again === undefined) throw new Error("nothing listed");
+      expect(
+        await resolveReview(page.id, await makeUser(), "approve", again),
+      ).toBe("resolved");
+    });
+
+    it("lets a Remove land after a report of a reason that hides at once", async () => {
+      const entryId = await reportableEntry();
+      const page = await readPage(entryId);
+
+      later();
+      await report(entryId, await makeUser(), "intimate");
+
+      expect(
+        await resolveReview(page.id, await makeUser(), "remove", page),
+      ).toBe("resolved");
+    });
   });
 
   it("records no time for a burst release's Approve, which nobody opened", async () => {

@@ -64,6 +64,7 @@ import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import { removedMatchesOf, type RemovedImage } from "./removed-fingerprints";
 import { heldPhotoStatus, publicPhotoStatus } from "../rules";
+import { reportHidingAtOnce } from "../limits";
 
 function db() {
   return coreDb();
@@ -141,10 +142,12 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
           source: input.source,
           // Reopened now, though created when it first was: the hold
           // breakers count this as a hold (design 164). A row still open
-          // keeps its opening, so a later report never refuses a decision
-          // pending on it, nor moves a counted hide into a later hour,
-          // unless this opening is the hide the reports breaker counts
-          // and the row was not yet one: that hide is counted in this hour.
+          // keeps its opening, so a later report refuses no decision
+          // pending on it by moving it (an Approve is held to the reports
+          // that hide at once by the page's read instead, in `decide`),
+          // nor moves a counted hide into a later hour, unless this
+          // opening is the hide the reports breaker counts and the row was
+          // not yet one: that hide is counted in this hour.
           openedAt: sql`(case when ${keepsOpening} then ${reviewQueue.openedAt} else ${now} end)`,
           // This opening's own: whether it hid, or null when the caller
           // does not say (only a report's opening does) — except that a
@@ -1227,7 +1230,7 @@ async function decide(
       queueId,
       reviewerId,
       settled.status,
-      row.unchanged,
+      heldFor(row.unchanged, decision, shown),
       settled.at,
       isRelease ? "release" : (shown?.readAt ?? settled.at),
     ).returning({ id: reviewQueue.id }),
@@ -1235,6 +1238,32 @@ async function decide(
     ...told,
   ]);
   return settle.length === 0 ? "already_resolved" : "resolved";
+}
+
+/**
+ * What a decision's settle holds to: the row as shown, and, for an
+ * Approve a page sent, no report of a reason that hides at once filed on
+ * its subject after the second the page was read (owner, 2026-11-23): one
+ * filed by then is one the page could show. Such an Approve settles
+ * nothing, and the reloaded page shows the report. A report of any other
+ * reason refuses no decision (owner, 2026-11-22).
+ */
+/**
+ * A report filed after `at`, named by table: inside a read of
+ * `review_queue`, which has a `created_at` of its own.
+ */
+function filedAfter(at: number): SQL {
+  return sql`${qualified(reports, reports.createdAt)} > ${at}`;
+}
+
+function heldFor(
+  unchanged: SQL,
+  decision: ReviewDecision,
+  shown: ShownRow | undefined,
+): SQL | undefined {
+  return decision === "approve" && shown !== undefined
+    ? and(unchanged, sql`not ${reportHidingAtOnce(filedAfter(shown.readAt))}`)
+    : unchanged;
 }
 
 /**

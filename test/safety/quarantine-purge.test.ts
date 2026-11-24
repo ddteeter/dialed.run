@@ -11,6 +11,7 @@ import {
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/dispatch";
+import { copiesNoRecordLists } from "../../src/modules/feed/moderation/garment-moderation";
 import {
   claimQuarantine,
   dueQuarantine,
@@ -355,6 +356,47 @@ describe("preservedKeysOf", () => {
         JSON.stringify([{ preservedKey: "entries/quarantine/u/e/p" }]),
       ),
     ).toStrictEqual({ ok: true, keys: [] });
+  });
+});
+
+/**
+A copy's key no record made.
+*/
+function unlisted(key: string): string {
+  return quarantineKeyFor(entryPhotoKeyFor("u", "e", key));
+}
+
+describe("copiesNoRecordLists", () => {
+  it("names the copies no record lists, in order, and keeps the ones a record does", async () => {
+    const first = await quarantined({ retainUntil: nowSeconds() + DAY });
+    const second = await quarantined({ retainUntil: nowSeconds() + DAY });
+    const [listed, alsoListed] = [first.keys[1], second.keys[0]];
+    if (listed === undefined || alsoListed === undefined)
+      throw new Error("two records");
+    const copies = [unlisted("b"), listed, alsoListed, unlisted("a")];
+
+    expect(await copiesNoRecordLists(copies)).toStrictEqual([
+      unlisted("b"),
+      unlisted("a"),
+    ]);
+  });
+
+  it("names every copy with no record at all, and nothing with no copies", async () => {
+    expect(await copiesNoRecordLists([unlisted("a")])).toStrictEqual([
+      unlisted("a"),
+    ]);
+    await quarantined({ retainUntil: nowSeconds() + DAY });
+    expect(await copiesNoRecordLists([])).toStrictEqual([]);
+  });
+
+  it("does not take a key a snapshot holds only inside a longer one as listed", async () => {
+    const key = unlisted("a");
+    await quarantined({
+      retainUntil: nowSeconds() + DAY,
+      snapshot: JSON.stringify([{ preservedKey: `${key}/card.webp` }]),
+    });
+
+    expect(await copiesNoRecordLists([key])).toStrictEqual([key]);
   });
 });
 
