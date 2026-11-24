@@ -7,6 +7,7 @@ import {
   notificationSettingsSchema,
   preferenceFor,
 } from "../../src/lib/contracts/email";
+import { EMAIL_MAX_LENGTH } from "../../src/lib/contracts/garments";
 
 /**
  * The email wire format (task 126, ACC-2): every kind's literal discriminant,
@@ -139,6 +140,19 @@ describe("emailRecipientSchema", () => {
       emailRecipientSchema.safeParse({ address: "a@example.com" }).success,
     ).toBe(true);
     expect(emailRecipientSchema.safeParse({ userId: "u1" }).success).toBe(true);
+  });
+
+  it("holds an address to the longest one a mail path carries", () => {
+    const domain = "@example.com";
+    const ofLength = (length: number) => ({
+      address: `${"a".repeat(length - domain.length)}${domain}`,
+    });
+    expect(
+      emailRecipientSchema.safeParse(ofLength(EMAIL_MAX_LENGTH)).success,
+    ).toBe(true);
+    expect(
+      emailRecipientSchema.safeParse(ofLength(EMAIL_MAX_LENGTH + 1)).success,
+    ).toBe(false);
   });
 });
 

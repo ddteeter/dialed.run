@@ -17,8 +17,12 @@ import { z } from "zod";
 
 import { communityRuleSchema } from "./community-rules";
 import { exportTokenSchema } from "./data-export";
+import { EMAIL_MAX_LENGTH } from "./garments";
 
-export const address = z.email();
+/**
+A recipient's address, no longer than any mail path carries.
+*/
+export const address = z.email().max(EMAIL_MAX_LENGTH);
 const link = z.url({ protocol: /^https?$/u });
 
 /**
