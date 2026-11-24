@@ -25,7 +25,7 @@ import {
   listItems,
   retireItem,
   unretireItem,
-  updateItem,
+  updateItemWithProduct,
 } from "./service";
 import { addFromTapList, tapListSelectionSchema } from "./tap-list";
 
@@ -76,9 +76,7 @@ export const updateItemFn = createServerFn({ method: "POST" })
     // Same rule as create: editing a garment into a brand + model is how a
     // generic piece becomes a specific one (P2.5), and that is exactly when
     // it should gain a product and a type.
-    const client = db();
-    const garment = await withResolvedProduct(client, data.garment, userId);
-    return updateItem(client, userId, data.itemId, garment);
+    return updateItemWithProduct(db(), userId, data.itemId, data.garment);
   });
 
 export const retireItemFn = createServerFn({ method: "POST" })

@@ -401,6 +401,7 @@ async function seedAccount(): Promise<Seeded> {
       .values([
         countRow("correction-runner", userId, 1, NOW),
         countRow("strava-connect-runner", userId, 1, NOW),
+        countRow("shared-row-runner", userId, 1, NOW),
       ]),
     core.insert(inviteRedemptions).values({
       userId,
@@ -521,7 +522,8 @@ function runnersCount(
     | "purge-runner"
     | "deletion-notice"
     | "correction-runner"
-    | "strava-connect-runner",
+    | "strava-connect-runner"
+    | "shared-row-runner",
   userId: string,
 ) {
   return and(eq(rateLimits.kind, kind), eq(rateLimits.subject, userId));
@@ -778,6 +780,7 @@ async function footprint(seeded: Seeded) {
           runnersCount("deletion-notice", userId),
           runnersCount("correction-runner", userId),
           runnersCount("strava-connect-runner", userId),
+          runnersCount("shared-row-runner", userId),
         ),
       ),
     spendLimits: await core

@@ -18,6 +18,7 @@ export type {
 } from "./service";
 export {
   createOrGetBrand,
+  newRowsFor,
   productsForBrand,
   createOrGetProduct,
   getProductAttributeDefaults,

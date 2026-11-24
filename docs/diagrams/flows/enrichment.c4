@@ -11,12 +11,14 @@ views {
         description 'The products row is the durable marker'
       }
 
-    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey); src/modules/closet/service.ts withResolvedProduct, isListedName, isUnconfirmed, assertLinkAllowed, productLinkFor (isDeniedLink); src/modules/closet/product-link.ts linkTypedGarments, productLinkFor
+    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey); src/modules/closet/service.ts withResolvedProduct, updateItemWithProduct, isCatalogueName, isListedName, isUnconfirmed, assertLinkAllowed, productLinkFor (isDeniedLink), claimSharedRows; src/modules/products/service.ts newRowsFor; src/modules/email/rate-limit.ts NEW_SHARED_ROWS_PER_RUNNER_PER_DAY (50); src/modules/closet/product-link.ts linkTypedGarments, productLinkFor, productLinkHandler
     runner -> cf.app.closet.saveGarment 'saves a garment with a brand, a model and a product link' {
       notes '''
         **Guard: the garment\'s idempotency key, on a create.** A repeat of the save also asks for enrichment again, which the claim below turns into nothing.
 
-        **Guard: only a nameable product.** An empty or listed brand or model, or an unconfirmed runner, makes no product and asks for nothing; the garment saves as typed. Confirming the account later links those garments the same way, and that asks for enrichment too.
+        **Guard: only a nameable product.** An empty or listed brand or model, one that normalizes to nothing, or an unconfirmed runner, makes no product and asks for nothing; the garment saves as typed. Confirming the account later links those garments the same way, and that asks for enrichment too. An edit reads the garment as the runner\'s before anything shared is found or made.
+
+        **Bounded: new shared rows.** A runner\'s saves may make 50 new brand or product rows a day, one count a row, counted before either is written; a brand and model already there cost nothing. Over that, the garment saves as typed with no product, and the link confirming owes waits until the count starts again.
 
         **Guard: the denylist, before the product.** A link the denylist refuses fails the save before the shared product is found or made, so it never becomes a product\'s link and asks for nothing. Wherever a garment is linked, confirming included, a denied link is left out and the product is linked without it.
       '''

@@ -997,6 +997,42 @@ describe("the product link's handler (design 133, D-113 Q1)", () => {
     expect(await db().select().from(outbox)).toStrictEqual([]);
   });
 
+  it("owes the link again from when the runner's count starts over", async () => {
+    const until = nowSeconds() + 3600;
+    const link = vi.fn(() => Promise.resolve({ until }));
+    const userId = newUlid();
+    const debt = oweOutbox({ kind: "product_link", payload: { userId } });
+    await db()
+      .insert(outbox)
+      .values({
+        id: debt.id,
+        kind: "product_link",
+        dedupeKey: userId,
+        payload: JSON.stringify({ userId }),
+        nextAttemptAt: NOW,
+        createdAt: NOW,
+      });
+
+    await settleOutbox(
+      db(),
+      debt,
+      {
+        ...outboxHandlers,
+        product_link: productLinkHandler(link),
+      },
+      vi.fn(),
+    );
+
+    const rows = await db().select().from(outbox);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "product_link",
+      dedupeKey: userId,
+      nextAttemptAt: until,
+    });
+    expect(rows[0]?.id).not.toBe(debt.id);
+  });
+
   it("names the runner for Sentry, whatever the linker", () => {
     expect(
       productLinkHandler(undefined).context({ userId: "u1" }),

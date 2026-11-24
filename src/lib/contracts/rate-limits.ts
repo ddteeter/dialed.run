@@ -72,7 +72,9 @@ export const SEND_LIMIT_KINDS = [
  *   connect callbacks make in an hour; the runner's id;
  * - `google-start` — the Continue with Google presses that start a
  *   sign-in, across everyone, in an hour: each one is a state row Better
- *   Auth writes; `GLOBAL_SUBJECT`.
+ *   Auth writes; `GLOBAL_SUBJECT`;
+ * - `shared-row-runner` — the shared brand and product rows one runner's
+ *   saves make in a day, one count a row; the runner's id.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -98,6 +100,7 @@ export const RATE_LIMIT_KINDS = [
   "correction-runner",
   "strava-connect-runner",
   "google-start",
+  "shared-row-runner",
 ] as const;
 
 /**

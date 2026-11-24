@@ -307,6 +307,37 @@ function wornBeyondItsMaker(): SQL {
   return sql`exists (select 1 from ${wardrobeItems} where ${qualified(wardrobeItems, wardrobeItems.productId)} = ${qualified(products, products.id)} and ${qualified(wardrobeItems, wardrobeItems.userId)} <> ${qualified(products, products.createdBy)})`;
 }
 
+/**
+ * How many new shared rows a save naming this brand and (when given) this
+ * model would make: the brand row if no brand normalizes the same, and
+ * the product row if the brand has no product that normalizes the same.
+ * Two reads on the identity indexes, and no write.
+ */
+export async function newRowsFor(
+  db: Db,
+  brandName: string,
+  productName?: string,
+): Promise<number> {
+  const brand = await firstRowWhere(
+    db,
+    brands,
+    eq(brands.normalized, normalizeIdentity(brandName)),
+  );
+  const productRow = productName === undefined ? 0 : 1;
+  if (brand === undefined) return 1 + productRow;
+  if (productName === undefined) return 0;
+  const normalizedName = normalizeIdentity(productName);
+  const product = await firstRowWhere(
+    db,
+    products,
+    and(
+      eq(products.brandId, brand.id),
+      eq(products.normalizedName, normalizedName),
+    ),
+  );
+  return product === undefined ? 1 : 0;
+}
+
 export async function resolveProduct(
   db: Db,
   input: ResolveProductInput,

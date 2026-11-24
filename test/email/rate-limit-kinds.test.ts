@@ -75,6 +75,7 @@ describe("the rate-limit kinds", () => {
     await isWithinRateLimit(db, "correction-runner", runner, 20, 86_400, NOW);
     await isWithinRateLimit(db, "strava-connect-runner", runner, 5, 3600, NOW);
     await claimLimit(db, "google-start", GLOBAL_SUBJECT, NOW);
+    await claimLimit(db, "shared-row-runner", runner, NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -102,6 +103,7 @@ describe("the rate-limit kinds", () => {
         `correction-runner:${runner}`,
         `strava-connect-runner:${runner}`,
         `google-start:${GLOBAL_SUBJECT}`,
+        `shared-row-runner:${runner}`,
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));
