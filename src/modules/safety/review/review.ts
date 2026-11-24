@@ -1230,7 +1230,7 @@ async function decide(
       queueId,
       reviewerId,
       settled.status,
-      heldFor(row.unchanged, decision, shown),
+      heldFor(row.unchanged, decision, isRelease ? "release" : shown),
       settled.at,
       isRelease ? "release" : (shown?.readAt ?? settled.at),
     ).returning({ id: reviewQueue.id }),
@@ -1246,7 +1246,11 @@ async function decide(
  * its subject after the second the page was read (owner, 2026-11-23): one
  * filed by then is one the page could show. Such an Approve settles
  * nothing, and the reloaded page shows the report. A report of any other
- * reason refuses no decision (owner, 2026-11-22).
+ * reason refuses no decision (owner, 2026-11-22). A burst release's
+ * Approve holds to no such report at all, whenever filed: a release never
+ * approves a row on the removal clock (`release.ts`), and its settle
+ * reads that again, so a report landing between its read and its claim
+ * leaves the row for a person.
  */
 /**
  * A report filed after `at`, named by table: inside a read of
@@ -1259,11 +1263,11 @@ function filedAfter(at: number): SQL {
 function heldFor(
   unchanged: SQL,
   decision: ReviewDecision,
-  shown: ShownRow | undefined,
+  shown: ShownRow | "release" | undefined,
 ): SQL | undefined {
-  return decision === "approve" && shown !== undefined
-    ? and(unchanged, sql`not ${reportHidingAtOnce(filedAfter(shown.readAt))}`)
-    : unchanged;
+  if (decision !== "approve" || shown === undefined) return unchanged;
+  const later = shown === "release" ? [] : [filedAfter(shown.readAt)];
+  return and(unchanged, sql`not ${reportHidingAtOnce(...later)}`);
 }
 
 /**
