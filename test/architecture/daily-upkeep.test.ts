@@ -29,12 +29,14 @@ describe("the firings and the queue get their jobs from the dispatch", () => {
       'import { sweepExports } from "../account/export-build";',
       'import { rescreenHandlesFromEnv } from "../account/handles";',
       'import { purgeDueAccounts } from "../account/purge";',
-      'import { sweepExpiredAuthRows, sweepExpiredStates } from "../auth/expired-rows";',
       'import { linkTypedGarments } from "../closet";',
       'import { sweepCopyrightHolds } from "../feed/moderation";',
     ]) {
       expect(code).toContain(line);
     }
+    expect(code).toMatch(
+      /import \{\s*sweepExpiredAuthRows,\s*sweepExpiredCounts,\s*sweepExpiredStates,\s*\} from "\.\.\/auth\/expired-rows";/u,
+    );
     expect(code).toMatch(
       /const liveUpkeep: Upkeep = \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*\};/u,
     );
