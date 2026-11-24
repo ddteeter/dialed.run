@@ -1697,8 +1697,7 @@ describe("purgeDueAccounts — a purge that stops deleting the runner's files", 
   it("keeps the claim and the files it could not reach, and the next firing deletes them", async () => {
     const runner = await seedAccount();
     await claim(runner.userId, NOW - 1);
-    // The purge's listing deletes a page at a time, as a list of keys;
-    // feed's fast path deletes one key, a string, and is left alone.
+    // The purge's listing deletes a page at a time, as a list of keys.
     const remove = env.IMPORTS.delete.bind(env.IMPORTS);
     let hasFailed = false;
     vi.spyOn(env.IMPORTS, "delete").mockImplementation((keys) => {
@@ -1728,9 +1727,9 @@ describe("purgeDueAccounts — a purge that stops deleting the runner's files", 
     expect(stopped.claim).toHaveLength(1);
     const [looseUpload = "", runUpload = "", unnamedUpload = ""] =
       runner.uploadKeys;
-    // The run's file went with its run, on feed's fast path; the other
-    // two wait for the listing.
-    expect(await env.IMPORTS.head(runUpload)).toBeNull();
+    // Every file waits for the listing, the run's too: deleting all of a
+    // runner's runs owes no file of its own.
+    expect(await env.IMPORTS.head(runUpload)).not.toBeNull();
     expect(await env.IMPORTS.head(looseUpload)).not.toBeNull();
     expect(await env.IMPORTS.head(unnamedUpload)).not.toBeNull();
 

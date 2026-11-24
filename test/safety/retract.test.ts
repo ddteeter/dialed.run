@@ -527,15 +527,27 @@ describe("deleting a run", () => {
     const other = await makeUser();
     const theirs = await importedRun(other);
 
+    const deletes = vi.spyOn(env.IMPORTS, "delete");
+
     await deleteRuns(core(), userId, "all");
 
     expect(
       await core().select().from(runs).where(eq(runs.userId, userId)),
     ).toStrictEqual([]);
+    expect(
+      await core().select().from(imports).where(eq(imports.userId, userId)),
+    ).toStrictEqual([]);
     expect(await rowsFor(first.entryId)).toStrictEqual(NOTHING);
     expect(await rowsFor(second.entryId)).toStrictEqual(NOTHING);
-    expect(await env.IMPORTS.head(first.key)).toBeNull();
-    expect(await env.IMPORTS.head(second.key)).toBeNull();
+    // The run files are the purge's, which lists the runner's prefix: "all"
+    // owes none and deletes none.
+    expect(deletes).not.toHaveBeenCalled();
+    expect(
+      await core()
+        .select()
+        .from(outbox)
+        .where(eq(outbox.kind, "import_file_delete")),
+    ).toStrictEqual([]);
     expect(await stored(entryPhotoPrefix(userId))).toStrictEqual([]);
     expect(
       await core().select().from(runs).where(eq(runs.userId, other)),

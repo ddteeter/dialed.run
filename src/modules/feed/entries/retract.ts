@@ -509,12 +509,13 @@ export function photoDeletion(
  * `manual_conditions` row, keyed by run id, is in `DIALED_WEATHER`, a
  * second database no batch here can reach (law 8c), so each run named is
  * owed a `manual_conditions_delete` in the batch that deletes it. "All"
- * owes none: only account deletion's purge (126 · ACC-9) asks for all, and
- * it sweeps that database itself, before the runs that name the bands go.
+ * owes neither a band nor a run file: only account deletion's purge (126 ·
+ * ACC-9) asks for all, and it sweeps that database itself, before the runs
+ * that name the bands go, and lists the runner's run-file prefix after.
  *
  * Reads go first, because a batch cannot branch on its own results: the
- * entries (each is owed its prefix), the uploads (each is owed its object,
- * and the row that names it is deleted in the batch) and the runs named
+ * entries (each is owed its prefix), the uploads of the runs named (each
+ * is owed its object; every upload row in scope is deleted in the batch) and the runs named
  * that are the runner's (each is owed its band — a band is found by run id
  * alone, so an id of someone else's must never be owed one).
  */
@@ -540,10 +541,13 @@ export async function deleteRuns(
       eq(imports.userId, userId),
       inArray(imports.runId, ownedRuns),
     );
-    const uploads = await db
-      .select({ key: imports.r2Key })
-      .from(imports)
-      .where(ofTheseRuns);
+    const uploads =
+      scope === "all"
+        ? []
+        : await db
+            .select({ key: imports.r2Key })
+            .from(imports)
+            .where(ofTheseRuns);
     // Every entry hangs on a run of the same runner's, so "all runs" is
     // "all entries" — and saying so keeps the statement to one parameter,
     // where a list of every id would pass D1's hundred-parameter cap for
