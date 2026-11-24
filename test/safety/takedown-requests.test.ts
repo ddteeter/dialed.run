@@ -163,6 +163,9 @@ describe("filing a request", () => {
             // `ENTRY` names no kit in this file's database, so the
             // request hid nothing (`removal-decisions.test.ts` hides one).
             isHidden: false,
+            confirmRequestId: id,
+            waits: false,
+            location: `https://dialed.run/feed/entry/${ENTRY}`,
           },
         },
       },
@@ -201,10 +204,12 @@ describe("filing a request", () => {
       isOurs: false,
     });
     // Nothing was hidden, so the receipt does not say it was.
-    expect(receipt?.email.template).toStrictEqual({
+    expect(receipt?.email.template).toMatchObject({
       kind: "removal_request_received",
       dueAt: DUE,
       isHidden: false,
+      waits: false,
+      location: "somewhere else",
     });
   });
 

@@ -181,9 +181,7 @@ export async function fileTakedownRequest<Attempt>(
   const dueAt = now + REMOVAL_DUE_SECONDS;
   const subject = await filedSubjectOf(db, input.location);
   const row = rowOf(id);
-  const hid = holds(row.newlyHid(now));
-  const held = holds(row.hid(now));
-  const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
+  const acts = await rowActs(db, row, subject, now);
   await db.batch([
     db
       .insert(takedownRequests)
@@ -204,12 +202,15 @@ export async function fileTakedownRequest<Attempt>(
         posterUsername: input.posterUsername,
       })
       .onConflictDoNothing(),
-    ...decisionWrites(db, row.written, subject, now),
-    ...holdWrites(db, subject, held),
-    ...told,
+    ...acts,
     ...operatorAlerts(deps.oweWhere, { id, dueAt, subject }, row.alerts(now)),
     ...valveAlerts(deps.oweWhere, now, row.owesSummary(now)),
-    ...receipts(deps.oweWhere, { id, email, dueAt }, row, now),
+    ...receipts(
+      deps.oweWhere,
+      { id, email, dueAt, location: input.location },
+      row,
+      now,
+    ),
   ]);
   await purgeIfHeld(db, { id, subject }, now, deps.purge);
   return { status: "received" };
@@ -294,6 +295,28 @@ function decisionWrites(
         resolvedAt: now,
       })
       .where(and(row, eq(takedownRequests.holdState, "blocked"))),
+  ];
+}
+
+/**
+ * What the request's row, once written, does in the same batch: its
+ * decisions (`decisionWrites`), then the hold where it hid, then the
+ * author's notice where it newly hid. Read before the batch, as the
+ * notice's recipient is.
+ */
+async function rowActs(
+  db: Db,
+  row: ReturnType<typeof rowOf>,
+  subject: TakedownSubject | undefined,
+  now: number,
+): Promise<BatchItem<"sqlite">[]> {
+  const hid = holds(row.newlyHid(now));
+  const held = holds(row.hid(now));
+  const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
+  return [
+    ...decisionWrites(db, row.written, subject, now),
+    ...holdWrites(db, subject, held),
+    ...told,
   ];
 }
 
@@ -426,8 +449,9 @@ async function purgeIfHeld(
 
 /**
  * The requester's receipt, in the words the row as written earns: hidden
- * where it hid, the confirm link where it waits on one, and otherwise
- * received. One dedupe key, and exactly one of the three conditions holds;
+ * where it hid, waiting where it waits on its confirm, and otherwise
+ * received. Every one carries the confirm link, which proves the address,
+ * and names the link the request was filed with. One dedupe key, and exactly one of the three conditions holds;
  * the plain receipt is owed first, so a second debt on the key (which
  * takes over the row's id and keeps its words) could never carry it.
  */
@@ -437,6 +461,7 @@ function receipts(
     readonly id: string;
     readonly email: string;
     readonly dueAt: number;
+    readonly location: string;
   },
   row: ReturnType<typeof rowOf>,
   now: number,
@@ -455,8 +480,11 @@ function receipts(
             dueAt: request.dueAt,
             isHidden: words.isHidden,
             // SA-L18: the request, not a token; the token is minted when
-            // the receipt is sent (`mintReceiptConfirmToken`).
-            confirmRequestId: words.waits ? request.id : undefined,
+            // the receipt is sent (`mintReceiptConfirmToken`), and only
+            // while the request is pending and unconfirmed.
+            confirmRequestId: request.id,
+            waits: words.waits,
+            location: request.location,
           },
         },
         { dedupeKey: `removal_request_received:${request.id}` },
@@ -801,8 +829,9 @@ const visibilityWrites: Record<
 export type TakedownConfirmResult = "confirmed" | "decided" | "not_found";
 
 /**
- * A requester's confirm (design 137): a request past the cap waited for
- * it, and now does what it would have done at filing — hides a link of
+ * A requester's confirm (design 137), which proves the request's address:
+ * `confirmed_at` is what Block and decline all reads. A request past the
+ * cap also waited for it, and now does what it would have done at filing — hides a link of
  * ours and alerts the operators — unless the valve has shut since, when it
  * owes the valve's alert instead. A repeat is the first confirm; a
  * request already decided stays decided.
@@ -830,6 +859,17 @@ export async function confirmTakedownRequest(
   // SA-L18: a confirm link lasts as long as the request's 48 hours, and
   // past them answers as an unknown link (owner, 2026-11-16).
   if (now > request.dueAt) return "not_found";
+  const claim = and(
+    eq(takedownRequests.id, request.id),
+    isNull(takedownRequests.confirmedAt),
+    eq(takedownRequests.status, "pending"),
+  );
+  // A request that already acted, or that hides nothing, waits on no
+  // confirm: pressing it proves the address and does nothing else.
+  if (request.holdState !== "confirm") {
+    await db.update(takedownRequests).set({ confirmedAt: now }).where(claim);
+    return "confirmed";
+  }
   const subject = await requestSubjectOf(db, request);
   const keys = {
     requesterKey: request.requesterKey ?? requesterKey(request.requesterEmail),
@@ -842,22 +882,13 @@ export async function confirmTakedownRequest(
     request.id,
     sql`(${eq(takedownRequests.confirmedAt, now)} and ${eq(takedownRequests.status, "pending")})`,
   );
-  const hid = holds(row.newlyHid(now));
-  const held = holds(row.hid(now));
-  const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
-  const claim = and(
-    eq(takedownRequests.id, request.id),
-    isNull(takedownRequests.confirmedAt),
-    eq(takedownRequests.status, "pending"),
-  );
+  const acts = await rowActs(db, row, subject, now);
   await db.batch([
     db
       .update(takedownRequests)
       .set({ confirmedAt: now, holdState: state })
       .where(claim),
-    ...decisionWrites(db, row.written, subject, now),
-    ...holdWrites(db, subject, held),
-    ...told,
+    ...acts,
     ...operatorAlerts(
       effects.oweWhere,
       { id: request.id, dueAt: request.dueAt, subject },

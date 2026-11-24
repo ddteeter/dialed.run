@@ -268,16 +268,16 @@ export const removalReminderSummary = emailKind("removal_reminder_summary", {
 /**
  * Design 136: the requester's receipt — what happens next and by when,
  * and whether the image is hidden (round 35 #58e). `confirmToken` is
- * design 137's: a request past the cap waits for its requester to confirm
- * before it hides anything, and the receipt carries the link. Sent to the
- * address they typed; they may have no account. Never shipped before
- * these fields, so `isHidden` is required.
+ * design 137's: every receipt carries the link, which proves the address;
+ * a request past the cap also waits for it before it hides anything.
+ * Sent to the address they typed; they may have no account. Never shipped
+ * before these fields, so `isHidden` is required.
  */
 export const removalRequestReceived = emailKind("removal_request_received", {
   dueAt: z.int().min(0),
   isHidden: z.boolean(),
   /**
-   * SA-L18: the request that waits on a confirm. What is owed carries this,
+   * SA-L18: the request the confirm is about. What is owed carries this,
    * never a token: the email handler mints the token when it sends
    * (`mintReceiptConfirmToken`), so no live token rests in the outbox.
    */
@@ -288,6 +288,16 @@ export const removalRequestReceived = emailKind("removal_request_received", {
    * (law 9).
    */
   confirmToken: z.string().min(1).optional(),
+  /**
+   * Whether the request waits on the confirm before it hides anything.
+   * Absent on a row owed before it was written, where a link meant it
+   * waited (law 9).
+   */
+  waits: z.boolean().optional(),
+  /**
+  The link the request was filed with, which the receipt names beside its confirm.
+  */
+  location: z.string().min(1).optional(),
 });
 
 /**

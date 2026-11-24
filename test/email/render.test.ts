@@ -359,6 +359,84 @@ describe("emailContent", () => {
       },
     ],
     [
+      // Past the cap, the receipt names the link its confirm is about.
+      {
+        kind: "removal_request_received",
+        dueAt: 1_791_810_300,
+        isHidden: false,
+        confirmToken: "abc123",
+        waits: true,
+        location: "https://dialed.run/kit/01K",
+      },
+      {
+        subject: "We have your removal request",
+        body: "It isn't hidden yet. To have it hidden while we look, confirm this request. We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. This email is about the request for https://dialed.run/kit/01K. Only confirm it if that is the link you sent us.",
+        button: {
+          label: "Confirm the request",
+          href: `${ORIGIN}/takedown/confirm?token=abc123`,
+        },
+        foot: "Sent because someone asked at dialed.test/takedown with this address.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      // A request that already acts: its confirm proves the address only.
+      {
+        kind: "removal_request_received",
+        dueAt: 1_791_810_300,
+        isHidden: true,
+        confirmToken: "abc123",
+        waits: false,
+        location: "https://dialed.run/kit/01K",
+      },
+      {
+        subject: "We have your removal request",
+        body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. Confirming tells us this address is yours. The image is already hidden while we look. This email is about the request for https://dialed.run/kit/01K. Only confirm it if that is the link you sent us.",
+        button: {
+          label: "Confirm it's me",
+          href: `${ORIGIN}/takedown/confirm?token=abc123`,
+        },
+        foot: "Sent because someone asked at dialed.test/takedown with this address.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      // One that hid nothing, with its link.
+      {
+        kind: "removal_request_received",
+        dueAt: 1_791_810_300,
+        isHidden: false,
+        confirmToken: "abc123",
+        waits: false,
+      },
+      {
+        subject: "We have your removal request",
+        body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. Confirming tells us this address is yours.",
+        button: {
+          label: "Confirm it's me",
+          href: `${ORIGIN}/takedown/confirm?token=abc123`,
+        },
+        foot: "Sent because someone asked at dialed.test/takedown with this address.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      // The same once its confirm was pressed or it was decided: no link.
+      {
+        kind: "removal_request_received",
+        dueAt: 1_791_810_300,
+        isHidden: false,
+        waits: false,
+        location: "https://dialed.run/kit/01K",
+      },
+      {
+        subject: "We have your removal request",
+        body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
+        foot: "Sent because someone asked at dialed.test/takedown with this address.",
+        footer: LEGAL,
+      },
+    ],
+    [
       // Design 137: the valve, once an hour while it lasts.
       { kind: "takedown_valve", perHour: 10 },
       {

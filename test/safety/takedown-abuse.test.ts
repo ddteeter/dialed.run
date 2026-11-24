@@ -227,6 +227,8 @@ const waitingOn = z.strictObject({
   dueAt: z.number(),
   isHidden: z.boolean(),
   confirmRequestId: z.string(),
+  waits: z.literal(true),
+  location: z.string(),
 });
 
 /**
@@ -678,6 +680,9 @@ describe("a blocked requester", () => {
         kind: "removal_request_received",
         dueAt: NOW + 172_800,
         isHidden: false,
+        confirmRequestId: row.id,
+        waits: false,
+        location: entryLink(a),
       },
     ]);
   });
@@ -692,6 +697,78 @@ async function confirmedAt(id: string, at: number): Promise<void> {
     .set({ confirmedAt: at })
     .where(eq(takedownRequests.id, id));
 }
+
+describe("every receipt's confirm link", () => {
+  it("is owed with the request it is about, and names its link", async () => {
+    const a = await sharedEntry();
+    const row = await file("me@example.com", entryLink(a));
+    const [receipt] = await owedWhere(
+      (email) => email.dedupeKey === `removal_request_received:${row.id}`,
+    );
+    expect(receipt?.email.template).toStrictEqual({
+      kind: "removal_request_received",
+      dueAt: row.dueAt,
+      isHidden: true,
+      confirmRequestId: row.id,
+      waits: false,
+      location: entryLink(a),
+    });
+  });
+
+  it("proves the address of a request that already hid, and changes nothing else", async () => {
+    const a = await sharedEntry();
+    const row = await file("me@example.com", entryLink(a));
+    const before = await kindsOwed();
+    const token = await mintReceiptConfirmToken(core(), row.id);
+    if (token === undefined) throw new Error("no token minted");
+
+    expect(
+      await confirmTakedownRequest(
+        core(),
+        token,
+        { oweWhere: oweInCoreWhere, purge: noPurge },
+        NOW + 60,
+      ),
+    ).toBe("confirmed");
+    const [after] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, row.id));
+    expect(after).toMatchObject({
+      confirmedAt: NOW + 60,
+      holdState: "held",
+      heldAt: row.heldAt,
+      hidAt: row.hidAt,
+      alertedAt: row.alertedAt,
+      status: "pending",
+    });
+    expect(await entryStatus(a)).toBe("hidden_pending_review");
+    expect(await kindsOwed()).toStrictEqual(before);
+  });
+
+  it("proves the address of a valve-quieted request without hiding anything", async () => {
+    const row = await file("me@example.com", "https://elsewhere.example/x");
+    await core()
+      .update(takedownRequests)
+      .set({ holdState: "valve" })
+      .where(eq(takedownRequests.id, row.id));
+    const token = await mintReceiptConfirmToken(core(), row.id);
+    if (token === undefined) throw new Error("no token minted");
+    expect(
+      await confirmTakedownRequest(
+        core(),
+        token,
+        { oweWhere: oweInCoreWhere, purge: noPurge },
+        NOW + 60,
+      ),
+    ).toBe("confirmed");
+    const [after] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, row.id));
+    expect(after).toMatchObject({ confirmedAt: NOW + 60, holdState: "valve" });
+  });
+});
 
 describe("Block and decline all", () => {
   it("declines the request and those sharing both its keys, gives back what they hid, blocks both keys of a confirmed one, and emails no outcome", async () => {
@@ -1993,6 +2070,9 @@ describe("what a request that held something already out of view tells", () => {
       kind: "removal_request_received",
       dueAt: row.dueAt,
       isHidden: true,
+      confirmRequestId: row.id,
+      waits: false,
+      location: row.location,
     });
   });
 });
@@ -2147,6 +2227,9 @@ describe("what a request reads back, and its receipt's words", () => {
       kind: "removal_request_received",
       dueAt: row.dueAt,
       isHidden: true,
+      confirmRequestId: row.id,
+      waits: false,
+      location: row.location,
     });
   });
 
@@ -2161,6 +2244,8 @@ describe("what a request reads back, and its receipt's words", () => {
       dueAt: request.dueAt,
       isHidden: false,
       confirmRequestId: request.id,
+      waits: true,
+      location: request.location,
     });
   });
 });
