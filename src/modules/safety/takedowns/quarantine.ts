@@ -20,7 +20,7 @@ import { quarantineKeyFor } from "../../../lib/entry-photo-key";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 
-import { requireAdmin } from "../rules";
+import { moderationActionInsertWhere, requireAdmin } from "../rules";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -195,10 +195,11 @@ export interface NcmecReport {
  *
  * The time is when the operator records it, not a time they type: the
  * record is made after the report is filed, so its year ends no earlier
- * than the report's would. Admin-only, refused before anything is
- * written. Says `gone` when there is no record by that id (already
- * purged, or never), and otherwise the record's report and clock as they
- * now stand.
+ * than the report's would. Each recording writes its own audit row, in
+ * the same batch, so every report id ever given is kept with who gave
+ * it. Admin-only, refused before anything is written. Says `gone` when
+ * there is no record by that id (already purged, or never), and otherwise
+ * the record's report and clock as they now stand.
  */
 export async function recordNcmecReport(
   db: Db,
@@ -207,26 +208,68 @@ export async function recordNcmecReport(
   now = nowSeconds(),
 ) {
   requireAdmin(viewerId);
-  const reportedAt = sql<number>`coalesce(${quarantinedContent.ncmecReportedAt}, ${now})`;
-  const [recorded] = await db
-    .update(quarantinedContent)
-    .set({
-      ncmecReportedAt: reportedAt,
-      retainUntil: sql<number>`max(${quarantinedContent.retainUntil}, ${reportedAt} + ${QUARANTINE_RETENTION_SECONDS})`,
-      // Given, it replaces what was there, so a mistyped id can be
-      // corrected; omitted, it leaves it, as drizzle sets no column whose
-      // value is `undefined`.
-      ncmecReportId: report.reportId,
+  const [record] = await db
+    .select({
+      subjectType: quarantinedContent.subjectType,
+      subjectId: quarantinedContent.subjectId,
+      uploaderId: quarantinedContent.uploaderId,
     })
-    .where(eq(quarantinedContent.id, report.recordId))
-    .returning({
-      ncmecReportedAt: quarantinedContent.ncmecReportedAt,
-      ncmecReportId: quarantinedContent.ncmecReportId,
-      retainUntil: quarantinedContent.retainUntil,
-    });
-  return recorded === undefined
+    .from(quarantinedContent)
+    .where(eq(quarantinedContent.id, report.recordId));
+  if (record === undefined) return { outcome: "gone" } as const;
+  const reportedAt = sql<number>`coalesce(${quarantinedContent.ncmecReportedAt}, ${now})`;
+  const [recorded] = await db.batch([
+    db
+      .update(quarantinedContent)
+      .set({
+        ncmecReportedAt: reportedAt,
+        retainUntil: sql<number>`max(${quarantinedContent.retainUntil}, ${reportedAt} + ${QUARANTINE_RETENTION_SECONDS})`,
+        // Given, it replaces what was there, so a mistyped id can be
+        // corrected; omitted, it leaves it, as drizzle sets no column whose
+        // value is `undefined`. Every id given stays in its audit row.
+        ncmecReportId: report.reportId,
+      })
+      .where(eq(quarantinedContent.id, report.recordId))
+      .returning({
+        ncmecReportedAt: quarantinedContent.ncmecReportedAt,
+        ncmecReportId: quarantinedContent.ncmecReportId,
+        retainUntil: quarantinedContent.retainUntil,
+      }),
+    ncmecReportAudit(db, viewerId, report, record),
+  ]);
+  const [stands] = recorded;
+  return stands === undefined
     ? ({ outcome: "gone" } as const)
-    : ({ outcome: "recorded", ...recorded } as const);
+    : ({ outcome: "recorded", ...stands } as const);
+}
+
+/**
+ * The audit row of one recording, in its batch: who recorded it, on the
+ * record's subject and uploader, with the report id given (empty when
+ * none) as its reason. Written only while the record exists, so a record
+ * purged between the read and the batch records nothing.
+ */
+function ncmecReportAudit(
+  db: Db,
+  viewerId: string,
+  report: NcmecReport,
+  record: Pick<
+    typeof quarantinedContent.$inferSelect,
+    "subjectType" | "subjectId" | "uploaderId"
+  >,
+) {
+  return moderationActionInsertWhere(
+    db,
+    {
+      actorId: viewerId,
+      action: "ncmec_report",
+      subjectType: record.subjectType,
+      subjectId: record.subjectId,
+      subjectOwnerId: record.uploaderId,
+      reason: report.reportId ?? "",
+    },
+    sql`exists (select 1 from ${quarantinedContent} where ${eq(quarantinedContent.id, report.recordId)})`,
+  );
 }
 
 /**

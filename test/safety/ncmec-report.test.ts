@@ -2,7 +2,10 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { quarantinedContent } from "../../src/db/schema-core";
+import {
+  moderationActions,
+  quarantinedContent,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { quarantineKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
@@ -66,6 +69,7 @@ const ADMINS: unknown = env.ADMIN_USER_IDS;
 
 beforeEach(async () => {
   await core().delete(quarantinedContent);
+  await core().delete(moderationActions);
   Reflect.set(env, "ADMIN_USER_IDS", ADMIN);
 });
 
@@ -280,6 +284,71 @@ describe("the purge, against the report's year", () => {
     expect(record?.retainUntil).toBe(now + YEAR);
     await purgeExpiredQuarantine(core(), env.MEDIA, now + YEAR);
     expect(await recordOf(id)).toBeUndefined();
+  });
+});
+
+/**
+The audit rows on a subject, as the report's tests read them.
+*/
+async function auditOf(subjectId: string) {
+  return core()
+    .select({
+      actorId: moderationActions.actorId,
+      action: moderationActions.action,
+      subjectType: moderationActions.subjectType,
+      subjectId: moderationActions.subjectId,
+      subjectOwnerId: moderationActions.subjectOwnerId,
+      reason: moderationActions.reason,
+    })
+    .from(moderationActions)
+    .where(eq(moderationActions.subjectId, subjectId));
+}
+
+describe("recording the report, in the audit", () => {
+  it("writes a row for each recording, naming who recorded it and the number given", async () => {
+    const now = nowSeconds();
+    const id = await quarantinedAtTime(now);
+    const record = await recordOf(id);
+
+    await recordNcmecReport(
+      core(),
+      ADMIN,
+      { recordId: id, reportId: "1" },
+      now,
+    );
+    await recordNcmecReport(
+      core(),
+      ADMIN,
+      { recordId: id, reportId: "2" },
+      now + DAY,
+    );
+    await recordNcmecReport(core(), ADMIN, { recordId: id }, now + 2 * DAY);
+
+    const rows = await auditOf(record?.subjectId ?? "");
+    expect(
+      rows.map((row) => row.reason).toSorted((a, b) => a.localeCompare(b)),
+    ).toStrictEqual(["", "1", "2"]);
+    for (const row of rows) {
+      expect(row).toStrictEqual({
+        actorId: ADMIN,
+        action: "ncmec_report",
+        subjectType: "photo",
+        subjectId: record?.subjectId,
+        subjectOwnerId: record?.uploaderId,
+        reason: row.reason,
+      });
+    }
+  });
+
+  it("writes no row for a record that is gone, or for someone not an admin", async () => {
+    const id = await quarantinedAtTime(nowSeconds());
+
+    await recordNcmecReport(core(), ADMIN, { recordId: newUlid() });
+    await expect(
+      recordNcmecReport(core(), "someone-else", { recordId: id }),
+    ).rejects.toThrow(AdminRequiredError);
+
+    expect(await core().select().from(moderationActions)).toStrictEqual([]);
   });
 });
 

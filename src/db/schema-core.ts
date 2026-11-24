@@ -1877,6 +1877,7 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
         "rename",
         "keep",
         "withdrawn",
+        "ncmec_report",
       ],
     }).notNull(),
     // `garment`: a garment's photo, by the garment's id (design 157).
