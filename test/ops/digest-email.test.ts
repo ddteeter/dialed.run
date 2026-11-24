@@ -274,6 +274,24 @@ describe("the daily firing sends it (D5)", () => {
     ]);
   });
 
+  it("owes the digest, and runs the day's other checks, before the account purge", async () => {
+    const seen: { owed: string[]; isSpeedRun: boolean }[] = [];
+    let isSpeedRun = false;
+    await handleScheduled(DIGEST, undefined, {
+      digestMail: digestMail(["op-a"], () => Promise.resolve()),
+      speed: () => {
+        isSpeedRun = true;
+        return Promise.resolve();
+      },
+      purgeAccounts: async () => {
+        seen.push({ owed: await owedDigests(), isSpeedRun });
+      },
+    });
+    expect(seen).toStrictEqual([
+      { owed: [`digest:${dayLabel(nowSeconds())}:op-a`], isSpeedRun: true },
+    ]);
+  });
+
   it("owes no digest from an hourly firing", async () => {
     await handleScheduled(
       { cron: "30 * * * *" } as ScheduledController,

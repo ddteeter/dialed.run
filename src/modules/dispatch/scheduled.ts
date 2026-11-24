@@ -1028,6 +1028,11 @@ export const digestKinds = [
 export type DigestKind = (typeof digestKinds)[number];
 
 /**
+The check the daily firing runs after everything else.
+*/
+const PURGED_LAST: DigestKind = "account-deletion";
+
+/**
  * The event for one kind on one day. The day is the digest's UTC date,
  * which is the unit a person reads it in: one issue per kind per morning.
  */
@@ -1081,8 +1086,8 @@ async function runDailyDigest(
     speed: async (anomalies) => {
       await upkeep.speed?.(utcDay(), anomalies);
     },
-    // The photo backup (D-172, design 186): daily, after the purge, so a
-    // photo the purge just deleted is set aside to expire today.
+    // The photo backup (D-172, design 186): daily. A photo the purge
+    // deletes is set aside by the next day's backup.
     "media-backup": async (anomalies) => {
       await backUpMedia(
         { source: env.MEDIA, backup: env.MEDIA_BACKUP },
@@ -1105,21 +1110,24 @@ async function runDailyDigest(
   // read that fails must not cost the day's outbox drain. What a throwing
   // check found before it threw is still reported, and the firing throws
   // at the end, so its check-in closes as an error.
-  const failed = await failuresOf(
-    digestKinds.map((kind) => async () => {
-      const lines: string[] = [];
-      try {
-        await checks[kind](lines);
-      } finally {
-        if (lines.length > 0) {
-          reporter.report(
-            new Error(`daily digest: ${kind}`),
-            digestReport(kind, lines, day),
-          );
-          everything.push(...lines);
-        }
+  const runCheck = (kind: DigestKind) => async () => {
+    const lines: string[] = [];
+    try {
+      await checks[kind](lines);
+    } finally {
+      if (lines.length > 0) {
+        reporter.report(
+          new Error(`daily digest: ${kind}`),
+          digestReport(kind, lines, day),
+        );
+        everything.push(...lines);
       }
-    }),
+    }
+  };
+  const failed = await failuresOf(
+    digestKinds
+      .filter((kind) => kind !== PURGED_LAST)
+      .map((kind) => runCheck(kind)),
   );
   // Strava's seven-day cache rule, on the activity ids we hold (task 127,
   // STR-10). Rides this firing rather than a cron of its own; it is upkeep,
@@ -1153,7 +1161,10 @@ async function runDailyDigest(
     // judged on yesterday's status.
     () => sweepModerationRecords(db),
   ]);
-  throwAny([...failed, ...sweeps]);
+  // The account purge last, after every other check, the email and the
+  // sweeps, with its lines reported as its own kind.
+  const purged = await failuresOf([runCheck(PURGED_LAST)]);
+  throwAny([...failed, ...sweeps, ...purged]);
   return everything;
 }
 
