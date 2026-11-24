@@ -1,18 +1,22 @@
 /**
  * Which Mutation shards a PR runs (design 259): `scripts/mutation-shards/`.
- * The decisions run on a hand-built graph, so each case shows the rule it
- * is about; the last cases cruise this repository, as CI does. The `node`
- * project: dependency-cruiser and the TypeScript compiler cannot load in
- * workerd.
+ * The decisions run on a hand-built graph and hand-built coverage, so each
+ * case shows the rule it is about; the last cases cruise this repository,
+ * as CI does. The `node` project: dependency-cruiser and the TypeScript
+ * compiler cannot load in workerd.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import {
+  coveringTests,
+  readCoverage,
+} from "../../scripts/mutation-shards/coverage";
 import { hasModuleGlob, readGraph } from "../../scripts/mutation-shards/graph";
 import {
   type Change,
@@ -33,27 +37,47 @@ const SHARDS = shardsOf([
 ]);
 
 /**
-y's service imports x's door, which reaches lib/a; x's functions.ts is
-negated. One test covers x through its door, one covers ui, and a route
-wires x's server functions.
+y's service imports x's door, which reaches lib/a; x's service reads env,
+which no scope holds; x's functions.ts is negated, and a route wires it.
 */
 const IMPORTS: Record<string, string[]> = {
   "src/lib/a.ts": [],
   "src/lib/b.ts": [],
+  "src/env/index.ts": [],
   "src/modules/x/index.ts": ["src/modules/x/service.ts"],
-  "src/modules/x/service.ts": ["src/lib/a.ts"],
+  "src/modules/x/service.ts": ["src/lib/a.ts", "src/env/index.ts"],
   "src/modules/x/functions.ts": ["src/modules/x/service.ts"],
   "src/modules/y/service.ts": ["src/modules/x/index.ts"],
   "src/ui/Button.tsx": [],
   "src/routes/x.tsx": ["src/modules/x/functions.ts"],
   "src/lib/words.txt": [],
   "test/x/service.test.ts": ["src/modules/x/index.ts", "test/support.ts"],
+  "test/lib/a.test.ts": ["src/lib/a.ts"],
   "test/ui/button.dom.test.tsx": ["src/ui/Button.tsx"],
   "test/support.ts": [],
 };
 
+/**
+What main's reports say covers each shard's mutants: x's service test
+covers x and, through it, lib/a; y's mutants are covered by y's own test.
+*/
+const COVERAGE: Record<string, string[]> = {
+  "lib/a (ts)": ["test/lib/a.test.ts", "test/x/service.test.ts"],
+  "modules/x (ts)": ["test/x/service.test.ts"],
+  "modules/y (ts)": ["test/y/service.test.ts"],
+  "ui (tsx)": ["test/ui/button.dom.test.tsx"],
+};
+
 function graphOf(unseen: readonly string[] = []): Graph {
   return { imports: new Map(Object.entries(IMPORTS)), unseen: new Set(unseen) };
+}
+
+function coverageOf(without: readonly string[] = []): Map<string, Set<string>> {
+  return new Map(
+    Object.entries(COVERAGE)
+      .filter(([name]) => !without.includes(name))
+      .map(([name, tests]) => [name, new Set(tests)]),
+  );
 }
 
 function changed(...paths: string[]): Change[] {
@@ -61,24 +85,45 @@ function changed(...paths: string[]): Change[] {
 }
 
 function keptNames(changes: readonly Change[], graph = graphOf()): string[] {
-  return keptShards(SHARDS, selectShards(SHARDS, changes, graph)).map(
-    (shard) => shard.name,
-  );
+  const selection = selectShards(SHARDS, changes, graph, coverageOf());
+  return keptShards(SHARDS, selection).map((shard) => shard.name);
 }
 
-function everyShardReason(changes: readonly Change[], graph = graphOf()) {
-  const selection = selectShards(SHARDS, changes, graph);
+function everyShardReason(changes: readonly Change[]) {
+  const selection = selectShards(SHARDS, changes, graphOf(), coverageOf());
   return selection.kind === "all" ? selection.reason : undefined;
 }
 
 describe("a PR's shards", () => {
-  it("keep the changed file's shard and the shards of every file that imports it", () => {
+  it("keep a changed file's own shard, and not the shards that import it", () => {
     expect(keptNames(changed("src/modules/x/service.ts"))).toStrictEqual([
       "modules/x (ts)",
-      "modules/y (ts)",
     ]);
-    expect(keptNames(changed("src/lib/a.ts"))).toStrictEqual([
+    expect(keptNames(changed("src/lib/a.ts"))).toStrictEqual(["lib/a (ts)"]);
+  });
+
+  it("keep, for a changed test, the shards whose report lists it as covering a mutant", () => {
+    expect(keptNames(changed("test/x/service.test.ts"))).toStrictEqual([
       "lib/a (ts)",
+      "modules/x (ts)",
+    ]);
+    expect(keptNames(changed("test/ui/button.dom.test.tsx"))).toStrictEqual([
+      "ui (tsx)",
+    ]);
+  });
+
+  it("keep, for a deleted test, the shards its tests covered", () => {
+    expect(
+      keptNames([{ path: "test/x/service.test.ts", deleted: true }]),
+    ).toStrictEqual(["lib/a (ts)", "modules/x (ts)"]);
+  });
+
+  it("keep none for a new test no report lists, which can only add kills", () => {
+    expect(keptNames(changed("test/x/new.test.ts"))).toStrictEqual([]);
+  });
+
+  it("keep, for a changed file outside every scope, the shards of the files that import it", () => {
+    expect(keptNames(changed("src/env/index.ts"))).toStrictEqual([
       "modules/x (ts)",
       "modules/y (ts)",
     ]);
@@ -87,29 +132,31 @@ describe("a PR's shards", () => {
   it("say why each was kept", () => {
     const selection = selectShards(
       SHARDS,
-      changed("src/modules/x/service.ts"),
+      changed("src/env/index.ts", "test/lib/a.test.ts"),
       graphOf(),
+      coverageOf(),
     );
     expect(selection).toStrictEqual({
       kind: "some",
       kept: new Map([
-        ["modules/x (ts)", "src/modules/x/service.ts changed"],
-        [
-          "modules/y (ts)",
-          "src/modules/y/service.ts imports src/modules/x/service.ts",
-        ],
+        ["modules/x (ts)", "src/modules/x/service.ts imports src/env/index.ts"],
+        ["modules/y (ts)", "src/modules/y/service.ts imports src/env/index.ts"],
+        ["lib/a (ts)", "test/lib/a.test.ts covers its mutants"],
       ]),
     });
   });
 
-  it("keep, for a changed test, the shards of every file it reaches", () => {
-    expect(keptNames(changed("test/x/service.test.ts"))).toStrictEqual([
-      "lib/a (ts)",
-      "modules/x (ts)",
-    ]);
-    expect(keptNames(changed("test/ui/button.dom.test.tsx"))).toStrictEqual([
-      "ui (tsx)",
-    ]);
+  it("keep a shard whose report could not be found or read", () => {
+    const selection = selectShards(
+      SHARDS,
+      changed("docs/a.md"),
+      graphOf(),
+      coverageOf(["ui (tsx)"]),
+    );
+    expect(selection).toStrictEqual({
+      kind: "some",
+      kept: new Map([["ui (tsx)", "no report to read"]]),
+    });
   });
 
   it("keep none for a docs-only change, or a route nothing in a scope imports", () => {
@@ -124,12 +171,15 @@ describe("a PR's shards", () => {
     expect(
       keptNames([{ path: "src/modules/x/service.ts", deleted: true }]),
     ).toStrictEqual(["modules/x (ts)"]);
+    expect(
+      keptNames([{ path: "src/env/gone.ts", deleted: true }]),
+    ).toStrictEqual([]);
   });
 
-  it("keep the shards of a file whose imports the graph cannot see, whatever it may import", () => {
+  it("keep the shards of a file whose imports the graph cannot see, for a change outside every scope", () => {
     expect(
-      keptNames(changed("src/ui/Button.tsx"), graphOf(["src/lib/b.ts"])),
-    ).toStrictEqual(["lib/a (ts)", "ui (tsx)"]);
+      keptNames(changed("src/routes/x.tsx"), graphOf(["src/lib/b.ts"])),
+    ).toStrictEqual(["lib/a (ts)"]);
   });
 });
 
@@ -151,6 +201,8 @@ describe("every shard runs", () => {
       "src/db/migrations/core/0001_x.sql",
       "scripts/mutation-shards.ts",
       "scripts/mutation-shards/select.ts",
+      "scripts/main-mutation-reports.sh",
+      "scripts/main-mutation-runs.sh",
     ]) {
       expect(everyShardReason(changed("docs/a.md", file))).toBe(
         `${file} is what every shard runs on`,
@@ -176,7 +228,6 @@ describe("every shard runs", () => {
       "src/styles.css",
       "e2e/support/new.ts",
       "scripts/new.ts",
-      "test/x/new.test.ts",
     ]) {
       expect(everyShardReason(changed(file))).toBe(
         `${file} is not in the import graph`,
@@ -185,27 +236,65 @@ describe("every shard runs", () => {
     expect(everyShardReason(changed("src/lib/words.txt"))).toBeUndefined();
   });
 
-  it("when a test is deleted, since what it reached is gone", () => {
-    expect(
-      everyShardReason([{ path: "test/x/service.test.ts", deleted: true }]),
-    ).toBe("test/x/service.test.ts was deleted, so what it reached is unknown");
-  });
-
-  it("when a changed test reaches a file whose imports the graph cannot see", () => {
-    expect(
-      everyShardReason(
-        changed("test/x/service.test.ts"),
-        graphOf(["src/modules/x/service.ts"]),
-      ),
-    ).toBe(
-      "test/x/service.test.ts reaches src/modules/x/service.ts, whose imports the graph cannot follow",
-    );
-  });
-
   it("in the order stryker.conf.json lists them", () => {
     expect(
       keptShards(SHARDS, { kind: "all", reason: "package.json" }),
     ).toStrictEqual(SHARDS);
+  });
+});
+
+describe("main's report for a shard", () => {
+  const report = {
+    files: {
+      "src/a.ts": {
+        mutants: [
+          { coveredBy: ["0", "1"], killedBy: ["0"] },
+          { killedBy: ["2"] },
+          { coveredBy: ["9"] },
+          {},
+        ],
+      },
+    },
+    testFiles: {
+      "test/a.test.ts": { tests: [{ id: "0" }, { id: "1" }] },
+      "test/b.test.ts": { tests: [{ id: "2" }] },
+      "test/c.test.ts": { tests: [{ id: "3" }] },
+    },
+  };
+
+  it("names the test files any of whose tests cover or kill a mutant", () => {
+    expect(coveringTests(report)).toStrictEqual(
+      new Set(["test/a.test.ts", "test/b.test.ts"]),
+    );
+  });
+
+  it("is not read when it is not a report", () => {
+    expect(coveringTests({ files: {} })).toBeUndefined();
+    expect(coveringTests("text")).toBeUndefined();
+  });
+
+  it("is read from its slug's folder; one missing or broken leaves its shard out", () => {
+    const directory = mkdtempSync(path.join(tmpdir(), "mutation-reports-"));
+    try {
+      const [a, x, y] = SHARDS;
+      const write = (slug: string, text: string) => {
+        mkdirSync(path.join(directory, slug));
+        writeFileSync(
+          path.join(directory, slug, "stryker-incremental.json"),
+          text,
+        );
+      };
+      write(a?.slug ?? "", JSON.stringify(report));
+      write(x?.slug ?? "", "{ not json");
+      write(y?.slug ?? "", JSON.stringify({ files: [] }));
+      expect(readCoverage(directory, SHARDS)).toStrictEqual(
+        new Map([
+          ["lib/a (ts)", new Set(["test/a.test.ts", "test/b.test.ts"])],
+        ]),
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
 
@@ -290,15 +379,23 @@ describe("this repository's graph", () => {
   );
 
   it(
-    "keeps, through the CLI, a module's shard and not a lib shard nothing there reaches",
+    "keeps, through the CLI, a changed file's shard when every other report lists nothing",
     () => {
       const directory = mkdtempSync(path.join(tmpdir(), "mutation-shards-"));
       try {
         const changes = path.join(directory, "changes.txt");
         writeFileSync(changes, "M\tsrc/modules/weather/index.ts\n");
+        const reports = path.join(directory, "reports");
+        for (const { slug } of shardsOf(strykerConfig.mutate)) {
+          mkdirSync(path.join(reports, slug), { recursive: true });
+          writeFileSync(
+            path.join(reports, slug, "stryker-incremental.json"),
+            JSON.stringify({ files: {}, testFiles: {} }),
+          );
+        }
         const run = spawnSync(
           path.resolve("node_modules/.bin/tsx"),
-          ["scripts/mutation-shards.ts", changes],
+          ["scripts/mutation-shards.ts", changes, reports],
           { encoding: "utf8" },
         );
         expect(run.status).toBe(0);
@@ -306,8 +403,7 @@ describe("this repository's graph", () => {
           .array(z.object({ name: z.string() }))
           .parse(JSON.parse(run.stdout))
           .map((shard) => shard.name);
-        expect(names).toContain("modules/weather (ts)");
-        expect(names).not.toContain("lib/contracts/thermal (ts)");
+        expect(names).toStrictEqual(["modules/weather (ts)"]);
         expect(run.stderr).toContain(
           "modules/weather (ts): src/modules/weather/index.ts changed",
         );

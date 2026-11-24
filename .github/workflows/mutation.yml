@@ -72,6 +72,10 @@ jobs:
   scopes:
     name: Read the ratcheted scopes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # To find main's runs and download their shard reports.
+      actions: read
     outputs:
       list: ${{ steps.read.outputs.list }}
       relevant: ${{ steps.read.outputs.relevant }}
@@ -143,16 +147,21 @@ jobs:
       # added or removed. `slug` is the name made safe for an artifact.
       # Both are derived there, not restated here.
       #
-      # On a PR it keeps a shard when a changed file is in its scope, a
-      # file in its scope imports a changed file, or a changed test reaches
-      # a file in its scope; it keeps every shard when the diff touches the
-      # toolchain or the test harness, or when the import graph cannot
-      # answer. An empty list skips `mutate`, and the `Mutation` job passes
-      # as it does for a docs-only PR. This used to be a `paths:` filter on
-      # the trigger, which cannot work once the job is required: a workflow
-      # that does not run reports no context, and a required context that
-      # never arrives blocks the merge indefinitely. If the selector itself
-      # fails, every shard runs.
+      # On a PR it keeps a shard when a changed file is in its scope, when
+      # a changed test is one main's report for the shard lists as covering
+      # or killing a mutant (`coveredBy`, `killedBy`), or when a changed
+      # file outside every scope is imported by a file in its scope. Those
+      # are what the shard's `--incremental` run re-tests, plus the import
+      # a report cannot see. The reports are the ones a shard's seed reads,
+      # found by scripts/main-mutation-reports.sh in one download; a shard
+      # with no report to read runs. It keeps every shard when the diff
+      # touches the toolchain or the test harness, or when the import graph
+      # cannot answer. An empty list skips `mutate`, and the `Mutation` job
+      # passes as it does for a docs-only PR. This used to be a `paths:`
+      # filter on the trigger, which cannot work once the job is required: a
+      # workflow that does not run reports no context, and a required
+      # context that never arrives blocks the merge indefinitely. If the
+      # selector itself fails, every shard runs.
       #
       # A push to `main` runs every shard — that run exists to refresh the
       # cold measurement every PR is seeded from, not to react to a diff,
@@ -168,6 +177,9 @@ jobs:
         id: read
         env:
           BASE: ${{ github.event.pull_request.base.ref }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DEPS: ${{ steps.deps.outputs.digest }}
         run: |
           set -euo pipefail
           if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
@@ -175,9 +187,14 @@ jobs:
           else
             git fetch --no-tags origin \
               "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+            git fetch --quiet --no-tags origin +refs/heads/main:refs/remotes/origin/main
             changes="$RUNNER_TEMP/changes.txt"
             git diff --name-status --no-renames "origin/$BASE...HEAD" >"$changes"
-            if ! list=$(npx tsx scripts/mutation-shards.ts "$changes"); then
+            reports="$RUNNER_TEMP/reports"
+            if ! sh scripts/main-mutation-reports.sh "$DEPS" "$reports"; then
+              echo "::notice::could not list main's runs; every shard runs"
+            fi
+            if ! list=$(npx tsx scripts/mutation-shards.ts "$changes" "$reports"); then
               echo "::warning::could not choose the shards from the diff; running every shard"
               list=$(npx tsx scripts/mutation-shards.ts)
             fi
@@ -264,9 +281,11 @@ jobs:
       # It is read from main's push runs only, never from a PR's own runs,
       # so every push to a PR starts from main's report and re-tests what
       # the PR changed. A run counts only when its commit is in main's
-      # history, fetched here (commits only) and named by its full ref;
-      # scripts/main-mutation-runs.sh is the same list the local seed
-      # reads. With no such run in reach, this shard runs cold.
+      # history, fetched here (commits only) and named by its full ref.
+      # scripts/main-mutation-reports.sh finds it, from the list
+      # scripts/main-mutation-runs.sh gives the local seed too, and the
+      # shard selector reads the same reports. With no such run in reach,
+      # this shard runs cold.
       # Every value reaches the script through `env`.
       - name: Seed from main's report
         if: github.event_name == 'pull_request'
@@ -284,22 +303,18 @@ jobs:
             exit 0
           fi
           # An API error anywhere here runs the shard cold; it never fails it.
-          if ! runs=$(sh scripts/main-mutation-runs.sh refs/remotes/origin/main 20); then
+          if ! found=$(sh scripts/main-mutation-reports.sh "$DEPS" "$seed" "$SLUG"); then
             echo "::notice::could not list main's runs; running cold"
             exit 0
           fi
-          for run in $runs; do
-            rm -rf "$seed"
-            gh run download "$run" --name "stryker-incremental-$SLUG" --dir "$seed" 2>/dev/null || continue
-            [ "$(cat "$seed/stryker-deps.txt" 2>/dev/null)" = "$DEPS" ] || continue
-            [ -f "$seed/stryker-incremental.json" ] && [ ! -L "$seed/stryker-incremental.json" ] || continue
-            mkdir -p reports
-            jq '.files |= map_values(.mutants |= map(select(.status != "Survived" and .status != "NoCoverage")))' \
-              "$seed/stryker-incremental.json" >reports/stryker-incremental.json || continue
-            echo "::notice::seeded from main's run $run"
+          if [ -z "$found" ]; then
+            echo "::notice::no main run with this dependency digest has a report for this shard; running cold"
             exit 0
-          done
-          echo "::notice::no passing main run with this dependency digest has a report for this shard; running cold"
+          fi
+          mkdir -p reports
+          jq '.files |= map_values(.mutants |= map(select(.status != "Survived" and .status != "NoCoverage")))' \
+            "$seed/$SLUG/stryker-incremental.json" >reports/stryker-incremental.json
+          echo "::notice::seeded from main's run ${found#* }"
 
       # Sharded by scope because this is minutes, not seconds, and the
       # whole ratcheted set only gets bigger. `--mutate` narrows what is

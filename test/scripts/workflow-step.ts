@@ -145,8 +145,10 @@ if (route !== undefined && route !== null && typeof route === "object" && route.
 else if (route !== undefined && typeof route === "object" && Object.hasOwn(route, "files")) {
   const into = flag("--dir");
   fs.mkdirSync(into, { recursive: true });
-  for (const [name, content] of Object.entries(route.files))
+  for (const [name, content] of Object.entries(route.files)) {
+    fs.mkdirSync(path.dirname(path.join(into, name)), { recursive: true });
     fs.writeFileSync(path.join(into, name), content);
+  }
 } else if (route !== undefined) answer(route);
 else {
   if (process.env.STUB_STDOUT !== undefined) process.stdout.write(process.env.STUB_STDOUT);

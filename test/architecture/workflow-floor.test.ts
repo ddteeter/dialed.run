@@ -499,7 +499,19 @@ describe("the Mutation matrix", () => {
       'git diff --name-status --no-renames "origin/$BASE...HEAD" >"$changes"',
     );
     expect(scopes).toContain(
-      '            if ! list=$(npx tsx scripts/mutation-shards.ts "$changes"); then\n              echo "::warning::could not choose the shards from the diff; running every shard"\n              list=$(npx tsx scripts/mutation-shards.ts)\n',
+      '            if ! list=$(npx tsx scripts/mutation-shards.ts "$changes" "$reports"); then\n              echo "::warning::could not choose the shards from the diff; running every shard"\n              list=$(npx tsx scripts/mutation-shards.ts)\n',
+    );
+  });
+
+  it("reads main's reports for the shards, as the seed finds them, and runs every shard without one", () => {
+    expect(scopes).toContain(
+      "    permissions:\n      contents: read\n      actions: read\n    outputs:\n",
+    );
+    expect(scopes).toContain(
+      "          DEPS: ${{ steps.deps.outputs.digest }}\n",
+    );
+    expect(scopes).toContain(
+      '            if ! sh scripts/main-mutation-reports.sh "$DEPS" "$reports"; then\n              echo "::notice::could not list main\'s runs; every shard runs"\n',
     );
   });
 
@@ -541,14 +553,11 @@ describe("a PR's mutation shard", () => {
   it("is seeded from a push run on main, measured under its dependencies, keeping only its kills", () => {
     expect(mutate).toContain("      actions: read");
     expect(mutate).toContain(
-      "runs=$(sh scripts/main-mutation-runs.sh refs/remotes/origin/main 20)",
+      'if ! found=$(sh scripts/main-mutation-reports.sh "$DEPS" "$seed" "$SLUG"); then',
     );
     expect(mutate).not.toContain('.conclusion == "success"');
     expect(mutate).toContain(
       'select(.status != "Survived" and .status != "NoCoverage")',
-    );
-    expect(mutate).toContain(
-      '[ "$(cat "$seed/stryker-deps.txt" 2>/dev/null)" = "$DEPS" ] || continue',
     );
   });
 

@@ -87,7 +87,11 @@ function makeHistory(): History {
   );
   git(checkout, "update-ref", "-d", "refs/remotes/origin/main");
   mkdirSync(path.join(checkout, "scripts"));
-  for (const script of ["main-mutation-runs.sh", "fetch-mutation-seed.sh"])
+  for (const script of [
+    "main-mutation-runs.sh",
+    "main-mutation-reports.sh",
+    "fetch-mutation-seed.sh",
+  ])
     copyFileSync(
       path.resolve("scripts", script),
       path.join(checkout, "scripts", script),
@@ -205,6 +209,99 @@ describe("a PR shard's seed in CI", () => {
       "::notice::could not list main's runs; running cold",
     );
     expect(existsSync(path.join(checkout, "reports"))).toBe(false);
+  });
+
+  it("runs cold when no run's report was measured under this run's dependencies", () => {
+    rmSync(path.join(checkout, "reports"), { recursive: true, force: true });
+    const stale = {
+      files: { ...download(2).files, "stryker-deps.txt": "digest-0\n" },
+    };
+    const run = seedStep({
+      ...routes(),
+      "run download 2": stale,
+      "run download 1": stale,
+    });
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain(
+      "::notice::no main run with this dependency digest has a report for this shard; running cold",
+    );
+    expect(existsSync(path.join(checkout, "reports"))).toBe(false);
+  });
+});
+
+/**
+Run `id`'s artifacts as a pattern download lays them out, one folder per
+shard: `lib-ts` measured under this digest, `ui-tsx` under another, and
+`ops-ts` with a report jq cannot read.
+*/
+function everyShard(id: number) {
+  const { files } = download(id);
+  return {
+    files: {
+      "stryker-incremental-lib-ts/stryker-incremental.json":
+        files["stryker-incremental.json"],
+      "stryker-incremental-lib-ts/stryker-deps.txt": files["stryker-deps.txt"],
+      "stryker-incremental-ui-tsx/stryker-incremental.json":
+        files["stryker-incremental.json"],
+      "stryker-incremental-ui-tsx/stryker-deps.txt": "digest-0\n",
+      "stryker-incremental-ops-ts/stryker-incremental.json": "{ not json",
+      "stryker-incremental-ops-ts/stryker-deps.txt": files["stryker-deps.txt"],
+    },
+  };
+}
+
+function reportsFor(stubRoutes: Record<string, unknown>, into: string) {
+  return runStep(`sh scripts/main-mutation-reports.sh ${DEPS} ${into}\n`, {
+    cwd: checkout,
+    env: {},
+    routes: stubRoutes,
+  });
+}
+
+describe("every shard's report, for the shard selector", () => {
+  it("comes from one download of the newest run in main's history, each under this digest and readable", () => {
+    const into = path.join(root, "every-shard");
+    const run = reportsFor(
+      { ...routes(), "run download 2": everyShard(2) },
+      into,
+    );
+    expect(run.status).toBe(0);
+    expect(run.stdout).toBe("lib-ts 2\n");
+    expect(
+      run.calls.filter((call) => call.startsWith("run download")),
+    ).toStrictEqual([
+      expect.stringMatching(
+        /^run download 2 --pattern stryker-incremental-\* --dir /u,
+      ),
+    ]);
+    const copied = readFileSync(
+      path.join(into, "lib-ts/stryker-incremental.json"),
+      "utf8",
+    );
+    expect(copied).toBe(download(2).files["stryker-incremental.json"]);
+    expect(existsSync(path.join(into, "ui-tsx"))).toBe(false);
+    expect(existsSync(path.join(into, "ops-ts"))).toBe(false);
+  });
+
+  it("passes over a run whose artifacts would not download", () => {
+    const run = reportsFor(
+      {
+        ...routes(),
+        "run download 2": FAILS,
+        "run download 1": everyShard(1),
+      },
+      path.join(root, "older-run"),
+    );
+    expect(run.stdout).toBe("lib-ts 1\n");
+  });
+
+  it("fails only when main's runs cannot be listed", () => {
+    const run = reportsFor(
+      { ...routes(), "run list": FAILS },
+      path.join(root, "no-list"),
+    );
+    expect(run.status).toBe(1);
+    expect(run.stdout).toBe("");
   });
 });
 

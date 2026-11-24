@@ -14,52 +14,72 @@ affect (#879, item #5).
 On `pull_request`, the `scopes` job keeps a shard when:
 
 - **(a)** a changed file is in the shard's scope;
-- **(b)** a file in the scope transitively imports a changed file, so its
-  behaviour, and its mutants' outcomes, can change; or
-- **(c)** a changed test file transitively imports a file in the scope, so
-  the tests that kill its mutants changed.
+- **(b)** a changed test file is one main's latest report for the shard
+  lists as covering or killing a mutant (`coveredBy`, `killedBy`; a deleted
+  test counts, a new one no report lists does not, since it can only add
+  kills); or
+- **(c)** a changed file outside every scope is imported, through any chain,
+  by a file in the shard's scope. A report cannot see this case.
+
+A shard is also kept when its report cannot be found or read.
+
+The first version (#981) used the import graph for tests as well: keep the
+shard when a file in its scope imports a changed file, or when a changed
+test reaches a file in its scope. Module barrels make almost every test
+reach almost every scope, so that rule kept nearly everything.
 
 **Every shard runs** when the diff touches the toolchain or the harness:
 `package.json`, the lockfile, `.npmrc`, `mise.toml`, `stryker.conf.json`,
 `vitest*.config*`, `vite.config.ts`, `tsconfig*`, `wrangler.jsonc`,
 `worker-configuration.d.ts`, `.github/workflows/`, `public/`,
 `src/db/migrations/`, a file under `test/` that is not a `*.test.ts(x)`
-(setup files, helpers, fixtures), or the selector itself. It also runs every
-shard when the graph cannot answer: a deleted test, a changed file under
-`src/`, `test/`, `e2e/` or `scripts/` that the cruise did not find, a local
-import it could not resolve, or an `import(…)` or executing
-`import.meta.glob` (one without `?raw`) that no resolver follows. A file
-outside those roots that is none of the above (docs, design, `.claude/`)
-keeps nothing.
+(setup files, helpers, fixtures), the selector, or the scripts that find its
+reports. It also runs every shard when the graph cannot answer, for example
+a changed file under `src/`, `e2e/` or `scripts/` that the cruise did not
+find. For (c), a file with an unresolved local import, an `import(…)` of a
+computed path or an executing `import.meta.glob` is treated as importing
+everything.
 
+- **The reports** are the ones a shard's seed reads: the newest main push
+  run in main's ancestry, red or green, measured under this run's dependency
+  digest. `scripts/main-mutation-reports.sh` finds them, and the seed step
+  now calls it too, so the checks live in one place: the digest, a regular
+  file, readable by jq. One `gh run download --pattern` of the newest
+  qualifying run is enough (about 340 MB, 20 s). Main runs are no longer
+  cancelled, so it holds every shard's report, and a shard it lacks is kept.
 - `scripts/mutation-shards.ts` is the CLI: with no argument it prints every
-  shard, and with a `git diff --name-status --no-renames` file it prints the
-  kept ones, with each one's reason on stderr.
-- `scripts/mutation-shards/select.ts` holds the decisions, pure and tested.
-  The shard name and slug move into it from the workflow's inline
-  `node -p`, so there is still one copy.
-- `scripts/mutation-shards/graph.ts` cruises `src`, `test`, `e2e` and
-  `scripts` with dependency-cruiser's API (as `scripts/diagrams/sources.ts`
-  does) and reads computed imports with `scripts/diagrams/syntax.ts`.
-  Type-only imports are left out: they run nothing.
-- `scopes` gains `setup-node` and `npm ci`. An empty list sets
-  `relevant=false`, so `mutate` is skipped and `Mutation` passes as it does
-  for a docs-only PR; a kept shard that fails still fails it. If the
-  selector itself fails, the step warns and runs every shard.
+  shard, and with the diff and the reports folder it prints the kept ones,
+  with each one's reason on stderr. `select.ts` holds the decisions,
+  `coverage.ts` parses the reports with zod, and `graph.ts` cruises the
+  imports with dependency-cruiser, type-only imports left out.
+- An empty list skips `mutate`, and `Mutation` passes as it does for a
+  docs-only PR. A kept shard that fails still fails it. If the selector
+  itself fails, every shard runs.
 
 **Why main stays full.** The push run on `main` is the cold measurement
 every PR is seeded from and calibrated against. It ignores the diff and
 runs all 43, unchanged.
 
 **What a skipped shard costs.** A PR shard runs `--incremental` from main's
-report, which re-tests mutants in changed files and mutants whose covering
-test files changed, and trusts the rest. Those are (a) and (c), so a shard
-this skips would mostly have reproduced its seed. (b) is kept anyway: a
-cold run would see it. The blind spot is the one incremental already has, a
-change to a file outside the scope and outside the tests (a helper a test
-uses, a component another scope's test renders) that flips a kill. Main's
-cold run catches that, its `main-status` job opens the "Mutation is red on
-main" alert, and stop-the-line applies.
+report. That re-tests mutants in changed files and mutants whose covering
+test files changed, and trusts the rest: exactly (a) and (b). A skipped
+shard would have reproduced its seed. The blind spot is the one incremental
+already has: a change to a file outside the scope and outside the tests (a
+helper a test uses, a component another scope's test renders) that flips a
+kill. Main's cold run catches that, its `main-status` job opens the
+"Mutation is red on main" alert, and stop-the-line applies.
+
+**Replay.** The last 44 merged PRs that touched code, against today's graph
+and main's reports from run 45217368406:
+
+| rule                | mean shards kept | the 14 PRs no trigger hit |
+| ------------------- | ---------------- | ------------------------- |
+| import graph (#981) | 39.1 of 43       | 30.9                      |
+| coverage (this)     | 34.5 of 43       | 16.1                      |
+
+The other 30 PRs ran every shard: 7 for a migration, 7 for
+`stryker.conf.json`, 7 for a test helper, 6 for `package*.json` and 3 for a
+workflow.
 
 ## Contract touches
 
@@ -71,15 +91,14 @@ main" alert, and stop-the-line applies.
 
 ## Test plan
 
-- `test/scripts/mutation-shards.node.test.ts` (vitest `node`: TypeScript
-  and dependency-cruiser cannot load in workerd), on a hand-built graph: a
-  src change keeps its shard and its importers' shards; a test-only change
-  keeps the shards it reaches; `package.json` keeps all; docs keep none; an
-  unresolvable file keeps all; plus the other fall-backs, and the names and
-  slugs the workflow has always used. One case runs the CLI on the real
-  repo.
-- `test/architecture/workflow-floor.test.ts`: pins the selection step, the
-  fall-back to every shard, and `mutate`'s `relevant` condition.
+- `test/scripts/mutation-shards.node.test.ts` (vitest `node`): on a
+  hand-built graph and coverage, (a), (b) for a changed, a deleted and a new
+  test, (c), a missing report, the run-everything triggers, the report
+  parser, and the CLI on the real repo.
+- `test/scripts/mutation-seed.node.test.ts`: the seed through the shared
+  script, including a digest mismatch, and the selector's single download.
+- `test/architecture/workflow-floor.test.ts`: pins the selection step, its
+  reports, the fall-backs and `mutate`'s `relevant` condition.
 
 ## Issues
 
@@ -87,11 +106,7 @@ main" alert, and stop-the-line applies.
 
 ## Open questions
 
-- **The saving is small.** Replaying the last 44 merged PRs that touched
-  code against today's graph, this rule kept 39 of 43 shards on average:
-  module barrels make almost every test reach almost every scope, and a
-  third of those PRs changed `stryker.conf.json`, a migration or a test
-  helper. Dropping (b) changes little. A narrower rule would read which
-  test files cover each shard's mutants from main's seed reports
-  (`coveredBy`), which is exactly what `--incremental` re-tests. Worth a
-  follow-up?
+- **Test helpers.** Seven of the 30 PRs that ran every shard did so because
+  a test helper changed. Mapping a helper to the specs that import it, and
+  those specs to the reports, would take the replay's mean to about 31.
+  Worth a follow-up?
