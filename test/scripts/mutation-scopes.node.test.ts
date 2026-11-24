@@ -23,6 +23,7 @@ import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { parseNameStatus } from "../../scripts/mutation-shards/select";
+import { withoutGitEnv } from "./git-env";
 import { FAILS, runStep, scriptOf } from "./workflow-step";
 
 const GIT = "/usr/bin/git";
@@ -39,7 +40,7 @@ function git(cwd: string, ...args: string[]): string {
     cwd,
     encoding: "utf8",
     env: {
-      ...process.env,
+      ...withoutGitEnv(process.env),
       GIT_AUTHOR_NAME: "test",
       GIT_AUTHOR_EMAIL: "test@example.invalid",
       GIT_COMMITTER_NAME: "test",
