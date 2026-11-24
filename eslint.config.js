@@ -331,6 +331,9 @@ export default tseslint.config(
   unicorn.configs.recommended,
   sonarjs.configs.recommended,
   {
+    // A rule comment in a file changes nothing, and ESLint warns that it
+    // has no effect: the rules are the ones this file sets.
+    linterOptions: { noInlineConfig: true },
     languageOptions: {
       parserOptions: {
         projectService: true,

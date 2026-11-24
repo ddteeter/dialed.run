@@ -211,11 +211,19 @@ describe("the protected-paths check", () => {
     "playwright.config.js",
     "tsconfig.json",
     "tsconfig.build.json",
+    "docs/tsconfig.json",
+    "test/x/tsconfig.app.json",
+    "jsconfig.json",
+    "src/modules/x/jsconfig.json",
+    "src/eslint.config.js",
+    "e2e/support/eslint.config.mjs",
+    "scripts/x/eslint.config.cts",
     ".npmrc",
     "scripts/fetch-mutation-seed.sh",
     "scripts/track/index.ts",
     "test/architecture/workflow-floor.test.ts",
     ".claude/settings.json",
+    ".codex/hooks.json",
   ])("fails a change to %s without the label", (file) => {
     const run = check({ files: ["src/app.ts", file] });
     expect(run.stdout).toContain(`This PR changes:\n  ${file}\n`);
@@ -224,7 +232,10 @@ describe("the protected-paths check", () => {
 
   it.each([
     "src/vite.config.ts",
-    "docs/tsconfig.json",
+    "docs/tsconfig.md",
+    "src/eslint.config.json",
+    "src/tsconfig.ts",
+    ".codex/agents/guardrail-fixer.toml",
     "test/scripts/track.test.ts",
     "src/scripts/x.ts",
     "test/architecture.md",
