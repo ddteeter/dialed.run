@@ -84,6 +84,7 @@ describe("the rate-limit kinds", () => {
       distanceM: 5000,
       indoor: true,
     });
+    await claimLimit(db, "handle-runner", runner, NOW);
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -113,6 +114,7 @@ describe("the rate-limit kinds", () => {
         `google-start:${GLOBAL_SUBJECT}`,
         `shared-row-runner:${runner}`,
         `manual-run-runner:${runner}`,
+        `handle-runner:${runner}`,
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));

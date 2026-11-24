@@ -76,7 +76,9 @@ export const SEND_LIMIT_KINDS = [
  *   sign-in, across everyone, in an hour: each one is a state row Better
  *   Auth writes; `GLOBAL_SUBJECT`;
  * - `shared-row-runner` — the shared brand and product rows one runner's
- *   saves make in a day, one count a row; the runner's id.
+ *   saves make in a day, one count a row; the runner's id;
+ * - `handle-runner` — the handle claims one runner makes in an hour that
+ *   reach the moderation check; the runner's id.
  */
 export const RATE_LIMIT_KINDS = [
   ...SEND_LIMIT_KINDS,
@@ -104,7 +106,16 @@ export const RATE_LIMIT_KINDS = [
   "strava-connect-runner",
   "google-start",
   "shared-row-runner",
+  "handle-runner",
 ] as const;
+
+/**
+ * How many handles one runner may try in an hour, whatever they type;
+ * past it the claim is refused before the moderation check (owner,
+ * 2026-11-23, a number the owner can retune). Here, not with the other
+ * limits, because the handle form's sentence says it.
+ */
+export const HANDLE_CLAIMS_PER_HOUR = 20;
 
 /**
  * The kinds whose subject is a visitor's IP. Their key is the address's

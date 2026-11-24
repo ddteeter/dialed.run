@@ -202,6 +202,28 @@ describe("Next", () => {
     expect(onClaimed).not.toHaveBeenCalled();
   });
 
+  it("bands the hour's claims above Save, naming the time, as the rename cap", async () => {
+    const { onClaimed, user } = renderForm(() => ({
+      kind: "busy",
+      until: Date.UTC(2026, 11, 14, 12) / 1000,
+      viewer: { homeZone: "America/Chicago" },
+    }));
+    await user.type(field(), "sixth_name");
+    await user.click(next());
+
+    const message =
+      "You've tried 20 handles this hour. You can try again at 6:00 AM.";
+    const band = await screen.findByText(message);
+    expect(band.closest("[data-part=failure-band]")).toHaveTextContent(
+      /Not changed/u,
+    );
+    expect(screen.getByRole("status").textContent).toBe(
+      `Not changed. ${message}`,
+    );
+    expect(field()).not.toHaveAttribute("aria-invalid", "true");
+    expect(onClaimed).not.toHaveBeenCalled();
+  });
+
   it("clears the cap's band when the next save lands", async () => {
     const claim = vi
       .fn<(username: string) => HandleClaim>()

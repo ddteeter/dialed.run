@@ -6,7 +6,12 @@
  * in the schema). This is the one refusal only the server can make.
  */
 import { RENAME_CAP, RENAME_WINDOW_DAYS } from "../../../lib/contracts";
-import { proseDayLabel, type ViewerZone } from "../../../lib/dates";
+import { HANDLE_CLAIMS_PER_HOUR } from "../../../lib/contracts/rate-limits";
+import {
+  proseDayLabel,
+  viewerClockLabel,
+  type ViewerZone,
+} from "../../../lib/dates";
 import type { HandleClaim } from "./username";
 
 export const HANDLE_COPY = {
@@ -60,12 +65,24 @@ export function takenMessage(
 }
 
 /**
- * The cap's band sentence for a claim the cap refused, or nothing for any
- * other answer: the band and the status region both read it.
+ * Past the hour's handle claims (owner, 2026-11-24): how many, and the
+ * time the hour ends, on the runner's clock.
+ */
+export function busyMessage(until: number, viewer: ViewerZone): string {
+  return `You've tried ${String(HANDLE_CLAIMS_PER_HOUR)} handles this hour. You can try again at ${viewerClockLabel(until, viewer)}.`;
+}
+
+/**
+ * The band's sentence for a claim the rename cap or the hour's claims
+ * refused, or nothing for any other answer: the band and the status
+ * region both read it.
  */
 export function capRefusal(claim: HandleClaim): string | undefined {
-  return claim.kind === "too_often"
-    ? tooOftenMessage(claim.until, claim.viewer)
+  if (claim.kind === "too_often") {
+    return tooOftenMessage(claim.until, claim.viewer);
+  }
+  return claim.kind === "busy"
+    ? busyMessage(claim.until, claim.viewer)
     : undefined;
 }
 

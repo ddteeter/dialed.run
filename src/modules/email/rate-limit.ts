@@ -15,7 +15,10 @@ import type { drizzle } from "drizzle-orm/d1";
 import { rateLimits } from "../../db/schema-core";
 import { SIGN_IN_TRIES, SIGN_IN_WINDOW_S } from "../../lib/contracts/access";
 import { EMAIL_SENDS_PER_HOUR } from "../../lib/contracts/email";
-import { VISITOR_KINDS } from "../../lib/contracts/rate-limits";
+import {
+  HANDLE_CLAIMS_PER_HOUR,
+  VISITOR_KINDS,
+} from "../../lib/contracts/rate-limits";
 import type {
   RateLimitKind,
   SendLimitKind,
@@ -386,8 +389,9 @@ const DAY_S = 24 * 60 * 60;
  * id), `/takedown`'s receipts per address (lowercased, as the request
  * is), a runner's "delete scheduled" emails (their id), Au5's
  * confirmed asks and confirm links per address (lowercased), the
- * Google sign-ins started across everyone (`GLOBAL_SUBJECT`), and the
- * shared brand and product rows a runner's saves make (their id).
+ * Google sign-ins started across everyone (`GLOBAL_SUBJECT`), the
+ * shared brand and product rows a runner's saves make (their id), and
+ * a runner's handle claims (their id).
  */
 const LIMIT_OF = {
   "resend-visitor": {
@@ -407,6 +411,7 @@ const LIMIT_OF = {
     limit: NEW_SHARED_ROWS_PER_RUNNER_PER_DAY,
     windowS: DAY_S,
   },
+  "handle-runner": { limit: HANDLE_CLAIMS_PER_HOUR, windowS: SEND_WINDOW_S },
 } as const satisfies Partial<
   Record<RateLimitKind, Readonly<{ limit: number; windowS: number }>>
 >;
