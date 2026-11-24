@@ -433,12 +433,14 @@ pull requests more.
    decomposition is coming that would redo them.
 3. **State the direction and hold it with a number** (S). "No module
    reaches itself through service code." Outside it: each `functions.ts`
-   and component (the wiring), and `account/purge` and `dispatch`
-   (composition). A short list of floor units is counted apart from their
-   parent, so that a module `ops` imports may import them: `ops/outbox`,
-   `ops/sentry`, `safety/rules`, and no more. The number is 4 statements
-   today (finding 2) and each has a remedy. It needs a D-row beside D-201
-   and a grant in the owner's files (owner question 1).
+   (the wiring), and `account/purge` and `dispatch` (composition).
+   Components and type-only imports are held to it. A short list of floor
+   units is counted apart from their parent, so that a module `ops`
+   imports may import them: `ops/outbox`, `ops/sentry`, `safety/rules`,
+   and no more. The number is 4 statements today with nothing counted
+   apart (finding 2), and 3 once the floor units are (`layered.json`'s
+   score). Each has a remedy. It needs a D-row beside D-201 and a grant
+   in the owner's files (owner question 1).
 4. **The backlog types go to `src/lib/contracts`** (S), in the lane that
    does design 258 proposal 2. It ends
    `src/modules/runs/components/VerdictBacklog.tsx:22`.
@@ -570,6 +572,10 @@ table-writer list under `test/architecture/`.
   released by it.
 
 ## Questions for the owner
+
+The owner answered these on 2026-11-23. The rulings are in design 261,
+and two of them go further than the recommendations here (questions 4
+and 5).
 
 1. **A direction between modules.** (a) None, as today. (b) One sentence
    in `docs/architecture.md`, held by nothing. (c) A number in the ratchet,
