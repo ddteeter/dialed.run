@@ -69,6 +69,12 @@ views {
       notes '''
         **Timing boundary: the week has passed.** The daily firing at 12:00 UTC purges what is due.
       '''
+    }
+    // source: src/modules/account/purge/purge.ts purgeDueAccounts, claimDue, PURGE_LEASE_S
+    cf.app.account.purge -> cf.coreDb 'claims the account, and purges it step by step' {
+      notes '''
+        **Guard: claim, then work.** Once claimed, Keep is too late.
+      '''
       navigateTo deletionPurge
     }
   }

@@ -527,6 +527,17 @@ One PR a flow, each drawn as the code stands on `main` when it branched.
   writer, so the story uses Remove photo as its example and names the
   other kinds in the first note. New entry point
   `cf.app.closet.removePhoto`.
+- **`flows/removals.c4`** (asked for on #932 by the owner):
+  `removalStory` (filing, the hold, the confirm step, the alerts and the
+  Desk's reminder), `removalDecision` (Take it down and Decline, each an
+  `opt`), `copyrightHoldStory` (a copyright takedown's hold, a
+  counter-notice, and the daily sweep's restore, purge and clean-up) and
+  `removalRecovery` (a decision lost between its two batches, a purge
+  that stops part way, a sweep that throws, a failed fast path or page
+  purge). A new `requester` actor, since a request needs no account; new
+  entry points `cf.app.safety.{takedownRequest, confirmRequest,
+counterNotice}` and `cf.app.feed.{decideRemoval, copyrightTakedown}`.
+  The public photos' side stays in `publicPhotosWithdraw`, which `removalStory` links to.
 
 ## Open questions
 
