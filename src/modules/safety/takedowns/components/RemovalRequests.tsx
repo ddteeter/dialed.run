@@ -72,6 +72,8 @@ type Block = (input: { data: { requestId: string } }) => Promise<BlockResult>;
  */
 function blockedSaid(result: BlockResult): string {
   if (result.status === "not_found") return "That request is no longer open.";
+  // C6: a marked guess, through the coordinator's wording round.
+  if (result.status === "decided") return "Someone already decided this request.";
   const { declined } = result;
   return `Blocked. ${String(declined)} ${declined === 1 ? "request" : "requests"} declined.`;
 }

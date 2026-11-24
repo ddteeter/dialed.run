@@ -391,6 +391,7 @@ function pending(
     due: "Due in 31h",
     holdState: "held",
     relatedIds: [],
+    isConfirmed: false,
     otherPhotos: { photos: [], total: 0, handle: undefined },
     subjectPhotoKey: undefined,
     ...overrides,
@@ -409,6 +410,7 @@ function blockedAnswer(declinedIds: string[]) {
     status: "blocked" as const,
     declined: declinedIds.length,
     declinedIds,
+    keysBlocked: ["ip" as const],
   };
 }
 
