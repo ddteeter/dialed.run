@@ -40,8 +40,8 @@ dropped, because it means keeping up with model releases by hand.)
    - report hide: **the larger of 10/h and 4× the busiest hour of the
      trailing 28 days that stayed under the ceiling in force during it,
      rising at most twofold from one hour to the next**. An hour held at
-     the ceiling raises nothing. The baseline is read only once the hour is
-     over 10.
+     the ceiling raises nothing. The baseline is read only once the hour
+     reaches 10.
      It counts only reports on entries and photos, the types a report can
      hide (owner, 2026-10-31). A flood of profile or product reports can't
      pause hides of posts, and still shows in Review's waiting count.

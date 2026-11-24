@@ -110,6 +110,12 @@ queues pushes; you never wait for another lane yourself.
   clean, `conflicting` (with the files in `failing`) when it would not.
   Both mean: rebase onto `origin/main`, then ship again. The gate measures
   from the merge-base, so local `main` does not need to be current.
+- `ship` titles a new PR from `--title=<t>`, or from a `# <title>` first
+  line of the body file (which it strips from the body), and otherwise
+  from the last commit's subject. Give the title whenever the branch has
+  more than one commit, so it names the whole change, prefixed by the
+  diff's main kind. `ship` warns when the last commit's type differs
+  from the branch's.
 - `ship` force-pushes only when asked. A branch you rebased after its first
   push ships with `npm run ship -- --body-file=<f> --force-with-lease`;
   without the flag, git's rejection comes back as `error`.
