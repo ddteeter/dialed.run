@@ -49,6 +49,7 @@ function ReviewPage() {
     requests,
     requestsPending,
     quarantine,
+    quarantineTotal,
     holds,
     bursts,
     burstsSince,
@@ -100,6 +101,7 @@ function ReviewPage() {
       {/* C12: what is held for NCMEC, and recording its report. */}
       <QuarantineRecords
         records={quarantine}
+        total={quarantineTotal}
         recordReport={recordNcmecReportAction}
       />
     </DeskPage>

@@ -92,6 +92,7 @@ import { burstsToRelease, releaseHolds } from "./review/release";
 import { fileReport } from "./reports/reports";
 import { pendingReviewQueue } from "./review/review";
 import {
+  quarantineCount,
   quarantinedContentFor,
   recordNcmecReport,
 } from "./takedowns/quarantine";
@@ -179,6 +180,7 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
       requestsPending: await pendingTakedownCount(coreDb()),
       // C12: what is held for NCMEC, and whether it has been reported.
       quarantine: await quarantinedContentFor(coreDb(), adminId),
+      quarantineTotal: await quarantineCount(coreDb(), adminId),
       // D-130: what a copyright takedown is holding, and its counter-notice.
       holds: await heldCopyrightContent(coreDb()),
       // Design 164: each cause's holds still waiting from the last day,

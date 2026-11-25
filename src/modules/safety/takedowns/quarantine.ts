@@ -15,12 +15,12 @@ import { z } from "zod";
 
 import { session, user } from "../../../db/schema-auth";
 import { quarantinedContent, userProfiles } from "../../../db/schema-core";
-import { env } from "../../../env";
+import { env, primaryCoreDb } from "../../../env";
 import { quarantineKeyFor } from "../../../lib/entry-photo-key";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 
-import { requireAdmin } from "../rules";
+import { moderationActionInsertWhere, requireAdmin } from "../rules";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -118,8 +118,13 @@ The most sessions an uploader snapshot keeps.
 export const SNAPSHOT_SESSIONS = 50;
 
 /**
- * What is in quarantine, newest first — for an admin only. Anyone else
- * is refused with `AdminRequiredError`, before anything is read.
+ * What is in quarantine — for an admin only. Anyone else is refused with
+ * `AdminRequiredError`, before anything is read.
+ *
+ * Every record still owed its report comes first, newest first, then the
+ * reported ones, newest first: a record waiting on a report is never
+ * pushed off the page by newer ones. The table holds a year or so of
+ * records, so the sort reads all of them.
  *
  * The record's columns without its two snapshots: this is what Review
  * lists, and the snapshots are the content itself, which has no business
@@ -140,8 +145,23 @@ export async function quarantinedContentFor(db: Db, viewerId: string) {
       ncmecReportId: quarantinedContent.ncmecReportId,
     })
     .from(quarantinedContent)
-    .orderBy(desc(quarantinedContent.quarantinedAt))
+    .orderBy(
+      desc(sql`${quarantinedContent.ncmecReportedAt} is null`),
+      desc(quarantinedContent.quarantinedAt),
+    )
     .limit(QUARANTINE_PAGE);
+}
+
+/**
+ * How many records are in quarantine, for Review's head beside the page
+ * `quarantinedContentFor` lists — for an admin only, refused as it is.
+ */
+export async function quarantineCount(
+  db: Db,
+  viewerId: string,
+): Promise<number> {
+  requireAdmin(viewerId);
+  return db.$count(quarantinedContent);
 }
 
 export type QuarantineSummary = Awaited<
@@ -175,10 +195,11 @@ export interface NcmecReport {
  *
  * The time is when the operator records it, not a time they type: the
  * record is made after the report is filed, so its year ends no earlier
- * than the report's would. Admin-only, refused before anything is
- * written. Says `gone` when there is no record by that id (already
- * purged, or never), and otherwise the record's report and clock as they
- * now stand.
+ * than the report's would. Each recording writes its own audit row, in
+ * the same batch, so every report id ever given is kept with who gave
+ * it. Admin-only, refused before anything is written. Says `gone` when
+ * there is no record by that id (already purged, or never), and otherwise
+ * the record's report and clock as they now stand.
  */
 export async function recordNcmecReport(
   db: Db,
@@ -187,26 +208,68 @@ export async function recordNcmecReport(
   now = nowSeconds(),
 ) {
   requireAdmin(viewerId);
-  const reportedAt = sql<number>`coalesce(${quarantinedContent.ncmecReportedAt}, ${now})`;
-  const [recorded] = await db
-    .update(quarantinedContent)
-    .set({
-      ncmecReportedAt: reportedAt,
-      retainUntil: sql<number>`max(${quarantinedContent.retainUntil}, ${reportedAt} + ${QUARANTINE_RETENTION_SECONDS})`,
-      // Given, it replaces what was there, so a mistyped id can be
-      // corrected; omitted, it leaves it, as drizzle sets no column whose
-      // value is `undefined`.
-      ncmecReportId: report.reportId,
+  const [record] = await db
+    .select({
+      subjectType: quarantinedContent.subjectType,
+      subjectId: quarantinedContent.subjectId,
+      uploaderId: quarantinedContent.uploaderId,
     })
-    .where(eq(quarantinedContent.id, report.recordId))
-    .returning({
-      ncmecReportedAt: quarantinedContent.ncmecReportedAt,
-      ncmecReportId: quarantinedContent.ncmecReportId,
-      retainUntil: quarantinedContent.retainUntil,
-    });
-  return recorded === undefined
+    .from(quarantinedContent)
+    .where(eq(quarantinedContent.id, report.recordId));
+  if (record === undefined) return { outcome: "gone" } as const;
+  const reportedAt = sql<number>`coalesce(${quarantinedContent.ncmecReportedAt}, ${now})`;
+  const [recorded] = await db.batch([
+    db
+      .update(quarantinedContent)
+      .set({
+        ncmecReportedAt: reportedAt,
+        retainUntil: sql<number>`max(${quarantinedContent.retainUntil}, ${reportedAt} + ${QUARANTINE_RETENTION_SECONDS})`,
+        // Given, it replaces what was there, so a mistyped id can be
+        // corrected; omitted, it leaves it, as drizzle sets no column whose
+        // value is `undefined`. Every id given stays in its audit row.
+        ncmecReportId: report.reportId,
+      })
+      .where(eq(quarantinedContent.id, report.recordId))
+      .returning({
+        ncmecReportedAt: quarantinedContent.ncmecReportedAt,
+        ncmecReportId: quarantinedContent.ncmecReportId,
+        retainUntil: quarantinedContent.retainUntil,
+      }),
+    ncmecReportAudit(db, viewerId, report, record),
+  ]);
+  const [stands] = recorded;
+  return stands === undefined
     ? ({ outcome: "gone" } as const)
-    : ({ outcome: "recorded", ...recorded } as const);
+    : ({ outcome: "recorded", ...stands } as const);
+}
+
+/**
+ * The audit row of one recording, in its batch: who recorded it, on the
+ * record's subject and uploader, with the report id given (empty when
+ * none) as its reason. Written only while the record exists, so a record
+ * purged between the read and the batch records nothing.
+ */
+function ncmecReportAudit(
+  db: Db,
+  viewerId: string,
+  report: NcmecReport,
+  record: Pick<
+    typeof quarantinedContent.$inferSelect,
+    "subjectType" | "subjectId" | "uploaderId"
+  >,
+) {
+  return moderationActionInsertWhere(
+    db,
+    {
+      actorId: viewerId,
+      action: "ncmec_report",
+      subjectType: record.subjectType,
+      subjectId: record.subjectId,
+      subjectOwnerId: record.uploaderId,
+      reason: report.reportId ?? "",
+    },
+    sql`exists (select 1 from ${quarantinedContent} where ${eq(quarantinedContent.id, report.recordId)})`,
+  );
 }
 
 /**
@@ -277,8 +340,10 @@ export function preservedKeysOf(snapshot: string): SnapshotKeys {
 export interface QuarantinePurge {
   readonly purged: number;
   /**
-   * Records this run claimed and could not purge, with why — for the
-   * caller to report (law 6). Each stays, due again when its lease passes.
+   * What this run could not finish, with why — for the caller to report
+   * (law 6): a record by its id, which stays and is due again when its
+   * lease passes, or `unlisted-copies` for the sweep of copies no record
+   * lists, which runs again the next day.
    */
   readonly failed: readonly { readonly id: string; readonly error: unknown }[];
 }
@@ -332,43 +397,152 @@ export async function claimQuarantine(
 }
 
 /**
- * The year is up: delete a quarantine's preserved copies and its record
- * (decision D-70: silent, everything kept a year, then gone). Nobody is
- * told — the uploader never was.
+ * The year is up: delete a quarantine's record, then the preserved copies
+ * it names that no other record lists (decision D-70: silent, everything
+ * kept a year, then gone). Nobody is told — the uploader never was.
  *
- * **Reconciliation, not an outbox (law 8c).** The record is the durable
- * marker that copies are still owed a delete, and the daily firing
- * re-drives it: the copies go first and the record last, so a failure
- * anywhere leaves the record to be claimed again once its lease passes,
- * and a re-run's delete of copies already gone is a no-op in R2.
+ * **The delete is held to the claim.** The record goes only while its
+ * `retain_until` is still the lease this purge set, so a report recorded
+ * after the claim (which moves it a year on) keeps the record, and with
+ * it every copy it lists.
  *
- * **Named, never listed.** Two records can share an entry's prefix — a
- * photo quarantined, then the rest of the entry — and each must go on its
- * own date, so a record deletes exactly the copies its snapshot names.
+ * **Copies go by one rule:** a copy under the quarantine prefix stays
+ * while any record lists it, and for `QUARANTINE_UNLISTED_GRACE_SECONDS`
+ * after R2 says it was written, then the sweep deletes it
+ * (`sweepUnlistedCopies`). The purge deletes the copies a record it just
+ * deleted listed; any it could not are unlisted now, and the sweep takes
+ * them (law 8c: the copy itself is the marker, and the next firing
+ * re-drives it).
  *
  * The `moderation_actions` row stays: it says who acted, when and why, and
  * holds none of the content.
  */
 export async function purgeExpiredQuarantine(
   db: Db,
-  media: Pick<R2Bucket, "delete"> = env.MEDIA,
+  media: Pick<R2Bucket, "delete" | "list"> = env.MEDIA,
   now = nowSeconds(),
 ): Promise<QuarantinePurge> {
+  const lease = now + QUARANTINE_PURGE_LEASE_SECONDS;
   const claimed = await claimQuarantine(db, await dueQuarantine(db, now), now);
   const failed: { id: string; error: unknown }[] = [];
+  let purged = 0;
   for (const record of claimed) {
-    const read = preservedKeysOf(record.photosSnapshot);
     try {
-      if (!read.ok) {
-        throw new Error(`quarantine snapshot unreadable: ${read.problem}`);
-      }
-      await media.delete(read.keys);
-      await db
-        .delete(quarantinedContent)
-        .where(eq(quarantinedContent.id, record.id));
+      purged += await purgeClaimed(db, media, record, lease);
     } catch (error) {
       failed.push({ id: record.id, error });
     }
   }
-  return { purged: claimed.length - failed.length, failed };
+  failed.push(...(await sweepUnlistedCopies(media, now)));
+  return { purged, failed };
+}
+
+/**
+ * One claimed record: its copies' keys read from the claim, the record
+ * deleted while it still holds this claim's lease, then the copies it
+ * listed that no record lists now. Says how many records it deleted: 1,
+ * or 0 for one reported since the claim. Throws for a snapshot it cannot
+ * read, keeping the record.
+ */
+async function purgeClaimed(
+  db: Db,
+  media: Pick<R2Bucket, "delete">,
+  record: { id: string; photosSnapshot: string },
+  lease: number,
+): Promise<number> {
+  const read = preservedKeysOf(record.photosSnapshot);
+  if (!read.ok) {
+    throw new Error(`quarantine snapshot unreadable: ${read.problem}`);
+  }
+  const deleted = await db
+    .delete(quarantinedContent)
+    .where(
+      and(
+        eq(quarantinedContent.id, record.id),
+        eq(quarantinedContent.retainUntil, lease),
+      ),
+    )
+    .returning({ id: quarantinedContent.id });
+  if (deleted.length === 0) return 0;
+  const unlisted = await copiesNoRecordLists(read.keys);
+  if (unlisted.length > 0) await media.delete(unlisted);
+  return 1;
+}
+
+/**
+ * How long a copy no record lists is kept after R2 says it was written:
+ * long enough that a quarantine still on its way to its batch, which
+ * takes seconds, is never swept from under it. A number the owner can
+ * retune.
+ */
+export const QUARANTINE_UNLISTED_GRACE_SECONDS = 24 * 60 * 60;
+
+/**
+ * The most pages of the quarantine prefix one firing lists, at
+ * `SWEEP_PAGE` objects a page. A prefix longer than that is reported,
+ * not swept further.
+ */
+export const QUARANTINE_SWEEP_PAGES = 20;
+
+/**
+The objects one page of the sweep lists.
+*/
+const SWEEP_PAGE = 100;
+
+/**
+ * Deletes the copies under the quarantine prefix that no record lists and
+ * that are older than the grace: a quarantine whose batch failed or was
+ * refused, or a purge whose copy delete failed. Never throws; what went
+ * wrong comes back as `unlisted-copies`.
+ */
+async function sweepUnlistedCopies(
+  media: Pick<R2Bucket, "delete" | "list">,
+  now: number,
+): Promise<QuarantinePurge["failed"]> {
+  const writtenBy = now - QUARANTINE_UNLISTED_GRACE_SECONDS;
+  try {
+    let cursor: string | undefined;
+    for (let page = 0; page < QUARANTINE_SWEEP_PAGES; page += 1) {
+      const listed = await media.list({
+        prefix: quarantineKeyFor(""),
+        limit: SWEEP_PAGE,
+        ...(cursor !== undefined && { cursor }),
+      });
+      const old = listed.objects
+        .filter((object) => object.uploaded.getTime() / 1000 <= writtenBy)
+        .map((object) => object.key);
+      const unlisted = await copiesNoRecordLists(old);
+      if (unlisted.length > 0) await media.delete(unlisted);
+      if (!listed.truncated) return [];
+      cursor = listed.cursor;
+    }
+    throw new Error(`more copies than ${String(QUARANTINE_SWEEP_PAGES)} pages`);
+  } catch (error: unknown) {
+    return [{ id: "unlisted-copies", error }];
+  }
+}
+
+/**
+ * Of these copies, the ones no record lists, read from the primary. Every
+ * quarantine of a subject copies its photos under the same keys, so a
+ * copy a record lists is that record's, and stays. A record lists a copy
+ * when its snapshot holds the copy's key as a JSON string.
+ */
+export async function copiesNoRecordLists(
+  copies: readonly string[],
+): Promise<string[]> {
+  const db = primaryCoreDb();
+  const snapshot = quarantinedContent.photosSnapshot;
+  const [first, ...rest] = copies.map((key) =>
+    db
+      .select({ id: quarantinedContent.id })
+      .from(quarantinedContent)
+      .where(sql`instr(${snapshot}, ${JSON.stringify(key)}) > 0`)
+      .limit(1),
+  );
+  if (first === undefined) return [];
+  const listed = await db.batch([first, ...rest]);
+  return listed.flatMap((rows, index) =>
+    rows.length > 0 ? [] : copies.slice(index, index + 1),
+  );
 }
