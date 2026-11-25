@@ -63,6 +63,7 @@ import {
 import {
   classifierFromEnv,
   dayHeadroom,
+  declineLapsedRequests,
   HEADROOM_WARN_SHARE,
   pendingReviewCount,
   quietScreenerWeek,
@@ -278,6 +279,9 @@ async function runCron(
         // C6's 40-hour reminder: hourly, so it lands before the deadline
         // the daily digest could miss (`removal-reminders.ts`).
         () => oweRemovalReminders(coreDb()),
+        // A removal request still waiting on its confirm past its 48
+        // hours is declined (`takedown-requests.ts`).
+        () => declineLapsedRequests(coreDb()),
         () => drainOwedEmail(anomalies),
         () => drainProductLinks(anomalies, upkeep),
         // Better Auth's expired sign-in states and reset links, every

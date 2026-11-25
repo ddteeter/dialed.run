@@ -467,6 +467,16 @@ const CONTENT: {
       foot: "Sent to every operator, once per removal, 8 hours before it's due.",
     };
   },
+  removal_reminder_summary: (template, { origin }) => {
+    // C6, for the requests that did not alert one by one.
+    const requests = template.count === 1 ? "request" : "requests";
+    return {
+      subject: `${String(template.count)} removal ${requests} still undecided`,
+      body: `${String(template.count)} removal ${requests} that came in while emails were paused reached 40 of their 48 hours in the last hour. Nothing changes until someone decides each one in Review.`,
+      button: { label: "Open Review", href: `${origin}/desk/review` },
+      foot: "Sent to every operator, once an hour while any are due.",
+    };
+  },
   removal_request_received: (template, { origin }) => {
     const due = utcMinute(template.dueAt);
     return {

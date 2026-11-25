@@ -12,7 +12,9 @@
  *
  * Only a request that alerted the operators is one to remind them of: a
  * blocked requester's alerts nobody, and one waiting on its requester's
- * confirm alerts nobody until it is confirmed (design 137).
+ * confirm alerts nobody until it is confirmed (design 137). One that
+ * alerted only through the valve's hourly email is reminded of the same
+ * way, by a count (`isOneByOne` false).
  */
 import { and, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
@@ -36,11 +38,14 @@ export const REMOVAL_REMINDER_LEAD_SECONDS = 8 * 60 * 60;
 
 /**
  * One undecided removal: `key` names it for the reminder's dedupe key,
- * and `dueAt` is its deadline.
+ * `dueAt` is its deadline, and `isOneByOne` whether it alerted every
+ * operator one by one (every report's Review row did; a request did
+ * where it newly hid its subject or the hour's allowance had room).
  */
 export interface UndecidedRemoval {
   readonly key: string;
   readonly dueAt: number;
+  readonly isOneByOne: boolean;
 }
 
 /**
@@ -61,7 +66,12 @@ export async function undecidedRemovalsDue(
     inArray(takedownRequests.holdState, ["held", "valve"]),
   );
   const requests = await db
-    .select({ id: takedownRequests.id, dueAt: takedownRequests.dueAt })
+    .select({
+      id: takedownRequests.id,
+      dueAt: takedownRequests.dueAt,
+      hidAt: takedownRequests.hidAt,
+      alertedAt: takedownRequests.alertedAt,
+    })
     .from(takedownRequests)
     .where(
       and(
@@ -91,10 +101,15 @@ export async function undecidedRemovalsDue(
       ),
     );
   return [
-    ...requests.map((row) => ({ key: `request:${row.id}`, dueAt: row.dueAt })),
+    ...requests.map((row) => ({
+      key: `request:${row.id}`,
+      dueAt: row.dueAt,
+      isOneByOne: row.hidAt !== null || row.alertedAt !== null,
+    })),
     ...rows.map((row) => ({
       key: `${row.subjectType}:${row.subjectId}`,
       dueAt: row.dueAt,
+      isOneByOne: true,
     })),
   ];
 }

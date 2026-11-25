@@ -14,7 +14,7 @@ import { z } from "zod";
 
 import { ulidSchema } from "../ids";
 import { withoutHiddenControls } from "./common";
-import { usernameSchema } from "./garments";
+import { EMAIL_MAX_LENGTH, usernameSchema } from "./garments";
 
 export const SIGNATURE_MAX = 120;
 export const LOCATION_MAX = 2000;
@@ -38,6 +38,9 @@ export const takedownRequestSchema = z.object({
   email: z
     .string()
     .min(1, TAKEDOWN_COPY.email)
+    // The longest address a mail path carries; past it the pattern never
+    // runs, since a pipe stops at an issue on its left.
+    .max(EMAIL_MAX_LENGTH, TAKEDOWN_COPY.emailShape)
     .pipe(z.email(TAKEDOWN_COPY.emailShape)),
   signature: z
     .string()

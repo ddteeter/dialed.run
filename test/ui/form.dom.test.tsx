@@ -75,8 +75,10 @@ function Harness({
   onSuccess,
   refusal,
   withLabels = true,
+  successMessage = "Saved.",
 }: Readonly<{
   action: (values: z.output<typeof schema>) => Promise<unknown>;
+  successMessage?: string | ((result: unknown) => string);
   onSuccess?: (() => void) | undefined;
   refusal?:
     | {
@@ -94,7 +96,7 @@ function Harness({
   const form = useFormSubmit({
     schema,
     action,
-    successMessage: "Saved.",
+    successMessage,
     ...(withLabels && { labels: { name: "Name", brand: "Brand" } }),
     ...(onSuccess !== undefined && { onSuccess }),
     ...(refusal !== undefined && { refusal }),
@@ -810,6 +812,25 @@ describe("announce, then move (R-44)", () => {
       expect(didRun).toBe(true);
     });
     expect(statusWhenSuccessRan).toBe("Saved.");
+  });
+});
+
+describe("a success sentence read from the answer", () => {
+  it("says what the action answered", async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness
+        action={() => Promise.resolve(3)}
+        successMessage={(result) => `Saved ${String(result)}.`}
+      />,
+    );
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(/^Saved 3\.$/u);
+    });
   });
 });
 

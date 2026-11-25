@@ -44,8 +44,15 @@ export const Route = createFileRoute("/desk/review")({
 function ReviewPage() {
   const today = useDeskToday();
   const router = useRouter();
-  const { queue, requests, quarantine, holds, bursts, burstsSince } =
-    Route.useLoaderData();
+  const {
+    queue,
+    requests,
+    requestsPending,
+    quarantine,
+    holds,
+    bursts,
+    burstsSince,
+  } = Route.useLoaderData();
 
   return (
     <DeskPage current="review">
@@ -59,10 +66,14 @@ function ReviewPage() {
       {/* Design 136: `/takedown` requests, soonest due first. */}
       <RemovalRequests
         requests={requests}
+        pending={requestsPending}
         asOf={today.asOf}
         decide={decideRemovalRequestAction}
         block={blockTakedownRequesterAction}
         decideMatch={decideGarmentMatchAction}
+        onChanged={() => {
+          void router.invalidate();
+        }}
       />
       <ReviewQueue
         queue={queue}

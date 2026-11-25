@@ -17,8 +17,12 @@ import { z } from "zod";
 
 import { communityRuleSchema } from "./community-rules";
 import { exportTokenSchema } from "./data-export";
+import { EMAIL_MAX_LENGTH } from "./garments";
 
-export const address = z.email();
+/**
+A recipient's address, no longer than any mail path carries.
+*/
+export const address = z.email().max(EMAIL_MAX_LENGTH);
 const link = z.url({ protocol: /^https?$/u });
 
 /**
@@ -249,6 +253,16 @@ export const removalRequested = emailKind("removal_requested", {
  */
 export const removalReminder = emailKind("removal_reminder", {
   dueAt: z.int().min(0),
+});
+
+/**
+ * C6 for the removal requests that did not alert one by one when filed
+ * (the valve, or past the hour's one-by-one allowance): one per operator
+ * per clock hour, saying how many reached their 40th hour in it. Operator
+ * mail, so always sent.
+ */
+export const removalReminderSummary = emailKind("removal_reminder_summary", {
+  count: z.int().min(1),
 });
 
 /**

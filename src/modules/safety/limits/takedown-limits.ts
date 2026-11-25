@@ -106,9 +106,15 @@ export function holdStateSql(
   now: number,
   subject: TakedownSubject | undefined,
 ): SQL {
-  const blocked = sql`exists (select 1 from ${takedownBlocks} where ${inArray(takedownBlocks.key, keysOf(keys))})`;
   const open = sql`(select count(*) from ${takedownRequests} where ${and(requesterMatches(keys), eq(takedownRequests.status, "pending"))})`;
-  return sql`(case when ${blocked} then 'blocked' when ${valveShutSql(now, subject)} then 'valve' when ${open} >= ${TAKEDOWN_CAP} then 'confirm' else 'held' end)`;
+  return sql`(case when ${blockedSql(keys)} then 'blocked' when ${valveShutSql(now, subject)} then 'valve' when ${open} >= ${TAKEDOWN_CAP} then 'confirm' else 'held' end)`;
+}
+
+/**
+Whether either of the requester's keys is in `takedown_blocks`, as the statement runs.
+*/
+export function blockedSql(keys: RequesterKeys): SQL {
+  return sql`exists (select 1 from ${takedownBlocks} where ${inArray(takedownBlocks.key, keysOf(keys))})`;
 }
 
 /**

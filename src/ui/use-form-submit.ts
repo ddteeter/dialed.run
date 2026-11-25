@@ -314,9 +314,10 @@ export interface UseFormSubmitOptions<TSchema extends z.ZodType, TResult> {
   action: (values: z.output<TSchema>) => Promise<TResult>;
   onSuccess?: (data: TResult) => void | Promise<void>;
   /**
-  The live-region sentence on success, e.g. "Run logged."
-  */
-  successMessage: string;
+   * The live-region sentence on success, e.g. "Run logged.", or one read
+   * from what the action answered, for a sentence that counts what it did.
+   */
+  successMessage: string | ((data: TResult) => string);
   /**
   Field name -> human label, for the summary rows.
   */
@@ -591,7 +592,11 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
           return;
         }
         setFieldErrors({});
-        setStatus(successMessage);
+        setStatus(
+          typeof successMessage === "string"
+            ? successMessage
+            : successMessage(result),
+        );
         // The submission is over at this point, and the guard is
         // per-submission rather than a latch — so release it before the
         // announce-and-move below, which is aftermath rather than part of

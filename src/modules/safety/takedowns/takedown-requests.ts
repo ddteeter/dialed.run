@@ -18,6 +18,7 @@ import {
   exists,
   inArray,
   isNull,
+  lt,
   ne,
   notExists,
   or,
@@ -66,9 +67,12 @@ import { ipKey, requesterKey } from "./requester-key";
 import type { HoldState } from "../limits";
 import {
   alertRoomSql,
+  blockedSql,
   confirmTokenHash,
+  counted,
   holdStateSql,
   newConfirmToken,
+  requestHolds,
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
   valveShutSql,
@@ -178,6 +182,7 @@ export async function fileTakedownRequest<Attempt>(
   const subject = await filedSubjectOf(db, input.location);
   const row = rowOf(id);
   const hid = holds(row.newlyHid(now));
+  const held = holds(row.hid(now));
   const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
   await db.batch([
     db
@@ -200,7 +205,7 @@ export async function fileTakedownRequest<Attempt>(
       })
       .onConflictDoNothing(),
     ...decisionWrites(db, row.written, subject, now),
-    ...holdWrites(db, subject, hid),
+    ...holdWrites(db, subject, held),
     ...told,
     ...operatorAlerts(deps.oweWhere, { id, dueAt, subject }, row.alerts(now)),
     ...valveAlerts(deps.oweWhere, now, row.owesSummary(now)),
@@ -228,7 +233,9 @@ export async function fileTakedownRequest<Attempt>(
  * 3. the state `valve` for one that held nothing past that room. One that
  *    holds its subject keeps `held` and `held_at`; both owe the valve's
  *    hourly alert (`row.owesSummary`);
- * 4. no state for a link that is not ours, which holds nothing.
+ * 4. no state for a link that is not ours, which holds nothing;
+ * 5. `declined`, with the block's reason and no operator, for a blocked
+ *    requester's: it is recorded, and waits for nobody.
  *
  * One statement each, so each counts what the one before it wrote.
  */
@@ -279,6 +286,14 @@ function decisionWrites(
             .where(mayAct),
         ]
       : []),
+    db
+      .update(takedownRequests)
+      .set({
+        status: "declined",
+        declineReason: BLOCKED_REASON,
+        resolvedAt: now,
+      })
+      .where(and(row, eq(takedownRequests.holdState, "blocked"))),
   ];
 }
 
@@ -372,11 +387,18 @@ function subjectOutOfView(subject: TakedownSubject): SQL {
 }
 
 /**
-Whether the subject is in a state a hold moves from: still public.
-*/
+ * Whether the subject is in a state a hold moves from and on view: still
+ * public, and a photo only while its kit is too. A photo still passed on
+ * a kit out of view is out of view, so a request holds it without
+ * hiding anything new (`holdWrites` then hides the photo's own row).
+ */
 function subjectPublic(subject: TakedownSubject): SQL {
   const { table, where } = holdable(subject);
-  return sql`exists (select 1 from ${table} where ${where})`;
+  const onView =
+    subject.subjectType === "photo"
+      ? sql` and exists (select 1 from ${outfitEntries} where ${qualified(outfitEntries, outfitEntries.id)} = ${qualified(entryPhotos, entryPhotos.entryId)} and ${qualified(outfitEntries, outfitEntries.moderationStatus)} = ${HOLD_FROM_STATUS.entry})`
+      : sql``;
+  return sql`exists (select 1 from ${table} where ${where}${onView})`;
 }
 
 /**
@@ -588,7 +610,10 @@ function valveAlerts(
  * person will look". Only from a public state — never over a removal,
  * and never over a photo the classifier flagged — so a request can take
  * a subject out of sight and never bring one back; and only where the
- * row as written says it hid (`onlyIf`).
+ * row as written says it held (`onlyIf`). Where it held a subject already
+ * out of view this matches nothing, but for a photo still passed on a kit
+ * out of view, which it hides, so the photo stays hidden when the kit
+ * comes back, until the request is decided.
  */
 function holdWrites(
   db: Db,
@@ -658,7 +683,7 @@ const SUBJECT_ROWS = {
  *   nothing);
  * - no review row is still open on the subject (reports hid it too, and
  *   that is a person's call still to make); and
- * - no other request for it is still pending.
+ * - no other request for it still holds it (`requestHolds`).
  */
 export function releaseHoldWrites(
   db: Db,
@@ -675,16 +700,17 @@ export function releaseHoldWrites(
     eq(reviewQueue.subjectId, subject.subjectId),
     inArray(reviewQueue.status, ["pending", "reviewing"]),
   );
-  const otherPending = and(
-    eq(takedownRequests.subjectType, subject.subjectType),
-    eq(takedownRequests.subjectId, subject.subjectId),
-    eq(takedownRequests.status, "pending"),
-    ne(takedownRequests.id, request.id),
+  const otherHolds = requestHolds(
+    sql`${and(
+      eq(takedownRequests.subjectType, subject.subjectType),
+      eq(takedownRequests.subjectId, subject.subjectId),
+      ne(takedownRequests.id, request.id),
+    )}`,
   );
   const when = and(
     exists(rowsWhere(db, takedownRequests, thisDeclined)),
     notExists(rowsWhere(db, reviewQueue, reviewOpen)),
-    notExists(rowsWhere(db, takedownRequests, otherPending)),
+    sql`not ${otherHolds}`,
   );
   return [
     visibilityWrites[subject.subjectType](db, subject.subjectId, {
@@ -805,7 +831,11 @@ export async function confirmTakedownRequest(
   // past them answers as an unknown link (owner, 2026-11-16).
   if (now > request.dueAt) return "not_found";
   const subject = await requestSubjectOf(db, request);
-  const state = sql<HoldState>`(case when ${valveShutSql(now, subject)} then 'valve' else 'held' end)`;
+  const keys = {
+    requesterKey: request.requesterKey ?? requesterKey(request.requesterEmail),
+    ipKey: request.ipKey ?? undefined,
+  };
+  const state = sql<HoldState>`(case when ${blockedSql(keys)} then 'blocked' when ${valveShutSql(now, subject)} then 'valve' else 'held' end)`;
   // This claim's moment, on a request still pending: a second press in
   // the same second whose batch lands after a decision acts on nothing.
   const row = rowOf(
@@ -813,6 +843,7 @@ export async function confirmTakedownRequest(
     sql`(${eq(takedownRequests.confirmedAt, now)} and ${eq(takedownRequests.status, "pending")})`,
   );
   const hid = holds(row.newlyHid(now));
+  const held = holds(row.hid(now));
   const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
   const claim = and(
     eq(takedownRequests.id, request.id),
@@ -825,7 +856,7 @@ export async function confirmTakedownRequest(
       .set({ confirmedAt: now, holdState: state })
       .where(claim),
     ...decisionWrites(db, row.written, subject, now),
-    ...holdWrites(db, subject, hid),
+    ...holdWrites(db, subject, held),
     ...told,
     ...operatorAlerts(
       effects.oweWhere,
@@ -890,8 +921,28 @@ export interface PendingTakedownRequest {
 }
 
 /**
- * The open requests, soonest due first — the order an operator must work
- * them in. Served by `takedown_requests_status_due`.
+ * What Review reads of a pending request: what it shows, and the two keys
+ * that link a requester's others. Not the confirm token's hash.
+ */
+const LISTED_COLUMNS = {
+  id: takedownRequests.id,
+  requesterEmail: takedownRequests.requesterEmail,
+  signature: takedownRequests.signature,
+  location: takedownRequests.location,
+  description: takedownRequests.description,
+  posterUsername: takedownRequests.posterUsername,
+  createdAt: takedownRequests.createdAt,
+  dueAt: takedownRequests.dueAt,
+  holdState: takedownRequests.holdState,
+  requesterKey: takedownRequests.requesterKey,
+  ipKey: takedownRequests.ipKey,
+};
+
+/**
+ * The open requests, those that may act first and then those waiting on a
+ * confirm, each soonest due first — the order an operator must work them
+ * in. Read on `takedown_requests_status_due`; `pendingTakedownCount` says
+ * how many there are past `limit`.
  */
 export async function pendingTakedownRequests(
   db: Db,
@@ -899,10 +950,13 @@ export async function pendingTakedownRequests(
   limit = 50,
 ): Promise<PendingTakedownRequest[]> {
   const rows = await db
-    .select()
+    .select(LISTED_COLUMNS)
     .from(takedownRequests)
     .where(eq(takedownRequests.status, "pending"))
-    .orderBy(asc(takedownRequests.dueAt))
+    .orderBy(
+      sql`${takedownRequests.holdState} is 'confirm'`,
+      asc(takedownRequests.dueAt),
+    )
     .limit(limit);
   // Counted among the rows already read rather than by a query per row:
   // the list is at most `limit` long, and a requester past it is still
@@ -951,6 +1005,39 @@ export async function pendingTakedownRequests(
 }
 
 /**
+How many requests are pending in all, listed or not.
+*/
+export async function pendingTakedownCount(db: Db): Promise<number> {
+  return counted(
+    await db
+      .select({ n: sql<number>`count(*)` })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.status, "pending")),
+  );
+}
+
+/**
+ * A request still waiting on its confirm once its 48 hours are past is
+ * declined, with no operator and no email: its link has lapsed, and it
+ * hid nothing, so it gives nothing back. Re-runnable (law 1).
+ */
+export async function declineLapsedRequests(
+  db: Db,
+  now = nowSeconds(),
+): Promise<void> {
+  await db
+    .update(takedownRequests)
+    .set({ status: "declined", declineReason: LAPSED_REASON, resolvedAt: now })
+    .where(
+      and(
+        eq(takedownRequests.status, "pending"),
+        eq(takedownRequests.holdState, "confirm"),
+        lt(takedownRequests.dueAt, now),
+      ),
+    );
+}
+
+/**
  * The handle of each named kit's author, by kit id, an `IN` list at a
  * time; a kit gone, or an author with no handle yet, is not in it.
  */
@@ -978,7 +1065,11 @@ async function ownersOf(
 }
 
 export type BlockResult =
-  | { readonly status: "blocked"; readonly declined: number }
+  | {
+      readonly status: "blocked";
+      readonly declined: number;
+      readonly declinedIds: readonly string[];
+    }
   | { readonly status: "not_found" };
 
 /**
@@ -1051,10 +1142,19 @@ export async function blockAndDeclineAll(
     ...declines,
     ...giveBacks,
   ]);
-  return { status: "blocked", declined: pending.length };
+  return {
+    status: "blocked",
+    declined: pending.length,
+    declinedIds: pending.map((row) => row.id),
+  };
 }
 
 /**
 The reason a block-and-decline records; no email carries it.
 */
 const BLOCKED_REASON = "Blocked as abuse";
+
+/**
+The reason a request recorded when its confirm link lapsed unpressed; no email carries it.
+*/
+const LAPSED_REASON = "Not confirmed";

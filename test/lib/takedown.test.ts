@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { EMAIL_MAX_LENGTH } from "../../src/lib/contracts/garments";
 import {
   DESCRIPTION_MAX,
   LOCATION_MAX,
@@ -63,6 +64,19 @@ describe("the request form", () => {
     expect(
       messages("description", "a".repeat(DESCRIPTION_MAX + 1)),
     ).toStrictEqual([TAKEDOWN_COPY.descriptionLong]);
+  });
+
+  it("holds the address to the longest one a mail path carries", () => {
+    const domain = "@example.com";
+    const ofLength = (length: number) =>
+      `${"a".repeat(length - domain.length)}${domain}`;
+    expect(messages("email", ofLength(EMAIL_MAX_LENGTH))).toBeUndefined();
+    expect(messages("email", ofLength(EMAIL_MAX_LENGTH + 1))).toStrictEqual([
+      TAKEDOWN_COPY.emailShape,
+    ]);
+    expect(
+      messages("email", `a+${"x".repeat(100_000)}@example.com`),
+    ).toStrictEqual([TAKEDOWN_COPY.emailShape]);
   });
 
   it("trims the name and the link", () => {

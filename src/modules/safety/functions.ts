@@ -21,6 +21,7 @@ import {
   blockAndDeclineAll,
   confirmTakedownRequest,
   fileTakedownRequest,
+  pendingTakedownCount,
   pendingTakedownRequests,
   REMOVAL_REQUESTS_PURGE_KEY,
 } from "./takedowns/takedown-requests";
@@ -174,6 +175,8 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
       // Design 136: `/takedown` requests, which carry their own decision
       // and so are not review rows, waiting above them (round 35 #58e).
       requests: await pendingTakedownRequests(coreDb()),
+      // How many are pending in all, listed or not.
+      requestsPending: await pendingTakedownCount(coreDb()),
       // C12: what is held for NCMEC, and whether it has been reported.
       quarantine: await quarantinedContentFor(coreDb(), adminId),
       // D-130: what a copyright takedown is holding, and its counter-notice.

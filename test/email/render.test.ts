@@ -381,6 +381,27 @@ describe("emailContent", () => {
       },
     ],
     [
+      // C6, counted: one per operator per hour for the rest.
+      { kind: "removal_reminder_summary", count: 3 },
+      {
+        subject: "3 removal requests still undecided",
+        body: "3 removal requests that came in while emails were paused reached 40 of their 48 hours in the last hour. Nothing changes until someone decides each one in Review.",
+        button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
+        foot: "Sent to every operator, once an hour while any are due.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      { kind: "removal_reminder_summary", count: 1 },
+      {
+        subject: "1 removal request still undecided",
+        body: "1 removal request that came in while emails were paused reached 40 of their 48 hours in the last hour. Nothing changes until someone decides each one in Review.",
+        button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
+        foot: "Sent to every operator, once an hour while any are due.",
+        footer: LEGAL,
+      },
+    ],
+    [
       { kind: "removal_request_decided", outcome: "removed" },
       {
         subject: "We removed what you reported",
@@ -561,7 +582,11 @@ describe("emailContent", () => {
 
   it("names the app's own host in the takedown receipt's footer (D-99)", () => {
     const receipt = emailContent(
-      { kind: "removal_request_received", dueAt: 1_791_810_300, isHidden: false },
+      {
+        kind: "removal_request_received",
+        dueAt: 1_791_810_300,
+        isHidden: false,
+      },
       { origin: "https://app.dialed.run" },
     );
     expect(receipt.foot).toBe(
