@@ -1168,6 +1168,19 @@ describe("the rename cap (SA-L02)", () => {
     });
   });
 
+  it("tells a runner with no profile yet when to try again, on no home zone", async () => {
+    // No profile row: refused claims write none, so the count still runs.
+    const userId = newUlid();
+    for (let attempt = 0; attempt < HANDLE_CLAIMS_PER_HOUR; attempt += 1) {
+      await claimUsername(db, userId, "rude_one", FLAGGED);
+    }
+    expect(await claimUsername(db, userId, "kind_one", CLEAR)).toStrictEqual({
+      kind: "busy",
+      until: expect.any(Number) as unknown,
+      viewer: { homeZone: undefined },
+    });
+  });
+
   it("does not count what is answered before the screen: a reserved word, the handle held, a placeholder", async () => {
     const userId = await runner({ username: "side_a" });
     const screen = vi.fn(CLEAR);
