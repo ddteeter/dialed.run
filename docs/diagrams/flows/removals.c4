@@ -62,7 +62,7 @@ views {
     // source: src/modules/dispatch/scheduled.ts runCron, oweRemovalReminders, declineLapsedRequests; src/modules/ops/daily/removal-reminders.ts oweRemovalReminders, summaryOwed, REQUEST_REMINDERS_PER_FIRING; src/modules/safety/reports/removal-reminders.ts undecidedRemovalsDue, REMOVAL_REMINDER_LEAD_SECONDS; src/modules/safety/takedowns/takedown-requests.ts declineLapsedRequests
     cf.app.cronHourly00 -> cf.coreDb 'owes the Desk a reminder 8 hours before a request is due' {
       notes '''
-        **Guard: one reminder a request a person**, by its dedupe key, for a request that alerted one by one, up to the firing's number (`REQUEST_REMINDERS_PER_FIRING`), soonest due first. The rest come in one summary a person an hour, which counts them.
+        **Guard: one reminder a request a person**, by its dedupe key, for a request that alerted one by one, up to the firing\'s number (`REQUEST_REMINDERS_PER_FIRING`), soonest due first. The rest come in one summary a person an hour, which counts them.
 
         Nothing ends a hold on a timer. The due time is a clock for the Desk: the subject stays hidden until a person decides. A request still waiting on its confirm when it is due is declined, since it held nothing.
       '''
