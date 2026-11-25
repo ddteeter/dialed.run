@@ -261,9 +261,21 @@ const emailField = z
   .max(EMAIL_MAX_LENGTH, { error: EMAIL_FORMAT_REFUSAL, abort: true })
   .check(z.email(EMAIL_FORMAT_REFUSAL));
 
+/**
+ * The longest password any field takes: Better Auth's own maximum,
+ * handed to it as `maxPasswordLength` so the server and the forms read one
+ * number. A current password longer than this cannot be anyone's.
+ */
+export const PASSWORD_MAX_LENGTH = 128;
+
+const PASSWORD_TOO_LONG = `Use at most ${String(PASSWORD_MAX_LENGTH)} characters.`;
+
 export const signInSchema = z.object({
   email: emailField,
-  password: z.string().min(1, "Enter your password."),
+  password: z
+    .string()
+    .min(1, "Enter your password.")
+    .max(PASSWORD_MAX_LENGTH, PASSWORD_TOO_LONG),
 });
 
 /**
@@ -286,7 +298,8 @@ const newPasswordField = z
   .min(
     PASSWORD_MIN_LENGTH,
     `Use at least ${String(PASSWORD_MIN_LENGTH)} characters.`,
-  );
+  )
+  .max(PASSWORD_MAX_LENGTH, PASSWORD_TOO_LONG);
 
 /**
  * With invite-only on (D-39), the code is the form's first field; off, it
@@ -341,7 +354,10 @@ export const newPasswordSchema = z.object({ password: newPasswordField });
  * (ACC-7, ACC-8). Only present: whether it matches is the server's to say,
  * in `CURRENT_PASSWORD_WRONG`'s words.
  */
-const currentPasswordField = z.string().min(1, "Enter your current password.");
+const currentPasswordField = z
+  .string()
+  .min(1, "Enter your current password.")
+  .max(PASSWORD_MAX_LENGTH, PASSWORD_TOO_LONG);
 
 /**
  * The server's refusal of a current password, on that field (ACC-7,
@@ -377,7 +393,7 @@ export const changePasswordSchema = z.object({
  * none — so the server takes it as optional.
  */
 export const accountDeletionInput = z.object({
-  currentPassword: z.string().max(1024).optional(),
+  currentPassword: z.string().max(PASSWORD_MAX_LENGTH).optional(),
 });
 
 /**

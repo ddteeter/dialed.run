@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { PASSWORD_MIN_LENGTH } from "../../src/lib/contracts";
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from "../../src/lib/contracts";
 import { BREACHED_CODE } from "../../src/modules/auth/breached-password";
 import { auth } from "../../src/modules/auth/instance";
 import { sessionFromRequest } from "../../src/modules/auth/session";
@@ -50,6 +53,7 @@ describe("the app auth instance", () => {
     expect(auth.options.emailAndPassword).toStrictEqual({
       enabled: true,
       minPasswordLength: PASSWORD_MIN_LENGTH,
+      maxPasswordLength: PASSWORD_MAX_LENGTH,
       autoSignIn: false,
       customSyntheticUser: A_FUNCTION,
       // The account emails are wired (ACC-3, ACC-4).
