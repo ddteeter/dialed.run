@@ -727,6 +727,26 @@ describe("D7 · Access", () => {
     expect(screen.queryByRole("link", { name: /^Next/u })).toBeNull();
   });
 
+  it("renders nothing after the requests when the queue fits on one page", async () => {
+    await desk();
+    const page = document.querySelector('[data-page="access"] > div');
+    expect(page?.lastElementChild?.tagName).toBe("SECTION");
+  });
+
+  it("draws both page links as ink underlined targets", async () => {
+    await desk({ after: "7.R2", desk: { ...DESK, next: "9.R4" } });
+    for (const name of ["← Back to the oldest", "Next 2 →"]) {
+      expect(screen.getByRole("link", { name })).toHaveClass(
+        "target",
+        "inline-flex",
+        "items-center",
+        "text-ink",
+        "underline",
+        "underline-offset-4",
+      );
+    }
+  });
+
   it("titles each page: Access over its Requests, and Codes on its own (G-15, R55·194)", async () => {
     await desk();
     const access = within(
