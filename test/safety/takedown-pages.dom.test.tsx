@@ -732,19 +732,29 @@ describe("Review · removal requests", () => {
           name: "Take it down",
         }),
       );
-      expect(await screen.findByText(said)).toBeInTheDocument();
+      // Each row's answer is read while its row is there: a decided row
+      // leaves the list once its answer has been said.
+      expect(
+        await screen.findByText(said, undefined, { timeout: SETTLED_MS }),
+      ).toBeInTheDocument();
       expect(screen.queryByText("Removed.")).toBeNull();
       const other = within(second ?? document.body);
       await user.click(other.getByRole("button", { name: "Decline" }));
       await user.type(other.getByLabelText("Why not"), "Not you");
       await user.click(other.getByRole("button", { name: "Decline" }));
       await waitFor(() => {
-        expect(screen.getAllByText(said)).toHaveLength(2);
+        expect(decide).toHaveBeenCalledTimes(2);
       });
+      expect(
+        await other.findByText(said, undefined, { timeout: SETTLED_MS }),
+      ).toBeInTheDocument();
       expect(screen.queryByText("Declined.")).toBeNull();
-      await waitFor(() => {
-        expect(onChanged).toHaveBeenCalledTimes(2);
-      });
+      await waitFor(
+        () => {
+          expect(onChanged).toHaveBeenCalledTimes(2);
+        },
+        { timeout: SETTLED_MS },
+      );
     },
   );
 
