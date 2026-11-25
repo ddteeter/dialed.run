@@ -38,7 +38,10 @@ import {
   takedownRequests,
   userProfiles,
 } from "../../../db/schema-core";
-import { removalRequestNotice } from "../../../lib/contracts/takedown";
+import {
+  removalRequestNotice,
+  takedownSubjectNamed,
+} from "../../../lib/contracts/takedown";
 import type {
   TakedownRequestValues,
   TakedownSubject,
@@ -1276,6 +1279,9 @@ export async function blockAndDeclineAll(
   const stillOpen = exists(rowsWhere(db, takedownRequests, pressedOpen));
   const declined = [...others, request];
   const subjects = await requestSubjectsOf(db, declined);
+  const named = declined.map((row, index) =>
+    takedownSubjectNamed(row, subjects[index]),
+  );
   // Each decline also waits on no Take it down recorded for its request.
   const decline = (index: number, also?: SQL) => {
     const row = declined[index] ?? request;
@@ -1291,7 +1297,7 @@ export async function blockAndDeclineAll(
         and(
           eq(takedownRequests.id, row.id),
           eq(takedownRequests.status, "pending"),
-          notTakenDown(row.id, subjects[index]),
+          notTakenDown(row.id, named[index]),
           also,
         ),
       );
@@ -1340,13 +1346,14 @@ export async function blockAndDeclineAll(
 }
 
 /**
- * No Take it down recorded for the request: an audit row on its subject
- * whose reason carries the request's notice (`removalRequestNotice`).
- * Always true of a request naming nothing of ours.
+ * No Take it down recorded for the request: an audit row on the subject
+ * it names (`takedownSubjectNamed`) whose reason carries the request's
+ * notice (`removalRequestNotice`). Always true of a request naming
+ * nothing of ours.
  */
 function notTakenDown(
   requestId: string,
-  subject: TakedownSubject | undefined,
+  subject: ReturnType<typeof takedownSubjectNamed>,
 ): SQL | undefined {
   if (subject === undefined) return undefined;
   return sql`not exists (select 1 from ${moderationActions} where ${and(

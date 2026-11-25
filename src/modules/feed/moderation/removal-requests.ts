@@ -21,7 +21,10 @@
 import { and, eq, like, notExists, sql } from "drizzle-orm";
 
 import { moderationActions, takedownRequests } from "../../../db/schema-core";
-import { removalRequestNotice } from "../../../lib/contracts/takedown";
+import {
+  removalRequestNotice,
+  takedownSubjectNamed,
+} from "../../../lib/contracts/takedown";
 import { nowSeconds } from "../../../lib/now";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { emailDebt } from "../../email";
@@ -83,11 +86,12 @@ export async function decideRemovalRequest(
   const decided = sql`${takedownRequests.id} = ${request.id} and ${takedownRequests.status} = ${decision.outcome} and ${takedownRequests.resolvedAt} = ${now}`;
   // A Decline of a subject of ours also waits on no takedown recorded for
   // this request: one whose claim is still to land.
+  const named = takedownSubjectNamed(request, subject);
   const claimable = and(
     eq(takedownRequests.id, request.id),
     eq(takedownRequests.status, "pending"),
-    subject !== undefined && decision.outcome === "declined"
-      ? notExists(takenDownFor(db, request.id, subject))
+    named !== undefined && decision.outcome === "declined"
+      ? notExists(takenDownFor(db, request.id, named))
       : undefined,
   );
   const told = emailDebt(
@@ -159,7 +163,7 @@ function stillPending(db: Db, requestId: string): HeldTo {
 function takenDownFor(
   db: Db,
   requestId: string,
-  subject: NonNullable<Awaited<ReturnType<typeof requestSubjectOf>>>,
+  subject: NonNullable<ReturnType<typeof takedownSubjectNamed>>,
 ) {
   const notice = removalRequestNotice(requestId);
   return db
