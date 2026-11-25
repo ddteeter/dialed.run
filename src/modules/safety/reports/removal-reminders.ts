@@ -37,12 +37,14 @@ type Db = ReturnType<typeof drizzle>;
 export const REMOVAL_REMINDER_LEAD_SECONDS = 8 * 60 * 60;
 
 /**
- * One undecided removal: `key` names it for the reminder's dedupe key,
+ * One undecided removal: `kind` says whether a `/takedown` request or a
+ * report's Review row, `key` names it for the reminder's dedupe key,
  * `dueAt` is its deadline, and `isOneByOne` whether it alerted every
  * operator one by one (every report's Review row did; a request did
  * where it newly hid its subject or the hour's allowance had room).
  */
 export interface UndecidedRemoval {
+  readonly kind: "request" | "report";
   readonly key: string;
   readonly dueAt: number;
   readonly isOneByOne: boolean;
@@ -102,11 +104,13 @@ export async function undecidedRemovalsDue(
     );
   return [
     ...requests.map((row) => ({
+      kind: "request" as const,
       key: `request:${row.id}`,
       dueAt: row.dueAt,
       isOneByOne: row.hidAt !== null || row.alertedAt !== null,
     })),
     ...rows.map((row) => ({
+      kind: "report" as const,
       key: `${row.subjectType}:${row.subjectId}`,
       dueAt: row.dueAt,
       isOneByOne: true,
