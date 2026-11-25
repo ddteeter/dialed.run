@@ -700,6 +700,44 @@ async function confirmedAt(id: string, at: number): Promise<void> {
     .where(eq(takedownRequests.id, id));
 }
 
+/**
+What the request's owed receipt says it is about.
+*/
+async function receiptAbout(requestId: string) {
+  const [receipt] = await owedWhere(
+    (email) => email.dedupeKey === `removal_request_received:${requestId}`,
+  );
+  return receipt?.email.template.about;
+}
+
+describe("what every receipt says its request is about", () => {
+  it("is the kit, a photo on it, or something not ours, by what the link names", async () => {
+    const kit = await sharedEntry();
+    const photoKit = await sharedEntry();
+    const photoId = await photoOn(photoKit, "pass");
+    const kitRequest = await file("one@example.com", entryLink(kit));
+    const photoRequest = await file(
+      "two@example.com",
+      photoLink(photoKit, photoId),
+      { ip: "198.51.100.50" },
+    );
+    const elsewhere = await file(
+      "three@example.com",
+      "https://elsewhere.example/x",
+      { ip: "198.51.100.51" },
+    );
+    expect(await receiptAbout(kitRequest.id)).toStrictEqual({
+      kind: "kit",
+      entryId: kit,
+    });
+    expect(await receiptAbout(photoRequest.id)).toStrictEqual({
+      kind: "photo",
+      entryId: photoKit,
+    });
+    expect(await receiptAbout(elsewhere.id)).toStrictEqual({ kind: "elsewhere" });
+  });
+});
+
 describe("every receipt's confirm link", () => {
   it("is owed with the request it is about, and names its link", async () => {
     const a = await sharedEntry();
@@ -1418,6 +1456,83 @@ async function sendReceipt(requestId: string): Promise<string> {
 }
 
 const LINKED_TOKEN = /takedown\/confirm\?token=([\da-f]{64})/u;
+
+/**
+A sent receipt with what differs between any two requests taken out.
+*/
+function asAnyRequest(sent: string, address: string): string {
+  return sent
+    .replaceAll(
+      new RegExp(LINKED_TOKEN.source, "gu"),
+      "takedown/confirm?token=TOKEN",
+    )
+    .replaceAll(address, "ADDRESS");
+}
+
+describe("a blocked requester's receipt", () => {
+  it("is sent as any other's is, link and words alike", async () => {
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: requesterKey("blocked@example.com"),
+        kind: "email",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+    const blocked = await file("blocked@example.com", "somewhere-1", {
+      ip: "198.51.100.40",
+    });
+    const ordinary = await file("ordinary@example.com", "somewhere-2", {
+      ip: "198.51.100.41",
+    });
+    expect(blocked.status).toBe("declined");
+
+    const sent = asAnyRequest(
+      await sendReceipt(blocked.id),
+      "blocked@example.com",
+    );
+    expect(sent).toContain("takedown/confirm?token=TOKEN");
+    expect(sent).toBe(
+      asAnyRequest(await sendReceipt(ordinary.id), "ordinary@example.com"),
+    );
+  });
+
+  it("confirms as any other's does, and changes nothing", async () => {
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: requesterKey("blocked@example.com"),
+        kind: "email",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+    const kit = await sharedEntry();
+    const blocked = await file("blocked@example.com", entryLink(kit));
+    const token = LINKED_TOKEN.exec(await sendReceipt(blocked.id))?.[1] ?? "";
+    const before = await kindsOwed();
+
+    expect(
+      await confirmTakedownRequest(
+        core(),
+        token,
+        { oweWhere: oweInCoreWhere, purge: noPurge },
+        NOW + 60,
+      ),
+    ).toBe("confirmed");
+    const [after] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, blocked.id));
+    expect(after).toMatchObject({
+      status: "declined",
+      holdState: "blocked",
+      confirmedAt: NOT_SET,
+      heldAt: NOT_SET,
+    });
+    expect(await entryStatus(kit)).toBe("ok");
+    expect(await kindsOwed()).toStrictEqual(before);
+  });
+});
 
 describe("the receipt's confirm token (SA-L18)", () => {
   it("is in no outbox row: the receipt is owed with its request", async () => {

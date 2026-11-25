@@ -22,6 +22,7 @@ import {
   lt,
   ne,
   notExists,
+  or,
   sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -519,9 +520,11 @@ function aboutOf(subject: TakedownSubject | undefined) {
  * SA-L18: the confirm token a receipt's link carries, minted when the
  * receipt is sent rather than when the request is filed, so the outbox row
  * that owes it never holds a live token. Only its hash is written, and
- * only while the request still waits on a confirm: `undefined` once it was
- * confirmed or decided, and the receipt then goes without the link. A
- * second send mints again, and the last token sent is the one that works.
+ * only while the request is unconfirmed and pending, or a blocked
+ * requester's (design 137: its receipt is any other's): `undefined` once
+ * it was confirmed or decided, and the receipt then goes without the
+ * link. A second send mints again, and the last token sent is the one
+ * that works.
  */
 export async function mintReceiptConfirmToken(
   // Any dialed-core handle: the outbox's drain asks with its own.
@@ -529,13 +532,17 @@ export async function mintReceiptConfirmToken(
   requestId: string,
 ): Promise<string | undefined> {
   const { token, hash } = await newConfirmToken();
+  const open = or(
+    eq(takedownRequests.status, "pending"),
+    eq(takedownRequests.holdState, "blocked"),
+  );
   const minted = await db
     .update(takedownRequests)
     .set({ confirmTokenHash: hash })
     .where(
       and(
         eq(takedownRequests.id, requestId),
-        eq(takedownRequests.status, "pending"),
+        open,
         isNull(takedownRequests.confirmedAt),
       ),
     )
@@ -868,11 +875,14 @@ export async function confirmTakedownRequest(
     eq(takedownRequests.confirmTokenHash, await confirmTokenHash(token)),
   );
   if (request === undefined) return "not_found";
-  if (request.status !== "pending") return "decided";
+  // A blocked requester's link answers as any other's, and does nothing.
+  const isBlocked = request.holdState === "blocked";
+  if (!isBlocked && request.status !== "pending") return "decided";
   if (request.confirmedAt !== null) return "confirmed";
   // SA-L18: a confirm link lasts as long as the request's 48 hours, and
   // past them answers as an unknown link (owner, 2026-11-16).
   if (now > request.dueAt) return "not_found";
+  if (isBlocked) return "confirmed";
   const claim = and(
     eq(takedownRequests.id, request.id),
     isNull(takedownRequests.confirmedAt),
