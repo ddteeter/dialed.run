@@ -210,12 +210,7 @@ export async function fileTakedownRequest<Attempt>(
     ...acts,
     ...operatorAlerts(deps.oweWhere, { id, dueAt, subject }, row.alerts(now)),
     ...valveAlerts(deps.oweWhere, now, row.owesSummary(now)),
-    ...receipts(
-      deps.oweWhere,
-      { id, email, dueAt, location: input.location },
-      row,
-      now,
-    ),
+    ...receipts(deps.oweWhere, { id, email, dueAt, subject }, row, now),
   ]);
   await purgeIfHeld(db, { id, subject }, now, deps.purge);
   return { status: "received" };
@@ -456,7 +451,7 @@ async function purgeIfHeld(
  * The requester's receipt, in the words the row as written earns: hidden
  * where it hid, waiting where it waits on its confirm, and otherwise
  * received. Every one carries the confirm link, which proves the address,
- * and names the link the request was filed with. One dedupe key, and exactly one of the three conditions holds;
+ * and says what the request is about (`aboutOf`). One dedupe key, and exactly one of the three conditions holds;
  * the plain receipt is owed first, so a second debt on the key (which
  * takes over the row's id and keeps its words) could never carry it.
  */
@@ -466,7 +461,7 @@ function receipts(
     readonly id: string;
     readonly email: string;
     readonly dueAt: number;
-    readonly location: string;
+    readonly subject: TakedownSubject | undefined;
   },
   row: ReturnType<typeof rowOf>,
   now: number,
@@ -489,7 +484,7 @@ function receipts(
             // while the request is pending and unconfirmed.
             confirmRequestId: request.id,
             waits: words.waits,
-            location: request.location,
+            about: aboutOf(request.subject),
           },
         },
         { dedupeKey: `removal_request_received:${request.id}` },
@@ -504,6 +499,20 @@ function receipts(
     receipt({ isHidden: true, waits: false }, row.hid(now)),
     receipt({ isHidden: false, waits: true }, row.is("confirm")),
   ];
+}
+
+/**
+ * What a receipt names its request as about: a kit of ours or a photo on
+ * one, by the kit's id, or something that is not ours. Never the link as
+ * typed.
+ */
+function aboutOf(subject: TakedownSubject | undefined) {
+  if (subject === undefined) return { kind: "elsewhere" as const };
+  return {
+    kind:
+      subject.subjectType === "entry" ? ("kit" as const) : ("photo" as const),
+    entryId: subject.entryId,
+  };
 }
 
 /**

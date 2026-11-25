@@ -267,6 +267,18 @@ export const removalReminderSummary = emailKind("removal_reminder_summary", {
 });
 
 /**
+ * What a removal receipt says its request is about: a kit of ours or a
+ * photo on one, by the kit's id, or something that is not ours.
+ */
+const receiptAboutSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.enum(["kit", "photo"]),
+    entryId: z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/u),
+  }),
+  z.object({ kind: z.literal("elsewhere") }),
+]);
+
+/**
  * Design 136: the requester's receipt — what happens next and by when,
  * and whether the image is hidden (round 35 #58e). `confirmToken` is
  * design 137's: every receipt carries the link, which proves the address;
@@ -296,9 +308,12 @@ export const removalRequestReceived = emailKind("removal_request_received", {
    */
   waits: z.boolean().optional(),
   /**
-  The link the request was filed with, which the receipt names beside its confirm.
-  */
-  location: z.string().min(1).optional(),
+   * What the request is about, which the receipt names beside its confirm:
+   * a kit of ours or a photo on one, by the kit's id (its link is built
+   * when the email is), or something that is not ours. Never the link as
+   * typed. Optional as every field added to a wire format is (law 9).
+   */
+  about: receiptAboutSchema.optional(),
 });
 
 /**

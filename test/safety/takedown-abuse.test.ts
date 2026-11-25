@@ -230,7 +230,7 @@ const waitingOn = z.strictObject({
   isHidden: z.boolean(),
   confirmRequestId: z.string(),
   waits: z.literal(true),
-  location: z.string(),
+  about: z.object({ kind: z.string() }).loose(),
 });
 
 /**
@@ -684,7 +684,7 @@ describe("a blocked requester", () => {
         isHidden: false,
         confirmRequestId: row.id,
         waits: false,
-        location: entryLink(a),
+        about: { kind: "kit", entryId: a },
       },
     ]);
   });
@@ -713,7 +713,7 @@ describe("every receipt's confirm link", () => {
       isHidden: true,
       confirmRequestId: row.id,
       waits: false,
-      location: entryLink(a),
+      about: { kind: "kit", entryId: a },
     });
   });
 
@@ -2185,7 +2185,7 @@ describe("what a request that held something already out of view tells", () => {
       isHidden: true,
       confirmRequestId: row.id,
       waits: false,
-      location: row.location,
+      about: { kind: "kit", entryId },
     });
   });
 });
@@ -2342,12 +2342,12 @@ describe("what a request reads back, and its receipt's words", () => {
       isHidden: true,
       confirmRequestId: row.id,
       waits: false,
-      location: row.location,
+      about: { kind: "kit", entryId },
     });
   });
 
   it("tells a requester who must confirm that nothing is hidden yet", async () => {
-    const { request } = await pastTheCap();
+    const { entryId, request } = await pastTheCap();
 
     const [receipt] = await owedWhere(
       (email) => email.dedupeKey === `removal_request_received:${request.id}`,
@@ -2358,7 +2358,7 @@ describe("what a request reads back, and its receipt's words", () => {
       isHidden: false,
       confirmRequestId: request.id,
       waits: true,
-      location: request.location,
+      about: { kind: "kit", entryId },
     });
   });
 });

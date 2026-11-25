@@ -165,7 +165,7 @@ describe("filing a request", () => {
             isHidden: false,
             confirmRequestId: id,
             waits: false,
-            location: `https://dialed.run/feed/entry/${ENTRY}`,
+            about: { kind: "kit", entryId: ENTRY },
           },
         },
       },
@@ -209,7 +209,7 @@ describe("filing a request", () => {
       dueAt: DUE,
       isHidden: false,
       waits: false,
-      location: "somewhere else",
+      about: { kind: "elsewhere" },
     });
   });
 

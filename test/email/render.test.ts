@@ -366,11 +366,11 @@ describe("emailContent", () => {
         isHidden: false,
         confirmToken: "abc123",
         waits: true,
-        location: "https://dialed.run/kit/01K",
+        about: { kind: "kit", entryId: "01JABCDEFGHJKMNPQRSTVWXYZ0" },
       },
       {
         subject: "We have your removal request",
-        body: "It isn't hidden yet. To have it hidden while we look, confirm this request. We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. This email is about the request for https://dialed.run/kit/01K. Only confirm it if that is the link you sent us.",
+        body: `It isn't hidden yet. To have it hidden while we look, confirm this request. We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. This email is about the request for the kit at ${ORIGIN}/kit/01JABCDEFGHJKMNPQRSTVWXYZ0. Only confirm it if that is the kit you asked us about.`,
         button: {
           label: "Confirm the request",
           href: `${ORIGIN}/takedown/confirm?token=abc123`,
@@ -387,11 +387,11 @@ describe("emailContent", () => {
         isHidden: true,
         confirmToken: "abc123",
         waits: false,
-        location: "https://dialed.run/kit/01K",
+        about: { kind: "photo", entryId: "01JABCDEFGHJKMNPQRSTVWXYZ0" },
       },
       {
         subject: "We have your removal request",
-        body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. Confirming tells us this address is yours. The image is already hidden while we look. This email is about the request for https://dialed.run/kit/01K. Only confirm it if that is the link you sent us.",
+        body: `We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. Confirming tells us this address is yours. The image is already hidden while we look. This email is about the request for a photo on the kit at ${ORIGIN}/kit/01JABCDEFGHJKMNPQRSTVWXYZ0. Only confirm it if that is the photo you asked us about.`,
         button: {
           label: "Confirm it's me",
           href: `${ORIGIN}/takedown/confirm?token=abc123&for=address`,
@@ -427,11 +427,32 @@ describe("emailContent", () => {
         dueAt: 1_791_810_300,
         isHidden: false,
         waits: false,
-        location: "https://dialed.run/kit/01K",
+        about: { kind: "elsewhere" },
       },
       {
         subject: "We have your removal request",
         body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
+        foot: "Sent because someone asked at dialed.test/takedown with this address.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      // A request about anything not ours: the fixed sentence.
+      {
+        kind: "removal_request_received",
+        dueAt: 1_791_810_300,
+        isHidden: false,
+        confirmToken: "abc123",
+        waits: false,
+        about: { kind: "elsewhere" },
+      },
+      {
+        subject: "We have your removal request",
+        body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way. Confirming tells us this address is yours. This email is about a request for something that isn't on dialed.test. Only confirm it if you sent us that request.",
+        button: {
+          label: "Confirm it's me",
+          href: `${ORIGIN}/takedown/confirm?token=abc123&for=address`,
+        },
         foot: "Sent because someone asked at dialed.test/takedown with this address.",
         footer: LEGAL,
       },
