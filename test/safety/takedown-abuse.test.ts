@@ -1169,8 +1169,50 @@ describe("Review's list", () => {
     await confirmedAt(two.id, NOW - 5);
     const listed = await pendingTakedownRequests(core(), NOW);
     const byId = (id: string) => listed.find((row) => row.id === id);
-    expect(byId(one.id)).toMatchObject({ relatedIds: [], isConfirmed: false });
-    expect(byId(two.id)).toMatchObject({ relatedIds: [], isConfirmed: true });
+    expect(byId(one.id)).toMatchObject({
+      relatedIds: [],
+      isConfirmed: false,
+      hasNetworkKey: false,
+    });
+    expect(byId(two.id)).toMatchObject({
+      relatedIds: [],
+      isConfirmed: true,
+      hasNetworkKey: false,
+    });
+  });
+
+  it("says a request filed with a network key has one", async () => {
+    const one = await file("me@example.com", "somewhere-1");
+    const listed = await pendingTakedownRequests(core(), NOW);
+    expect(listed.find((row) => row.id === one.id)).toMatchObject({
+      hasNetworkKey: true,
+    });
+  });
+
+  it("links requests by their stored requester key, whatever their addresses read as", async () => {
+    const stored = async (email: string, location: string) => {
+      const id = newUlid();
+      await core()
+        .insert(takedownRequests)
+        .values({
+          id,
+          requesterEmail: email,
+          signature: "x",
+          location,
+          dueAt: NOW + 172_800,
+          createdAt: NOW,
+          idempotencyKey: newUlid(),
+          requesterKey: "kept@example.com",
+          ipKey: "a-network",
+        });
+      return id;
+    };
+    const first = await stored("first@example.com", "somewhere-1");
+    const second = await stored("second@example.com", "somewhere-2");
+    const listed = await pendingTakedownRequests(core(), NOW);
+    expect(listed.find((row) => row.id === first)?.relatedIds).toStrictEqual([
+      second,
+    ]);
   });
 });
 

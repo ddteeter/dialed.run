@@ -211,11 +211,11 @@ type RemovalReceipt = Extract<
 >;
 
 /**
- * Whether a receipt's request waits on its confirm before it hides: a row
- * owed before `waits` was written carried a link only when it did.
+ * Whether a receipt with its link waits on the confirm before it hides: a
+ * row owed before `waits` was written carried a link only when it did.
  */
 function isWaitingOnConfirm(template: RemovalReceipt): boolean {
-  return template.waits ?? template.confirmToken !== undefined;
+  return template.waits ?? true;
 }
 
 /**

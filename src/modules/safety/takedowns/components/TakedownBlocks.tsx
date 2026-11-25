@@ -84,7 +84,7 @@ function BlockRow({
           }}
         />
       )}
-      {said === undefined && !isAsking && (
+      {!isAsking && (
         <div className={ACTION_BAR}>
           <button
             ref={askedFrom.ref}

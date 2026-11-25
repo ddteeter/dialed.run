@@ -56,7 +56,8 @@ export async function decideRemovalRequest(
     eq(takedownRequests.id, requestId),
   );
   if (request === undefined) return "not_found";
-  if (request.status !== "pending") return "already_decided";
+  // A request no longer pending takes nothing down (the takedown is held
+  // to it) and is claimed by nothing, so it answers `already_decided`.
   // The subject is read from the request as filed, the way Review shows
   // it: a link that is not ours names nothing to take down.
   const subject = await requestSubjectOf(db, request);

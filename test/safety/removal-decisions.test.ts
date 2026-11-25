@@ -883,6 +883,31 @@ describe("two opposite decisions sent together", () => {
     },
   );
 
+  it.each([
+    "boom",
+    "NOT NULL constraint failed: review_queue.status",
+    "takedown_requests.status could not be read",
+  ])(
+    "passes on a takedown's failure that is not the request's hold: %s",
+    async (message) => {
+      const entryId = await sharedEntry();
+      const id = await seedRequest({ subjectType: "entry", subjectId: entryId });
+      const failing = landingFirst(() => Promise.reject(new Error(message)));
+
+      await expect(
+        decideRemovalRequest(
+          failing,
+          "op-one",
+          id,
+          { outcome: "removed" },
+          NOW + 10,
+        ),
+      ).rejects.toThrow(new Error(message));
+      const row = await requestRow(id);
+      expect(row?.status).toBe("pending");
+    },
+  );
+
   it("answers decided only to the decision whose claim landed", async () => {
     const entryId = await sharedEntry();
     const id = await seedRequest({ subjectType: "entry", subjectId: entryId });

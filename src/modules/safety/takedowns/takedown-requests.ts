@@ -1151,7 +1151,8 @@ export async function blockAndDeclineAll(
     eq(takedownRequests.id, requestId),
   );
   if (request === undefined) return { status: "not_found" };
-  if (request.status !== "pending") return { status: "decided" };
+  // A request no longer pending declines nothing below, and so answers
+  // `decided` from the read-back.
   const keysBlocked = [
     ...(request.confirmedAt === null ? [] : (["email"] as const)),
     ...(request.ipKey === null ? [] : (["ip"] as const)),
@@ -1170,20 +1171,19 @@ export async function blockAndDeclineAll(
   // The pressed request declined by this batch's own first statement:
   // what every other statement is held to.
   const pressedOpen = and(eq(takedownRequests.id, request.id), declinedHere);
-  const others =
-    request.ipKey === null
-      ? []
-      : await db
-          .select()
-          .from(takedownRequests)
-          .where(
-            and(
-              ne(takedownRequests.id, request.id),
-              eq(takedownRequests.status, "pending"),
-              eq(takedownRequests.requesterKey, keyOf.email),
-              eq(takedownRequests.ipKey, request.ipKey),
-            ),
-          );
+  // `=` against a missing network key is never true, so with none the
+  // pressed request is declined alone.
+  const others = await db
+    .select()
+    .from(takedownRequests)
+    .where(
+      and(
+        ne(takedownRequests.id, request.id),
+        eq(takedownRequests.status, "pending"),
+        eq(takedownRequests.requesterKey, keyOf.email),
+        sql`${takedownRequests.ipKey} = ${request.ipKey}`,
+      ),
+    );
   const stillOpen = exists(rowsWhere(db, takedownRequests, pressedOpen));
   const declined = [...others, request];
   const subjects = await requestSubjectsOf(db, declined);
@@ -1218,11 +1218,12 @@ export async function blockAndDeclineAll(
       .insert(takedownBlocks)
       .select(
         db
+          // Each value aliased as the column it fills.
           .select({
-            key: sql`${keyOf[kind]}`.as("key"),
-            kind: sql`${kind}`.as("kind"),
-            createdAt: sql`${now}`.as("created_at"),
-            createdBy: sql`${actorId}`.as("created_by"),
+            key: sql`${keyOf[kind]}`.as(takedownBlocks.key.name),
+            kind: sql`${kind}`.as(takedownBlocks.kind.name),
+            createdAt: sql`${now}`.as(takedownBlocks.createdAt.name),
+            createdBy: sql`${actorId}`.as(takedownBlocks.createdBy.name),
           })
           .from(takedownRequests)
           .where(pressedOpen),

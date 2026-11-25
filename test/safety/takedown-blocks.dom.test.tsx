@@ -1,9 +1,21 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { TakedownBlocks } from "../../src/modules/safety/takedowns/components/TakedownBlocks";
 import type { TakedownBlockListed } from "../../src/modules/safety/takedowns/takedown-blocks";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Review's Blocked section (design 137): each block on `/takedown`, and
@@ -92,6 +104,48 @@ describe("Review · Blocked", () => {
       { timeout: SETTLED_MS },
     );
     expect(inRow.getByRole("status")).toHaveTextContent(/^Unblocked\.$/u);
+  });
+
+  it("says nothing in a row until Unblock is answered, and draws Unblock as an outline pill", () => {
+    render(<TakedownBlocks blocks={[address]} unblock={vi.fn<UnblockFn>()} />);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: "Unblock" })).toHaveClass(
+      "target",
+      "rounded-pill",
+      "border",
+      "bg-transparent",
+      "font-bold",
+      "text-ink",
+    );
+  });
+
+  it("gives focus back to Unblock on Cancel, even when the press did not move focus", async () => {
+    render(<TakedownBlocks blocks={[address]} unblock={vi.fn<UnblockFn>()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Unblock" }));
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Unblock" })).toHaveFocus();
+  });
+
+  it("carries its form as the page, and says it is unblocking while it waits", async () => {
+    const unblock = vi
+      .fn<UnblockFn>()
+      .mockReturnValue(
+        new Promise(() => {
+          // Never answers: the press stays pending.
+        }),
+      );
+    render(<TakedownBlocks blocks={[address]} unblock={unblock} />);
+    const user = userEvent.setup();
+    carriedSince();
+    await user.click(screen.getByRole("button", { name: "Unblock" }));
+    expect(carriedSince()).toEqual(["page"]);
+    await user.click(screen.getByRole("button", { name: "Unblock" }));
+    expect(
+      await screen.findByRole("button", { name: "Unblocking" }),
+    ).toBeVisible();
   });
 
   it("asks of an address as an address", async () => {
