@@ -270,6 +270,26 @@ async function rowsOf(db: Db, target: Target, input: ModerateInput) {
 }
 
 /**
+ * The record's photos: every photo copied, in the order copied, each with
+ * its row as read after the copy laid over it, and then any row read that
+ * was not copied. A photo whose row was gone by the read is listed by its
+ * key and its copy, so every copy is listed by the record that made it.
+ */
+function photosSnapshotOf(
+  copyOf: Awaited<ReturnType<typeof copyBytes>>,
+  photos: readonly (typeof entryPhotos.$inferSelect)[],
+) {
+  const rowOf = new Map(photos.map((photo) => [photo.photoKey, photo]));
+  const copied = Array.from(copyOf, ([photoKey, copy]) => ({
+    photoKey,
+    ...rowOf.get(photoKey),
+    ...copy,
+  }));
+  const uncopied = photos.filter((photo) => !copyOf.has(photo.photoKey));
+  return [...copied, ...uncopied];
+}
+
+/**
  * Everything a quarantine keeps, ready for the batch: the bytes are copied
  * now, and the rows are read now, so the statement that preserves them
  * lands with the deletes.
@@ -285,10 +305,7 @@ async function preservation(
 }> {
   const copyOf = await copyBytes(target.photoKeys);
   const rows = await rowsOf(db, target, input);
-  const photos = rows.photos.map((photo) => ({
-    ...photo,
-    ...copyOf.get(photo.photoKey),
-  }));
+  const photos = photosSnapshotOf(copyOf, rows.photos);
   const preservedKey = quarantineKeyFor(
     input.subjectType === "photo"
       ? entryPhotoKeyFor(target.ownerId, target.entryId, input.subjectId)
