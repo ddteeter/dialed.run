@@ -158,6 +158,13 @@ function signUpRequest(
 
 const errorSchema = z.object({ code: z.string(), message: z.string() });
 
+/**
+An address of `length` characters at the test domain.
+*/
+function at(length: number): string {
+  return "@example.test".padStart(length, "a");
+}
+
 async function refusal(response: Response) {
   return errorSchema.parse(await response.json());
 }
@@ -216,10 +223,9 @@ describe("email sign-up through the gate", () => {
     expect(account?.image).toBeNull();
   });
 
-  it("makes an account for an address of 254 characters, and refuses 255 before spending a code", async () => {
-    const auth = instance(accessGate(db, turnstile().verify));
-    const domain = "@example.test";
-    const at = (length: number) => domain.padStart(length, "a");
+  it("makes an account for an address of 254 characters, and refuses 255 before Turnstile or a code", async () => {
+    const { attempts, verify } = turnstile();
+    const auth = instance(accessGate(db, verify));
     const code = await freshCode();
     const codeId = await seedCode(code);
     const headers = { "x-invite-code": code, "x-turnstile-token": "token" };
@@ -227,6 +233,7 @@ describe("email sign-up through the gate", () => {
     const tooLong = await auth.handler(signUpRequest(at(255), headers));
     expect(tooLong.status).toBe(400);
     expect(await refusal(tooLong)).toMatchObject({ code: "INVALID_EMAIL" });
+    expect(attempts).toStrictEqual([]);
     expect(await accountFor(at(255))).toBeUndefined();
     expect(
       await db
@@ -238,6 +245,27 @@ describe("email sign-up through the gate", () => {
     const longest = await auth.handler(signUpRequest(at(254), headers));
     expect(longest.status).toBe(200);
     expect(await accountFor(at(254))).toBeDefined();
+  });
+
+  it("refuses a new Google account of 255 characters on the callback, and makes none", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = await freshCode();
+    const codeId = await seedCode(code);
+    const { landing } = await googleRoundTrip(
+      auth,
+      at(255),
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+    );
+    expect(landing?.pathname).toBe("/auth/signup");
+    expect(landing?.searchParams.get("error")).toBe("INVALID_EMAIL");
+    expect(await accountFor(at(255))).toBeUndefined();
+    expect(
+      await db
+        .select()
+        .from(inviteRedemptions)
+        .where(eq(inviteRedemptions.codeId, codeId)),
+    ).toStrictEqual([]);
   });
 
   it("keeps a single-use code spent after its account is deleted", async () => {

@@ -124,6 +124,21 @@ function refuse(code: keyof typeof ACCESS_CODES): never {
 }
 
 /**
+ * An address longer than `EMAIL_MAX_LENGTH` characters, refused as Better
+ * Auth refuses an address that is not one.
+ */
+function refuseLongAddress(): never {
+  throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_EMAIL);
+}
+
+/**
+An email sign-up's body whose address is longer than `EMAIL_MAX_LENGTH`.
+*/
+const longAddressBodySchema = z.object({
+  email: z.string().min(EMAIL_MAX_LENGTH + 1),
+});
+
+/**
 Only `requestSignUp` is read from a social sign-in's body.
 */
 const socialBodySchema = z.object({ requestSignUp: z.boolean().optional() });
@@ -256,8 +271,9 @@ async function admitAge(
 
 /**
  * The before-hook's half: an email sign-up from a blocked state first,
- * then Turnstile (it runs whether or not invite-only is on, and after the
- * public gate too), then the age, then the code.
+ * then one whose address is too long, then Turnstile (it runs whether or
+ * not invite-only is on, and after the public gate too), then the age,
+ * then the code.
  *
  * **Google from a blocked state goes on to Google**, as Google with no
  * code does: the press cannot know yet whether the address already has an
@@ -271,6 +287,7 @@ export async function admitSignUp(
   const kind = signUpKind(ctx.path, ctx.body);
   if (kind === undefined) return;
   if (kind === "email" && isFromBlockedRegion(ctx.request)) refuseRegion();
+  if (longAddressBodySchema.safeParse(ctx.body).success) refuseLongAddress();
   const token = ctx.headers?.get(ACCESS_HEADERS.turnstileToken) ?? undefined;
   if (!(await gate.passesTurnstile(token, ctx.request))) refuse("turnstile");
   if (gate.checksAge) await admitAge(kind, ctx.headers);
@@ -358,9 +375,7 @@ export function claimInvite(gate: AccessGate) {
   ) => {
     // An address the app's own fields would refuse is refused here too,
     // whichever endpoint sent it: at most `EMAIL_MAX_LENGTH` characters.
-    if (user.email.length > EMAIL_MAX_LENGTH) {
-      throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_EMAIL);
-    }
+    if (user.email.length > EMAIL_MAX_LENGTH) refuseLongAddress();
     // Every account, before anything else: an email sign-up from a
     // blocked state never gets here, Google's callback is read here.
     if (isFromBlockedRegion(context?.request)) refuseRegion();
