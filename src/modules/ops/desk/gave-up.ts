@@ -24,6 +24,7 @@ import {
   userProfiles,
 } from "../../../db/schema-core";
 import { coreDb, env } from "../../../env";
+import { chunked, IN_LIST_CHUNK } from "../../../lib/chunked";
 import type { GaveUpKind } from "../../../lib/contracts/gave-up";
 import { clockLabel, monthDayLabel } from "../../../lib/dates";
 import { firstColumnWhere, firstRowWhere } from "../../../lib/sql/keyed-read";
@@ -133,17 +134,43 @@ export function doingOf(
   }
 }
 
+interface SubjectRow {
+  readonly kind: GaveUpKind;
+  readonly subjectId: string;
+}
+
 /**
- * The facts each row's sentence needs, in one round trip: every lookup is
- * by primary key or an index (`product_snapshots_product_fetched`,
- * `strava_connections_athlete`), over the ids on this page only. Each
- * lookup is handed every subject on the page, whatever its kind: the ids
- * are ULIDs, so a run's id finds no product, and one list is fewer things
- * to get wrong than four filtered ones.
+ * The facts every listed row's sentence needs, read `IN_LIST_CHUNK` rows
+ * at a time, so each lookup's `IN (…)` list stays under D1's parameter
+ * cap however many rows are listed.
  */
 async function subjectFacts(
   db: Db,
-  rows: readonly { kind: GaveUpKind; subjectId: string }[],
+  rows: readonly SubjectRow[],
+): Promise<SubjectFacts> {
+  const chunks = await Promise.all(
+    chunked(rows, IN_LIST_CHUNK).map((chunk) => chunkFacts(db, chunk)),
+  );
+  return {
+    products: new Map(chunks.flatMap((facts) => [...facts.products])),
+    storedPages: new Set(chunks.flatMap((facts) => [...facts.storedPages])),
+    runs: new Map(chunks.flatMap((facts) => [...facts.runs])),
+    imports: new Map(chunks.flatMap((facts) => [...facts.imports])),
+    athletes: new Map(chunks.flatMap((facts) => [...facts.athletes])),
+  };
+}
+
+/**
+ * The facts one chunk of rows needs, in one round trip: every lookup is
+ * by primary key or an index (`product_snapshots_product_fetched`,
+ * `strava_connections_athlete`), over the chunk's ids only. Each lookup
+ * is handed every subject in the chunk, whatever its kind: the ids are
+ * ULIDs, so a run's id finds no product, and one list is fewer things to
+ * get wrong than four filtered ones.
+ */
+async function chunkFacts(
+  db: Db,
+  rows: readonly SubjectRow[],
 ): Promise<SubjectFacts> {
   const subjects = rows.map((row) => row.subjectId);
   const athleteIds = subjects

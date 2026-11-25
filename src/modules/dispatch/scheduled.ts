@@ -1131,24 +1131,29 @@ async function runDailyDigest(
       .filter((kind) => kind !== PURGED_LAST)
       .map((kind) => runCheck(kind)),
   );
-  // Strava's seven-day cache rule, on the activity ids we hold (task 127,
-  // STR-10). Rides this firing rather than a cron of its own; it is upkeep,
-  // not a check, so it reports nothing.
-  await pruneStravaIds(db);
-  // The suspected-CSAM quarantine's year (task 128, D-70): upkeep like the
-  // prune, and silent to everyone but Sentry, which hears of each record
-  // this firing claimed and could not purge (law 6). Each one stays, due
-  // again tomorrow.
-  const purge = await purgeExpiredQuarantine(db);
-  for (const failure of purge.failed) {
-    captureException(failure.error, {
-      surface: "quarantine-purge",
-      quarantineId: failure.id,
-    });
-  }
-  // D5: the morning email, every day, even when every number is zero
-  // (task 125 · OPS-11, through task 126's email module).
-  await oweDigestEmail(db, upkeep.digestMail);
+  // Upkeep that reports nothing to the digest, then the morning email.
+  // Each runs whether the others throw, so none of them can cost the
+  // sweeps or the purge; a throw is thrown at the end with the rest.
+  const upkept = await failuresOf([
+    // Strava's seven-day cache rule, on the activity ids we hold (task
+    // 127, STR-10). Rides this firing rather than a cron of its own.
+    () => pruneStravaIds(db),
+    // The suspected-CSAM quarantine's year (task 128, D-70): silent to
+    // everyone but Sentry, which hears of each record this firing claimed
+    // and could not purge (law 6). Each one stays, due again tomorrow.
+    async () => {
+      const purge = await purgeExpiredQuarantine(db);
+      for (const failure of purge.failed) {
+        captureException(failure.error, {
+          surface: "quarantine-purge",
+          quarantineId: failure.id,
+        });
+      }
+    },
+    // D5: the morning email, every day, even when every number is zero
+    // (task 125 · OPS-11, through task 126's email module).
+    () => oweDigestEmail(db, upkeep.digestMail),
+  ]);
   // Rows kept past any use: password-try counts whose window ended a day
   // ago, sessions expired a month ago, access requests answered 90 days ago, moderation
   // records whose 3 years are up (D-131). After the
@@ -1166,7 +1171,7 @@ async function runDailyDigest(
   // The account purge last, after every other check, the email and the
   // sweeps, with its lines reported as its own kind.
   const purged = await failuresOf([runCheck(PURGED_LAST)]);
-  throwAny([...failed, ...sweeps, ...purged]);
+  throwAny([...failed, ...upkept, ...sweeps, ...purged]);
   return everything;
 }
 

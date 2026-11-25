@@ -292,6 +292,55 @@ describe("the daily firing sends it (D5)", () => {
     ]);
   });
 
+  it("runs the day's sweeps before the account purge", async () => {
+    const swept: string[] = [];
+    const seen: string[][] = [];
+    await handleScheduled(DIGEST, undefined, {
+      digestMail: digestMail(["op-a"], () => Promise.resolve()),
+      sweepAuthRows: () => {
+        swept.push("auth rows");
+        return Promise.resolve();
+      },
+      forgetAnsweredRequests: () => {
+        swept.push("answered requests");
+        return Promise.resolve();
+      },
+      sweepCopyrightHolds: () => {
+        swept.push("copyright holds");
+        return Promise.resolve();
+      },
+      purgeAccounts: () => {
+        seen.push([...swept]);
+        return Promise.resolve();
+      },
+    });
+    expect(seen).toStrictEqual([
+      ["auth rows", "answered requests", "copyright holds"],
+    ]);
+  });
+
+  it("runs the sweeps and the account purge when the digest email throws, then throws it", async () => {
+    const boom = new Error("counts fell over");
+    const ran: string[] = [];
+    const firing = handleScheduled(DIGEST, undefined, {
+      digestMail: {
+        ...digestMail(["op-a"], () => Promise.resolve()),
+        counts: () => Promise.reject(boom),
+      },
+      sweepAuthRows: () => {
+        ran.push("sweep");
+        return Promise.resolve();
+      },
+      purgeAccounts: () => {
+        ran.push("purge");
+        return Promise.resolve();
+      },
+    });
+
+    await expect(firing).rejects.toBe(boom);
+    expect(ran).toStrictEqual(["sweep", "purge"]);
+  });
+
   it("owes no digest from an hourly firing", async () => {
     await handleScheduled(
       { cron: "30 * * * *" } as ScheduledController,

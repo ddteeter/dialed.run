@@ -416,21 +416,33 @@ describe("sweepExports", () => {
 const DAY_S = 24 * 60 * 60;
 
 describe("checkTooLargeExports", () => {
-  it("names each runner whose export was too large to build in the last day, oldest first", async () => {
+  it("names each runner whose export was too large to build, oldest first, however long ago", async () => {
     const later = await seedExport("too-large", { claimedAt: NOW - 60 });
     const earlier = await seedExport("too-large", {
-      claimedAt: NOW - DAY_S + 1,
+      claimedAt: NOW - 3 * DAY_S,
     });
-    await seedExport("too-large", { claimedAt: NOW - DAY_S });
     await seedExport("failed", { claimedAt: NOW - 60 });
     const anomalies: string[] = [];
 
-    await checkTooLargeExports(anomalies, { db, now: NOW });
+    await checkTooLargeExports(anomalies, { db });
 
     expect(anomalies).toStrictEqual([
       `A data export was too large to build for runner ${earlier.userId}: make it by hand`,
       `A data export was too large to build for runner ${later.userId}: make it by hand`,
     ]);
+  });
+
+  it("names no export the sweep has forgotten", async () => {
+    await seedExport("too-large", {
+      requestedAt: NOW - EXPORT_LINK_TTL_S - 1,
+      claimedAt: NOW - EXPORT_LINK_TTL_S - 1,
+    });
+    await sweepExports([], deps().deps);
+    const anomalies: string[] = [];
+
+    await checkTooLargeExports(anomalies, { db });
+
+    expect(anomalies).toStrictEqual([]);
   });
 
   it("names at most a firing's cap", async () => {
@@ -439,7 +451,7 @@ describe("checkTooLargeExports", () => {
     }
     const anomalies: string[] = [];
 
-    await checkTooLargeExports(anomalies, { db, now: NOW });
+    await checkTooLargeExports(anomalies, { db });
 
     expect(anomalies).toHaveLength(EXPORT_SWEEP_CAP);
   });

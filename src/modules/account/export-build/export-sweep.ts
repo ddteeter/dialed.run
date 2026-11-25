@@ -7,7 +7,7 @@
  * the account barrel, and called by nothing in `ops` (the cycle the
  * purge documents): the dispatch runs it on the hourly firing.
  */
-import { and, asc, eq, gt, inArray, lt, lte, or } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, lte, or } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { dataExports } from "../../../db/schema-core";
@@ -222,29 +222,18 @@ async function resendStalled(
 }
 
 /**
-How far back the daily digest looks for exports too large to build.
-*/
-const DIGEST_DAY_S = 24 * 60 * 60;
-
-/**
- * The daily digest's line for each export marked too large to build in
- * the last day, oldest first, at most a firing's cap: a copy to make by
- * hand.
+ * The daily digest's line for each export marked too large to build that
+ * the hourly sweep has not yet forgotten, oldest first, at most a firing's
+ * cap: a copy to make by hand, named every morning until it is forgotten.
  */
 export async function checkTooLargeExports(
   anomalies: string[],
-  deps: Pick<SweepDeps, "db" | "now"> = liveSweepDeps(),
+  deps: Pick<SweepDeps, "db"> = liveSweepDeps(),
 ): Promise<void> {
-  const { db, now } = deps;
-  const tooLarge = await db
+  const tooLarge = await deps.db
     .select({ userId: dataExports.userId })
     .from(dataExports)
-    .where(
-      and(
-        eq(dataExports.status, "too-large"),
-        gt(dataExports.claimedAt, now - DIGEST_DAY_S),
-      ),
-    )
+    .where(eq(dataExports.status, "too-large"))
     .orderBy(asc(dataExports.claimedAt))
     .limit(EXPORT_SWEEP_CAP);
   for (const row of tooLarge) {
