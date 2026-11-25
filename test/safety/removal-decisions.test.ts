@@ -19,7 +19,7 @@ import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { removalRequestNotice } from "../../src/lib/contracts/takedown";
 import { moderateContent } from "../../src/modules/feed/moderation/moderation";
 import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";
-import { resolveReview } from "../../src/modules/safety";
+import { declineLapsedRequests, resolveReview } from "../../src/modules/safety";
 import {
   fileTakedownRequest,
   pendingTakedownRequests,
@@ -843,6 +843,45 @@ describe("two opposite decisions sent together", () => {
     expect(row?.status).toBe("pending");
     expect(await emailsToSam()).toStrictEqual([]);
   });
+
+  it.each([
+    { named: "a kit of ours", isOurs: true },
+    { named: "a link that is not ours", isOurs: false },
+  ])(
+    "answers already decided to a Take it down of $named that the lapse declined first, and takes nothing down",
+    async ({ isOurs }) => {
+      const entryId = await sharedEntry();
+      const id = await seedRequest(
+        isOurs ? { subjectType: "entry", subjectId: entryId } : undefined,
+      );
+      await core()
+        .update(takedownRequests)
+        .set({ holdState: "confirm" })
+        .where(eq(takedownRequests.id, id));
+      const pastDue = NOW + 172_800 + 1;
+      const lapseFirst = landingFirst(() =>
+        declineLapsedRequests(core(), pastDue),
+      );
+
+      expect(
+        await decideRemovalRequest(
+          lapseFirst,
+          "op-one",
+          id,
+          { outcome: "removed" },
+          pastDue,
+        ),
+      ).toBe("already_decided");
+      const row = await requestRow(id);
+      expect(row).toMatchObject({
+        status: "declined",
+        declineReason: "Not confirmed",
+      });
+      expect(row?.resolvedBy).toBeNull();
+      expect(await entryStatus(entryId)).toBeDefined();
+      expect(await emailsToSam()).toStrictEqual([]);
+    },
+  );
 
   it("answers decided only to the decision whose claim landed", async () => {
     const entryId = await sharedEntry();
