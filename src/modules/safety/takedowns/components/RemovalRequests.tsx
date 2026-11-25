@@ -49,7 +49,32 @@ type Decide = (input: {
   data:
     | { requestId: string; outcome: "removed" }
     | { requestId: string; outcome: "declined"; reason: string };
-}) => Promise<unknown>;
+}) => Promise<{ outcome: "decided" | "already_decided" | "not_found" }>;
+
+/**
+ * A decision's answer, as the page says it: what it did only where this
+ * press decided the request, and otherwise why nothing was done.
+ */
+function decidedSaid(
+  done: string,
+): (result: Awaited<ReturnType<Decide>>) => string {
+  return ({ outcome }) => {
+    if (outcome === "decided") return done;
+    return outcome === "already_decided"
+      ? ALREADY_DECIDED
+      : NO_LONGER_OPEN;
+  };
+}
+
+/**
+What the page says of a request no longer pending, or gone.
+*/
+const NO_LONGER_OPEN = "That request is no longer open.";
+
+/**
+What the page says of a request someone decided before this press landed.
+*/
+const ALREADY_DECIDED = "Someone already decided this request.";
 
 /**
  * One request's decision: which request, what sends it, and what follows.
@@ -71,9 +96,8 @@ type Block = (input: { data: { requestId: string } }) => Promise<BlockResult>;
  * declined, from the server's count.
  */
 function blockedSaid(result: BlockResult): string {
-  if (result.status === "not_found") return "That request is no longer open.";
-  // C6: a marked guess, through the coordinator's wording round.
-  if (result.status === "decided") return "Someone already decided this request.";
+  if (result.status === "not_found") return NO_LONGER_OPEN;
+  if (result.status === "decided") return ALREADY_DECIDED;
   const { declined } = result;
   return `Blocked. ${String(declined)} ${declined === 1 ? "request" : "requests"} declined.`;
 }
@@ -681,7 +705,7 @@ function RemoveForm({
     carry: "page",
     schema: z.object({}),
     action: () => decide({ data: { requestId, outcome: "removed" } }),
-    successMessage: "Removed.",
+    successMessage: decidedSaid("Removed."),
     onSuccess: onDecided,
   });
   return (
@@ -728,7 +752,7 @@ function DeclineQuestion({
     schema: declineSchema,
     action: (values) =>
       decide({ data: { requestId, outcome: "declined", ...values } }),
-    successMessage: "Declined.",
+    successMessage: decidedSaid("Declined."),
     onSuccess: onDecided,
   });
   return (

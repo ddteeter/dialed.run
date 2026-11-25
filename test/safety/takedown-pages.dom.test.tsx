@@ -700,6 +700,54 @@ describe("Review · removal requests", () => {
     },
   );
 
+  it.each([
+    { outcome: "already_decided", said: "Someone already decided this request." },
+    { outcome: "not_found", said: "That request is no longer open." },
+  ] as const)(
+    "says $said when Take it down or Decline finds it $outcome, and the page reads it again",
+    async ({ outcome, said }) => {
+      const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome });
+      const onChanged = vi.fn();
+      await renderWithRouter(
+        <RemovalRequests
+          onChanged={onChanged}
+          asOf={0}
+          requests={[
+            pending(),
+            pending({
+              id: "01JREQUEST0000000000000009",
+              signature: "Other Asker",
+            }),
+          ]}
+          decide={decide}
+          block={vi.fn<BlockFn>()}
+        />,
+      );
+      const user = userEvent.setup();
+      const [first, second] = document.querySelectorAll<HTMLElement>(
+        "[data-part='removal-request']",
+      );
+      await user.click(
+        within(first ?? document.body).getByRole("button", {
+          name: "Take it down",
+        }),
+      );
+      expect(await screen.findByText(said)).toBeInTheDocument();
+      expect(screen.queryByText("Removed.")).toBeNull();
+      const other = within(second ?? document.body);
+      await user.click(other.getByRole("button", { name: "Decline" }));
+      await user.type(other.getByLabelText("Why not"), "Not you");
+      await user.click(other.getByRole("button", { name: "Decline" }));
+      await waitFor(() => {
+        expect(screen.getAllByText(said)).toHaveLength(2);
+      });
+      expect(screen.queryByText("Declined.")).toBeNull();
+      await waitFor(() => {
+        expect(onChanged).toHaveBeenCalledTimes(2);
+      });
+    },
+  );
+
   it("takes it down, says so, only that request leaves the list, and the page reads it again", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     const onChanged = vi.fn();

@@ -12,15 +12,22 @@
  * request's claim and the requester's email are one batch, the email
  * written only where the claim landed, so the requester is told exactly
  * once and never about a decision that did not happen (law 8c).
+ *
+ * **Held to the request, both ways.** The takedown's batch holds to the
+ * request still pending as it lands, and a Decline's claim to no takedown
+ * recorded for this request, so of two opposite decisions sent together
+ * only one acts. Each answers `decided` only where its own claim landed.
  */
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, like, notExists, sql } from "drizzle-orm";
 
-import { takedownRequests } from "../../../db/schema-core";
+import { moderationActions, takedownRequests } from "../../../db/schema-core";
+import { removalRequestNotice } from "../../../lib/contracts/takedown";
 import { nowSeconds } from "../../../lib/now";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { emailDebt } from "../../email";
 import { outboxInsertWhere, oweOutbox } from "../../ops";
 import { releaseHoldWrites, requestSubjectOf } from "../../safety";
+import type { HeldTo } from "./garment-moderation";
 import { moderateContent } from "./moderation";
 
 type Db = Parameters<typeof moderateContent>[0];
@@ -54,21 +61,33 @@ export async function decideRemovalRequest(
   // it: a link that is not ours names nothing to take down.
   const subject = await requestSubjectOf(db, request);
   if (subject !== undefined && decision.outcome === "removed") {
-    await moderateContent(db, {
-      actorId,
-      action: "takedown",
-      subjectType: subject.subjectType,
-      subjectId: subject.subjectId,
-      reason: "intimate",
-      notice: `removal request ${request.id}`,
-    });
+    const heldTo = stillPending(db, request.id);
+    try {
+      await moderateContent(db, {
+        actorId,
+        action: "takedown",
+        subjectType: subject.subjectType,
+        subjectId: subject.subjectId,
+        reason: "intimate",
+        notice: removalRequestNotice(request.id),
+        heldTo,
+      });
+    } catch (error: unknown) {
+      if (heldTo.refused(error)) return "already_decided";
+      throw error;
+    }
   }
   const { reason } = decision;
   // The row as this decision leaves it: only then is the email owed.
   const decided = sql`${takedownRequests.id} = ${request.id} and ${takedownRequests.status} = ${decision.outcome} and ${takedownRequests.resolvedAt} = ${now}`;
-  const stillPending = and(
+  // A Decline of a subject of ours also waits on no takedown recorded for
+  // this request: one whose claim is still to land.
+  const claimable = and(
     eq(takedownRequests.id, request.id),
     eq(takedownRequests.status, "pending"),
+    subject !== undefined && decision.outcome === "declined"
+      ? notExists(takenDownFor(db, request.id, subject))
+      : undefined,
   );
   const told = emailDebt(
     {
@@ -90,7 +109,7 @@ export async function decideRemovalRequest(
         resolvedAt: now,
         resolvedBy: actorId,
       })
-      .where(stillPending),
+      .where(claimable),
     outboxInsertWhere(
       db,
       oweOutbox(told),
@@ -106,5 +125,72 @@ export async function decideRemovalRequest(
       ? []
       : releaseHoldWrites(db, { id: request.id, declinedAt: now }, subject)),
   ]);
-  return "decided";
+  return (await wasClaimedHere(db, request.id, { actorId, decision, now }))
+    ? "decided"
+    : "already_decided";
+}
+
+/**
+ * The takedown's hold on the request (`moderateContent`'s `heldTo`): it
+ * fails the takedown's batch when the request is no longer pending as it
+ * lands, setting its status, which may not be empty, to nothing.
+ */
+function stillPending(db: Db, requestId: string): HeldTo {
+  const status = sql<"pending">`(case when ${takedownRequests.status} = 'pending' then ${takedownRequests.status} else null end)`;
+  return {
+    statement: db
+      .update(takedownRequests)
+      .set({ status })
+      .where(eq(takedownRequests.id, requestId)),
+    refused: (error) => {
+      const text = String(error);
+      return (
+        text.includes("NOT NULL") && text.includes("takedown_requests.status")
+      );
+    },
+  };
+}
+
+/**
+ * A takedown this request's Take it down recorded: its audit row, on the
+ * request's subject, carrying the request's notice.
+ */
+function takenDownFor(
+  db: Db,
+  requestId: string,
+  subject: NonNullable<Awaited<ReturnType<typeof requestSubjectOf>>>,
+) {
+  const notice = removalRequestNotice(requestId);
+  return db
+    .select({ one: sql`1` })
+    .from(moderationActions)
+    .where(
+      and(
+        eq(moderationActions.action, "takedown"),
+        eq(moderationActions.subjectType, subject.subjectType),
+        eq(moderationActions.subjectId, subject.subjectId),
+        like(moderationActions.reason, `%${notice}`),
+      ),
+    );
+}
+
+/**
+Whether the request reads back as this decision left it.
+*/
+async function wasClaimedHere(
+  db: Db,
+  requestId: string,
+  claim: Readonly<{ actorId: string; decision: RemovalDecision; now: number }>,
+): Promise<boolean> {
+  const row = await firstRowWhere(
+    db,
+    takedownRequests,
+    and(
+      eq(takedownRequests.id, requestId),
+      eq(takedownRequests.status, claim.decision.outcome),
+      eq(takedownRequests.resolvedAt, claim.now),
+      eq(takedownRequests.resolvedBy, claim.actorId),
+    ),
+  );
+  return row !== undefined;
 }

@@ -63,6 +63,15 @@ export const takedownRequestSchema = z.object({
   idempotencyKey: ulidSchema,
 });
 
+/**
+ * The notice a removal request's Take it down records on its audit row
+ * (`moderation_actions.reason`, after the reason's words), which is how a
+ * Decline of the same request finds that its subject was taken down.
+ */
+export function removalRequestNotice(requestId: string): string {
+  return `removal request ${requestId}`;
+}
+
 export type TakedownRequestValues = z.infer<typeof takedownRequestSchema>;
 
 /**
