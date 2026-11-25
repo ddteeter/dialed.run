@@ -37,9 +37,11 @@ views {
         A photo that has not passed screening is shown to its author only.
       '''
     }
-    // source: src/modules/weather/read.ts observationsForRuns; src/modules/feed/following/feed.ts hydrateEntries (observationsForRuns)
+    // source: src/modules/weather/read.ts observationsForRuns; src/modules/feed/following/feed.ts hydrateEntries, conditionsOrNone
     cf.app.feed.following -> cf.app.weather 'reads each run\'s observation' {
       notes '''
+        **Degrade, don\'t fail.** If the weather read fails, the cards are shown without their conditions, as a run with no observation already is, and the error goes to Sentry with the reader.
+
         The weather is in its own database, so the two are joined in code, by each run\'s place and hour.
       '''
     }
