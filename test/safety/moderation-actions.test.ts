@@ -77,6 +77,7 @@ import {
 import {
   QUARANTINE_PAGE,
   QUARANTINE_RETENTION_SECONDS,
+  copiesNoRecordLists,
   preservedKeysOf,
   quarantinedContentFor,
 } from "../../src/modules/safety/takedowns/quarantine";
@@ -1140,6 +1141,41 @@ describe("takedown (SAF-6)", () => {
   });
 });
 
+/**
+ * R2's put, which lets `after` land once the `count`th copy is made:
+ * an owner's delete between a quarantine's copy and its read of rows.
+ */
+function afterCopy(count: number, after: () => Promise<unknown>) {
+  const put = env.MEDIA.put.bind(env.MEDIA);
+  const seen = { puts: 0 };
+  return vi.spyOn(env.MEDIA, "put").mockImplementation(async (...args) => {
+    const stored = await put(...args);
+    seen.puts += 1;
+    if (seen.puts === count) await after();
+    return stored;
+  });
+}
+
+/**
+The copies a quarantine's records list, every record's in turn.
+*/
+async function listedCopies(): Promise<string[]> {
+  const records = await core()
+    .select({ snapshot: quarantinedContent.photosSnapshot })
+    .from(quarantinedContent);
+  return records.flatMap(({ snapshot }) => {
+    const read = preservedKeysOf(snapshot);
+    return read.ok ? read.keys : [];
+  });
+}
+
+/**
+Keys in a fixed order, for comparing sets of them.
+*/
+function byKey(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
 describe("decideReview: the queue's Remove really deletes", () => {
   beforeEach(freshState);
   afterEach(() => {
@@ -1306,6 +1342,144 @@ describe("decideReview: the queue's Remove really deletes", () => {
       { id: records[0]?.actionId, actorId: "rev", subjectOwnerId: author },
     ]);
     expect(await noticesFor(author)).toStrictEqual([]);
+  });
+
+  it("lists the copy of a photo its owner deleted between the copy and the read of its row, and the sweep keeps it", async () => {
+    const { author, photoId, key } = await postedPhoto();
+    const queueId = await queued("photo", photoId);
+    const subject = await openSubject(queueId, await shownRowOf(queueId));
+    if (subject === undefined) throw new Error("not open");
+    const puts = afterCopy(1, () =>
+      deleteEntryPhoto(core(), author, photoId, quiet, noPurge),
+    );
+
+    const outcome = await moderateContent(
+      core(),
+      {
+        actorId: "rev",
+        action: "quarantine",
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "explicit",
+        heldTo: subject.heldTo,
+      },
+      quiet,
+    );
+    puts.mockRestore();
+
+    expect(outcome).toBe("removed");
+    expect(await listedCopies()).toStrictEqual([quarantineKeyFor(key)]);
+    // The sweep deletes only copies no record lists.
+    expect(await copiesNoRecordLists([quarantineKeyFor(key)])).toStrictEqual(
+      [],
+    );
+    expect(await stored("quarantine/")).toStrictEqual([quarantineKeyFor(key)]);
+  });
+
+  it("lists every copy of a kit when its owner deletes one photo between the copies and the read of its rows, and a photo added then with no copy", async () => {
+    const { author, entryId, photoId, key } = await postedPhoto();
+    const secondId = newUlid();
+    const secondKey = entryPhotoKeyFor(author, entryId, secondId);
+    await env.MEDIA.put(secondKey, new Uint8Array([4, 5, 6]));
+    await core().insert(entryPhotos).values({
+      id: secondId,
+      entryId,
+      photoKey: secondKey,
+      position: 1,
+      screenStatus: "pass",
+    });
+    const queueId = await queued("entry", entryId);
+    const subject = await openSubject(queueId, await shownRowOf(queueId));
+    if (subject === undefined) throw new Error("not open");
+    // The second photo goes, and a third arrives, after the copies.
+    const thirdId = newUlid();
+    const thirdKey = entryPhotoKeyFor(author, entryId, thirdId);
+    const puts = afterCopy(2, async () => {
+      await deleteEntryPhoto(core(), author, secondId, quiet, noPurge);
+      await core().insert(entryPhotos).values({
+        id: thirdId,
+        entryId,
+        photoKey: thirdKey,
+        position: 2,
+        screenStatus: "pass",
+      });
+    });
+
+    const outcome = await moderateContent(
+      core(),
+      {
+        actorId: "rev",
+        action: "quarantine",
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+        heldTo: subject.heldTo,
+      },
+      quiet,
+    );
+    puts.mockRestore();
+
+    expect(outcome).toBe("removed");
+    const copies = [quarantineKeyFor(key), quarantineKeyFor(secondKey)];
+    const [record] = await core()
+      .select({ snapshot: quarantinedContent.photosSnapshot })
+      .from(quarantinedContent);
+    const snapshot = z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          photoKey: z.string(),
+          preservedKey: z.string().optional(),
+        }),
+      )
+      .parse(JSON.parse(record?.snapshot ?? "null"));
+    expect(
+      snapshot.map(({ id, photoKey, preservedKey }) => ({
+        id,
+        photoKey,
+        preservedKey,
+      })),
+    ).toStrictEqual([
+      { id: photoId, photoKey: key, preservedKey: quarantineKeyFor(key) },
+      {
+        id: undefined,
+        photoKey: secondKey,
+        preservedKey: quarantineKeyFor(secondKey),
+      },
+      { id: thirdId, photoKey: thirdKey, preservedKey: undefined },
+    ]);
+    // The sweep deletes only copies no record lists.
+    expect(await copiesNoRecordLists(copies)).toStrictEqual([]);
+    const kept = await stored("quarantine/");
+    expect(kept.toSorted(byKey)).toStrictEqual(copies.toSorted(byKey));
+  });
+
+  it("keeps a copy already at its key, writing nothing over it, and lists it", async () => {
+    const { photoId, key } = await postedPhoto();
+    const copy = quarantineKeyFor(key);
+    // A first attempt's copy, whose batch never landed.
+    await env.MEDIA.put(copy, new Uint8Array([9]));
+    const puts = vi.spyOn(env.MEDIA, "put");
+
+    const outcome = await moderateContent(
+      core(),
+      {
+        actorId: "rev",
+        action: "quarantine",
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "explicit",
+      },
+      quiet,
+    );
+
+    expect(outcome).toBe("removed");
+    expect(puts.mock.calls.map(([written]) => written)).not.toContain(copy);
+    const kept = await env.MEDIA.get(copy);
+    expect(new Uint8Array((await kept?.arrayBuffer()) ?? [])).toStrictEqual(
+      new Uint8Array([9]),
+    );
+    expect(await listedCopies()).toStrictEqual([copy]);
   });
 
   it("records nothing for a refused quarantine whose row another reviewer decided, and keeps its copy", async () => {

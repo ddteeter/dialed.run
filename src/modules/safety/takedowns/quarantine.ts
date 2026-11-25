@@ -470,12 +470,18 @@ async function purgeClaimed(
 }
 
 /**
- * How long a copy no record lists is kept after R2 says it was written:
- * long enough that a quarantine still on its way to its batch, which
- * takes seconds, is never swept from under it. A number the owner can
- * retune.
+ * The retention, in days, of the R2 lock rule on the quarantine prefix
+ * (`docs/deployment.md`, "Lock `quarantine/`"); a test reads the runbook's
+ * number against this one.
  */
-export const QUARANTINE_UNLISTED_GRACE_SECONDS = 24 * 60 * 60;
+export const QUARANTINE_LOCK_DAYS = 365;
+
+/**
+ * How long a copy no record lists is kept after R2 says it was written:
+ * the lock's retention and a day more.
+ */
+export const QUARANTINE_UNLISTED_GRACE_SECONDS =
+  (QUARANTINE_LOCK_DAYS + 1) * 24 * 60 * 60;
 
 /**
  * The most pages of the quarantine prefix one firing lists, at

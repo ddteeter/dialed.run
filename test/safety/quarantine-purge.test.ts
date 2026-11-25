@@ -20,6 +20,7 @@ import {
   QUARANTINE_PURGE_CAP,
   QUARANTINE_PURGE_LEASE_SECONDS,
   QUARANTINE_SWEEP_PAGES,
+  QUARANTINE_LOCK_DAYS,
   QUARANTINE_UNLISTED_GRACE_SECONDS,
 } from "../../src/modules/safety/takedowns/quarantine";
 
@@ -257,7 +258,7 @@ describe("purgeExpiredQuarantine", () => {
     expect(await recordOf(record.id)).toBeUndefined();
     for (const key of record.keys) expect(await isStored(key)).toBe(true);
 
-    await purgeExpiredQuarantine(core(), env.MEDIA, now + 2 * DAY);
+    await purgeExpiredQuarantine(core(), env.MEDIA, now + 367 * DAY);
     for (const key of record.keys) expect(await isStored(key)).toBe(false);
   });
 
@@ -411,17 +412,43 @@ describe("a copy two records list", () => {
   });
 });
 
+/**
+The runbook, read as text.
+*/
+const runbook: Record<string, string> = import.meta.glob(
+  "../../docs/deployment.md",
+  { query: "?raw", import: "default", eager: true },
+);
+
+describe("QUARANTINE_LOCK_DAYS", () => {
+  it("is the retention of the runbook's lock on the quarantine prefix", () => {
+    const text = Object.values(runbook).join("");
+    const rule =
+      /Lock `quarantine\/`[\s\S]*?retention \*\*(\d+) days\*\*/u.exec(text);
+
+    expect(Number(rule?.[1])).toBe(QUARANTINE_LOCK_DAYS);
+  });
+
+  it("is what an unlisted copy waits, and a day more", () => {
+    expect(QUARANTINE_UNLISTED_GRACE_SECONDS).toBe(
+      (QUARANTINE_LOCK_DAYS + 1) * DAY,
+    );
+  });
+});
+
 describe("copies no record lists", () => {
-  it("are deleted by the purge once a day old, and kept until then", async () => {
+  it("are kept a year and a day after R2 says they were written, then deleted by the purge", async () => {
     const copy = unlisted(newUlid());
     await env.MEDIA.put(copy, "bytes");
     const madeAt = nowSeconds();
 
-    await purgeExpiredQuarantine(core(), env.MEDIA, madeAt + DAY - 60);
+    await purgeExpiredQuarantine(core(), env.MEDIA, madeAt + 2 * DAY);
+    expect(await isStored(copy)).toBe(true);
+    await purgeExpiredQuarantine(core(), env.MEDIA, madeAt + 366 * DAY - 60);
     expect(await isStored(copy)).toBe(true);
 
     expect(
-      await purgeExpiredQuarantine(core(), env.MEDIA, madeAt + DAY + 60),
+      await purgeExpiredQuarantine(core(), env.MEDIA, madeAt + 366 * DAY + 60),
     ).toStrictEqual({ purged: 0, failed: [] });
     expect(await isStored(copy)).toBe(false);
   });
@@ -461,11 +488,11 @@ describe("copies no record lists", () => {
 
   it("keeps an old copy a record lists, and deletes nothing outside the prefix", async () => {
     const now = nowSeconds();
-    const kept = await quarantined({ retainUntil: now + 3 * DAY });
+    const kept = await quarantined({ retainUntil: now + 400 * DAY });
     const live = entryPhotoKeyFor("u", "e", newUlid());
     await env.MEDIA.put(live, "bytes");
 
-    await purgeExpiredQuarantine(core(), env.MEDIA, now + 2 * DAY);
+    await purgeExpiredQuarantine(core(), env.MEDIA, now + 367 * DAY);
 
     for (const key of kept.keys) expect(await isStored(key)).toBe(true);
     expect(await isStored(live)).toBe(true);
@@ -476,7 +503,7 @@ describe("copies no record lists", () => {
     const copies = Array.from({ length: 101 }, () => unlisted(newUlid()));
     for (const copy of copies) await env.MEDIA.put(copy, "bytes");
 
-    await purgeExpiredQuarantine(core(), env.MEDIA, nowSeconds() + 2 * DAY);
+    await purgeExpiredQuarantine(core(), env.MEDIA, nowSeconds() + 367 * DAY);
 
     expect(await env.MEDIA.list({ prefix: "quarantine/" })).toMatchObject({
       objects: [],
