@@ -11,6 +11,7 @@ import {
   ListSection,
   Mono,
   MONO_CASED_CLASS,
+  PageLinks,
   QUIET_CANCEL,
   QUIET_PILL,
   SubmitButton,
@@ -60,9 +61,7 @@ function decidedSaid(
 ): (result: Awaited<ReturnType<Decide>>) => string {
   return ({ outcome }) => {
     if (outcome === "decided") return done;
-    return outcome === "already_decided"
-      ? ALREADY_DECIDED
-      : NO_LONGER_OPEN;
+    return outcome === "already_decided" ? ALREADY_DECIDED : NO_LONGER_OPEN;
   };
 }
 
@@ -141,6 +140,7 @@ function ignoreRow(): void {
 export function RemovalRequests({
   requests,
   pending = requests.length,
+  page = FIRST_PAGE,
   asOf,
   decide,
   block,
@@ -153,6 +153,11 @@ export function RemovalRequests({
    * than `requests` once they run past the list (`pendingTakedownCount`).
    */
   pending?: number;
+  /**
+   * Which page this is (`pendingTakedownPage`): the place it starts
+   * after, the next page's, and how many pending requests come before it.
+   */
+  page?: RequestsPage;
   /**
   After a decision or a block, so the route reads the list again.
   */
@@ -211,19 +216,61 @@ export function RemovalRequests({
           />
         )}
       </ListSection>
-      <ShownOf shown={remaining.length} waiting={waiting} />
+      <ShownOf
+        shown={remaining.length}
+        waiting={waiting}
+        before={page.after === undefined ? undefined : page.before}
+      />
+      <PageLinks
+        to="/desk/review"
+        shown={requests.length}
+        next={page.next}
+        after={page.after}
+        backLabel="← Back to the soonest due"
+      />
     </>
   );
 }
 
 /**
- * How many of the pending requests are listed, when not all are.
+Which page of the removal requests is shown (`pendingTakedownPage`).
+*/
+interface RequestsPage {
+  readonly after: string | undefined;
+  readonly next: string | undefined;
+  readonly before: number;
+}
+
+const FIRST_PAGE: RequestsPage = {
+  after: undefined,
+  next: undefined,
+  before: 0,
+};
+
+/**
+ * How many of the pending requests are listed: on the first page, when
+ * not all are; on a later one (`before` known), which of them, with the
+ * range's end not past the total.
  */
 function ShownOf({
   shown,
   waiting,
-}: Readonly<{ shown: number; waiting: number }>): JSX.Element | undefined {
-  if (shown === 0 || shown >= waiting) return undefined;
+  before,
+}: Readonly<{
+  shown: number;
+  waiting: number;
+  before: number | undefined;
+}>): JSX.Element | undefined {
+  if (shown === 0) return undefined;
+  if (before !== undefined) {
+    const to = Math.min(before + shown, waiting);
+    return (
+      <p className="m-0 text-body text-quiet" data-part="requests-shown">
+        {`Showing ${String(before + 1)}–${String(to)} of ${String(waiting)}.`}
+      </p>
+    );
+  }
+  if (shown >= waiting) return undefined;
   return (
     <p className="m-0 text-body text-quiet" data-part="requests-shown">
       {`Showing ${String(shown)} of ${String(waiting)}. The rest come in as these are decided.`}

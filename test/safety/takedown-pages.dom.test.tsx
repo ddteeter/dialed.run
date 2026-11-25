@@ -415,6 +415,106 @@ function blockedAnswer(declinedIds: string[]) {
   };
 }
 
+/**
+`count` pending requests, each with its own id.
+*/
+function listed(count: number): PendingTakedownRequest[] {
+  return Array.from({ length: count }, (_, index) =>
+    pending({ id: `01JREQUEST${String(index).padStart(16, "0")}` }),
+  );
+}
+
+/**
+One page of Review's removal requests.
+*/
+function pageOf(page: {
+  count: number;
+  pending: number;
+  after?: string;
+  next?: string;
+  before?: number;
+}) {
+  return renderWithRouter(
+    <RemovalRequests
+      onChanged={vi.fn()}
+      asOf={0}
+      requests={listed(page.count)}
+      pending={page.pending}
+      page={{ after: page.after, next: page.next, before: page.before ?? 0 }}
+      decide={vi.fn<DecideFn>()}
+      block={vi.fn<BlockFn>()}
+    />,
+  );
+}
+
+describe("Review · removal requests, a page at a time", () => {
+  const AFTER = "0.1800003600.01JABCDEFGHJKMNPQRSTVWXYZ9";
+
+  it("keeps the first page's line, and links the next page while there is one", async () => {
+    await pageOf({ count: 50, pending: 61, next: AFTER });
+    expect(part("requests-shown")).toHaveTextContent(
+      /^Showing 50 of 61\. The rest come in as these are decided\.$/u,
+    );
+    expect(screen.getByRole("link", { name: "Next 50 →" })).toHaveAttribute(
+      "href",
+      `/desk/review?after=${AFTER}`,
+    );
+    expect(
+      screen.queryByRole("link", { name: "← Back to the soonest due" }),
+    ).toBeNull();
+  });
+
+  it("says a later page's range of the total, and links back to the soonest due", async () => {
+    await pageOf({ count: 11, pending: 61, after: AFTER, before: 50 });
+    expect(part("requests-shown")).toHaveTextContent(
+      /^Showing 51–61 of 61\.$/u,
+    );
+    expect(
+      screen.getByRole("link", { name: "← Back to the soonest due" }),
+    ).toHaveAttribute("href", "/desk/review");
+    expect(screen.queryByRole("link", { name: /^Next/u })).toBeNull();
+  });
+
+  it("caps the range at the total", async () => {
+    await pageOf({ count: 11, pending: 55, after: AFTER, before: 50 });
+    expect(part("requests-shown")).toHaveTextContent(
+      /^Showing 51–55 of 55\.$/u,
+    );
+  });
+
+  it("links both ways from a middle page, as ink underlined targets", async () => {
+    await pageOf({
+      count: 50,
+      pending: 160,
+      after: AFTER,
+      next: AFTER,
+      before: 50,
+    });
+    expect(part("requests-shown")).toHaveTextContent(
+      /^Showing 51–100 of 160\.$/u,
+    );
+    for (const name of ["← Back to the soonest due", "Next 50 →"]) {
+      expect(screen.getByRole("link", { name })).toHaveClass(
+        "target",
+        "inline-flex",
+        "items-center",
+        "text-ink",
+        "underline",
+        "underline-offset-4",
+      );
+    }
+  });
+
+  it("draws no page links when every request fits on one page", async () => {
+    await pageOf({ count: 3, pending: 3 });
+    expect(screen.queryByRole("link", { name: /^Next/u })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: "← Back to the soonest due" }),
+    ).toBeNull();
+    expect(part("requests-shown")).toBeNull();
+  });
+});
+
 describe("Review · removal requests", () => {
   it("draws the photo a request names, served as the Desk's tiles are (SA-M24)", async () => {
     await renderWithRouter(
@@ -701,7 +801,10 @@ describe("Review · removal requests", () => {
   );
 
   it.each([
-    { outcome: "already_decided", said: "Someone already decided this request." },
+    {
+      outcome: "already_decided",
+      said: "Someone already decided this request.",
+    },
     { outcome: "not_found", said: "That request is no longer open." },
   ] as const)(
     "says $said when Take it down or Decline finds it $outcome, and the page reads it again",

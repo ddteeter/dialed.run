@@ -982,25 +982,114 @@ const LISTED_COLUMNS = {
 };
 
 /**
- * The open requests, those that may act first and then those waiting on a
- * confirm, each soonest due first — the order an operator must work them
- * in. Read on `takedown_requests_status_due`; `pendingTakedownCount` says
- * how many there are past `limit`.
+Whether a request waits on its confirm: 1, after those that may act (0).
+*/
+const WAITS = sql<number>`(${takedownRequests.holdState} is 'confirm')`;
+
+/**
+ * A page's place in Review's order, `<waits>.<due_at>.<id>`: the last
+ * request of the page before (`removalRequestsSearch` admits nothing else).
+ */
+function keyOfCursor(after: string) {
+  const [waits = "0", dueAt = "0", id = ""] = after.split(".", 3);
+  return sql`(${Number(waits)}, ${Number(dueAt)}, ${id})`;
+}
+
+/**
+The pending requests at or before (`<=`) or after (`>`) a page's place.
+*/
+function pendingFrom(after: string | undefined, side: ">" | "<="): SQL {
+  const pending = eq(takedownRequests.status, "pending");
+  if (after === undefined) return pending;
+  const key = sql`(${WAITS}, ${takedownRequests.dueAt}, ${takedownRequests.id})`;
+  return sql`${pending} and ${key} ${sql.raw(side)} ${keyOfCursor(after)}`;
+}
+
+/**
+ * The open requests after `after` (from the top when there is none), those
+ * that may act first and then those waiting on a confirm, each soonest
+ * due first and then by id — the order an operator must work them in, and
+ * one a page ends and the next starts on. Read on
+ * `takedown_requests_status_due`.
+ */
+function listedRows(db: Db, limit: number, after: string | undefined) {
+  return db
+    .select(LISTED_COLUMNS)
+    .from(takedownRequests)
+    .where(pendingFrom(after, ">"))
+    .orderBy(WAITS, asc(takedownRequests.dueAt), asc(takedownRequests.id))
+    .limit(limit);
+}
+
+/**
+ * One page of Review's removal requests (owner, 2026-11-24): `limit` of
+ * them after `after`, the page after this one as `next` (nothing on the
+ * last), and how many pending requests come `before` it. Keyed, not
+ * counted, so a request decided or lapsed since moves no other past the
+ * page's place. A request confirmed since moves from waiting to may act,
+ * at its own due time, and a pass from the top reaches it there.
+ */
+export async function pendingTakedownPage(
+  db: Db,
+  page: { readonly after?: string | undefined; readonly now?: number },
+  limit = 50,
+): Promise<{
+  readonly requests: PendingTakedownRequest[];
+  readonly next: string | undefined;
+  readonly before: number;
+}> {
+  const { after, now = nowSeconds() } = page;
+  // One past the page, to know whether there is a next one.
+  const read = await listedRows(db, limit + 1, after);
+  const last = read.length > limit ? read[limit - 1] : undefined;
+  const before =
+    after === undefined
+      ? 0
+      : counted(
+          await db
+            .select({ n: sql<number>`count(*)` })
+            .from(takedownRequests)
+            .where(pendingFrom(after, "<=")),
+        );
+  return {
+    requests: await describedRows(db, read.slice(0, limit), now),
+    next: last === undefined ? undefined : cursorAt(last),
+    before,
+  };
+}
+
+/**
+A row's place as the next page's `after`.
+*/
+function cursorAt(row: {
+  readonly holdState: string | null;
+  readonly dueAt: number;
+  readonly id: string;
+}): string {
+  const waits = row.holdState === "confirm" ? "1" : "0";
+  return `${waits}.${String(row.dueAt)}.${row.id}`;
+}
+
+/**
+ * The first `limit` open requests in Review's order
+ * (`pendingTakedownPage` for the pages past them).
  */
 export async function pendingTakedownRequests(
   db: Db,
   now = nowSeconds(),
   limit = 50,
 ): Promise<PendingTakedownRequest[]> {
-  const rows = await db
-    .select(LISTED_COLUMNS)
-    .from(takedownRequests)
-    .where(eq(takedownRequests.status, "pending"))
-    .orderBy(
-      sql`${takedownRequests.holdState} is 'confirm'`,
-      asc(takedownRequests.dueAt),
-    )
-    .limit(limit);
+  return describedRows(db, await listedRows(db, limit, undefined), now);
+}
+
+/**
+What Review shows of each row read, and the others listed beside it.
+*/
+async function describedRows(
+  db: Db,
+  rows: Awaited<ReturnType<typeof listedRows>>,
+  now: number,
+): Promise<PendingTakedownRequest[]> {
   // Counted among the rows already read rather than by a query per row:
   // the list is at most `limit` long, and a requester past it is still
   // one whose other requests show once these are decided.

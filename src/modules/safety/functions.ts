@@ -22,7 +22,7 @@ import {
   confirmTakedownRequest,
   fileTakedownRequest,
   pendingTakedownCount,
-  pendingTakedownRequests,
+  pendingTakedownPage,
   REMOVAL_REQUESTS_PURGE_KEY,
 } from "./takedowns/takedown-requests";
 import {
@@ -80,6 +80,7 @@ import {
   takedownRequestInput,
   takedownConfirmInput,
   blockRequesterInput,
+  removalRequestsSearch,
   unblockRequesterInput,
   forceRenameInput,
   handleReviewInput,
@@ -170,9 +171,11 @@ export const runRemovalsQuery = createServerFn({ method: "GET" })
     return removalsOnRun(coreDb(), ownerId, data.runId, data.since);
   });
 
-export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const reviewQueueQuery = createServerFn({ method: "GET" })
+  .validator((data: unknown) => removalRequestsSearch.parse(data ?? {}))
+  .handler(async ({ data }) => {
     const adminId = requireAdmin(await verifiedUserId());
+    const page = await pendingTakedownPage(coreDb(), { after: data.after });
     return {
       // The copies search reads on its own, and a failure is reported.
       queue: await pendingReviewQueue(undefined, {
@@ -180,7 +183,9 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
       }),
       // Design 136: `/takedown` requests, which carry their own decision
       // and so are not review rows, waiting above them (round 35 #58e).
-      requests: await pendingTakedownRequests(coreDb()),
+      // A page at a time (owner, 2026-11-24), after `after`.
+      requests: page.requests,
+      requestsPage: { after: data.after, next: page.next, before: page.before },
       // How many are pending in all, listed or not.
       requestsPending: await pendingTakedownCount(coreDb()),
       // Design 137: the blocks Block and decline all made, for Unblock.
@@ -194,8 +199,7 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
       // which Review offers to release at once.
       ...(await burstsToRelease()),
     };
-  },
-);
+  });
 
 /**
  * `/takedown`'s request (design 136, D-117). No session: the person asking

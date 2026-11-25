@@ -1,10 +1,13 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 
+import { afterOf } from "../../ui";
+
 import {
   DeskPage,
   useDeskToday,
 } from "../../modules/ops/desk/components/DeskPage";
 import { ReviewHeading } from "../../modules/ops/desk/components/ReviewHeading";
+import { removalRequestsSearch } from "../../modules/safety/client";
 import { CopyrightHolds } from "../../modules/safety/takedowns/components/CopyrightHolds";
 import { QuarantineRecords } from "../../modules/safety/takedowns/components/QuarantineRecords";
 import { ReleaseHolds } from "../../modules/safety/review/components/ReleaseHolds";
@@ -39,7 +42,10 @@ import {
  * check `requireAdmin` besides.
  */
 export const Route = createFileRoute("/desk/review")({
-  loader: async () => reviewQueueQuery(),
+  validateSearch: removalRequestsSearch,
+  // The page is the list's `after`.
+  loaderDeps: afterOf,
+  loader: async ({ deps }) => reviewQueueQuery({ data: deps }),
   component: ReviewPage,
 });
 
@@ -51,6 +57,7 @@ function ReviewPage() {
     requests,
     blocks,
     requestsPending,
+    requestsPage,
     quarantine,
     quarantineTotal,
     holds,
@@ -71,6 +78,7 @@ function ReviewPage() {
       <RemovalRequests
         requests={requests}
         pending={requestsPending}
+        page={requestsPage}
         asOf={today.asOf}
         decide={decideRemovalRequestAction}
         block={blockTakedownRequesterAction}
