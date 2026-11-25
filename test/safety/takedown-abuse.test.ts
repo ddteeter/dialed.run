@@ -820,9 +820,15 @@ describe("Block and decline all", () => {
     const blocks = await core().select().from(takedownBlocks);
     expect(
       blocks
-        .map((block) => `${block.kind} ${block.createdBy} ${String(block.createdAt)}`)
+        .map(
+          (block) =>
+            `${block.kind} ${block.createdBy} ${String(block.createdAt)}`,
+        )
         .toSorted(byText),
-    ).toStrictEqual([`email op-one ${String(NOW + 10)}`, `ip op-one ${String(NOW + 10)}`]);
+    ).toStrictEqual([
+      `email op-one ${String(NOW + 10)}`,
+      `ip op-one ${String(NOW + 10)}`,
+    ]);
     expect(blocks.find((block) => block.kind === "email")?.key).toBe(
       "me@example.com",
     );
@@ -830,26 +836,26 @@ describe("Block and decline all", () => {
     expect(await kindsOwed()).not.toContain("removal_request_decided");
   });
 
-  it("does not decline or block a requester for a request someone else filed under their address", async () => {
+  it("declines only the pressed request when another under its address came from another network, and blocks only that network", async () => {
     const reported = await sharedEntry();
-    const decoy = await sharedEntry();
-    const real = await file("r@example.com", entryLink(reported));
-    const forged = await file("r@example.com", entryLink(decoy), {
+    const other = await sharedEntry();
+    const theirs = await file("r@example.com", entryLink(reported));
+    const fromElsewhere = await file("r@example.com", entryLink(other), {
       ip: "198.51.100.77",
     });
     expect(await entryStatus(reported)).toBe("hidden_pending_review");
 
     expect(
-      await blockAndDeclineAll(core(), "op-one", forged.id, NOW + 10),
+      await blockAndDeclineAll(core(), "op-one", fromElsewhere.id, NOW + 10),
     ).toStrictEqual({
       status: "blocked",
       declined: 1,
-      declinedIds: [forged.id],
+      declinedIds: [fromElsewhere.id],
       keysBlocked: ["ip"],
     });
 
     const rows = await core().select().from(takedownRequests);
-    expect(rows.find((row) => row.id === real.id)?.status).toBe("pending");
+    expect(rows.find((row) => row.id === theirs.id)?.status).toBe("pending");
     expect(await entryStatus(reported)).toBe("hidden_pending_review");
     const next = await file("r@example.com", entryLink(await sharedEntry()), {
       now: NOW + 20,
@@ -863,8 +869,8 @@ describe("Block and decline all", () => {
     expect(fromThem.holdState).toBe("blocked");
   });
 
-  it("leaves the address free when every request under it was junk, so the real one filed later hides", async () => {
-    const junk = await file("r@example.com", entryLink(await sharedEntry()), {
+  it("leaves an unconfirmed address unblocked, so a later request from it on another network hides", async () => {
+    const first = await file("r@example.com", entryLink(await sharedEntry()), {
       ip: "198.51.100.77",
     });
     await file("r@example.com", entryLink(await sharedEntry()), {
@@ -873,27 +879,34 @@ describe("Block and decline all", () => {
     const blocked = await blockAndDeclineAll(
       core(),
       "op-one",
-      junk.id,
+      first.id,
       NOW + 10,
     );
     expect(blocked).toMatchObject({ declined: 2, keysBlocked: ["ip"] });
 
     const reported = await sharedEntry();
-    const real = await file("r@example.com", entryLink(reported), {
+    const later = await file("r@example.com", entryLink(reported), {
       now: NOW + 20,
     });
-    expect(real.holdState).toBe("held");
+    expect(later.holdState).toBe("held");
     expect(await entryStatus(reported)).toBe("hidden_pending_review");
   });
 
   it("blocks the address only for the pressed request's own confirm, not another's under the key", async () => {
-    const real = await file("r@example.com", entryLink(await sharedEntry()));
-    const forged = await file("r@example.com", entryLink(await sharedEntry()), {
-      ip: "198.51.100.77",
-    });
-    await confirmedAt(real.id, NOW + 5);
+    const confirmed = await file(
+      "r@example.com",
+      entryLink(await sharedEntry()),
+    );
+    const fromElsewhere = await file(
+      "r@example.com",
+      entryLink(await sharedEntry()),
+      {
+        ip: "198.51.100.77",
+      },
+    );
+    await confirmedAt(confirmed.id, NOW + 5);
     expect(
-      await blockAndDeclineAll(core(), "op-one", forged.id, NOW + 10),
+      await blockAndDeclineAll(core(), "op-one", fromElsewhere.id, NOW + 10),
     ).toMatchObject({ declined: 1, keysBlocked: ["ip"] });
     const blocks = await core().select().from(takedownBlocks);
     expect(blocks.map((block) => block.kind)).toStrictEqual(["ip"]);
@@ -904,10 +917,16 @@ describe("Block and decline all", () => {
     const row = await file("me@example.com", entryLink(a), {
       secret: undefined,
     });
-    const sibling = await file("me@example.com", entryLink(await sharedEntry()), {
-      secret: undefined,
-    });
-    expect(await blockAndDeclineAll(core(), "op-one", row.id, NOW)).toStrictEqual({
+    const sibling = await file(
+      "me@example.com",
+      entryLink(await sharedEntry()),
+      {
+        secret: undefined,
+      },
+    );
+    expect(
+      await blockAndDeclineAll(core(), "op-one", row.id, NOW),
+    ).toStrictEqual({
       status: "blocked",
       declined: 1,
       declinedIds: [row.id],
@@ -938,7 +957,10 @@ describe("Block and decline all", () => {
   it("refuses a request already decided, and blocks and declines nothing", async () => {
     const a = await sharedEntry();
     const decided = await file("me@example.com", entryLink(a));
-    const sibling = await file("me@example.com", entryLink(await sharedEntry()));
+    const sibling = await file(
+      "me@example.com",
+      entryLink(await sharedEntry()),
+    );
     await confirmedAt(decided.id, NOW + 5);
     await core()
       .update(takedownRequests)
@@ -1083,9 +1105,9 @@ describe("Review's list", () => {
     const two = await file("two@example.com", "somewhere-2");
     expect(one.ipKey).toBe(two.ipKey);
     const listed = await pendingTakedownRequests(core(), NOW);
-    expect(
-      listed.find((row) => row.id === one.id)?.relatedIds,
-    ).toStrictEqual([]);
+    expect(listed.find((row) => row.id === one.id)?.relatedIds).toStrictEqual(
+      [],
+    );
   });
 
   it("does not link requests with no IP key, and says whether each was confirmed", async () => {
@@ -1241,9 +1263,9 @@ describe("requests filed before the keys existed", () => {
     const first = await legacyRequest("Me+x@example.com", "somewhere-1");
     await legacyRequest("me@example.com", "somewhere-2");
     const listed = await pendingTakedownRequests(core(), NOW);
-    expect(
-      listed.find((row) => row.id === first)?.relatedIds,
-    ).toStrictEqual([]);
+    expect(listed.find((row) => row.id === first)?.relatedIds).toStrictEqual(
+      [],
+    );
   });
 
   it("are blocked by their address's inbox once confirmed", async () => {
