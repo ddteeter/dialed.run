@@ -15,6 +15,7 @@ import {
   exportKeyFor,
   exportPrefixFor,
   exportRowState,
+  FAILED_EXPORTS_PER_DAY,
   failExport,
   newLinkToken,
   requestExport,
@@ -165,9 +166,14 @@ describe("canRequest", () => {
     ).toBe(false);
   });
 
-  it("always allows another after a failure, and the very first request", async () => {
-    expect(canRequest(await rowLike("failed", NOW), NOW)).toBe(true);
+  it("allows one more right after a failure, and the very first request", async () => {
+    expect(canRequest(await rowLike("failed", NOW), NOW, 1)).toBe(true);
     expect(canRequest(undefined, NOW)).toBe(true);
+  });
+
+  it("allows none after a second failure in a day", async () => {
+    expect(canRequest(await rowLike("failed", NOW), NOW, 2)).toBe(false);
+    expect(FAILED_EXPORTS_PER_DAY).toBe(2);
   });
 });
 
@@ -186,8 +192,14 @@ describe("rowState", () => {
   );
 
   it("is failed after the DLQ gave up", async () => {
-    expect(rowState(await rowWith("failed"), NOW)).toStrictEqual({
+    expect(rowState(await rowWith("failed"), NOW, 1)).toStrictEqual({
       state: "failed",
+    });
+  });
+
+  it("waits for tomorrow once a second export failed in a day", async () => {
+    expect(rowState(await rowWith("failed"), NOW, 2)).toStrictEqual({
+      state: "failed-wait",
     });
   });
 
@@ -233,6 +245,32 @@ describe("rowState", () => {
   });
 });
 
+describe("an export too large to build", () => {
+  it("shows as too large, with nothing to press, for the day it was asked for", async () => {
+    const tooLarge = await rowLike("too-large", NOW - EXPORT_EVERY_S + 1);
+    expect(rowState(tooLarge, NOW)).toStrictEqual({ state: "too-large" });
+    expect(canRequest(tooLarge, NOW)).toBe(false);
+  });
+
+  it("allows another a day after it was asked for", async () => {
+    const tooLarge = await rowLike("too-large", NOW - EXPORT_EVERY_S);
+    expect(rowState(tooLarge, NOW)).toStrictEqual({ state: "idle" });
+    expect(canRequest(tooLarge, NOW)).toBe(true);
+  });
+
+  it("makes nothing when asked again that day", async () => {
+    const userId = newUlid();
+    await seedExport(userId, "too-large", { requestedAt: NOW - 120 });
+    const { sent, effects: live } = effects();
+
+    expect(
+      await requestExport(db, { userId, idempotencyKey: newUlid() }, live, NOW),
+    ).toStrictEqual({ state: "too-large" });
+    expect(sent).toStrictEqual([]);
+    expect(await rowsOf(userId)).toHaveLength(1);
+  });
+});
+
 describe("exportRowState", () => {
   it("reads the runner's latest export, and only theirs", async () => {
     const userId = newUlid();
@@ -245,6 +283,53 @@ describe("exportRowState", () => {
     expect(await exportRowState(db, newUlid(), NOW)).toStrictEqual({
       state: "idle",
     });
+  });
+});
+
+describe("requestExport after failures", () => {
+  it("makes another right after one failure", async () => {
+    const userId = newUlid();
+    await seedExport(userId, "failed", { requestedAt: NOW - 120 });
+    const { sent, effects: live } = effects();
+
+    expect(
+      await requestExport(db, { userId, idempotencyKey: newUlid() }, live, NOW),
+    ).toStrictEqual({ state: "preparing" });
+    expect(sent).toHaveLength(1);
+  });
+
+  it("makes nothing after two failures in a day, and says to wait", async () => {
+    const userId = newUlid();
+    await seedExport(userId, "failed", { requestedAt: NOW - 240 });
+    await seedExport(userId, "failed", { requestedAt: NOW - 120 });
+    const { sent, effects: live } = effects();
+
+    expect(
+      await requestExport(db, { userId, idempotencyKey: newUlid() }, live, NOW),
+    ).toStrictEqual({ state: "failed-wait" });
+    expect(sent).toStrictEqual([]);
+    expect(await rowsOf(userId)).toHaveLength(2);
+    expect(await exportRowState(db, userId, NOW)).toStrictEqual({
+      state: "failed-wait",
+    });
+  });
+
+  it("makes one again a day after the second failure", async () => {
+    const userId = newUlid();
+    const later = NOW + EXPORT_EVERY_S;
+    await seedExport(userId, "failed", { requestedAt: NOW - 240 });
+    await seedExport(userId, "failed", { requestedAt: NOW });
+    const { sent, effects: live } = effects();
+
+    expect(
+      await requestExport(
+        db,
+        { userId, idempotencyKey: newUlid() },
+        live,
+        later,
+      ),
+    ).toStrictEqual({ state: "preparing" });
+    expect(sent).toHaveLength(1);
   });
 });
 

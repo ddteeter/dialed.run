@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
 import { inArray } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { manualConditions } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
@@ -103,6 +103,10 @@ describe("newestObservationAt", () => {
 });
 
 describe("forgetManualBands", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("deletes every band the runs carry, past one statement's worth, and only theirs", async () => {
     const theirs = Array.from({ length: 90 }, () => newUlid());
     const kept = newUlid();
@@ -117,6 +121,16 @@ describe("forgetManualBands", () => {
     expect(await bandsOf(theirs.slice(0, 80))).toStrictEqual([]);
     expect(await bandsOf(theirs.slice(80))).toStrictEqual([]);
     expect(await bandsOf([kept])).toStrictEqual([{ runId: kept }]);
+  });
+
+  it("sends every chunk of a page in one batch", async () => {
+    const batch = vi.spyOn(env.DIALED_WEATHER, "batch");
+    const ids = Array.from({ length: 170 }, () => newUlid());
+
+    await forgetManualBands(ids);
+
+    expect(batch).toHaveBeenCalledTimes(1);
+    expect(batch.mock.calls[0]?.[0]).toHaveLength(3);
   });
 
   it("is re-runnable: forgetting bands already gone deletes nothing", async () => {

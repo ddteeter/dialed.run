@@ -185,19 +185,19 @@ export const manualConditionsHandler: OutboxHandler<"manual_conditions_delete"> 
 
 /**
  * Every band these runs carry, gone — the account purge's step (ACC-9),
- * which deletes a runner's whole run history at once. In chunks under D1's
- * parameter cap. Re-runnable for the reason `forgetManualBand` is: a band
+ * which deletes a runner's run history a page at a time. In chunks under
+ * D1's parameter cap, sent in one batch. Re-runnable for the reason `forgetManualBand` is: a band
  * already gone deletes nothing.
  */
 export async function forgetManualBands(
   runIds: readonly string[],
 ): Promise<void> {
   const db = weatherDb();
-  for (const chunk of chunked(runIds, IN_LIST_CHUNK)) {
-    await db
-      .delete(manualConditions)
-      .where(inArray(manualConditions.runId, chunk));
-  }
+  const [first, ...rest] = chunked(runIds, IN_LIST_CHUNK).map((chunk) =>
+    db.delete(manualConditions).where(inArray(manualConditions.runId, chunk)),
+  );
+  if (first === undefined) return;
+  await db.batch([first, ...rest]);
 }
 
 export type ManualBandRow = typeof manualConditions.$inferSelect;

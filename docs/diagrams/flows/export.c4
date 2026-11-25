@@ -15,12 +15,12 @@ views {
         description 'Run files under imports/, export ZIPs under exports/'
       }
 
-    // source: src/modules/account/functions.ts requestExportFn; src/modules/account/data/data-exports.ts requestExport, canRequest; src/lib/contracts/data-export.ts EXPORT_EVERY_S
+    // source: src/modules/account/functions.ts requestExportFn; src/modules/account/data/data-exports.ts requestExport, canRequest, exportHistory, FAILED_EXPORTS_PER_DAY; src/lib/contracts/data-export.ts EXPORT_EVERY_S
     runner -> cf.app.account.request 'asks for a copy, with an idempotency key' {
       notes '''
         **Guard: the idempotency key.** A repeat of the key answers what the first request made.
 
-        One export a day: a new one is made after a failure at once, never while one is under way, and otherwise a day after the last.
+        One export a day: after a failure, one more at once; after a second failure in a day, the next waits for the day. Never while one is under way, and otherwise a day after the last.
       '''
     }
     // source: src/modules/account/data/data-exports.ts requestExport, newLinkToken; src/db/schema-core.ts dataExports, data_exports_idempotency, data_exports_in_flight
@@ -60,21 +60,32 @@ views {
     // source: src/modules/account/export-build/export-build.ts buildExport (claimId, IN_FLIGHT); src/modules/account/data/data-exports.ts IN_FLIGHT
     cf.app.account.exportBuild.consumer -> cf.coreDb 'claims the row: building, under a fresh claim id' {
       notes '''
-        **Guard: claim, then work.** Only a `pending` or `building` row is claimed. A job whose export is ready, failed or gone claims nothing and stops.
+        **Guard: claim, then work.** Only a `pending` or `building` row is claimed. A job whose export is ready, failed, too large or gone claims nothing and stops.
 
         A `building` row is claimable again, so a redelivery after a crash rebuilds it. Every claim has its own id, and only the build still holding it can finish.
       '''
+    }
+    // source: src/modules/account/export-build/export-build.ts buildExport, storedSizesOf, sizesUnder, isPastCaps, EXPORT_CAPS; src/lib/sql/r2-pages.ts listedPages
+    cf.app.account.exportBuild.consumer -> cf.mediaBucket 'lists the runner\'s photos, with their sizes, and counts their runs and garments' {
+      notes '''
+        And their run files under `imports/`. The sizes give the ZIP its length before a byte is written, which R2 needs to take a stream.
+
+        **Bounded.** Before anything is read for the ZIP: past 5,000 runs, 5,000 garments or 4 GiB of listed files, nothing is built.
+      '''
+    }
+    opt 'the export is past a cap' {
+      // source: src/modules/account/export-build/export-build.ts buildExport (mine, too-large)
+      cf.app.account.exportBuild.consumer -> cf.coreDb 'marks it too large, under its claim, and ends the job' {
+        notes '''
+          **Guard: the claim.** Only the build still holding it writes the status. The job is acknowledged: no retry and no report. The runner\'s row says a copy will be made by hand and emailed, and the daily digest names the runner.
+        '''
+        navigateTo exportRecovery
+      }
     }
     // source: src/modules/account/export-build/export.ts exportData, conditionsFor; src/modules/weather/index.ts observationsForRuns, manualReadingsForRuns
     cf.app.account.exportBuild.consumer -> cf.app.weather 'reads each run\'s conditions, as the app shows them' {
       notes '''
         With the runner\'s account, closet, runs, entries, uploads and accepted terms from the core database. The conditions are the derived reading only, never a raw provider row.
-      '''
-    }
-    // source: src/modules/account/export-build/export-build.ts buildExport, sizesUnder; src/lib/sql/r2-pages.ts listedPages
-    cf.app.account.exportBuild.consumer -> cf.mediaBucket 'lists the runner\'s photos, with their sizes' {
-      notes '''
-        And their run files under `imports/`. The sizes give the ZIP its length before a byte is written, which R2 needs to take a stream.
       '''
     }
     // source: src/modules/account/export-build/export-build.ts writeZip, zeros, FixedLengthStream; src/modules/account/data/data-exports.ts exportKeyFor, exportPrefixFor
@@ -166,11 +177,21 @@ views {
       // source: src/modules/account/data/data-exports.ts failExport, canRequest, rowState
       cf.app.account.exportBuild.deadLetter -[recovery]-> cf.coreDb 'marks the export failed, only if still in flight' {
         notes '''
-          The runner\'s export row says it did not work and offers to try again, which they can do at once. A redelivered dead letter for an export that did finish changes nothing.
+          The runner\'s export row says it did not work and offers to try again, which they can do once at once. After a second failure in a day, it says they can ask again tomorrow. A redelivered dead letter for an export that did finish changes nothing.
         '''
       }
       // source: src/modules/account/data/data-exports.ts failExport (account export dead-lettered)
       cf.app.account.exportBuild.deadLetter -> sentry 'reports the export\'s and the runner\'s ids'
+    }
+    opt 'an export was too large to build' {
+      // source: src/modules/dispatch/scheduled.ts runDailyDigest (export-too-large); src/modules/account/export-build/export-sweep.ts checkTooLargeExports, EXPORT_SWEEP_CAP (50)
+      cf.app.cronDaily1200 -> cf.coreDb 'finds the exports marked too large in the last day' {
+        notes '''
+          **Bounded.** At most 50 a firing, oldest first.
+        '''
+      }
+      // source: src/modules/dispatch/scheduled.ts digestReport; src/modules/account/export-build/export-sweep.ts checkTooLargeExports
+      cf.app.cronDaily1200 -> sentry 'names each runner in the digest, for a copy made by hand'
     }
     opt 'the email\'s fast path failed' {
       // source: src/modules/dispatch/scheduled.ts drainOwedEmail, runCron; src/modules/ops/outbox/outbox.ts drainOutbox, OUTBOX_FAST_PATH_GRACE_S
@@ -181,8 +202,8 @@ views {
       }
     }
     opt 'a week passes' {
-      // source: src/modules/account/export-build/export-sweep.ts expireExports, forgetFailures; src/lib/contracts/data-export.ts EXPORT_LINK_TTL_S
-      cf.app.cronHourly00 -> cf.coreDb 'claims ready exports past their 7 days, and failures a week old' {
+      // source: src/modules/account/export-build/export-sweep.ts expireExports, forgetFailures, FINISHED_UNBUILT; src/lib/contracts/data-export.ts EXPORT_LINK_TTL_S
+      cf.app.cronHourly00 -> cf.coreDb 'claims ready exports past their 7 days, and failures and too-large exports a week old' {
         notes '''
           A failed export can hold a whole ZIP: its last build\'s upload may have landed before its ready batch failed. So the claim\'s ZIP goes too.
         '''

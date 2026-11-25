@@ -42,13 +42,20 @@ function subLine(
     case "failed": {
       return "Your export didn't finish, and it doesn't count as today's.";
     }
+    case "failed-wait": {
+      return "Your export didn't work again. You can ask for another tomorrow.";
+    }
+    case "too-large": {
+      return "Your data is too large for a copy here. We'll make one by hand and email it to you.";
+    }
   }
 }
 
 /**
  * U1's "Export your data" row (ACC-10; round 27 #13), ending, as every
  * Account row does, in one bold `--cold-text` verb (R55·182.1): Get a
- * copy, Try again, or Download. Get a copy queues
+ * copy, Try again, or Download — or none, while the next export waits for
+ * tomorrow or an operator makes a copy too large to build here. Get a copy queues
  * the ZIP, and the row turns to `[ Preparing ]` and "We'll email a link
  * when it's ready." One a day: on the day a copy is ready the row offers
  * it instead. A control outside a form, so `useControlAction`'s — with a
@@ -121,7 +128,11 @@ function ExportAction({
   state: ExportRowState;
   pending: boolean;
   onRequest: () => void;
-}>): JSX.Element {
+}>): JSX.Element | undefined {
+  // Nothing to press until tomorrow, or until an operator sends the copy.
+  if (state.state === "failed-wait" || state.state === "too-large") {
+    return undefined;
+  }
   if (state.state === "preparing") {
     return <Bracketed className="shrink-0">Preparing</Bracketed>;
   }

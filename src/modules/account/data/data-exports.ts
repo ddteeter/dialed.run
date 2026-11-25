@@ -8,7 +8,7 @@
  * is written before the queue send, a lost send leaves it `pending`, and
  * the sweep re-sends it. So nothing here retries (law 3).
  */
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { dataExports } from "../../../db/schema-core";
@@ -71,29 +71,66 @@ export function newLinkToken(): string {
     .join("");
 }
 
-async function latestExport(
-  db: Db,
-  userId: string,
-): Promise<ExportRow | undefined> {
-  const [latest] = await db
-    .select()
-    .from(dataExports)
-    .where(eq(dataExports.userId, userId))
-    .orderBy(desc(dataExports.requestedAt), desc(dataExports.id))
-    .limit(1);
-  return latest;
+/**
+ * How many exports may fail in a day before the next waits for the day:
+ * one, and one more asked for straight after it. A number the owner may
+ * retune.
+ */
+export const FAILED_EXPORTS_PER_DAY = 2;
+
+/**
+The runner's exports asked for after `since` that failed.
+*/
+function failedSince(userId: string, since: number) {
+  return and(
+    eq(dataExports.userId, userId),
+    gt(dataExports.requestedAt, since),
+    eq(dataExports.status, "failed"),
+  );
 }
 
 /**
- * Whether a new request may make an export: always after a failure, never
- * while one is in flight, and otherwise once a day has passed since the
- * last (round 27 #13, "One export a day").
+ * The runner's latest export, and how many of theirs asked for in the
+ * last `EXPORT_EVERY_S` failed, in one batch on `data_exports_user`.
+ */
+async function exportHistory(
+  db: Db,
+  userId: string,
+  now: number,
+): Promise<{ latest: ExportRow | undefined; failedToday: number }> {
+  const [[latest], failed] = await db.batch([
+    db
+      .select()
+      .from(dataExports)
+      .where(eq(dataExports.userId, userId))
+      .orderBy(desc(dataExports.requestedAt), desc(dataExports.id))
+      .limit(1),
+    db
+      .select({ count: count() })
+      .from(dataExports)
+      .where(failedSince(userId, now - EXPORT_EVERY_S)),
+  ]);
+  return {
+    latest,
+    failedToday: failed.reduce((total, row) => total + row.count, 0),
+  };
+}
+
+/**
+ * Whether a new request may make an export: after a failure, while fewer
+ * than `FAILED_EXPORTS_PER_DAY` failed in the day; never while one is in
+ * flight; and otherwise once a day has passed since the last (round 27
+ * #13, "One export a day").
  */
 export function canRequest(
   latest: ExportRow | undefined,
   now: number,
+  failedToday = 0,
 ): boolean {
-  if (latest === undefined || latest.status === "failed") return true;
+  if (latest === undefined) return true;
+  if (latest.status === "failed") {
+    return failedToday < FAILED_EXPORTS_PER_DAY;
+  }
   if ((IN_FLIGHT as readonly string[]).includes(latest.status)) return false;
   return now - latest.requestedAt >= EXPORT_EVERY_S;
 }
@@ -102,16 +139,25 @@ export function canRequest(
  * What the row shows for the runner's latest export. A copy is offered
  * for download on the day it was asked for — the day a new one cannot be
  * — and after that the row offers a fresh one; the emailed link still
- * works until it expires.
+ * works until it expires. An export too large to build says so for the
+ * same day.
  */
 export function rowState(
   latest: ExportRow | undefined,
   now: number,
+  failedToday = 0,
 ): ExportRowState {
   if (latest === undefined) return { state: "idle" };
-  if (latest.status === "failed") return { state: "failed" };
+  if (latest.status === "failed") {
+    return canRequest(latest, now, failedToday)
+      ? { state: "failed" }
+      : { state: "failed-wait" };
+  }
   if ((IN_FLIGHT as readonly string[]).includes(latest.status)) {
     return { state: "preparing" };
+  }
+  if (latest.status === "too-large" && !canRequest(latest, now)) {
+    return { state: "too-large" };
   }
   if (
     latest.status === "ready" &&
@@ -132,7 +178,8 @@ export async function exportRowState(
   userId: string,
   now: number,
 ): Promise<ExportRowState> {
-  return rowState(await latestExport(db, userId), now);
+  const { latest, failedToday } = await exportHistory(db, userId, now);
+  return rowState(latest, now, failedToday);
 }
 
 /**
@@ -173,8 +220,10 @@ export async function requestExport(
     ),
   );
   if (repeat !== undefined) return rowState(repeat, now);
-  const latest = await latestExport(db, userId);
-  if (!canRequest(latest, now)) return rowState(latest, now);
+  const { latest, failedToday } = await exportHistory(db, userId, now);
+  if (!canRequest(latest, now, failedToday)) {
+    return rowState(latest, now, failedToday);
+  }
   const exportId = newUlid();
   const made = await db
     .insert(dataExports)

@@ -22,6 +22,7 @@ export {
   deleteEntryPhoto,
   deleteRun,
   deleteRuns,
+  deleteRunsThrough,
   entryPhotoWhere,
   entryStatements,
   mediaDebts,

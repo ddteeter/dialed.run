@@ -2,7 +2,12 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { cronCheckpoints, imports, runs } from "../../src/db/schema-core";
+import {
+  cronCheckpoints,
+  imports,
+  rateLimits,
+  runs,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { retryPendingWeather } from "../../src/modules/weather";
@@ -15,6 +20,8 @@ import {
 import { gaveUpUpsert } from "../../src/db/gave-up";
 import { nowSeconds } from "../../src/lib/now";
 import { gaveUpRow } from "../gave-up-rows";
+import { countRow } from "../rate-limit-rows";
+import { WEATHER_CALLS_PER_DAY } from "../../src/modules/weather/budget";
 
 const HOUR = 3600;
 
@@ -355,6 +362,54 @@ describe("the Desk's Gave up (R-119)", () => {
         "No weather came back for this run in five hours of hourly tries.",
       tries: 5,
     });
+  });
+
+  it("fails, without listing, a run only its runner's spent budget held back", async () => {
+    silenceWarn();
+    const userId = newUlid();
+    await coreDb()
+      .insert(rateLimits)
+      .values(
+        countRow("weather-runner", userId, WEATHER_CALLS_PER_DAY, nowSeconds()),
+      );
+    const runId = await insertPendingRun({
+      userId,
+      lat: 63.4,
+      lng: 23.4,
+      startedAt: startedForWindowAge(5),
+    });
+    const fetchSpy = mockVisualCrossing();
+
+    await retryPendingWeather(nothing);
+
+    const asked = fetchSpy.mock.calls.filter(([input]) =>
+      urlOf(input).includes("63.4"),
+    );
+    expect(asked).toStrictEqual([]);
+    expect(await statusOf(runId)).toBe("failed");
+    expect(await gaveUpRow("weather", runId)).toBeUndefined();
+  });
+
+  it("keeps a budget-held run pending inside its window", async () => {
+    silenceWarn();
+    const userId = newUlid();
+    await coreDb()
+      .insert(rateLimits)
+      .values(
+        countRow("weather-runner", userId, WEATHER_CALLS_PER_DAY, nowSeconds()),
+      );
+    const runId = await insertPendingRun({
+      userId,
+      lat: 63.6,
+      lng: 23.6,
+      startedAt: startedForWindowAge(1),
+    });
+    mockVisualCrossing();
+
+    await retryPendingWeather(nothing);
+
+    expect(await statusOf(runId)).toBe("pending");
+    expect(await gaveUpRow("weather", runId)).toBeUndefined();
   });
 
   it("does not list a run still inside the window", async () => {

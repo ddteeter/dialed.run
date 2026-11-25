@@ -83,7 +83,7 @@ import { orSqlNull } from "../../../lib/sql/sql-null";
 import { nowSeconds } from "../../../lib/now";
 import { forgetRateLimit, forgetSendLimits } from "../../email";
 import { forgetRunnerEnrichmentLimit } from "../../enrichment";
-import { deleteRuns, LIVE_HOLD } from "../../feed";
+import { deleteRuns, deleteRunsThrough, LIVE_HOLD } from "../../feed";
 import { captureException, outboxInsert, oweOutbox } from "../../ops";
 import { disconnectStrava } from "../../runs";
 import { followRowsNaming } from "../../notifications";
@@ -116,6 +116,18 @@ export const PURGE_BUDGET_MS = 5 * 60 * 1000;
  */
 export const PURGE_LEASE_S = 60 * 60;
 
+/**
+How many of a runner's runs the purge deletes in one statement batch.
+*/
+export const PURGE_RUNS_PAGE = 400;
+
+/**
+ * How many runs one firing's purge deletes across every account it
+ * claims. An account with more keeps its claim, and the next firing goes
+ * on from where this one stopped.
+ */
+export const PURGE_RUNS_PER_FIRING = 8000;
+
 export interface PurgeDeps {
   readonly core: Db;
   /**
@@ -140,6 +152,24 @@ export interface PurgeDeps {
    * account's addresses. Absent: nothing is kept, and the digest says so.
    */
   readonly closedAddressSecret?: string | undefined;
+  /**
+  The run pages' sizes, `PURGE_RUNS_PAGE` and `PURGE_RUNS_PER_FIRING` unless given.
+  */
+  readonly runPages?: { readonly page: number; readonly perFiring: number };
+}
+
+/**
+What is left of the firing's runs to delete.
+*/
+interface RunBudget {
+  left: number;
+}
+
+/**
+No bound: every run the account has.
+*/
+function everyRun(): RunBudget {
+  return { left: Infinity };
 }
 
 function liveDeps(): PurgeDeps {
@@ -173,23 +203,33 @@ export async function purgeDueAccounts(
   await forgetClosedAddresses(deps.core, deps.now);
   let failed = 0;
   let unremembered = 0;
+  let unfinished = 0;
+  const budget: RunBudget = {
+    left: deps.runPages?.perFiring ?? PURGE_RUNS_PER_FIRING,
+  };
   // The next claim is the loop's step, outside its body, so each round
-  // reads the clock whatever the round did.
+  // reads the clock and the runs left whatever the round did.
   for (
     let claimed = await claimDue(deps.core, deps.now);
     claimed.length > 0;
     claimed =
-      clock() - startedAt < PURGE_BUDGET_MS
+      clock() - startedAt < PURGE_BUDGET_MS && budget.left > 0
         ? await claimDue(deps.core, deps.now)
         : []
   ) {
-    const outcome = await purgeEach(deps, claimed);
+    const outcome = await purgeEach(deps, claimed, budget);
     failed += outcome.failed;
     unremembered += outcome.unremembered;
+    unfinished += outcome.unfinished;
   }
   if (failed > 0) {
     anomalies.push(
       `${String(failed)} account deletion(s) stopped part way and are finished on the next firing`,
+    );
+  }
+  if (unfinished > 0) {
+    anomalies.push(
+      `${String(unfinished)} account deletion(s) are part way through and continue on the next firing`,
     );
   }
   if (unremembered > 0) {
@@ -215,26 +255,30 @@ export async function purgeDueAccounts(
 }
 
 /**
- * How many of these purges failed, and how many closed accounts were
- * purged with nothing kept of their addresses; each failure is reported,
- * and the rest go on.
+ * How many of these purges failed, how many stopped at the firing's runs
+ * and go on next firing, and how many closed accounts were purged with
+ * nothing kept of their addresses; each failure is reported, and the rest
+ * go on.
  */
 async function purgeEach(
   deps: PurgeDeps,
   userIds: readonly string[],
-): Promise<{ failed: number; unremembered: number }> {
+  budget: RunBudget,
+): Promise<{ failed: number; unremembered: number; unfinished: number }> {
   let failed = 0;
   let unremembered = 0;
+  let unfinished = 0;
   for (const userId of userIds) {
     try {
-      const { isUnremembered } = await purgeAccount(deps, userId);
-      if (isUnremembered) unremembered += 1;
+      const outcome = await purgeAccount(deps, userId, budget);
+      if (outcome === undefined) unfinished += 1;
+      else if (outcome.isUnremembered) unremembered += 1;
     } catch (error) {
       failed += 1;
       deps.report(error, { surface: "account-purge", userId });
     }
   }
-  return { failed, unremembered };
+  return { failed, unremembered, unfinished };
 }
 
 /**
@@ -318,19 +362,23 @@ async function claimDue(db: Db, now: number): Promise<string[]> {
  * it again from the top after a failure at any step does only what the
  * failure left undone. `isUnremembered` when the account was closed, had
  * proved addresses, and nothing was kept of them (`deleteAccountRows`).
+ * Nothing (`undefined`) when the firing's runs (`budget`) ran out first:
+ * nothing past the runs is touched, and the claim stays for the next
+ * firing.
  */
 export async function purgeAccount(
   deps: PurgeDeps,
   userId: string,
-): Promise<{ isUnremembered: boolean }> {
+  budget: RunBudget = everyRun(),
+): Promise<{ isUnremembered: boolean } | undefined> {
   const { core, report } = deps;
-  await forgetManualConditions(deps, userId);
   // Revoked before anything else of theirs goes: a connection the request
   // could not close is closed here, with the grant owed to Strava.
   await deps.revokeStrava(userId);
   await forgetScreenings(core, userId);
-  // 128's SAF-3 primitive (seam 4): every run, every entry — with their
-  // items, tags, reactions, photos and notifications — and the R2 owed.
+  if (!(await didDeleteEveryRun(deps, userId, budget))) return undefined;
+  // 128's SAF-3 primitive (seam 4): every entry left — with their items,
+  // tags, reactions, photos and notifications — and the media prefix owed.
   await deleteRuns(core, userId, "all", report);
   await deleteCloset(core, userId);
   await deleteStoredFiles(deps.importsBucket, userId);
@@ -363,22 +411,34 @@ async function deleteStoredFiles(
 }
 
 /**
- * The runner's own bands for their runs, in `DIALED_WEATHER` — first,
- * because once the runs are gone nothing names these rows. Two databases,
- * so this is its own write (law 8c); weather chunks it under D1's
- * parameter cap.
+ * The runner's runs, a page at a time, oldest id first, while the firing
+ * has runs left: each page's bands in `DIALED_WEATHER` first, because
+ * once the runs are gone nothing names those rows (two databases, so its
+ * own write, law 8c), then the page's runs and what hangs on them. True
+ * when no run is left; false when the firing's runs ran out first. Every
+ * page reads what is left, so a page that fails is done again next firing.
  */
-async function forgetManualConditions(
+async function didDeleteEveryRun(
   deps: PurgeDeps,
   userId: string,
-): Promise<void> {
-  const runIds = await columnWhere(
-    deps.core,
-    runs,
-    runs.id,
-    eq(runs.userId, userId),
-  );
-  await deps.forgetBands(runIds);
+  budget: RunBudget,
+): Promise<boolean> {
+  const pageSize = deps.runPages?.page ?? PURGE_RUNS_PAGE;
+  while (budget.left > 0) {
+    const size = Math.min(pageSize, budget.left);
+    const page = await deps.core
+      .select({ id: runs.id })
+      .from(runs)
+      .where(eq(runs.userId, userId))
+      .orderBy(asc(runs.id))
+      .limit(size);
+    const last = page.at(-1);
+    if (last === undefined) return true;
+    budget.left -= page.length;
+    await deps.forgetBands(page.map((run) => run.id));
+    await deleteRunsThrough(deps.core, userId, last.id, deps.report);
+  }
+  return false;
 }
 
 /**
@@ -646,6 +706,7 @@ async function deleteAccountRows(
     ),
     forgetRateLimit(db, "change-runner", userId),
     forgetRateLimit(db, "upload-runner", userId),
+    forgetRateLimit(db, "manual-run-runner", userId),
     forgetRateLimit(db, "weather-runner", userId),
     forgetRateLimit(db, "photo-runner", userId),
     forgetRateLimit(db, "purge-runner", userId),

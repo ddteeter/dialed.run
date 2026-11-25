@@ -26,7 +26,7 @@ describe("the firings and the queue get their jobs from the dispatch", () => {
     const code = withoutComments(scheduledSource);
     for (const line of [
       'import { forgetAnsweredRequests } from "../account/access";',
-      'import { sweepExports } from "../account/export-build";',
+      'import { checkTooLargeExports, sweepExports } from "../account/export-build";',
       'import { rescreenHandlesFromEnv } from "../account/handles";',
       'import { purgeDueAccounts } from "../account/purge";',
       'import { linkTypedGarments } from "../closet";',

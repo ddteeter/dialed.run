@@ -20,6 +20,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { oweOutbox, outboxInsert } from "../../src/modules/ops/outbox/outbox";
 import {
   GAVE_UP_LIST_LIMIT,
+  PLACE_IN_KIND,
   dropGaveUp,
   gaveUpJobs,
   retryGaveUp,
@@ -268,15 +269,40 @@ describe("gaveUpJobs", () => {
     expect(found?.doing).toBe("Read the product page for Mystery Tee");
   });
 
-  it(`lists the newest ${String(GAVE_UP_LIST_LIMIT)} and no more`, async () => {
-    for (let index = 0; index <= GAVE_UP_LIST_LIMIT; index += 1) {
+  it("names each row's place within its kind", () => {
+    expect(PLACE_IN_KIND).toBe("place");
+  });
+
+  it(`lists the newest ${String(GAVE_UP_LIST_LIMIT)} of a kind and no more`, async () => {
+    for (let index = 1; index <= GAVE_UP_LIST_LIMIT + 1; index += 1) {
       await gaveUpFor("weather", `run-${String(index)}`, index);
     }
 
     const jobs = await gaveUpJobs();
 
     expect(jobs).toHaveLength(GAVE_UP_LIST_LIMIT);
-    expect(jobs[0]?.lastFailedAt).toBe(GAVE_UP_LIST_LIMIT);
+    expect(jobs[0]?.lastFailedAt).toBe(GAVE_UP_LIST_LIMIT + 1);
+    expect(jobs.at(-1)?.lastFailedAt).toBe(2);
+  });
+
+  it("lists every kind's newest, however many newer rows another kind has", async () => {
+    const upload = await failedImport(await runner());
+    await gaveUpFor("import", upload.id, 1);
+    await gaveUpFor("reminder", reminderSubject(REMINDER), 2);
+    for (let index = 0; index <= GAVE_UP_LIST_LIMIT; index += 1) {
+      await gaveUpFor("weather", `run-${String(index)}`, 100 + index);
+    }
+
+    const jobs = await gaveUpJobs();
+
+    expect(jobs).toHaveLength(GAVE_UP_LIST_LIMIT + 2);
+    expect(
+      jobs.slice(-2).map((job) => [job.kind, job.lastFailedAt]),
+    ).toStrictEqual([
+      ["reminder", 2],
+      ["import", 1],
+    ]);
+    expect(jobs[0]?.lastFailedAt).toBe(100 + GAVE_UP_LIST_LIMIT);
   });
 });
 

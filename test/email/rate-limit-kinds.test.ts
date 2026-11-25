@@ -26,6 +26,7 @@ import {
 } from "../../src/modules/enrichment/spend-limit";
 import { cspReportDepsFromEnv } from "../../src/modules/ops/edge/csp-report";
 import { isWithinUploadCap } from "../../src/modules/runs/imports/imports";
+import { createManualRun } from "../../src/modules/runs/service";
 import {
   isWithinAtOnceLimit,
   isWithinReportLimit,
@@ -76,6 +77,13 @@ describe("the rate-limit kinds", () => {
     await isWithinRateLimit(db, "strava-connect-runner", runner, 5, 3600, NOW);
     await claimLimit(db, "google-start", GLOBAL_SUBJECT, NOW);
     await claimLimit(db, "shared-row-runner", runner, NOW);
+    await createManualRun(db, runner, {
+      title: "Morning run",
+      startedAt: NOW - 3600,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: true,
+    });
 
     const keys = await countedKeys(db);
     expect(keys).toStrictEqual(
@@ -104,6 +112,7 @@ describe("the rate-limit kinds", () => {
         `strava-connect-runner:${runner}`,
         `google-start:${GLOBAL_SUBJECT}`,
         `shared-row-runner:${runner}`,
+        `manual-run-runner:${runner}`,
       ].toSorted((a, b) => a.localeCompare(b)),
     );
     const kinds = new Set(keys.map((key) => key.slice(0, key.indexOf(":"))));

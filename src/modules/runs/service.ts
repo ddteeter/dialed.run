@@ -16,6 +16,7 @@ import {
 
 import { outfitEntries, runs, userProfiles } from "../../db/schema-core";
 import { roundCoordinate } from "../../lib/coords";
+import { ControlRefusal } from "../../lib/control-refusal";
 import { calendarDay } from "../../lib/dates";
 import { readInChunks } from "../../lib/chunked";
 import type { ManualSky, RunDraft } from "../../lib/contracts";
@@ -23,6 +24,7 @@ import { newUlid, ulidSchema } from "../../lib/ids";
 import type { Ulid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
 import { selectOwnedRow } from "../../lib/sql/owned";
+import { isWithinRateLimit } from "../email";
 import { manualReadingsForRuns, observationsForRuns } from "../weather";
 import type { WeatherReading } from "../weather";
 import { bandMiddleC, canSetConditions } from "./run-conditions";
@@ -89,6 +91,44 @@ export async function findDuplicateRun(
   return rows[0];
 }
 
+/**
+ * How many runs one runner may type in a day, Try again on a run's
+ * weather included (the owner, 2026-11-23: the same number as a day's run
+ * files). A number the owner may retune.
+ */
+export const MANUAL_RUNS_PER_DAY = 30;
+
+const DAY_S = 24 * 60 * 60;
+
+/**
+ * What a runner reads past the day's count: on the form for a new run,
+ * and on a run's sheet for Try again. Literals, as the upload's are, and
+ * a test pins each number to `MANUAL_RUNS_PER_DAY`.
+ */
+export const MANUAL_RUN_REFUSALS = {
+  log: "That's 30 runs today. You can log more tomorrow.",
+  retry: "That's 30 tries today. You can try again tomorrow.",
+} as const;
+
+/**
+ * Count one of the runner's typed runs or retries today, or refuse it
+ * with the sentence they read.
+ */
+async function spendManualRun(
+  db: CoreDb,
+  userId: string,
+  refusal: string,
+): Promise<void> {
+  const isWithin = await isWithinRateLimit(
+    db,
+    "manual-run-runner",
+    userId,
+    MANUAL_RUNS_PER_DAY,
+    DAY_S,
+  );
+  if (!isWithin) throw new ControlRefusal(refusal);
+}
+
 export interface CreatedRun {
   id: string;
   /**
@@ -101,7 +141,8 @@ export interface CreatedRun {
 /**
 Manual entry. Outdoor drafts without coordinates fall back to the user's
 home location (design doc 102, open question 1) so the weather module can
-still resolve conditions.
+still resolve conditions. Within `MANUAL_RUNS_PER_DAY` a runner; past
+it, a `ControlRefusal` the form shows, and nothing is stored.
 */
 export async function createManualRun(
   db: CoreDb,
@@ -125,6 +166,8 @@ export async function createManualRun(
       return { id: existing.id, weatherStatus: existing.weatherStatus };
     }
   }
+  // After the repeat's read, so a resent submission is not counted twice.
+  await spendManualRun(db, userId, MANUAL_RUN_REFUSALS.log);
   let { lat, lng } = draft;
   if (!draft.indoor && (lat === undefined || lng === undefined)) {
     const profile = await db
@@ -599,7 +642,9 @@ async function didWriteEligibleRun(
 
 /**
  * R2b's "Try again": the weather gave up on this run, and the runner asks
- * once more. Only for a run R2b may be offered for; false otherwise.
+ * once more. Only for a run R2b may be offered for; false otherwise. Each
+ * try is one of the day's `MANUAL_RUNS_PER_DAY`; past it, a
+ * `ControlRefusal`, and the run stays as it was.
  */
 export async function didRetryRunWeather(
   db: CoreDb,
@@ -607,9 +652,10 @@ export async function didRetryRunWeather(
   userId: string,
   runId: string,
 ): Promise<boolean> {
-  return didWriteEligibleRun(db, userId, runId, () =>
-    refetchWeather(db, weather, runId),
-  );
+  return didWriteEligibleRun(db, userId, runId, async () => {
+    await spendManualRun(db, userId, MANUAL_RUN_REFUSALS.retry);
+    await refetchWeather(db, weather, runId);
+  });
 }
 
 /**

@@ -383,6 +383,7 @@ async function seedAccount(): Promise<Seeded> {
         countRow("weather-runner", userId, 1, NOW),
         countRow("photo-runner", userId, 1, NOW),
         countRow("purge-runner", userId, 1, NOW),
+        countRow("manual-run-runner", userId, 1, NOW),
         countRow("deletion-notice", userId, 1, NOW),
       ]),
     // The counts kept by address, in their own statement: with the
@@ -520,6 +521,7 @@ function runnersCount(
     | "weather-runner"
     | "photo-runner"
     | "purge-runner"
+    | "manual-run-runner"
     | "deletion-notice"
     | "correction-runner"
     | "strava-connect-runner"
@@ -777,6 +779,7 @@ async function footprint(seeded: Seeded) {
           runnersCount("weather-runner", userId),
           runnersCount("photo-runner", userId),
           runnersCount("purge-runner", userId),
+          runnersCount("manual-run-runner", userId),
           runnersCount("deletion-notice", userId),
           runnersCount("correction-runner", userId),
           runnersCount("strava-connect-runner", userId),
@@ -1697,8 +1700,7 @@ describe("purgeDueAccounts — a purge that stops deleting the runner's files", 
   it("keeps the claim and the files it could not reach, and the next firing deletes them", async () => {
     const runner = await seedAccount();
     await claim(runner.userId, NOW - 1);
-    // The purge's listing deletes a page at a time, as a list of keys;
-    // feed's fast path deletes one key, a string, and is left alone.
+    // The purge's listing deletes a page at a time, as a list of keys.
     const remove = env.IMPORTS.delete.bind(env.IMPORTS);
     let hasFailed = false;
     vi.spyOn(env.IMPORTS, "delete").mockImplementation((keys) => {
@@ -1728,9 +1730,9 @@ describe("purgeDueAccounts — a purge that stops deleting the runner's files", 
     expect(stopped.claim).toHaveLength(1);
     const [looseUpload = "", runUpload = "", unnamedUpload = ""] =
       runner.uploadKeys;
-    // The run's file went with its run, on feed's fast path; the other
-    // two wait for the listing.
-    expect(await env.IMPORTS.head(runUpload)).toBeNull();
+    // Every file waits for the listing, the run's too: deleting all of a
+    // runner's runs owes no file of its own.
+    expect(await env.IMPORTS.head(runUpload)).not.toBeNull();
     expect(await env.IMPORTS.head(looseUpload)).not.toBeNull();
     expect(await env.IMPORTS.head(unnamedUpload)).not.toBeNull();
 
@@ -1762,7 +1764,7 @@ function failBatch(n: number): void {
 type Footprint = Awaited<ReturnType<typeof footprint>>;
 
 /**
- * Each of `purgeAccount`'s six steps, stopped in turn: how to stop it,
+ * Each of `purgeAccount`'s seven steps, stopped in turn: how to stop it,
  * and what the rows say about where it stopped — the step before it done,
  * its own not — so each case proves it interrupted the step it names.
  */
@@ -1772,48 +1774,52 @@ const STEPS: readonly {
   readonly stoppedAt: (partial: Footprint, revoked: readonly string[]) => void;
 }[] = [
   {
-    step: "1 · the runner's bands in DIALED_WEATHER",
-    stop: () => depsAt(NOW, [], true),
-    stoppedAt: (partial, revoked) => {
-      expect(partial.manualConditions).toHaveLength(1);
-      expect(revoked).toStrictEqual([]);
-    },
-  },
-  {
-    step: "2 · the Strava grant",
+    step: "1 · the Strava grant",
     stop: (runner) => depsAt(NOW, [runner.userId]),
     stoppedAt: (partial, revoked) => {
-      expect(partial.manualConditions).toStrictEqual([]);
       expect(revoked).toHaveLength(1);
+      expect(partial.manualConditions).toHaveLength(1);
       expect(partial.screenings).toHaveLength(2);
     },
   },
   {
-    step: "3 · the photo screenings",
+    step: "2 · the photo screenings",
     stop: () => {
+      // The claim's batch is the first.
       failBatch(2);
       return depsAt(NOW);
     },
     stoppedAt: (partial, revoked) => {
       expect(revoked).toHaveLength(1);
       expect(partial.screenings).toHaveLength(2);
+      expect(partial.manualConditions).toHaveLength(1);
       expect(partial.runs).toHaveLength(2);
     },
   },
   {
-    step: "4 · the runs and entries",
+    step: "3 · a page's bands in DIALED_WEATHER",
+    stop: () => depsAt(NOW, [], true),
+    stoppedAt: (partial, revoked) => {
+      expect(revoked).toHaveLength(1);
+      expect(partial.screenings).toStrictEqual([]);
+      expect(partial.manualConditions).toHaveLength(1);
+      expect(partial.runs).toHaveLength(2);
+    },
+  },
+  {
+    step: "4 · a page's runs and entries",
     stop: () => {
       failBatch(3);
       return depsAt(NOW);
     },
     stoppedAt: (partial) => {
-      expect(partial.screenings).toStrictEqual([]);
+      expect(partial.manualConditions).toStrictEqual([]);
       expect(partial.runs).toHaveLength(2);
       expect(partial.garments).toHaveLength(2);
     },
   },
   {
-    step: "5 · the closet",
+    step: "5 · the entries left",
     stop: () => {
       failBatch(4);
       return depsAt(NOW);
@@ -1825,10 +1831,22 @@ const STEPS: readonly {
     },
   },
   {
-    step: "6 · the account itself",
+    step: "6 · the closet",
+    stop: () => {
+      failBatch(5);
+      return depsAt(NOW);
+    },
+    stoppedAt: (partial) => {
+      expect(partial.runs).toStrictEqual([]);
+      expect(partial.garments).toHaveLength(2);
+      expect(partial.user).toHaveLength(1);
+    },
+  },
+  {
+    step: "7 · the account itself",
     stop: () => {
       // Its last batch, after the closet's.
-      failBatch(5);
+      failBatch(6);
       return depsAt(NOW);
     },
     stoppedAt: (partial) => {

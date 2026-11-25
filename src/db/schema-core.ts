@@ -442,7 +442,7 @@ export const dataExports = /*#__PURE__*/ sqliteTable(
     idempotencyKey: text("idempotency_key").notNull(),
     linkToken: text("link_token").notNull(),
     status: text("status", {
-      enum: ["pending", "building", "ready", "failed", "expiring"],
+      enum: ["pending", "building", "ready", "failed", "expiring", "too-large"],
     }).notNull(),
     requestedAt: integer("requested_at").notNull(),
     claimedAt: integer("claimed_at"),

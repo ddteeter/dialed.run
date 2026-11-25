@@ -7,7 +7,7 @@
  * the account barrel, and called by nothing in `ops` (the cycle the
  * purge documents): the dispatch runs it on the hourly firing.
  */
-import { and, asc, eq, inArray, lt, lte, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lt, lte, or } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { dataExports } from "../../../db/schema-core";
@@ -69,7 +69,12 @@ export async function sweepExports(
 }
 
 /**
- * A failure's row lives as long as a ready one would have: the page says
+Exports that ended without a ZIP to offer: failed, or too large to build.
+*/
+const FINISHED_UNBUILT = ["failed", "too-large"] as const;
+
+/**
+ * A failure's row (or a too-large one's) lives as long as a ready one would have: the page says
  * "didn't work" until the runner asks again, or a week passes. Then its
  * ZIP goes, and after it the row.
  *
@@ -94,14 +99,14 @@ async function forgetFailures(
     .from(dataExports)
     .where(
       and(
-        eq(dataExports.status, "failed"),
+        inArray(dataExports.status, FINISHED_UNBUILT),
         lt(dataExports.requestedAt, now - EXPORT_LINK_TTL_S),
       ),
     )
     .limit(EXPORT_SWEEP_CAP);
   if (failed.length === 0) return;
-  // `failed` is final — nothing moves a row out of it — so the ids read
-  // are still failures when their rows go.
+  // Both statuses are final — nothing moves a row out of them — so the
+  // ids read are still unbuilt when their rows go.
   try {
     await deps.bucket.delete(failed.flatMap((row) => exportKeyFor(row) ?? []));
     await db.delete(dataExports).where(
@@ -214,4 +219,37 @@ async function resendStalled(
   anomalies.push(
     `${String(stalled.length)} data export(s) stalled and were re-sent`,
   );
+}
+
+/**
+How far back the daily digest looks for exports too large to build.
+*/
+const DIGEST_DAY_S = 24 * 60 * 60;
+
+/**
+ * The daily digest's line for each export marked too large to build in
+ * the last day, oldest first, at most a firing's cap: a copy to make by
+ * hand.
+ */
+export async function checkTooLargeExports(
+  anomalies: string[],
+  deps: Pick<SweepDeps, "db" | "now"> = liveSweepDeps(),
+): Promise<void> {
+  const { db, now } = deps;
+  const tooLarge = await db
+    .select({ userId: dataExports.userId })
+    .from(dataExports)
+    .where(
+      and(
+        eq(dataExports.status, "too-large"),
+        gt(dataExports.claimedAt, now - DIGEST_DAY_S),
+      ),
+    )
+    .orderBy(asc(dataExports.claimedAt))
+    .limit(EXPORT_SWEEP_CAP);
+  for (const row of tooLarge) {
+    anomalies.push(
+      `A data export was too large to build for runner ${row.userId}: make it by hand`,
+    );
+  }
 }

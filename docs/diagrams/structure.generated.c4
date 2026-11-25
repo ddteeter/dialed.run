@@ -299,6 +299,7 @@ model {
   cf.app.products -[imports]-> cf.app.notifications
   cf.app.products -[imports]-> cf.app.safety
   cf.app.runs -[wiring]-> cf.app.auth
+  cf.app.runs -[imports]-> cf.app.email
   cf.app.runs -[wiring]-> cf.app.feed
   cf.app.runs -[imports]-> cf.app.notifications
   cf.app.runs -[wiring]-> cf.app.ops

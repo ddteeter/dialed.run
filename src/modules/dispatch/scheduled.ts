@@ -19,7 +19,7 @@ import {
   sweepOwed,
 } from "../enrichment";
 import { forgetAnsweredRequests } from "../account/access";
-import { sweepExports } from "../account/export-build";
+import { checkTooLargeExports, sweepExports } from "../account/export-build";
 import { rescreenHandlesFromEnv } from "../account/handles";
 import { purgeDueAccounts } from "../account/purge";
 import {
@@ -272,25 +272,28 @@ async function runCron(
     }
     case "weather-retry": {
       return runHourly(cronName, reporter, (anomalies) => [
-        // docs/tasks/103-weather.md requirement 4/5: the hourly
-        // pending-observation retry, claim-then-work at the module level.
-        () => retryPendingWeather(captureException),
-        () => upkeep.sweepExports(anomalies),
-        // C6's 40-hour reminder: hourly, so it lands before the deadline
-        // the daily digest could miss (`removal-reminders.ts`).
+        // First the steps whose work is bounded and on a clock. C6's
+        // 40-hour reminder: hourly, so it lands before the deadline the
+        // daily digest could miss (`removal-reminders.ts`).
         () => oweRemovalReminders(coreDb()),
         // A removal request still waiting on its confirm past its 48
         // hours is declined (`takedown-requests.ts`).
         () => declineLapsedRequests(coreDb()),
-        () => drainOwedEmail(anomalies),
-        () => drainProductLinks(anomalies, upkeep),
         // Better Auth's expired sign-in states and reset links, every
-        // hour (owner, 2026-11-21).
+        // hour (owner, 2026-11-21), a bounded number of batches.
         () => sweepExpiredStates(),
         // Rate-limit counts past their window, ours and Better Auth's:
         // every hour, a bounded number of batches each.
         () => sweepRateLimits(coreDb()),
         () => sweepExpiredCounts(),
+        // Then the steps whose work grows with what runners have queued:
+        // the export sweep, owed email, the product links, and the
+        // pending-observation retry (docs/tasks/103-weather.md
+        // requirement 4/5, claim-then-work at the module level).
+        () => upkeep.sweepExports(anomalies),
+        () => drainOwedEmail(anomalies),
+        () => drainProductLinks(anomalies, upkeep),
+        () => retryPendingWeather(captureException),
         // Profiles whose zone lookup failed when the place was saved
         // (design 142): a NULL zone beside coordinates is the marker.
         // Last, because its lookups can wait on Visual Crossing.
@@ -1016,6 +1019,7 @@ export const digestKinds = [
   "review-queue",
   "breaker-headroom",
   "screener-quiet",
+  "export-too-large",
   "account-deletion",
   "speed",
   "media-backup",
@@ -1023,6 +1027,11 @@ export const digestKinds = [
 ] as const;
 
 export type DigestKind = (typeof digestKinds)[number];
+
+/**
+The check the daily firing runs after everything else.
+*/
+const PURGED_LAST: DigestKind = "account-deletion";
 
 /**
  * The event for one kind on one day. The day is the digest's UTC date,
@@ -1072,14 +1081,15 @@ async function runDailyDigest(
     "review-queue": checkReviewQueueDepth,
     "breaker-headroom": checkBreakerHeadroom,
     "screener-quiet": checkQuietScreener,
+    "export-too-large": (anomalies) => checkTooLargeExports(anomalies),
     "account-deletion": async (anomalies) => {
       await upkeep.purgeAccounts(anomalies);
     },
     speed: async (anomalies) => {
       await upkeep.speed?.(utcDay(), anomalies);
     },
-    // The photo backup (D-172, design 186): daily, after the purge, so a
-    // photo the purge just deleted is set aside to expire today.
+    // The photo backup (D-172, design 186): daily. A photo the purge
+    // deletes is set aside by the next day's backup.
     "media-backup": async (anomalies) => {
       await backUpMedia(
         { source: env.MEDIA, backup: env.MEDIA_BACKUP },
@@ -1102,21 +1112,24 @@ async function runDailyDigest(
   // read that fails must not cost the day's outbox drain. What a throwing
   // check found before it threw is still reported, and the firing throws
   // at the end, so its check-in closes as an error.
-  const failed = await failuresOf(
-    digestKinds.map((kind) => async () => {
-      const lines: string[] = [];
-      try {
-        await checks[kind](lines);
-      } finally {
-        if (lines.length > 0) {
-          reporter.report(
-            new Error(`daily digest: ${kind}`),
-            digestReport(kind, lines, day),
-          );
-          everything.push(...lines);
-        }
+  const runCheck = (kind: DigestKind) => async () => {
+    const lines: string[] = [];
+    try {
+      await checks[kind](lines);
+    } finally {
+      if (lines.length > 0) {
+        reporter.report(
+          new Error(`daily digest: ${kind}`),
+          digestReport(kind, lines, day),
+        );
+        everything.push(...lines);
       }
-    }),
+    }
+  };
+  const failed = await failuresOf(
+    digestKinds
+      .filter((kind) => kind !== PURGED_LAST)
+      .map((kind) => runCheck(kind)),
   );
   // Strava's seven-day cache rule, on the activity ids we hold (task 127,
   // STR-10). Rides this firing rather than a cron of its own; it is upkeep,
@@ -1150,7 +1163,10 @@ async function runDailyDigest(
     // judged on yesterday's status.
     () => sweepModerationRecords(db),
   ]);
-  throwAny([...failed, ...sweeps]);
+  // The account purge last, after every other check, the email and the
+  // sweeps, with its lines reported as its own kind.
+  const purged = await failuresOf([runCheck(PURGED_LAST)]);
+  throwAny([...failed, ...sweeps, ...purged]);
   return everything;
 }
 
