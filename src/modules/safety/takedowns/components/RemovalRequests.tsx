@@ -140,7 +140,7 @@ function ignoreRow(): void {
 export function RemovalRequests({
   requests,
   pending = requests.length,
-  page = FIRST_PAGE,
+  page,
   asOf,
   decide,
   block,
@@ -156,6 +156,7 @@ export function RemovalRequests({
   /**
    * Which page this is (`pendingTakedownPage`): the place it starts
    * after, the next page's, and how many pending requests come before it.
+   * None is the first page.
    */
   page?: RequestsPage;
   /**
@@ -219,13 +220,13 @@ export function RemovalRequests({
       <ShownOf
         shown={remaining.length}
         waiting={waiting}
-        before={page.after === undefined ? undefined : page.before}
+        before={page?.after === undefined ? undefined : page.before}
       />
       <PageLinks
         to="/desk/review"
         shown={requests.length}
-        next={page.next}
-        after={page.after}
+        next={page?.next}
+        after={page?.after}
         backLabel="← Back to the soonest due"
       />
     </>
@@ -240,12 +241,6 @@ interface RequestsPage {
   readonly next: string | undefined;
   readonly before: number;
 }
-
-const FIRST_PAGE: RequestsPage = {
-  after: undefined,
-  next: undefined,
-  before: 0,
-};
 
 /**
  * How many of the pending requests are listed: on the first page, when

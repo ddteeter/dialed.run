@@ -875,14 +875,15 @@ export async function confirmTakedownRequest(
     eq(takedownRequests.confirmTokenHash, await confirmTokenHash(token)),
   );
   if (request === undefined) return "not_found";
-  // A blocked requester's link answers as any other's, and does nothing.
+  // A blocked requester's link answers as any other's, and does nothing:
+  // its request is not pending, so the claim below lands nowhere and the
+  // batch held to it writes nothing.
   const isBlocked = request.holdState === "blocked";
   if (!isBlocked && request.status !== "pending") return "decided";
   if (request.confirmedAt !== null) return "confirmed";
   // SA-L18: a confirm link lasts as long as the request's 48 hours, and
   // past them answers as an unknown link (owner, 2026-11-16).
   if (now > request.dueAt) return "not_found";
-  if (isBlocked) return "confirmed";
   const claim = and(
     eq(takedownRequests.id, request.id),
     isNull(takedownRequests.confirmedAt),
@@ -1013,7 +1014,7 @@ const WAITS = sql<number>`(${takedownRequests.holdState} is 'confirm')`;
  * request of the page before (`removalRequestsSearch` admits nothing else).
  */
 function keyOfCursor(after: string) {
-  const [waits = "0", dueAt = "0", id = ""] = after.split(".", 3);
+  const [waits, dueAt, id] = after.split(".", 3);
   return sql`(${Number(waits)}, ${Number(dueAt)}, ${id})`;
 }
 
