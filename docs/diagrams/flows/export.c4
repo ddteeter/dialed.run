@@ -185,9 +185,9 @@ views {
     }
     opt 'an export was too large to build' {
       // source: src/modules/dispatch/scheduled.ts runDailyDigest (export-too-large); src/modules/account/export-build/export-sweep.ts checkTooLargeExports, EXPORT_SWEEP_CAP (50)
-      cf.app.cronDaily1200 -> cf.coreDb 'finds the exports marked too large in the last day' {
+      cf.app.cronDaily1200 -> cf.coreDb 'finds the exports marked too large' {
         notes '''
-          **Bounded.** At most 50 a firing, oldest first.
+          **Bounded.** At most 50 a firing, oldest first. Each is named every morning until the hourly sweep forgets it, a week after it was asked for.
         '''
       }
       // source: src/modules/dispatch/scheduled.ts digestReport; src/modules/account/export-build/export-sweep.ts checkTooLargeExports
