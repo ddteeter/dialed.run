@@ -37,6 +37,7 @@ import {
 } from "../conditions";
 import { type EntryRunFields, countedUsefulOf } from "../entries";
 import { followingCount } from "./follows";
+import { captureException } from "../../ops";
 import {
   isUnderReviewForAuthor,
   publicPhotoStatus,
@@ -222,6 +223,30 @@ export interface FeedPage {
   followeeCount: number;
 }
 
+type Report = typeof captureException;
+
+/**
+ * The cards' conditions, or none. **Degrades rather than fails** (law 5):
+ * they read the weather cache — another database — after the core batch,
+ * so a weather read that throws would otherwise take the whole feed down
+ * with it, as the compact line beside it guards against
+ * (`consensus/compact-conditions.ts`). The failure goes to Sentry with the
+ * viewer, and the cards draw without conditions, as a run with no
+ * observation already does.
+ */
+async function conditionsOrNone(
+  runRows: Parameters<typeof observationsForRuns>[0],
+  viewerId: string,
+  report: Report,
+): Promise<Map<string, Conditions>> {
+  try {
+    return await observationsForRuns(runRows);
+  } catch (error) {
+    report(error, { userId: viewerId, surface: "following-feed-conditions" });
+    return new Map();
+  }
+}
+
 /**
  * Batches the core-DB hydration reads (CLAUDE.md D1 discipline: db.batch()).
  */
@@ -229,6 +254,7 @@ async function hydrateEntries(
   database: DrizzleD1Database,
   entryRows: (typeof outfitEntries.$inferSelect)[],
   viewerId: string,
+  report: Report,
 ): Promise<FeedItem[]> {
   // Equivalent mutant: an empty page produces empty reads and an empty
   // map either way. What the return saves is six queries and a batch on
@@ -313,7 +339,7 @@ async function hydrateEntries(
   const itemIds = [...new Set(itemRows.map((i) => i.itemId))];
   const garmentNameById = await garmentNamesByIds(database, itemIds);
 
-  const observations = await observationsForRuns(runRows);
+  const observations = await conditionsOrNone(runRows, viewerId, report);
 
   const usefulCounts = new Map<string, number>();
   for (const row of reactionRows) {
@@ -361,10 +387,15 @@ async function hydrateEntries(
   });
 }
 
+/**
+ * `report` is a parameter so a test can make the conditions read fail and
+ * see the report.
+ */
 export async function followingFeed(
   viewerId: string,
   cursor?: FeedCursor,
   limit = PAGE_SIZE,
+  report: Report = captureException,
 ): Promise<FeedPage> {
   const database = coreDb();
   const [rows, followeeCount] = await Promise.all([
@@ -372,7 +403,7 @@ export async function followingFeed(
     followingCount(viewerId),
   ]);
   const page = rows.slice(0, limit);
-  const items = await hydrateEntries(database, page, viewerId);
+  const items = await hydrateEntries(database, page, viewerId, report);
   const last = page.at(-1);
   return {
     items,

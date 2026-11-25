@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { env } from "../../src/env";
 import {
@@ -240,5 +240,37 @@ describe("following feed (E1)", () => {
     expect(details).toMatch(
       /SEARCH entry_photos USING (?:INTEGER PRIMARY KEY|INDEX sqlite_autoindex_entry_photos_1) \(id=\?\)/u,
     );
+  });
+});
+
+/**
+ * Law 5: the cards' conditions read the weather database, another D1, after
+ * the core batch. A weather read that throws costs the cards their
+ * conditions and goes to Sentry; the feed itself still draws (#995).
+ */
+describe("following feed when the conditions read fails", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("draws the cards without conditions, and reports", async () => {
+    const viewer = await makeUser();
+    const runId = await makeRun({ userId: viewer });
+    const entryId = await makeEntry({ userId: viewer, runId, createdAt: NOW });
+    const failure = new Error("weather down");
+    vi.spyOn(env.DIALED_WEATHER, "prepare").mockImplementation(() => {
+      throw failure;
+    });
+    const report = vi.fn();
+
+    const page = await followingFeed(viewer, undefined, undefined, report);
+
+    expect(page.items.map((item) => [item.entryId, item.conditions])).toEqual([
+      [entryId, undefined],
+    ]);
+    expect(report).toHaveBeenCalledExactlyOnceWith(failure, {
+      userId: viewer,
+      surface: "following-feed-conditions",
+    });
   });
 });
