@@ -19,6 +19,8 @@ import { removalRequestReceived } from "../../src/lib/contracts/email-kinds";
 import { newUlid, ulidSchema } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";
+import { moderateContent } from "../../src/modules/feed/moderation/moderation";
+import { removalRequestNotice } from "../../src/lib/contracts/takedown";
 import {
   mintReceiptConfirmToken,
   requestSubjectOf,
@@ -976,6 +978,53 @@ describe("Block and decline all", () => {
       .from(takedownRequests)
       .where(eq(takedownRequests.id, sibling.id));
     expect(still?.status).toBe("pending");
+  });
+
+  it("declines nothing once a Take it down of the request has been recorded", async () => {
+    const a = await sharedEntry();
+    const row = await file("me@example.com", entryLink(a));
+    await moderateContent(core(), {
+      actorId: "op-two",
+      action: "takedown",
+      subjectType: "entry",
+      subjectId: a,
+      reason: "intimate",
+      notice: removalRequestNotice(row.id),
+    });
+
+    expect(
+      await blockAndDeclineAll(core(), "op-one", row.id, NOW + 10),
+    ).toStrictEqual({ status: "decided" });
+    const [still] = await core()
+      .select({ status: takedownRequests.status })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, row.id));
+    expect(still?.status).toBe("pending");
+    expect(await core().select().from(takedownBlocks)).toStrictEqual([]);
+  });
+
+  it("declines a request sharing both keys only while no Take it down of it is recorded", async () => {
+    const a = await sharedEntry();
+    const b = await sharedEntry();
+    const pressed = await file("me@example.com", entryLink(a));
+    const takenDown = await file("me@example.com", entryLink(b));
+    await moderateContent(core(), {
+      actorId: "op-two",
+      action: "takedown",
+      subjectType: "entry",
+      subjectId: b,
+      reason: "intimate",
+      notice: removalRequestNotice(takenDown.id),
+    });
+
+    expect(
+      await blockAndDeclineAll(core(), "op-one", pressed.id, NOW + 10),
+    ).toStrictEqual({
+      status: "blocked",
+      declined: 1,
+      declinedIds: [pressed.id],
+      keysBlocked: ["ip"],
+    });
   });
 
   it("says not found for no request", async () => {

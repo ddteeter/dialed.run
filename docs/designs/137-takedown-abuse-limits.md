@@ -62,8 +62,8 @@ requester.
   outcome emails, and gives back what they hid through
   `releaseHoldWrites`. It adds the IP key to `takedown_blocks`, and the
   email key only when the pressed request was confirmed. The question says
-  which it will block. A request already decided is answered as decided,
-  and nothing is blocked.
+  which it will block. A request already decided, or one a Take it down
+  was recorded for, is answered as decided, and nothing is blocked.
 - **Review's Blocked list** shows each block, newest first: an address by
   itself, a network by the address on the request it was blocked from.
   **Unblock** asks in place, then deletes the block, so what that key

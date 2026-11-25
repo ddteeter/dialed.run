@@ -18,10 +18,10 @@ import {
   exists,
   inArray,
   isNull,
+  like,
   lt,
   ne,
   notExists,
-  or,
   sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -31,12 +31,14 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
+  moderationActions,
   outfitEntries,
   reviewQueue,
   takedownBlocks,
   takedownRequests,
   userProfiles,
 } from "../../../db/schema-core";
+import { removalRequestNotice } from "../../../lib/contracts/takedown";
 import type {
   TakedownRequestValues,
   TakedownSubject,
@@ -1133,7 +1135,8 @@ export type BlockResult =
  * One batch, held to the pressed request still pending when it lands: its
  * decline first, then the others' and the blocks, each only where that
  * decline landed, then the give-backs, so each sees none of these pending
- * on its subject. The answer is
+ * on its subject. A request a Take it down was recorded for is declined
+ * by none of them. The answer is
  * read back, so it counts what the batch declined.
  */
 export async function blockAndDeclineAll(
@@ -1164,12 +1167,9 @@ export async function blockAndDeclineAll(
     eq(takedownRequests.resolvedAt, now),
     eq(takedownRequests.resolvedBy, actorId),
   );
-  // The pressed request still pending, or declined by this batch's own
-  // first statement: what every other statement is held to.
-  const pressedOpen = and(
-    eq(takedownRequests.id, request.id),
-    or(eq(takedownRequests.status, "pending"), declinedHere),
-  );
+  // The pressed request declined by this batch's own first statement:
+  // what every other statement is held to.
+  const pressedOpen = and(eq(takedownRequests.id, request.id), declinedHere);
   const others =
     request.ipKey === null
       ? []
@@ -1185,8 +1185,12 @@ export async function blockAndDeclineAll(
             ),
           );
   const stillOpen = exists(rowsWhere(db, takedownRequests, pressedOpen));
-  const decline = (id: string, also?: SQL) =>
-    db
+  const declined = [...others, request];
+  const subjects = await requestSubjectsOf(db, declined);
+  // Each decline also waits on no Take it down recorded for its request.
+  const decline = (index: number, also?: SQL) => {
+    const row = declined[index] ?? request;
+    return db
       .update(takedownRequests)
       .set({
         status: "declined",
@@ -1196,13 +1200,13 @@ export async function blockAndDeclineAll(
       })
       .where(
         and(
-          eq(takedownRequests.id, id),
+          eq(takedownRequests.id, row.id),
           eq(takedownRequests.status, "pending"),
+          notTakenDown(row.id, subjects[index]),
           also,
         ),
       );
-  const declined = [...others, request];
-  const subjects = await requestSubjectsOf(db, declined);
+  };
   const giveBacks = declined.flatMap((row, index) => {
     const subject = subjects[index];
     return subject === undefined
@@ -1225,8 +1229,8 @@ export async function blockAndDeclineAll(
       )
       .onConflictDoNothing();
   await db.batch([
-    decline(request.id),
-    ...others.map((row) => decline(row.id, stillOpen)),
+    decline(others.length),
+    ...others.map((_row, index) => decline(index, stillOpen)),
     ...keysBlocked.map((kind) => block(kind)),
     ...giveBacks,
   ]);
@@ -1243,6 +1247,24 @@ export async function blockAndDeclineAll(
     declinedIds,
     keysBlocked,
   };
+}
+
+/**
+ * No Take it down recorded for the request: an audit row on its subject
+ * whose reason carries the request's notice (`removalRequestNotice`).
+ * Always true of a request naming nothing of ours.
+ */
+function notTakenDown(
+  requestId: string,
+  subject: TakedownSubject | undefined,
+): SQL | undefined {
+  if (subject === undefined) return undefined;
+  return sql`not exists (select 1 from ${moderationActions} where ${and(
+    eq(moderationActions.action, "takedown"),
+    eq(moderationActions.subjectType, subject.subjectType),
+    eq(moderationActions.subjectId, subject.subjectId),
+    like(moderationActions.reason, `%${removalRequestNotice(requestId)}`),
+  )})`;
 }
 
 /**
