@@ -105,7 +105,7 @@ form
 status
 What it is
 combobox, What it is, has popup listbox, not expanded
-option, Not set, not selected, position 1, set size 3
+option, Not set, selected, position 1, set size 3
 option, A photo, photo, not selected, position 2, set size 3
 option, A whole entry, entry, not selected, position 3, set size 3
 end of combobox, What it is, has popup listbox, not expanded
