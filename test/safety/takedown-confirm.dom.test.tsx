@@ -109,6 +109,33 @@ describe("/takedown/confirm", () => {
     expect(confirm).toHaveBeenCalledWith({ data: { token: TOKEN } });
   });
 
+  it("asks a request that already acts to prove its address, and thanks them", async () => {
+    const confirm = vi
+      .fn<ConfirmFn>()
+      .mockResolvedValue({ outcome: "confirmed" });
+    await renderWithRouter(
+      <TakedownConfirm token={TOKEN} isForAddress confirm={confirm} />,
+    );
+    expect(
+      screen.getByText(
+        "Confirm that you asked us to remove an image at this address.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/Then we hide it/u)).toBeNull();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Confirm the request" }));
+    await waitFor(() => {
+      expect(screen.getByText("Thanks, that's confirmed.")).toBeVisible();
+    });
+    expect(
+      screen.queryByText(
+        "We'll decide within 48 hours and email you either way.",
+      ),
+    ).toBeNull();
+    expect(confirm).toHaveBeenCalledWith({ data: { token: TOKEN } });
+  });
+
   it("says a decided request was decided", async () => {
     const confirm = vi
       .fn<ConfirmFn>()
@@ -154,6 +181,7 @@ describe("its search", () => {
   it("keeps a token only when it is 64 hex characters", () => {
     expect(takedownConfirmSearch({ token: TOKEN })).toStrictEqual({
       token: TOKEN,
+      isForAddress: false,
     });
     // 64 hex characters with anything before or after is not a token.
     for (const token of [
@@ -166,7 +194,19 @@ describe("its search", () => {
     ]) {
       expect(takedownConfirmSearch({ token })).toStrictEqual({
         token: undefined,
+        isForAddress: false,
       });
+    }
+  });
+
+  it("reads `for=address` as a link that proves an address, and nothing else as one", () => {
+    expect(
+      takedownConfirmSearch({ token: TOKEN, for: "address" }),
+    ).toStrictEqual({ token: TOKEN, isForAddress: true });
+    for (const value of ["Address", "hide", 1, undefined]) {
+      expect(takedownConfirmSearch({ token: TOKEN, for: value })).toStrictEqual(
+        { token: TOKEN, isForAddress: false },
+      );
     }
   });
 });

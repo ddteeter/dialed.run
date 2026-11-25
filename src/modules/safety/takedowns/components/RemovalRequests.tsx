@@ -49,7 +49,32 @@ type Decide = (input: {
   data:
     | { requestId: string; outcome: "removed" }
     | { requestId: string; outcome: "declined"; reason: string };
-}) => Promise<unknown>;
+}) => Promise<{ outcome: "decided" | "already_decided" | "not_found" }>;
+
+/**
+ * A decision's answer, as the page says it: what it did only where this
+ * press decided the request, and otherwise why nothing was done.
+ */
+function decidedSaid(
+  done: string,
+): (result: Awaited<ReturnType<Decide>>) => string {
+  return ({ outcome }) => {
+    if (outcome === "decided") return done;
+    return outcome === "already_decided"
+      ? ALREADY_DECIDED
+      : NO_LONGER_OPEN;
+  };
+}
+
+/**
+What the page says of a request no longer pending, or gone.
+*/
+const NO_LONGER_OPEN = "That request is no longer open.";
+
+/**
+What the page says of a request someone decided before this press landed.
+*/
+const ALREADY_DECIDED = "Someone already decided this request.";
 
 /**
  * One request's decision: which request, what sends it, and what follows.
@@ -71,7 +96,8 @@ type Block = (input: { data: { requestId: string } }) => Promise<BlockResult>;
  * declined, from the server's count.
  */
 function blockedSaid(result: BlockResult): string {
-  if (result.status === "not_found") return "That request is no longer open.";
+  if (result.status === "not_found") return NO_LONGER_OPEN;
+  if (result.status === "decided") return ALREADY_DECIDED;
   const { declined } = result;
   return `Blocked. ${String(declined)} ${declined === 1 ? "request" : "requests"} declined.`;
 }
@@ -434,7 +460,7 @@ function RequestActions({
     return (
       <BlockQuestion
         requestId={request.id}
-        count={request.relatedIds.length + 1}
+        asks={blockAsked(request)}
         acts={{
           block,
           onBlocked,
@@ -490,7 +516,7 @@ function RequestActions({
  * Cancel. On a wrapper, because `FormElement` is the forms primitive and
  * takes no key handler; a key pressed inside the form bubbles to it.
  */
-function QuestionInPlace({
+export function QuestionInPlace({
   form,
   dataPart,
   onSubmit,
@@ -562,16 +588,37 @@ function QuestionInPlace({
 }
 
 /**
+ * Block and decline all's question, as the server will answer it: the
+ * request and those sharing both its keys (`relatedIds`), its network
+ * when it has one, and its address only once confirmed.
+ */
+function blockAsked(request: PendingTakedownRequest): string {
+  const count = request.relatedIds.length + 1;
+  const which =
+    count === 1 ? "this request" : `all ${String(count)} of these requests`;
+  if (request.isConfirmed) {
+    const reach = request.hasNetworkKey ? "address and network" : "address";
+    return `Block this ${reach} and decline ${which}? Anything they hid comes back, and nothing is sent to them.`;
+  }
+  return request.hasNetworkKey
+    ? `Block this network and decline ${which}? The address is not blocked: nobody confirmed it.`
+    : "Decline this request as abuse? Nothing else is blocked: nobody confirmed the address.";
+}
+
+/**
  * Block and decline all's question, in the bar's place. Undesigned: the
  * review row's own parts, placeholder words (design deltas).
  */
 function BlockQuestion({
   requestId,
-  count,
+  asks,
   acts,
 }: Readonly<{
   requestId: string;
-  count: number;
+  /**
+  What the question says the block will reach (`blockAsked`).
+  */
+  asks: string;
   /**
   What sends the block, what follows it, and the way back.
   */
@@ -605,13 +652,7 @@ function BlockQuestion({
         cancelHasFocus: true,
       }}
     >
-      <p className="m-0 text-body">
-        Block this requester and decline{" "}
-        {count === 1
-          ? "this request"
-          : `all ${String(count)} of their requests`}
-        ? Anything they hid comes back, and nothing is sent to them.
-      </p>
+      <p className="m-0 text-body">{asks}</p>
     </QuestionInPlace>
   );
 }
@@ -664,7 +705,7 @@ function RemoveForm({
     carry: "page",
     schema: z.object({}),
     action: () => decide({ data: { requestId, outcome: "removed" } }),
-    successMessage: "Removed.",
+    successMessage: decidedSaid("Removed."),
     onSuccess: onDecided,
   });
   return (
@@ -711,7 +752,7 @@ function DeclineQuestion({
     schema: declineSchema,
     action: (values) =>
       decide({ data: { requestId, outcome: "declined", ...values } }),
-    successMessage: "Declined.",
+    successMessage: decidedSaid("Declined."),
     onSuccess: onDecided,
   });
   return (

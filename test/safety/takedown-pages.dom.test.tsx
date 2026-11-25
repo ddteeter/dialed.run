@@ -391,6 +391,8 @@ function pending(
     due: "Due in 31h",
     holdState: "held",
     relatedIds: [],
+    isConfirmed: false,
+    hasNetworkKey: true,
     otherPhotos: { photos: [], total: 0, handle: undefined },
     subjectPhotoKey: undefined,
     ...overrides,
@@ -409,6 +411,7 @@ function blockedAnswer(declinedIds: string[]) {
     status: "blocked" as const,
     declined: declinedIds.length,
     declinedIds,
+    keysBlocked: ["ip" as const],
   };
 }
 
@@ -694,6 +697,64 @@ describe("Review · removal requests", () => {
       const spoken = part("request-head")?.nextElementSibling;
       expect(spoken).toHaveClass("sr-only");
       expect(spoken?.textContent).toBe(heard);
+    },
+  );
+
+  it.each([
+    { outcome: "already_decided", said: "Someone already decided this request." },
+    { outcome: "not_found", said: "That request is no longer open." },
+  ] as const)(
+    "says $said when Take it down or Decline finds it $outcome, and the page reads it again",
+    async ({ outcome, said }) => {
+      const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome });
+      const onChanged = vi.fn();
+      await renderWithRouter(
+        <RemovalRequests
+          onChanged={onChanged}
+          asOf={0}
+          requests={[
+            pending(),
+            pending({
+              id: "01JREQUEST0000000000000009",
+              signature: "Other Asker",
+            }),
+          ]}
+          decide={decide}
+          block={vi.fn<BlockFn>()}
+        />,
+      );
+      const user = userEvent.setup();
+      const [first, second] = document.querySelectorAll<HTMLElement>(
+        "[data-part='removal-request']",
+      );
+      await user.click(
+        within(first ?? document.body).getByRole("button", {
+          name: "Take it down",
+        }),
+      );
+      // Each row's answer is read while its row is there: a decided row
+      // leaves the list once its answer has been said.
+      expect(
+        await screen.findByText(said, undefined, { timeout: SETTLED_MS }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Removed.")).toBeNull();
+      const other = within(second ?? document.body);
+      await user.click(other.getByRole("button", { name: "Decline" }));
+      await user.type(other.getByLabelText("Why not"), "Not you");
+      await user.click(other.getByRole("button", { name: "Decline" }));
+      await waitFor(() => {
+        expect(decide).toHaveBeenCalledTimes(2);
+      });
+      expect(
+        await other.findByText(said, undefined, { timeout: SETTLED_MS }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Declined.")).toBeNull();
+      await waitFor(
+        () => {
+          expect(onChanged).toHaveBeenCalledTimes(2);
+        },
+        { timeout: SETTLED_MS },
+      );
     },
   );
 
@@ -1001,6 +1062,75 @@ describe("Review · removal requests", () => {
     expect(part("related")).toHaveTextContent(/^2 more from this requester$/u);
   });
 
+  it.each([
+    {
+      shown: { isConfirmed: true, hasNetworkKey: true, relatedIds: [] },
+      asks: "Block this address and network and decline this request? Anything they hid comes back, and nothing is sent to them.",
+    },
+    {
+      shown: {
+        isConfirmed: true,
+        hasNetworkKey: true,
+        relatedIds: ["01JABCDEFGHJKMNPQRSTVWXYZ2"],
+      },
+      asks: "Block this address and network and decline all 2 of these requests? Anything they hid comes back, and nothing is sent to them.",
+    },
+    {
+      shown: { isConfirmed: false, hasNetworkKey: true, relatedIds: [] },
+      asks: "Block this network and decline this request? The address is not blocked: nobody confirmed it.",
+    },
+    {
+      shown: { isConfirmed: false, hasNetworkKey: false, relatedIds: [] },
+      asks: "Decline this request as abuse? Nothing else is blocked: nobody confirmed the address.",
+    },
+    {
+      shown: { isConfirmed: true, hasNetworkKey: false, relatedIds: [] },
+      asks: "Block this address and decline this request? Anything they hid comes back, and nothing is sent to them.",
+    },
+  ])("asks what the block will reach: $asks", async ({ shown, asks }) => {
+    await renderWithRouter(
+      <RemovalRequests
+        onChanged={vi.fn()}
+        asOf={0}
+        requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1", ...shown })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Block and decline all" }));
+    expect(screen.getByText(asks)).toBeVisible();
+  });
+
+  it("says a request someone decided first was decided, and takes it off the list", async () => {
+    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "decided" });
+    await renderWithRouter(
+      <RemovalRequests
+        onChanged={vi.fn()}
+        asOf={0}
+        requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
+        decide={vi.fn<DecideFn>()}
+        block={block}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await user.click(
+      within(part("block") ?? document.body).getByRole("button", {
+        name: "Block and decline all",
+      }),
+    );
+    expect(
+      await screen.findByText("Someone already decided this request."),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(part("removal-request")).toBeNull();
+    });
+  });
+
   it("asks before it blocks, can be cancelled, and takes every request of theirs off the list", async () => {
     const block = vi
       .fn<BlockFn>()
@@ -1061,7 +1191,7 @@ describe("Review · removal requests", () => {
     );
     expect(
       row.getByText(
-        "Block this requester and decline all 2 of their requests? Anything they hid comes back, and nothing is sent to them.",
+        "Block this network and decline all 2 of these requests? The address is not blocked: nobody confirmed it.",
       ),
     ).toBeVisible();
     await user.click(row.getByRole("button", { name: "Cancel" }));
@@ -1103,7 +1233,7 @@ describe("Review · removal requests", () => {
       .click(screen.getByRole("button", { name: "Block and decline all" }));
     expect(
       screen.getByText(
-        "Block this requester and decline this request? Anything they hid comes back, and nothing is sent to them.",
+        "Block this network and decline this request? The address is not blocked: nobody confirmed it.",
       ),
     ).toBeVisible();
   });

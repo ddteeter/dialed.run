@@ -5,8 +5,8 @@ import { TakedownConfirm } from "../../modules/safety/takedowns/components/Taked
 import { confirmTakedownFn } from "../../modules/safety/functions";
 
 /**
- * `/takedown/confirm?token=` (design 137): the receipt's link for a
- * request past the requester cap.
+ * `/takedown/confirm?token=` (design 137): every receipt's link, which
+ * proves the request's address and hides a request past the cap.
  */
 export const Route = createFileRoute("/takedown/confirm")({
   validateSearch: takedownConfirmSearch,
@@ -14,6 +14,12 @@ export const Route = createFileRoute("/takedown/confirm")({
 });
 
 function TakedownConfirmPage() {
-  const { token } = Route.useSearch();
-  return <TakedownConfirm token={token} confirm={confirmTakedownFn} />;
+  const { token, isForAddress } = Route.useSearch();
+  return (
+    <TakedownConfirm
+      token={token}
+      isForAddress={isForAddress}
+      confirm={confirmTakedownFn}
+    />
+  );
 }

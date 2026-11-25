@@ -205,6 +205,42 @@ const REPORTED = {
  * An epoch second as `2026-10-12 13:05 UTC`: operators read the Desk in
  * UTC, like the digest's day.
  */
+type RemovalReceipt = Extract<
+  EmailTemplate,
+  { kind: "removal_request_received" }
+>;
+
+/**
+ * Whether a receipt with its link waits on the confirm before it hides: a
+ * row owed before `waits` was written carried a link only when it did.
+ */
+function isWaitingOnConfirm(template: RemovalReceipt): boolean {
+  return template.waits ?? true;
+}
+
+/**
+ * The receipt's body. The confirm's lines only where it carries the link:
+ * waiting on it, or proving the address of a request that already acts,
+ * and then the link the request is about, so its reader confirms only
+ * their own.
+ */
+function receiptBody(template: RemovalReceipt, due: string): string {
+  const decides = `We'll decide within 48 hours, by ${due}, and email you either way.`;
+  const hidden = template.isHidden ? "The image is hidden while we look. " : "";
+  if (template.confirmToken === undefined) return `${hidden}${decides}`;
+  const about =
+    template.location === undefined
+      ? ""
+      : ` This email is about the request for ${template.location}. Only confirm it if that is the link you sent us.`;
+  if (isWaitingOnConfirm(template)) {
+    return `${hidden}It isn't hidden yet. To have it hidden while we look, confirm this request. ${decides}${about}`;
+  }
+  const already = template.isHidden
+    ? " The image is already hidden while we look."
+    : "";
+  return `${decides} Confirming tells us this address is yours.${already}${about}`;
+}
+
 function utcMinute(epochSeconds: number): string {
   const iso = new Date(epochSeconds * 1000).toISOString();
   return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
@@ -483,13 +519,14 @@ const CONTENT: {
     const due = utcMinute(template.dueAt);
     return {
       subject: "We have your removal request",
-      // Round 35 #58e. The hidden line is true only of what was hidden;
-      // design 137's confirm line only of a request past the cap.
-      body: `${template.isHidden ? "The image is hidden while we look. " : ""}${template.confirmToken === undefined ? "" : "It isn't hidden yet. To have it hidden while we look, confirm this request. "}We'll decide within 48 hours, by ${due}, and email you either way.`,
+      // Round 35 #58e. The hidden line is true only of what was hidden.
+      body: receiptBody(template, due),
       ...(template.confirmToken !== undefined && {
         button: {
-          label: "Confirm the request",
-          href: `${origin}/takedown/confirm?token=${template.confirmToken}`,
+          label: isWaitingOnConfirm(template)
+            ? "Confirm the request"
+            : "Confirm it's me",
+          href: `${origin}/takedown/confirm?token=${template.confirmToken}${isWaitingOnConfirm(template) ? "" : "&for=address"}`,
         },
       }),
       // The app's own host (D-99), read from the origin every link uses.

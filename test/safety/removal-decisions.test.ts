@@ -16,8 +16,10 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
+import { removalRequestNotice } from "../../src/lib/contracts/takedown";
+import { moderateContent } from "../../src/modules/feed/moderation/moderation";
 import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";
-import { resolveReview } from "../../src/modules/safety";
+import { declineLapsedRequests, resolveReview } from "../../src/modules/safety";
 import {
   fileTakedownRequest,
   pendingTakedownRequests,
@@ -713,5 +715,223 @@ describe("the author's notice of a request's hold (R-163)", () => {
     await sharedEntry();
     await file("https://elsewhere.example/img");
     expect(await core().select().from(notifications)).toStrictEqual([]);
+  });
+});
+
+/**
+ * `db`, with `before` run once just ahead of its first batch: the other
+ * operator's decision landing between this one's read and its writes.
+ */
+function landingFirst(
+  before: () => Promise<unknown>,
+): ReturnType<typeof core> {
+  const db = core();
+  let isFirst = true;
+  return new Proxy(db, {
+    get(target, key, receiver) {
+      if (key !== "batch") {
+        const value: unknown = Reflect.get(target, key, receiver);
+        return value;
+      }
+      return async (...items: Parameters<typeof db.batch>) => {
+        if (isFirst) {
+          isFirst = false;
+          await before();
+        }
+        return target.batch(...items);
+      };
+    },
+  });
+}
+
+describe("two opposite decisions sent together", () => {
+  it("takes nothing down when a Decline lands first, and says it was already decided", async () => {
+    const entryId = await sharedEntry();
+    const id = await seedRequest({ subjectType: "entry", subjectId: entryId });
+    const declineFirst = landingFirst(() =>
+      decideRemovalRequest(
+        core(),
+        "op-two",
+        id,
+        { outcome: "declined", reason: "Not you" },
+        NOW + 5,
+      ),
+    );
+
+    expect(
+      await decideRemovalRequest(
+        declineFirst,
+        "op-one",
+        id,
+        { outcome: "removed" },
+        NOW + 10,
+      ),
+    ).toBe("already_decided");
+    expect(await requestRow(id)).toMatchObject({
+      status: "declined",
+      resolvedBy: "op-two",
+    });
+    expect(await entryStatus(entryId)).toBeDefined();
+    const actions = await core()
+      .select()
+      .from(moderationActions)
+      .where(eq(moderationActions.subjectId, entryId));
+    expect(actions).toStrictEqual([]);
+    const emails = await emailsToSam();
+    expect(emails.map((email) => email.email.template)).toMatchObject([
+      { kind: "removal_request_decided", outcome: "declined" },
+    ]);
+  });
+
+  it("declines nothing when a Take it down lands first, and says it was already decided", async () => {
+    const entryId = await sharedEntry();
+    const id = await seedRequest({ subjectType: "entry", subjectId: entryId });
+    const takedownFirst = landingFirst(() =>
+      decideRemovalRequest(
+        core(),
+        "op-two",
+        id,
+        { outcome: "removed" },
+        NOW + 5,
+      ),
+    );
+
+    expect(
+      await decideRemovalRequest(
+        takedownFirst,
+        "op-one",
+        id,
+        { outcome: "declined", reason: "Not you" },
+        NOW + 10,
+      ),
+    ).toBe("already_decided");
+    expect(await requestRow(id)).toMatchObject({
+      status: "removed",
+      resolvedBy: "op-two",
+    });
+    expect(await entryStatus(entryId)).toBeUndefined();
+    const emails = await emailsToSam();
+    expect(emails.map((email) => email.email.template)).toMatchObject([
+      { kind: "removal_request_decided", outcome: "removed" },
+    ]);
+  });
+
+  it("declines nothing when a Take it down's takedown landed and its claim has not yet", async () => {
+    const entryId = await sharedEntry();
+    const id = await seedRequest({ subjectType: "entry", subjectId: entryId });
+    // The other operator's takedown batch, as Take it down sends it, with
+    // the request still pending: its claim's batch comes after.
+    await moderateContent(core(), {
+      actorId: "op-two",
+      action: "takedown",
+      subjectType: "entry",
+      subjectId: entryId,
+      reason: "intimate",
+      notice: removalRequestNotice(id),
+    });
+
+    expect(
+      await decideRemovalRequest(
+        core(),
+        "op-one",
+        id,
+        { outcome: "declined", reason: "Not you" },
+        NOW + 10,
+      ),
+    ).toBe("already_decided");
+    const row = await requestRow(id);
+    expect(row?.status).toBe("pending");
+    expect(await emailsToSam()).toStrictEqual([]);
+  });
+
+  it.each([
+    { named: "a kit of ours", isOurs: true },
+    { named: "a link that is not ours", isOurs: false },
+  ])(
+    "answers already decided to a Take it down of $named that the lapse declined first, and takes nothing down",
+    async ({ isOurs }) => {
+      const entryId = await sharedEntry();
+      const id = await seedRequest(
+        isOurs ? { subjectType: "entry", subjectId: entryId } : undefined,
+      );
+      await core()
+        .update(takedownRequests)
+        .set({ holdState: "confirm" })
+        .where(eq(takedownRequests.id, id));
+      const pastDue = NOW + 172_800 + 1;
+      const lapseFirst = landingFirst(() =>
+        declineLapsedRequests(core(), pastDue),
+      );
+
+      expect(
+        await decideRemovalRequest(
+          lapseFirst,
+          "op-one",
+          id,
+          { outcome: "removed" },
+          pastDue,
+        ),
+      ).toBe("already_decided");
+      const row = await requestRow(id);
+      expect(row).toMatchObject({
+        status: "declined",
+        declineReason: "Not confirmed",
+      });
+      expect(row?.resolvedBy).toBeNull();
+      expect(await entryStatus(entryId)).toBeDefined();
+      expect(await emailsToSam()).toStrictEqual([]);
+    },
+  );
+
+  it.each([
+    "boom",
+    "NOT NULL constraint failed: review_queue.status",
+    "takedown_requests.status could not be read",
+  ])(
+    "passes on a takedown's failure that is not the request's hold: %s",
+    async (message) => {
+      const entryId = await sharedEntry();
+      const id = await seedRequest({ subjectType: "entry", subjectId: entryId });
+      const failing = landingFirst(() => Promise.reject(new Error(message)));
+
+      await expect(
+        decideRemovalRequest(
+          failing,
+          "op-one",
+          id,
+          { outcome: "removed" },
+          NOW + 10,
+        ),
+      ).rejects.toThrow(new Error(message));
+      const row = await requestRow(id);
+      expect(row?.status).toBe("pending");
+    },
+  );
+
+  it("answers decided only to the decision whose claim landed", async () => {
+    const entryId = await sharedEntry();
+    const id = await seedRequest({ subjectType: "entry", subjectId: entryId });
+    const declineFirst = landingFirst(() =>
+      decideRemovalRequest(
+        core(),
+        "op-two",
+        id,
+        { outcome: "declined", reason: "Not you" },
+        NOW + 5,
+      ),
+    );
+    expect(
+      await decideRemovalRequest(
+        declineFirst,
+        "op-one",
+        id,
+        { outcome: "declined", reason: "Also not" },
+        NOW + 10,
+      ),
+    ).toBe("already_decided");
+    expect(await requestRow(id)).toMatchObject({
+      declineReason: "Not you",
+      resolvedBy: "op-two",
+    });
   });
 });

@@ -43,18 +43,31 @@ requester.
      requests, hidden or not, the request waits for a confirm before it
      hides or alerts. Counting every open request, not only hidden ones,
      also stops a flood of outside links from filling operators' inboxes.
-     The
-     receipt email carries a link to `/takedown/confirm?token=…`. That
-     page asks first, with a Confirm button and no hide on GET, because
-     mail scanners follow links. Confirming applies the hold through the
-     same guards, the valve included.
   4. Otherwise it hides, as today.
+- **Every receipt carries the confirm link** (`/takedown/confirm?token=…`)
+  and names the link its request was filed with, so its reader confirms
+  only their own. Pressing it proves the address (`confirmed_at`). A
+  request past the cap also waits for it: confirming applies the hold
+  through the same guards, the valve included. For any other request it
+  records `confirmed_at` and nothing else; its receipt's link carries
+  `for=address`, which chooses only the page's words. The page asks first,
+  with a Confirm button and no write on GET, because mail scanners follow
+  links.
 - **Review** shows each request's state: `[hidden]`,
-  `[waiting for confirm]`, `[valve]` or `[blocked]`. It shows the
-  requester's other open requests ("2 more from this requester"), and offers **Block and decline
-  all**. That declines every pending request from either key with no
-  outcome emails, gives back what they hid through `releaseHoldWrites`,
-  and adds both keys to `takedown_blocks`.
+  `[waiting for confirm]`, `[valve]` or `[blocked]`. It shows the other
+  open requests that share both of its keys ("2 more from this
+  requester"), and offers **Block and decline all**. For a request still
+  pending, that declines it and the pending requests sharing both its
+  email key and its IP key (with no IP key, the request alone), with no
+  outcome emails, and gives back what they hid through
+  `releaseHoldWrites`. It adds the IP key to `takedown_blocks`, and the
+  email key only when the pressed request was confirmed. The question says
+  which it will block. A request already decided, or one a Take it down
+  was recorded for, is answered as decided, and nothing is blocked.
+- **Review's Blocked list** shows each block, newest first: an address by
+  itself, a network by the address on the request it was blocked from.
+  **Unblock** asks in place, then deletes the block, so what that key
+  files next hides and alerts as usual.
 
 ## Contract touches
 
@@ -80,10 +93,14 @@ requester.
   - the valve and its one alert per hour;
   - a blocked requester gets a silent receipt;
   - confirm applies the hold once, is refused after a decision, and
-    respects the valve;
-  - block-and-decline-all releases holds and sends no outcome emails.
-- DOM: Review's state brackets, the "N more" line and the block action;
-  the confirm page's two states.
+    respects the valve; on a request that already acts it records
+    `confirmed_at` only;
+  - block-and-decline-all declines by both keys, blocks the email key
+    only for a confirmed request, refuses a decided one, releases holds
+    and sends no outcome emails.
+- Worker (`takedown-blocks.test.ts`): the Blocked list and Unblock.
+- DOM: Review's state brackets, the "N more" line, the block action and
+  its question, the Blocked list and Unblock; the confirm page's states.
 - Demo: extend `takedown.demo.spec.ts` with a third request that waits
   for a confirm.
 

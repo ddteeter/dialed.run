@@ -151,7 +151,7 @@ model {
     }
     confirmRequest = inRequest 'confirmTakedownFn' {
       technology 'in the request: one attempt, the requester is waiting'
-      description 'The receipt\'s confirm link, for a requester who must confirm first'
+      description 'The receipt\'s confirm link: proves the address, and hides a request past the cap'
     }
     counterNotice = inRequest 'counterNoticeAction' {
       technology 'in the request: one attempt, the operator is waiting'

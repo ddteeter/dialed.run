@@ -18,10 +18,10 @@ import {
   exists,
   inArray,
   isNull,
+  like,
   lt,
   ne,
   notExists,
-  or,
   sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -31,12 +31,14 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
+  moderationActions,
   outfitEntries,
   reviewQueue,
   takedownBlocks,
   takedownRequests,
   userProfiles,
 } from "../../../db/schema-core";
+import { removalRequestNotice } from "../../../lib/contracts/takedown";
 import type {
   TakedownRequestValues,
   TakedownSubject,
@@ -181,9 +183,7 @@ export async function fileTakedownRequest<Attempt>(
   const dueAt = now + REMOVAL_DUE_SECONDS;
   const subject = await filedSubjectOf(db, input.location);
   const row = rowOf(id);
-  const hid = holds(row.newlyHid(now));
-  const held = holds(row.hid(now));
-  const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
+  const acts = await rowActs(db, row, subject, now);
   await db.batch([
     db
       .insert(takedownRequests)
@@ -204,12 +204,15 @@ export async function fileTakedownRequest<Attempt>(
         posterUsername: input.posterUsername,
       })
       .onConflictDoNothing(),
-    ...decisionWrites(db, row.written, subject, now),
-    ...holdWrites(db, subject, held),
-    ...told,
+    ...acts,
     ...operatorAlerts(deps.oweWhere, { id, dueAt, subject }, row.alerts(now)),
     ...valveAlerts(deps.oweWhere, now, row.owesSummary(now)),
-    ...receipts(deps.oweWhere, { id, email, dueAt }, row, now),
+    ...receipts(
+      deps.oweWhere,
+      { id, email, dueAt, location: input.location },
+      row,
+      now,
+    ),
   ]);
   await purgeIfHeld(db, { id, subject }, now, deps.purge);
   return { status: "received" };
@@ -294,6 +297,28 @@ function decisionWrites(
         resolvedAt: now,
       })
       .where(and(row, eq(takedownRequests.holdState, "blocked"))),
+  ];
+}
+
+/**
+ * What the request's row, once written, does in the same batch: its
+ * decisions (`decisionWrites`), then the hold where it hid, then the
+ * author's notice where it newly hid. Read before the batch, as the
+ * notice's recipient is.
+ */
+async function rowActs(
+  db: Db,
+  row: ReturnType<typeof rowOf>,
+  subject: TakedownSubject | undefined,
+  now: number,
+): Promise<BatchItem<"sqlite">[]> {
+  const hid = holds(row.newlyHid(now));
+  const held = holds(row.hid(now));
+  const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
+  return [
+    ...decisionWrites(db, row.written, subject, now),
+    ...holdWrites(db, subject, held),
+    ...told,
   ];
 }
 
@@ -426,8 +451,9 @@ async function purgeIfHeld(
 
 /**
  * The requester's receipt, in the words the row as written earns: hidden
- * where it hid, the confirm link where it waits on one, and otherwise
- * received. One dedupe key, and exactly one of the three conditions holds;
+ * where it hid, waiting where it waits on its confirm, and otherwise
+ * received. Every one carries the confirm link, which proves the address,
+ * and names the link the request was filed with. One dedupe key, and exactly one of the three conditions holds;
  * the plain receipt is owed first, so a second debt on the key (which
  * takes over the row's id and keeps its words) could never carry it.
  */
@@ -437,6 +463,7 @@ function receipts(
     readonly id: string;
     readonly email: string;
     readonly dueAt: number;
+    readonly location: string;
   },
   row: ReturnType<typeof rowOf>,
   now: number,
@@ -455,8 +482,11 @@ function receipts(
             dueAt: request.dueAt,
             isHidden: words.isHidden,
             // SA-L18: the request, not a token; the token is minted when
-            // the receipt is sent (`mintReceiptConfirmToken`).
-            confirmRequestId: words.waits ? request.id : undefined,
+            // the receipt is sent (`mintReceiptConfirmToken`), and only
+            // while the request is pending and unconfirmed.
+            confirmRequestId: request.id,
+            waits: words.waits,
+            location: request.location,
           },
         },
         { dedupeKey: `removal_request_received:${request.id}` },
@@ -801,8 +831,9 @@ const visibilityWrites: Record<
 export type TakedownConfirmResult = "confirmed" | "decided" | "not_found";
 
 /**
- * A requester's confirm (design 137): a request past the cap waited for
- * it, and now does what it would have done at filing — hides a link of
+ * A requester's confirm (design 137), which proves the request's address:
+ * `confirmed_at` is what Block and decline all reads. A request past the
+ * cap also waited for it, and now does what it would have done at filing — hides a link of
  * ours and alerts the operators — unless the valve has shut since, when it
  * owes the valve's alert instead. A repeat is the first confirm; a
  * request already decided stays decided.
@@ -830,6 +861,17 @@ export async function confirmTakedownRequest(
   // SA-L18: a confirm link lasts as long as the request's 48 hours, and
   // past them answers as an unknown link (owner, 2026-11-16).
   if (now > request.dueAt) return "not_found";
+  const claim = and(
+    eq(takedownRequests.id, request.id),
+    isNull(takedownRequests.confirmedAt),
+    eq(takedownRequests.status, "pending"),
+  );
+  // A request that already acted, or that hides nothing, waits on no
+  // confirm: pressing it proves the address and does nothing else.
+  if (request.holdState !== "confirm") {
+    await db.update(takedownRequests).set({ confirmedAt: now }).where(claim);
+    return "confirmed";
+  }
   const subject = await requestSubjectOf(db, request);
   const keys = {
     requesterKey: request.requesterKey ?? requesterKey(request.requesterEmail),
@@ -842,22 +884,13 @@ export async function confirmTakedownRequest(
     request.id,
     sql`(${eq(takedownRequests.confirmedAt, now)} and ${eq(takedownRequests.status, "pending")})`,
   );
-  const hid = holds(row.newlyHid(now));
-  const held = holds(row.hid(now));
-  const told = subject === undefined ? [] : await holdNotice(db, subject, hid);
-  const claim = and(
-    eq(takedownRequests.id, request.id),
-    isNull(takedownRequests.confirmedAt),
-    eq(takedownRequests.status, "pending"),
-  );
+  const acts = await rowActs(db, row, subject, now);
   await db.batch([
     db
       .update(takedownRequests)
       .set({ confirmedAt: now, holdState: state })
       .where(claim),
-    ...decisionWrites(db, row.written, subject, now),
-    ...holdWrites(db, subject, held),
-    ...told,
+    ...acts,
     ...operatorAlerts(
       effects.oweWhere,
       { id: request.id, dueAt: request.dueAt, subject },
@@ -900,9 +933,17 @@ export interface PendingTakedownRequest {
   */
   readonly holdState: HoldState | undefined;
   /**
-  The requester's other open requests among those listed, by either key.
+  The other open requests listed that share both its keys: those Block and decline all declines with it.
   */
   readonly relatedIds: readonly string[];
+  /**
+  Whether its receipt's link was pressed, so its address is proved and a block reaches it.
+  */
+  readonly isConfirmed: boolean;
+  /**
+  Whether it was filed with a network key, so a block reaches its network.
+  */
+  readonly hasNetworkKey: boolean;
   /**
    * The posting runner's other photos (D-117, R-145 c), when the link is
    * ours; `undefined` when it is not, since then nobody is known.
@@ -921,8 +962,9 @@ export interface PendingTakedownRequest {
 }
 
 /**
- * What Review reads of a pending request: what it shows, and the two keys
- * that link a requester's others. Not the confirm token's hash.
+ * What Review reads of a pending request: what it shows, the two keys
+ * that link a requester's others, and whether it was confirmed. Not the
+ * confirm token's hash.
  */
 const LISTED_COLUMNS = {
   id: takedownRequests.id,
@@ -936,6 +978,7 @@ const LISTED_COLUMNS = {
   holdState: takedownRequests.holdState,
   requesterKey: takedownRequests.requesterKey,
   ipKey: takedownRequests.ipKey,
+  confirmedAt: takedownRequests.confirmedAt,
 };
 
 /**
@@ -997,10 +1040,13 @@ export async function pendingTakedownRequests(
       .filter(
         (other) =>
           other.id !== row.id &&
-          (keyOf(other) === keyOf(row) ||
-            (row.ipKey !== null && other.ipKey === row.ipKey)),
+          row.ipKey !== null &&
+          other.ipKey === row.ipKey &&
+          keyOf(other) === keyOf(row),
       )
       .map((other) => other.id),
+    isConfirmed: row.confirmedAt !== null,
+    hasNetworkKey: row.ipKey !== null,
   }));
 }
 
@@ -1069,16 +1115,29 @@ export type BlockResult =
       readonly status: "blocked";
       readonly declined: number;
       readonly declinedIds: readonly string[];
+      /**
+      The keys now in `takedown_blocks`: the network's, and the address's only once the request confirmed it.
+      */
+      readonly keysBlocked: readonly ("email" | "ip")[];
     }
+  | { readonly status: "decided" }
   | { readonly status: "not_found" };
 
 /**
- * Block and decline all (design 137): every pending request from this
- * request's requester, by either key, is declined with no outcome email,
- * what each hid is given back, and both keys go into `takedown_blocks`,
- * so what they file next is recorded and does nothing. One batch: the
- * declines first, so each give-back sees no other pending request of the
- * requester's on its subject.
+ * Block and decline all (design 137), for a request still pending: it is
+ * declined with no outcome email, and with it the pending requests that
+ * share both its address's key and its network's — none when it has no
+ * network key. What each hid is given back. Its network's key goes into
+ * `takedown_blocks`, and its address's key only when this request itself
+ * was confirmed from its receipt's link, so what they file next is
+ * recorded and does nothing.
+ *
+ * One batch, held to the pressed request still pending when it lands: its
+ * decline first, then the others' and the blocks, each only where that
+ * decline landed, then the give-backs, so each sees none of these pending
+ * on its subject. A request a Take it down was recorded for is declined
+ * by none of them. The answer is
+ * read back, so it counts what the batch declined.
  */
 export async function blockAndDeclineAll(
   db: Db,
@@ -1092,24 +1151,46 @@ export async function blockAndDeclineAll(
     eq(takedownRequests.id, requestId),
   );
   if (request === undefined) return { status: "not_found" };
-  const keys = {
-    requesterKey: request.requesterKey ?? requesterKey(request.requesterEmail),
-    ipKey: request.ipKey ?? undefined,
+  // A request no longer pending declines nothing below, and so answers
+  // `decided` from the read-back.
+  const keysBlocked = [
+    ...(request.confirmedAt === null ? [] : (["email"] as const)),
+    ...(request.ipKey === null ? [] : (["ip"] as const)),
+  ];
+  const keyOf = {
+    email: request.requesterKey ?? requesterKey(request.requesterEmail),
+    ip: request.ipKey,
   };
-  // The request itself by its id, and the requester's others by their
-  // email key only: an address many people share may have filed some of
-  // them, and those wait for a person. Both keys are still blocked, so
-  // what that address files next hides nothing.
-  const theirs = or(
-    eq(takedownRequests.id, request.id),
-    eq(takedownRequests.requesterKey, keys.requesterKey),
+  // A row this block's batch declined.
+  const declinedHere = and(
+    eq(takedownRequests.status, "declined"),
+    eq(takedownRequests.declineReason, BLOCKED_REASON),
+    eq(takedownRequests.resolvedAt, now),
+    eq(takedownRequests.resolvedBy, actorId),
   );
-  const pending = await db
+  // The pressed request declined by this batch's own first statement:
+  // what every other statement is held to.
+  const pressedOpen = and(eq(takedownRequests.id, request.id), declinedHere);
+  // `=` against a missing network key is never true, so with none the
+  // pressed request is declined alone.
+  const others = await db
     .select()
     .from(takedownRequests)
-    .where(and(theirs, eq(takedownRequests.status, "pending")));
-  const declines = pending.map((row) =>
-    db
+    .where(
+      and(
+        ne(takedownRequests.id, request.id),
+        eq(takedownRequests.status, "pending"),
+        eq(takedownRequests.requesterKey, keyOf.email),
+        sql`${takedownRequests.ipKey} = ${request.ipKey}`,
+      ),
+    );
+  const stillOpen = exists(rowsWhere(db, takedownRequests, pressedOpen));
+  const declined = [...others, request];
+  const subjects = await requestSubjectsOf(db, declined);
+  // Each decline also waits on no Take it down recorded for its request.
+  const decline = (index: number, also?: SQL) => {
+    const row = declined[index] ?? request;
+    return db
       .update(takedownRequests)
       .set({
         status: "declined",
@@ -1121,38 +1202,76 @@ export async function blockAndDeclineAll(
         and(
           eq(takedownRequests.id, row.id),
           eq(takedownRequests.status, "pending"),
+          notTakenDown(row.id, subjects[index]),
+          also,
         ),
-      ),
-  );
-  const subjects = await requestSubjectsOf(db, pending);
-  const giveBacks = pending.flatMap((row, index) => {
+      );
+  };
+  const giveBacks = declined.flatMap((row, index) => {
     const subject = subjects[index];
     return subject === undefined
       ? []
       : releaseHoldWrites(db, { id: row.id, declinedAt: now }, subject);
   });
-  const block = (key: string, kind: "email" | "ip") =>
+  const block = (kind: "email" | "ip") =>
     db
       .insert(takedownBlocks)
-      .values({ key, kind, createdAt: now, createdBy: actorId })
+      .select(
+        db
+          // Each value aliased as the column it fills.
+          .select({
+            key: sql`${keyOf[kind]}`.as(takedownBlocks.key.name),
+            kind: sql`${kind}`.as(takedownBlocks.kind.name),
+            createdAt: sql`${now}`.as(takedownBlocks.createdAt.name),
+            createdBy: sql`${actorId}`.as(takedownBlocks.createdBy.name),
+          })
+          .from(takedownRequests)
+          .where(pressedOpen),
+      )
       .onConflictDoNothing();
   await db.batch([
-    block(keys.requesterKey, "email"),
-    ...(keys.ipKey === undefined ? [] : [block(keys.ipKey, "ip")]),
-    ...declines,
+    decline(others.length),
+    ...others.map((_row, index) => decline(index, stillOpen)),
+    ...keysBlocked.map((kind) => block(kind)),
     ...giveBacks,
   ]);
+  const ids = declined.map((row) => row.id);
+  const landed = await db
+    .select({ id: takedownRequests.id })
+    .from(takedownRequests)
+    .where(and(inArray(takedownRequests.id, ids), declinedHere));
+  const declinedIds = ids.filter((id) => landed.some((row) => row.id === id));
+  if (!declinedIds.includes(request.id)) return { status: "decided" };
   return {
     status: "blocked",
-    declined: pending.length,
-    declinedIds: pending.map((row) => row.id),
+    declined: declinedIds.length,
+    declinedIds,
+    keysBlocked,
   };
+}
+
+/**
+ * No Take it down recorded for the request: an audit row on its subject
+ * whose reason carries the request's notice (`removalRequestNotice`).
+ * Always true of a request naming nothing of ours.
+ */
+function notTakenDown(
+  requestId: string,
+  subject: TakedownSubject | undefined,
+): SQL | undefined {
+  if (subject === undefined) return undefined;
+  return sql`not exists (select 1 from ${moderationActions} where ${and(
+    eq(moderationActions.action, "takedown"),
+    eq(moderationActions.subjectType, subject.subjectType),
+    eq(moderationActions.subjectId, subject.subjectId),
+    like(moderationActions.reason, `%${removalRequestNotice(requestId)}`),
+  )})`;
 }
 
 /**
 The reason a block-and-decline records; no email carries it.
 */
-const BLOCKED_REASON = "Blocked as abuse";
+export const BLOCKED_REASON = "Blocked as abuse";
 
 /**
 The reason a request recorded when its confirm link lapsed unpressed; no email carries it.

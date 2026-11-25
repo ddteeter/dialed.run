@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { isoDayOf } from "../../lib/contracts/age";
 import { HOLD_CAUSES, REVIEW_SOURCES } from "../../lib/contracts/hold-causes";
-import { usernameSchema } from "../../lib/contracts/garments";
+import { EMAIL_MAX_LENGTH, usernameSchema } from "../../lib/contracts/garments";
 import { takedownRequestSchema } from "../../lib/contracts/takedown";
 import { rowIdSchema, ulidSchema } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -341,6 +341,15 @@ Block and decline all (design 137): the request whose requester it is.
 export const blockRequesterInput = removalRequestRef;
 
 /**
+ * Unblock (design 137): the blocked key, an address's or a network's, as
+ * Review listed it. A network's is 64 hex characters, so the address's
+ * cap bounds both.
+ */
+export const unblockRequesterInput = z.object({
+  key: z.string().min(1).max(EMAIL_MAX_LENGTH),
+});
+
+/**
  * Review's "Record the NCMEC report" (C12): which quarantine, and
  * CyberTipline's id for the report when the operator has it. The field
  * is optional, so an empty one means none; bounded and plain, because it
@@ -368,13 +377,18 @@ const confirmTokenSchema = z.string().regex(/^[\da-f]{64}$/u);
 export const takedownConfirmInput = z.object({ token: confirmTokenSchema });
 
 /**
-`/takedown/confirm?token=`: the token when it is one, and nothing otherwise.
-*/
+ * `/takedown/confirm?token=`: the token when it is one, and nothing
+ * otherwise; and whether the receipt sent it as a link that proves an
+ * address (`for=address`), which chooses only the page's words.
+ */
 export function takedownConfirmSearch(
   search: Readonly<Record<string, unknown>>,
-): { token?: string | undefined } {
+): { token?: string | undefined; isForAddress: boolean } {
   const parsed = confirmTokenSchema.safeParse(search.token);
-  return { token: parsed.success ? parsed.data : undefined };
+  return {
+    token: parsed.success ? parsed.data : undefined,
+    isForAddress: search.for === "address",
+  };
 }
 
 export const removalDecisionInput = z.discriminatedUnion("outcome", [

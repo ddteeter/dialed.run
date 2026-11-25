@@ -25,6 +25,10 @@ import {
   pendingTakedownRequests,
   REMOVAL_REQUESTS_PURGE_KEY,
 } from "./takedowns/takedown-requests";
+import {
+  takedownBlocksListed,
+  unblockTakedownKey,
+} from "./takedowns/takedown-blocks";
 
 import { coreDb, env, primaryCoreDb } from "../../env";
 import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
@@ -76,6 +80,7 @@ import {
   takedownRequestInput,
   takedownConfirmInput,
   blockRequesterInput,
+  unblockRequesterInput,
   forceRenameInput,
   handleReviewInput,
   ncmecReportInput,
@@ -178,6 +183,8 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
       requests: await pendingTakedownRequests(coreDb()),
       // How many are pending in all, listed or not.
       requestsPending: await pendingTakedownCount(coreDb()),
+      // Design 137: the blocks Block and decline all made, for Unblock.
+      blocks: await takedownBlocksListed(coreDb()),
       // C12: what is held for NCMEC, and whether it has been reported.
       quarantine: await quarantinedContentFor(coreDb(), adminId),
       quarantineTotal: await quarantineCount(coreDb(), adminId),
@@ -237,15 +244,29 @@ export const confirmTakedownFn = createServerFn({ method: "POST" })
   }));
 
 /**
- * Review's Block and decline all (design 137): every open request from
- * this requester declined, what they hid given back, and their keys
- * blocked. Admin-only.
+ * Review's Block and decline all (design 137): the request declined with
+ * those sharing both its keys, what they hid given back, its network
+ * blocked, and its address once confirmed. Admin-only.
  */
 export const blockTakedownRequesterAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => blockRequesterInput.parse(input))
   .handler(async ({ data }) => {
     const actorId = requireAdmin(await verifiedUserId());
-    return blockAndDeclineAll(coreDb(), actorId, data.requestId);
+    // Primary: whether the request is still pending gates the block.
+    return blockAndDeclineAll(primaryCoreDb(), actorId, data.requestId);
+  });
+
+/**
+ * Review's Unblock (design 137): the key is no longer blocked, so what it
+ * files next hides and alerts as usual. Admin-only.
+ */
+export const unblockTakedownRequesterAction = createServerFn({
+  method: "POST",
+})
+  .validator((input: unknown) => unblockRequesterInput.parse(input))
+  .handler(async ({ data }) => {
+    requireAdmin(await verifiedUserId());
+    return { outcome: await unblockTakedownKey(coreDb(), data.key) };
   });
 
 /**

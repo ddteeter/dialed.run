@@ -7,7 +7,8 @@
  * then D-147 (design 152): the receipt points to StopNCII and Take It
  * Down, and the takedown keeps the photo's fingerprint — then design 137's
  * limits: past two open requests, the next waits for a confirm from its
- * receipt, and the operator blocks the requester and declines the rest.
+ * receipt, and the operator blocks a confirmed request's address, then
+ * lifts the block from Review's Blocked list.
  * One journey, one video. A copy of a removed photo posted again, waiting
  * on Review with what it matched, is `takedown.spec.ts`'s.
  *
@@ -259,9 +260,9 @@ test("someone with no account asks for an intimate image to come down, and an op
     ).toBeVisible();
     await expect(request).toContainText("[via /takedown]");
     await expect(request).toContainText("[hidden]");
-    await expect(request.locator("[data-part='related']")).toHaveText(
-      "2 more from this requester",
-    );
+    // Filed with no network key, so no other request shares both its keys:
+    // a block would decline this one alone.
+    await expect(request.locator("[data-part='related']")).toHaveCount(0);
     await expect(request).toContainText("From Sam Asker · signed · good faith");
     await expect(request).toContainText(requester);
     const requestRow = await request.getAttribute("id");
@@ -364,7 +365,7 @@ test("someone with no account asks for an intimate image to come down, and an op
 
     await scene(
       page,
-      "Block and decline all: the rest go, and the kit comes back",
+      "Block and decline all: the confirmed request goes, and its kit comes back",
     );
     const rest = page
       .locator("[data-part='removal-request']")
@@ -376,13 +377,34 @@ test("someone with no account asks for an intimate image to come down, and an op
       )
       .first();
     await rest.getByRole("button", { name: "Block and decline all" }).click();
+    await expect(
+      rest.getByText(
+        "Block this address and decline this request? Anything they hid comes back, and nothing is sent to them.",
+      ),
+    ).toBeVisible();
     await rest.getByRole("button", { name: "Block and decline all" }).click();
     await expect(
       page
         .locator("[data-part='removal-request']")
-        .filter({ hasText: `asker-${suffix}` }),
+        .filter({ hasText: requester.replace("@", "+again@") }),
     ).toHaveCount(0, { timeout: 15_000 });
     expect(await statusOf(secondEntryId)).toBe("ok");
+    // Its confirm proved the address, so the address is what is blocked.
+    await scene(page, "Blocked: the address, and its Unblock");
+    const blocked = page
+      .locator("[data-part='takedown-block']")
+      .filter({ hasText: requester });
+    await expect(blocked).toContainText("[address]");
+    await blocked.getByRole("button", { name: "Unblock" }).click();
+    await expect(
+      blocked.getByText(
+        "Unblock this address? What it files next hides and alerts as usual.",
+      ),
+    ).toBeVisible();
+    await blocked.getByRole("button", { name: "Unblock" }).click();
+    await expect(blocked.getByRole("status")).toHaveText("Unblocked.", {
+      timeout: 15_000,
+    });
   } finally {
     // A walk that fails partway leaves its requests waiting on Review for
     // every later spec's Desk (design 238). Only what still waits goes.

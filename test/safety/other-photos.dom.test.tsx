@@ -192,6 +192,8 @@ describe("on Review's rows", () => {
       due: "Due in 31h",
       holdState: "held",
       relatedIds: [],
+      isConfirmed: false,
+      hasNetworkKey: true,
       otherPhotos: others(PHOTOS.slice(0, 1)),
       subjectPhotoKey: undefined,
     };

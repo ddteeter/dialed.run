@@ -53,6 +53,44 @@ end of navigation, Desk
 main
 heading, Review, level 1
 # waiting · # decided today
+heading, Removal requests · #, level 2
+Removal requests · #
+end of heading, Removal requests · #, level 2
+list
+listitem, level 1, position 1, set size 1
+link via /takedown
+Due in #h
+From
+Sam Asker
+· signed · good faith
+asker-#@example.com
+a photo on another site
+Not one of our links: find it from what they wrote.
+paragraph
+Intimate means nudity or sexual content (# U.S.C. § #). If it isn't, decline, and remove it under another rule if it breaks one.
+end of paragraph
+form
+status
+button, Take it down
+Take it down
+end of button, Take it down
+button, Decline
+button, Block and decline all
+end of form
+end of listitem, level 1, position 1, set size 1
+end of list
+heading, Blocked, level 2
+Blocked
+end of heading, Blocked, level 2
+list
+listitem, level 1, position 1, set size 1
+address
+asker-#@example.com · blocked :month #
+status
+Unblocked.
+end of status
+end of listitem, level 1, position 1, set size 1
+end of list
 heading, waiting, level 2
 waiting
 end of heading, waiting, level 2
