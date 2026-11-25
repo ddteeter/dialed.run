@@ -115,6 +115,13 @@ async function storedSizesOf(
 }
 
 /**
+The sum of a count's rows: one row, from `count()`.
+*/
+function totalOf(rows: readonly { readonly n: number }[]): number {
+  return rows.reduce((total, row) => total + row.n, 0);
+}
+
+/**
  * Whether the runner's export is past any of `caps`: their runs and
  * garments counted in one batch, and the files' listed bytes summed.
  */
@@ -136,8 +143,8 @@ async function isPastCaps(
     bytes += size;
   }
   return (
-    runCounts.some((row) => row.n > caps.runs) ||
-    garmentCounts.some((row) => row.n > caps.garments) ||
+    totalOf(runCounts) > caps.runs ||
+    totalOf(garmentCounts) > caps.garments ||
     bytes > caps.bytes
   );
 }

@@ -271,8 +271,8 @@ async function purgeEach(
   for (const userId of userIds) {
     try {
       const outcome = await purgeAccount(deps, userId, budget);
-      if (!outcome.isFinished) unfinished += 1;
-      if (outcome.isUnremembered) unremembered += 1;
+      if (outcome === undefined) unfinished += 1;
+      else if (outcome.isUnremembered) unremembered += 1;
     } catch (error) {
       failed += 1;
       deps.report(error, { surface: "account-purge", userId });
@@ -362,7 +362,7 @@ async function claimDue(db: Db, now: number): Promise<string[]> {
  * it again from the top after a failure at any step does only what the
  * failure left undone. `isUnremembered` when the account was closed, had
  * proved addresses, and nothing was kept of them (`deleteAccountRows`).
- * `isFinished` is false when the firing's runs (`budget`) ran out first:
+ * Nothing (`undefined`) when the firing's runs (`budget`) ran out first:
  * nothing past the runs is touched, and the claim stays for the next
  * firing.
  */
@@ -370,22 +370,19 @@ export async function purgeAccount(
   deps: PurgeDeps,
   userId: string,
   budget: RunBudget = everyRun(),
-): Promise<{ isUnremembered: boolean; isFinished: boolean }> {
+): Promise<{ isUnremembered: boolean } | undefined> {
   const { core, report } = deps;
   // Revoked before anything else of theirs goes: a connection the request
   // could not close is closed here, with the grant owed to Strava.
   await deps.revokeStrava(userId);
   await forgetScreenings(core, userId);
-  if (!(await didDeleteEveryRun(deps, userId, budget))) {
-    return { isUnremembered: false, isFinished: false };
-  }
+  if (!(await didDeleteEveryRun(deps, userId, budget))) return undefined;
   // 128's SAF-3 primitive (seam 4): every entry left — with their items,
   // tags, reactions, photos and notifications — and the media prefix owed.
   await deleteRuns(core, userId, "all", report);
   await deleteCloset(core, userId);
   await deleteStoredFiles(deps.importsBucket, userId);
-  const { isUnremembered } = await deleteAccountRows(core, userId, deps);
-  return { isUnremembered, isFinished: true };
+  return deleteAccountRows(core, userId, deps);
 }
 
 /**
@@ -440,7 +437,6 @@ async function didDeleteEveryRun(
     budget.left -= page.length;
     await deps.forgetBands(page.map((run) => run.id));
     await deleteRunsThrough(deps.core, userId, last.id, deps.report);
-    if (page.length < size) return true;
   }
   return false;
 }

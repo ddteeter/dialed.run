@@ -98,7 +98,7 @@ async function exportHistory(
   userId: string,
   now: number,
 ): Promise<{ latest: ExportRow | undefined; failedToday: number }> {
-  const [[latest], [failed]] = await db.batch([
+  const [[latest], failed] = await db.batch([
     db
       .select()
       .from(dataExports)
@@ -110,7 +110,10 @@ async function exportHistory(
       .from(dataExports)
       .where(failedSince(userId, now - EXPORT_EVERY_S)),
   ]);
-  return { latest, failedToday: failed?.count ?? 0 };
+  return {
+    latest,
+    failedToday: failed.reduce((total, row) => total + row.count, 0),
+  };
 }
 
 /**

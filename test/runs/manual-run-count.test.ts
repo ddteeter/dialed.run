@@ -69,6 +69,35 @@ describe("a runner's day of manual runs", () => {
     expect(await countRuns(db, userId)).toBe(1);
   });
 
+  it("holds the count for a day from its first run", async () => {
+    const db = coreDb();
+    const held = newUlid();
+    const lapsed = newUlid();
+    await coreDb()
+      .insert(rateLimits)
+      .values([
+        countRow(
+          "manual-run-runner",
+          held,
+          MANUAL_RUNS_PER_DAY,
+          nowSeconds() - 86_400 + 60,
+        ),
+        countRow(
+          "manual-run-runner",
+          lapsed,
+          MANUAL_RUNS_PER_DAY,
+          nowSeconds() - 86_400 - 60,
+        ),
+      ]);
+
+    const over = createManualRun(db, held, draft, newUlid());
+    expect(await refusalOf(over)).toBe(
+      "That's 30 runs today. You can log more tomorrow.",
+    );
+    await createManualRun(db, lapsed, draft, newUlid());
+    expect(await countRuns(db, lapsed)).toBe(1);
+  });
+
   it("counts every new run, with or without a key", async () => {
     const db = coreDb();
     const userId = newUlid();

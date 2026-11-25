@@ -50,6 +50,12 @@ type Db = DrizzleD1Database & { $client: D1Database };
 export const GAVE_UP_LIST_LIMIT = 50;
 
 /**
+ * The name the list's statement gives each row's place within its kind,
+ * and reads it back by.
+ */
+export const PLACE_IN_KIND = "place";
+
+/**
 One row on Today's Gave up, worded for display.
 */
 export interface GaveUpJob {
@@ -208,7 +214,7 @@ export async function gaveUpJobs(
       ...getTableColumns(gaveUp),
       place:
         sql<number>`row_number() over (partition by ${gaveUp.kind} order by ${gaveUp.lastFailedAt} desc)`.as(
-          "place",
+          PLACE_IN_KIND,
         ),
     })
     .from(gaveUp)

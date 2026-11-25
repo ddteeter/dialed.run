@@ -20,6 +20,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { oweOutbox, outboxInsert } from "../../src/modules/ops/outbox/outbox";
 import {
   GAVE_UP_LIST_LIMIT,
+  PLACE_IN_KIND,
   dropGaveUp,
   gaveUpJobs,
   retryGaveUp,
@@ -266,6 +267,10 @@ describe("gaveUpJobs", () => {
     const [found] = await gaveUpJobs();
 
     expect(found?.doing).toBe("Read the product page for Mystery Tee");
+  });
+
+  it("names each row's place within its kind", () => {
+    expect(PLACE_IN_KIND).toBe("place");
   });
 
   it(`lists the newest ${String(GAVE_UP_LIST_LIMIT)} of a kind and no more`, async () => {

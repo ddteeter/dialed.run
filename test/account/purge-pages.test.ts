@@ -3,12 +3,17 @@ import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { user } from "../../src/db/schema-auth";
-import { accountDeletions, runs } from "../../src/db/schema-core";
+import {
+  accountDeletions,
+  outfitEntries,
+  runs,
+} from "../../src/db/schema-core";
 import { manualConditions } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
   PURGE_LEASE_S,
+  PURGE_PER_ROUND,
   PURGE_RUNS_PAGE,
   PURGE_RUNS_PER_FIRING,
   purgeDueAccounts,
@@ -165,6 +170,33 @@ describe("the purge's run pages", () => {
     expect(left).toHaveLength(3);
   });
 
+  it("delete the entries on the runs they delete, and only those", async () => {
+    const userId = await dueAccount(5);
+    const runIds = await runIdsOf(userId);
+    await core
+      .insert(outfitEntries)
+      .values(
+        runIds.map((runId) => ({
+          id: newUlid(),
+          runId,
+          userId,
+          createdAt: NOW,
+        })),
+      );
+
+    await purgeDueAccounts([], firingAt(NOW, { page: 2, perFiring: 2 }).deps);
+
+    const entries = await core
+      .select({ runId: outfitEntries.runId })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.userId, userId));
+    const left = await runIdsOf(userId);
+    expect(entries.map((entry) => entry.runId).toSorted(byId)).toStrictEqual(
+      left.toSorted(byId),
+    );
+    expect(left).toHaveLength(3);
+  });
+
   it("share one bound across every account the firing purges", async () => {
     const first = await dueAccount(3);
     const second = await dueAccount(3);
@@ -179,6 +211,26 @@ describe("the purge's run pages", () => {
     expect(anomalies).toContain(
       "1 account deletion(s) are part way through and continue on the next firing",
     );
+  });
+
+  it("claim no further round once the bound is spent", async () => {
+    for (let index = 0; index <= PURGE_PER_ROUND; index += 1) {
+      await dueAccount(1);
+    }
+    const firing = firingAt(NOW, { page: 10, perFiring: PURGE_PER_ROUND });
+
+    await purgeDueAccounts([], firing.deps);
+
+    expect(firing.handed).toStrictEqual(
+      Array.from({ length: PURGE_PER_ROUND }, () => 1),
+    );
+    // The first round's last account is left part way, holding its claim;
+    // the one past the round is never claimed.
+    const claims = await core
+      .select({ startedAt: accountDeletions.purgeStartedAt })
+      .from(accountDeletions);
+    expect(claims).toHaveLength(2);
+    expect(claims.filter((claim) => claim.startedAt === NOW)).toHaveLength(1);
   });
 
   it("finish an account whose runs end exactly on the bound on the next firing", async () => {

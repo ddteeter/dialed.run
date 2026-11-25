@@ -383,6 +383,7 @@ async function seedAccount(): Promise<Seeded> {
         countRow("weather-runner", userId, 1, NOW),
         countRow("photo-runner", userId, 1, NOW),
         countRow("purge-runner", userId, 1, NOW),
+        countRow("manual-run-runner", userId, 1, NOW),
         countRow("deletion-notice", userId, 1, NOW),
       ]),
     // The counts kept by address, in their own statement: with the
@@ -520,6 +521,7 @@ function runnersCount(
     | "weather-runner"
     | "photo-runner"
     | "purge-runner"
+    | "manual-run-runner"
     | "deletion-notice"
     | "correction-runner"
     | "strava-connect-runner"
@@ -777,6 +779,7 @@ async function footprint(seeded: Seeded) {
           runnersCount("weather-runner", userId),
           runnersCount("photo-runner", userId),
           runnersCount("purge-runner", userId),
+          runnersCount("manual-run-runner", userId),
           runnersCount("deletion-notice", userId),
           runnersCount("correction-runner", userId),
           runnersCount("strava-connect-runner", userId),

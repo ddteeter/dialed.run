@@ -565,18 +565,6 @@ export async function deleteRuns(
 ): Promise<void> {
   const effects = { report, purge };
   await retractScoped(db, runs, userId, scope, effects, async (ownedRuns) => {
-    const entryIds =
-      scope === "all"
-        ? []
-        : await columnWhere(
-            db,
-            outfitEntries,
-            outfitEntries.id,
-            and(
-              eq(outfitEntries.userId, userId),
-              inArray(outfitEntries.runId, ownedRuns),
-            ),
-          );
     const uploads =
       scope === "all"
         ? []
@@ -588,7 +576,18 @@ export async function deleteRuns(
     // "all entries" — and saying so keeps the statement to one parameter,
     // where a list of every id would pass D1's hundred-parameter cap for
     // anyone who has logged a hundred runs.
-    const entryScope: Scope = scope === "all" ? "all" : entryIds;
+    const entryScope: Scope =
+      scope === "all"
+        ? "all"
+        : await columnWhere(
+            db,
+            outfitEntries,
+            outfitEntries.id,
+            and(
+              eq(outfitEntries.userId, userId),
+              inArray(outfitEntries.runId, ownedRuns),
+            ),
+          );
     const bandRuns = scope === "all" ? [] : await ownedRuns;
     const theirEntries = owned(db, outfitEntries, userId, entryScope);
     return {
