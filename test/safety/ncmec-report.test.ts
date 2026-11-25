@@ -340,6 +340,27 @@ describe("recording the report, in the audit", () => {
     }
   });
 
+  it("says gone, and writes no row, for a record purged between its read and the batch", async () => {
+    const id = await quarantinedAtTime(nowSeconds());
+    const db = core();
+    const batch = db.batch.bind(db);
+    Reflect.set(
+      db,
+      "batch",
+      async (...statements: Parameters<typeof db.batch>) => {
+        await core()
+          .delete(quarantinedContent)
+          .where(eq(quarantinedContent.id, id));
+        return batch(...statements);
+      },
+    );
+
+    expect(
+      await recordNcmecReport(db, ADMIN, { recordId: id, reportId: "3" }),
+    ).toStrictEqual({ outcome: "gone" });
+    expect(await core().select().from(moderationActions)).toStrictEqual([]);
+  });
+
   it("writes no row for a record that is gone, or for someone not an admin", async () => {
     const id = await quarantinedAtTime(nowSeconds());
 

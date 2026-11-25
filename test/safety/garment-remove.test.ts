@@ -562,6 +562,29 @@ describe("a refused garment quarantine and the copies it made", () => {
     expect(await bellOf(owner)).toStrictEqual([]);
   });
 
+  it("records nothing when its owner removed the photo but the batch failed for another cause", async () => {
+    const { owner, itemId, heldTo } = await heldWithHold();
+
+    const taking = moderateGarmentPhoto(
+      batchWithAfter(heldTo.statement, () =>
+        removeItemPhoto(core(), owner, itemId, quiet),
+      ),
+      {
+        actorId: "rev",
+        itemId,
+        action: "quarantine",
+        reason: "explicit",
+        heldTo: { statement: heldTo.statement, refused: () => false },
+      },
+      quiet,
+    );
+
+    await expect(taking).rejects.toThrow(
+      /NOT NULL[\s\S]*review_queue\.status/u,
+    );
+    expect(await core().select().from(quarantinedContent)).toStrictEqual([]);
+  });
+
   it("keeps the copies a landed quarantine lists when another of the photo is refused", async () => {
     const { itemId, photoKey, queueId, heldTo } = await heldWithHold();
     const landing = await openSubject(queueId, await shownRowOf(queueId));

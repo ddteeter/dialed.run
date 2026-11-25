@@ -20,6 +20,7 @@ import {
   QUARANTINE_PURGE_CAP,
   QUARANTINE_PURGE_LEASE_SECONDS,
   QUARANTINE_SWEEP_PAGES,
+  QUARANTINE_UNLISTED_GRACE_SECONDS,
 } from "../../src/modules/safety/takedowns/quarantine";
 
 /**
@@ -392,12 +393,17 @@ describe("a copy two records list", () => {
       snapshot,
     });
 
+    const deletes = vi.spyOn(env.MEDIA, "delete");
+
     expect(await purgeExpiredQuarantine(core(), env.MEDIA, now)).toStrictEqual({
       purged: 1,
       failed: [],
     });
     expect(await recordOf(first.id)).toBeUndefined();
     for (const key of first.keys) expect(await isStored(key)).toBe(true);
+    // Nothing left to delete is not a delete of nothing.
+    expect(deletes).not.toHaveBeenCalled();
+    deletes.mockRestore();
 
     await purgeExpiredQuarantine(core(), env.MEDIA, now + 2 * DAY);
     expect(await recordOf(second.id)).toBeUndefined();
@@ -418,6 +424,39 @@ describe("copies no record lists", () => {
       await purgeExpiredQuarantine(core(), env.MEDIA, madeAt + DAY + 60),
     ).toStrictEqual({ purged: 0, failed: [] });
     expect(await isStored(copy)).toBe(false);
+  });
+
+  it("deletes a copy written exactly a day before, and lists the first page with no cursor", async () => {
+    const now = nowSeconds();
+    const onTheLine = unlisted(newUlid());
+    const justInside = unlisted(newUlid());
+    const media = {
+      delete: vi.fn().mockResolvedValue(undefined),
+      list: vi.fn().mockResolvedValue({
+        objects: [
+          {
+            key: onTheLine,
+            uploaded: new Date(
+              (now - QUARANTINE_UNLISTED_GRACE_SECONDS) * 1000,
+            ),
+          },
+          {
+            key: justInside,
+            uploaded: new Date(
+              (now - QUARANTINE_UNLISTED_GRACE_SECONDS + 1) * 1000,
+            ),
+          },
+        ],
+        truncated: false,
+      }),
+    };
+
+    await purgeExpiredQuarantine(core(), media, now);
+
+    expect(media.list.mock.calls).toStrictEqual([
+      [{ prefix: quarantineKeyFor(""), limit: 100 }],
+    ]);
+    expect(media.delete.mock.calls).toStrictEqual([[[onTheLine]]]);
   });
 
   it("keeps an old copy a record lists, and deletes nothing outside the prefix", async () => {
