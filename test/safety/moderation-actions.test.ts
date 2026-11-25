@@ -77,8 +77,8 @@ import {
 import {
   QUARANTINE_PAGE,
   QUARANTINE_RETENTION_SECONDS,
+  copiesNoRecordLists,
   preservedKeysOf,
-  purgeExpiredQuarantine,
   quarantinedContentFor,
 } from "../../src/modules/safety/takedowns/quarantine";
 import {
@@ -1369,11 +1369,9 @@ describe("decideReview: the queue's Remove really deletes", () => {
 
     expect(outcome).toBe("removed");
     expect(await listedCopies()).toStrictEqual([quarantineKeyFor(key)]);
-    // Two days on: past the sweep's day for a copy no record lists.
-    await purgeExpiredQuarantine(
-      core(),
-      env.MEDIA,
-      nowSeconds() + 2 * 24 * 60 * 60,
+    // The sweep deletes only copies no record lists.
+    expect(await copiesNoRecordLists([quarantineKeyFor(key)])).toStrictEqual(
+      [],
     );
     expect(await stored("quarantine/")).toStrictEqual([quarantineKeyFor(key)]);
   });
@@ -1450,14 +1448,38 @@ describe("decideReview: the queue's Remove really deletes", () => {
       },
       { id: thirdId, photoKey: thirdKey, preservedKey: undefined },
     ]);
-    // Two days on: past the sweep's day for a copy no record lists.
-    await purgeExpiredQuarantine(
-      core(),
-      env.MEDIA,
-      nowSeconds() + 2 * 24 * 60 * 60,
-    );
+    // The sweep deletes only copies no record lists.
+    expect(await copiesNoRecordLists(copies)).toStrictEqual([]);
     const kept = await stored("quarantine/");
     expect(kept.toSorted(byKey)).toStrictEqual(copies.toSorted(byKey));
+  });
+
+  it("keeps a copy already at its key, writing nothing over it, and lists it", async () => {
+    const { photoId, key } = await postedPhoto();
+    const copy = quarantineKeyFor(key);
+    // A first attempt's copy, whose batch never landed.
+    await env.MEDIA.put(copy, new Uint8Array([9]));
+    const puts = vi.spyOn(env.MEDIA, "put");
+
+    const outcome = await moderateContent(
+      core(),
+      {
+        actorId: "rev",
+        action: "quarantine",
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "explicit",
+      },
+      quiet,
+    );
+
+    expect(outcome).toBe("removed");
+    expect(puts.mock.calls.map(([written]) => written)).not.toContain(copy);
+    const kept = await env.MEDIA.get(copy);
+    expect(new Uint8Array((await kept?.arrayBuffer()) ?? [])).toStrictEqual(
+      new Uint8Array([9]),
+    );
+    expect(await listedCopies()).toStrictEqual([copy]);
   });
 
   it("records nothing for a refused quarantine whose row another reviewer decided, and keeps its copy", async () => {

@@ -147,15 +147,19 @@ export type GarmentModerationOutcome =
  * The one copy a quarantine makes, shared with a kit's (`moderation.ts`) so
  * the two cannot drift on what is preserved: one object under the
  * quarantine prefix, and where it went and when R2 says it was uploaded.
- * Nothing when the object is already gone.
+ * Nothing when the object is already gone. A copy already at its key is
+ * kept as it is, and nothing is written over it.
  */
 export async function preserveObject(key: string) {
   const object = await env.MEDIA.get(key);
   if (object === null) return;
   const preservedKey = quarantineKeyFor(key);
-  await env.MEDIA.put(preservedKey, object.body, {
-    httpMetadata: object.httpMetadata ?? {},
-  });
+  const kept = await env.MEDIA.head(preservedKey);
+  await (kept === null
+    ? env.MEDIA.put(preservedKey, object.body, {
+        httpMetadata: object.httpMetadata ?? {},
+      })
+    : object.body.cancel());
   return {
     preservedKey,
     uploadedAt: Math.floor(object.uploaded.getTime() / 1000),
