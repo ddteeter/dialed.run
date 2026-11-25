@@ -51,13 +51,13 @@ views {
     }
     opt 'the requester confirms the receipt\'s link' {
       // source: src/modules/safety/functions.ts confirmTakedownFn; src/modules/safety/takedowns/takedown-requests.ts confirmTakedownRequest; src/modules/ops/owed-email/owed-email.ts withReceiptConfirmToken; src/modules/email/content.ts receiptBody
-      requester -> cf.app.safety.confirmRequest 'opens the receipt\'s confirm link, which names the request\'s link'
+      requester -> cf.app.safety.confirmRequest 'opens the receipt\'s confirm link, which says what the request is about'
       // source: src/modules/safety/takedowns/takedown-requests.ts confirmTakedownRequest, rowActs, purgeIfHeld
       cf.app.safety.confirmRequest -> cf.coreDb 'claims the confirmation, which proves the address, and hides as filing would if it waited' {
         notes '''
           **Guard: claim, then work.** Only an unconfirmed, pending request is claimed, and only before it is due, so a second click does nothing.
 
-          A request past the cap waited for this, and now hides as filing would. Any other request records the confirmation and nothing else. A block reaches an address only through it.
+          A request past the cap waited for this, and now hides as filing would. Any other request records the confirmation and nothing else, and a blocked requester\'s answers the same and records nothing. A block reaches an address only through it.
         '''
       }
     }
