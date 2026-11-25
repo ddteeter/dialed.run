@@ -9,7 +9,6 @@
     "jsx": "react-jsx",
     "module": "ESNext",
     "paths": {
-      "#/*": ["./src/*"],
       "@/*": ["./src/*"]
     },
     // ES2024 wholesale, replacing a floor at ES2022 that had drifted well

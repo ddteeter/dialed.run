@@ -510,6 +510,22 @@ export default tseslint.config(
   },
   {
     /**
+     * `@cloudflare/workers-types` declares the D1 bindings (`D1Database`,
+     * `D1PreparedStatement`, `D1DatabaseSession`) as ambient abstract
+     * classes. The runtime hands them to us, and no constructor is reachable
+     * from code. So a wrapper over a binding, or a fake of one, can only
+     * match them structurally. That is what this rule (typescript-eslint
+     * 8.73, `strictTypeChecked`) reports, and it takes no options. It stays
+     * on everywhere else, where a class instance can be made properly
+     * (owner's grant, 2026-11-24).
+     */
+    files: ["test/**", "e2e/support/**", "src/lib/sql/d1-session.ts"],
+    rules: {
+      "@typescript-eslint/no-unsafe-class-instance-assignment": "off",
+    },
+  },
+  {
+    /**
      * Two test files, named rather than a `test/**` blanket, because the
      * exemption is about one specific fact and should not spread quietly.
      *
