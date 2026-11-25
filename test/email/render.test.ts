@@ -385,7 +385,7 @@ describe("emailContent", () => {
       { kind: "removal_reminder_summary", count: 3 },
       {
         subject: "3 removal requests still undecided",
-        body: "3 removal requests that came in while emails were paused reached 40 of their 48 hours in the last hour. Nothing changes until someone decides each one in Review.",
+        body: "3 removal requests reached 40 of their 48 hours in the last hour without an email of their own. Nothing changes until someone decides each one in Review.",
         button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
         foot: "Sent to every operator, once an hour while any are due.",
         footer: LEGAL,
@@ -395,7 +395,7 @@ describe("emailContent", () => {
       { kind: "removal_reminder_summary", count: 1 },
       {
         subject: "1 removal request still undecided",
-        body: "1 removal request that came in while emails were paused reached 40 of their 48 hours in the last hour. Nothing changes until someone decides each one in Review.",
+        body: "1 removal request reached 40 of its 48 hours in the last hour without an email of its own. Nothing changes until someone decides each one in Review.",
         button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
         foot: "Sent to every operator, once an hour while any are due.",
         footer: LEGAL,

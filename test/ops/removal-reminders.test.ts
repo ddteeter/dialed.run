@@ -19,6 +19,7 @@ import { addAccount } from "../feed/helpers";
 import {
   oweRemindersSince,
   oweRemovalReminders,
+  REQUEST_REMINDERS_PER_FIRING,
 } from "../../src/modules/ops/daily/removal-reminders";
 
 /**
@@ -281,6 +282,46 @@ describe("the 40-hour reminder", () => {
         },
       },
     ]);
+  });
+
+  it("reminds one by one of the soonest due requests up to the firing's number, every report, and counts the rest", async () => {
+    // Filed in one hour, confirmed across the next forty: each alerted
+    // one by one at its confirm, and all reach 40 hours together. Filed
+    // latest first, so the soonest due are the last ids.
+    const filed: string[] = [];
+    const over = REQUEST_REMINDERS_PER_FIRING + 5;
+    for (let index = 0; index < over; index += 1) {
+      filed.push(await request(40 + (index + 1) / 100));
+    }
+    const report = await reported(41);
+
+    await oweRemovalReminders(core(), NOW);
+
+    const soonest = filed.slice(-REQUEST_REMINDERS_PER_FIRING);
+    expect(await keys()).toStrictEqual(
+      [...soonest.map((id) => `request:${id}`), `photo:${report}`]
+        .flatMap((key) => [
+          `removal_reminder:${key}:op-one`,
+          `removal_reminder:${key}:op-two`,
+        ])
+        .toSorted((a, b) => a.localeCompare(b)),
+    );
+    const owed = await summaries();
+    expect(owed.map((email) => email.email.template)).toStrictEqual([
+      { kind: "removal_reminder_summary", count: 5 },
+      { kind: "removal_reminder_summary", count: 5 },
+    ]);
+  });
+
+  it("reminds one by one of exactly the firing's number of requests, with no summary", async () => {
+    for (let index = 0; index < REQUEST_REMINDERS_PER_FIRING; index += 1) {
+      await request(41);
+    }
+
+    await oweRemovalReminders(core(), NOW);
+
+    expect(await reminders()).toHaveLength(2 * REQUEST_REMINDERS_PER_FIRING);
+    expect(await summaries()).toStrictEqual([]);
   });
 
   it("on its first firing, reminds of an overdue removal too", async () => {

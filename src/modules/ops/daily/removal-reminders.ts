@@ -21,9 +21,11 @@
  * **One by one only for what alerted one by one.** A removal request the
  * valve quieted, or one past the hour's one-by-one allowance, alerted
  * through the hourly email; it is reminded of the same way, in one
- * summary per operator per firing saying how many reached 40 hours. So
- * the batch is as long as the first alerts were, however many requests
- * arrive.
+ * summary per operator per firing saying how many reached 40 hours.
+ * Every report is reminded of one by one, and at most
+ * `REQUEST_REMINDERS_PER_FIRING` requests, the soonest due; the rest are
+ * counted into the summary too. So the batch has a bound however many
+ * requests reach 40 hours together.
  */
 import { eq, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
@@ -40,6 +42,15 @@ import { markedAt, REMOVAL_REMINDERS } from "../desk";
 import { outboxInsertWhere, oweOutbox } from "../outbox";
 
 type Db = ReturnType<typeof drizzle>;
+
+type Removal = Awaited<ReturnType<typeof undecidedRemovalsDue>>[number];
+
+/**
+ * At most this many removal requests are reminded of one by one in one
+ * firing; the rest are counted into the summary. The owner's number to
+ * retune.
+ */
+export const REQUEST_REMINDERS_PER_FIRING = 20;
 
 /**
  * Owe every operator a reminder for each removal that came within 8
@@ -73,7 +84,7 @@ export async function oweRemindersSince(
     table: cronCheckpoints,
     where: sql`${cronCheckpoints.cronName} = ${REMOVAL_REMINDERS} and ${cronCheckpoints.lastRunAt} = ${now}`,
   };
-  const oneByOne = due.filter((removal) => removal.isOneByOne);
+  const oneByOne = ownReminders(due);
   const quieted = due.length - oneByOne.length;
   const reminders = oneByOne.flatMap((removal) =>
     adminUserIds().map((userId) =>
@@ -106,6 +117,22 @@ export async function oweRemindersSince(
           ),
         );
   await db.batch([claimStatement(db, last, now), ...reminders, ...summaries]);
+}
+
+/**
+ * The removals reminded of one by one: every report, and the soonest due
+ * requests that alerted one by one, up to `REQUEST_REMINDERS_PER_FIRING`.
+ */
+function ownReminders(due: readonly Removal[]): readonly Removal[] {
+  const oneByOne = due.filter((removal) => removal.isOneByOne);
+  // `undecidedRemovalsDue` reads the requests soonest due first.
+  const requests = oneByOne
+    .filter((removal) => removal.kind === "request")
+    .slice(0, REQUEST_REMINDERS_PER_FIRING);
+  return [
+    ...oneByOne.filter((removal) => removal.kind === "report"),
+    ...requests,
+  ];
 }
 
 const HOUR_S = 60 * 60;

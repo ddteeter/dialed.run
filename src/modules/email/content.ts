@@ -468,11 +468,13 @@ const CONTENT: {
     };
   },
   removal_reminder_summary: (template, { origin }) => {
-    // C6, for the requests that did not alert one by one.
-    const requests = template.count === 1 ? "request" : "requests";
+    // C6, for the requests reminded of by a count.
+    const isOne = template.count === 1;
+    const requests = isOne ? "request" : "requests";
+    const their = isOne ? "its" : "their";
     return {
       subject: `${String(template.count)} removal ${requests} still undecided`,
-      body: `${String(template.count)} removal ${requests} that came in while emails were paused reached 40 of their 48 hours in the last hour. Nothing changes until someone decides each one in Review.`,
+      body: `${String(template.count)} removal ${requests} reached 40 of ${their} 48 hours in the last hour without an email of ${their} own. Nothing changes until someone decides each one in Review.`,
       button: { label: "Open Review", href: `${origin}/desk/review` },
       foot: "Sent to every operator, once an hour while any are due.",
     };
