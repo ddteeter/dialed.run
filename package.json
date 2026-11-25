@@ -2,9 +2,6 @@
   "name": "dialed",
   "private": true,
   "type": "module",
-  "imports": {
-    "#/*": "./src/*"
-  },
   "scripts": {
     "dev": "vite dev --port ${PORT:-3000}",
     "generate-routes": "tsr generate",
