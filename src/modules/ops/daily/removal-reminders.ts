@@ -124,11 +124,15 @@ export async function oweRemindersSince(
  * requests that alerted one by one, up to `REQUEST_REMINDERS_PER_FIRING`.
  */
 function ownReminders(due: readonly Removal[]): readonly Removal[] {
-  const requests = due
-    .filter((removal) => removal.kind === "request" && removal.isOneByOne)
-    .toSorted((a, b) => a.dueAt - b.dueAt)
+  const oneByOne = due.filter((removal) => removal.isOneByOne);
+  // `undecidedRemovalsDue` reads the requests soonest due first.
+  const requests = oneByOne
+    .filter((removal) => removal.kind === "request")
     .slice(0, REQUEST_REMINDERS_PER_FIRING);
-  return [...due.filter((removal) => removal.kind === "report"), ...requests];
+  return [
+    ...oneByOne.filter((removal) => removal.kind === "report"),
+    ...requests,
+  ];
 }
 
 const HOUR_S = 60 * 60;

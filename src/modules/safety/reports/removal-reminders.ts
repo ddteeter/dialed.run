@@ -16,7 +16,7 @@
  * alerted only through the valve's hourly email is reminded of the same
  * way, by a count (`isOneByOne` false).
  */
-import { and, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import {
@@ -51,9 +51,9 @@ export interface UndecidedRemoval {
 }
 
 /**
- * The undecided removals due in `(after, until]`, in no order. `after`
- * is `undefined` for no lower bound: everything due by `until`, overdue
- * included.
+ * The undecided removals due in `(after, until]`: the requests soonest
+ * due first, then the Review rows in no order. `after` is `undefined`
+ * for no lower bound: everything due by `until`, overdue included.
  *
  * The requests are read on `takedown_requests_status_due`; the Review rows
  * by status, then their reports by `reports_subject`.
@@ -84,7 +84,8 @@ export async function undecidedRemovalsDue(
         lte(takedownRequests.dueAt, window.until),
         alerted,
       ),
-    );
+    )
+    .orderBy(asc(takedownRequests.dueAt));
   const dueAt = sql<number>`${firstReportHidingAtOnce()} + ${REMOVAL_DUE_SECONDS}`;
   const rows = await db
     .select({
