@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { isoDayOf } from "../../lib/contracts/age";
 import { HOLD_CAUSES, REVIEW_SOURCES } from "../../lib/contracts/hold-causes";
-import { usernameSchema } from "../../lib/contracts/garments";
+import { EMAIL_MAX_LENGTH, usernameSchema } from "../../lib/contracts/garments";
 import { takedownRequestSchema } from "../../lib/contracts/takedown";
 import { rowIdSchema, ulidSchema } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -339,6 +339,15 @@ const removalRequestRef = z.object({ requestId: ulidSchema });
 Block and decline all (design 137): the request whose requester it is.
 */
 export const blockRequesterInput = removalRequestRef;
+
+/**
+ * Unblock (design 137): the blocked key, an address's or a network's, as
+ * Review listed it. A network's is 64 hex characters, so the address's
+ * cap bounds both.
+ */
+export const unblockRequesterInput = z.object({
+  key: z.string().min(1).max(EMAIL_MAX_LENGTH),
+});
 
 /**
  * Review's "Record the NCMEC report" (C12): which quarantine, and

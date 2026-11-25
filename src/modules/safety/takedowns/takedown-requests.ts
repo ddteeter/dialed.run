@@ -939,6 +939,10 @@ export interface PendingTakedownRequest {
   */
   readonly isConfirmed: boolean;
   /**
+  Whether it was filed with a network key, so a block reaches its network.
+  */
+  readonly hasNetworkKey: boolean;
+  /**
    * The posting runner's other photos (D-117, R-145 c), when the link is
    * ours; `undefined` when it is not, since then nobody is known.
    */
@@ -1040,6 +1044,7 @@ export async function pendingTakedownRequests(
       )
       .map((other) => other.id),
     isConfirmed: row.confirmedAt !== null,
+    hasNetworkKey: row.ipKey !== null,
   }));
 }
 
@@ -1243,7 +1248,7 @@ export async function blockAndDeclineAll(
 /**
 The reason a block-and-decline records; no email carries it.
 */
-const BLOCKED_REASON = "Blocked as abuse";
+export const BLOCKED_REASON = "Blocked as abuse";
 
 /**
 The reason a request recorded when its confirm link lapsed unpressed; no email carries it.

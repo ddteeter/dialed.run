@@ -193,6 +193,7 @@ describe("on Review's rows", () => {
       holdState: "held",
       relatedIds: [],
       isConfirmed: false,
+      hasNetworkKey: true,
       otherPhotos: others(PHOTOS.slice(0, 1)),
       subjectPhotoKey: undefined,
     };

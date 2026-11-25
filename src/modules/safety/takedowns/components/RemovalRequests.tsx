@@ -436,7 +436,7 @@ function RequestActions({
     return (
       <BlockQuestion
         requestId={request.id}
-        count={request.relatedIds.length + 1}
+        asks={blockAsked(request)}
         acts={{
           block,
           onBlocked,
@@ -492,7 +492,7 @@ function RequestActions({
  * Cancel. On a wrapper, because `FormElement` is the forms primitive and
  * takes no key handler; a key pressed inside the form bubbles to it.
  */
-function QuestionInPlace({
+export function QuestionInPlace({
   form,
   dataPart,
   onSubmit,
@@ -564,16 +564,37 @@ function QuestionInPlace({
 }
 
 /**
+ * Block and decline all's question, as the server will answer it: the
+ * request and those sharing both its keys (`relatedIds`), its network
+ * when it has one, and its address only once confirmed.
+ */
+function blockAsked(request: PendingTakedownRequest): string {
+  const count = request.relatedIds.length + 1;
+  const which =
+    count === 1 ? "this request" : `all ${String(count)} of these requests`;
+  if (request.isConfirmed) {
+    const reach = request.hasNetworkKey ? "address and network" : "address";
+    return `Block this ${reach} and decline ${which}? Anything they hid comes back, and nothing is sent to them.`;
+  }
+  return request.hasNetworkKey
+    ? `Block this network and decline ${which}? The address is not blocked: nobody confirmed it.`
+    : "Decline this request as abuse? Nothing else is blocked: nobody confirmed the address.";
+}
+
+/**
  * Block and decline all's question, in the bar's place. Undesigned: the
  * review row's own parts, placeholder words (design deltas).
  */
 function BlockQuestion({
   requestId,
-  count,
+  asks,
   acts,
 }: Readonly<{
   requestId: string;
-  count: number;
+  /**
+  What the question says the block will reach (`blockAsked`).
+  */
+  asks: string;
   /**
   What sends the block, what follows it, and the way back.
   */
@@ -607,13 +628,7 @@ function BlockQuestion({
         cancelHasFocus: true,
       }}
     >
-      <p className="m-0 text-body">
-        Block this requester and decline{" "}
-        {count === 1
-          ? "this request"
-          : `all ${String(count)} of their requests`}
-        ? Anything they hid comes back, and nothing is sent to them.
-      </p>
+      <p className="m-0 text-body">{asks}</p>
     </QuestionInPlace>
   );
 }

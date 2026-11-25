@@ -329,6 +329,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // account; the token is the proof. Blocking a requester is the Desk's.
   "safety/functions.ts confirmTakedownFn": "sessionless",
   "safety/functions.ts blockTakedownRequesterAction": "admin",
+  "safety/functions.ts unblockTakedownRequesterAction": "admin",
 
   // ---- server routes
   // A signed link's token, or the viewer if any.

@@ -392,6 +392,7 @@ function pending(
     holdState: "held",
     relatedIds: [],
     isConfirmed: false,
+    hasNetworkKey: true,
     otherPhotos: { photos: [], total: 0, handle: undefined },
     subjectPhotoKey: undefined,
     ...overrides,
@@ -1003,6 +1004,75 @@ describe("Review · removal requests", () => {
     expect(part("related")).toHaveTextContent(/^2 more from this requester$/u);
   });
 
+  it.each([
+    {
+      shown: { isConfirmed: true, hasNetworkKey: true, relatedIds: [] },
+      asks: "Block this address and network and decline this request? Anything they hid comes back, and nothing is sent to them.",
+    },
+    {
+      shown: {
+        isConfirmed: true,
+        hasNetworkKey: true,
+        relatedIds: ["01JABCDEFGHJKMNPQRSTVWXYZ2"],
+      },
+      asks: "Block this address and network and decline all 2 of these requests? Anything they hid comes back, and nothing is sent to them.",
+    },
+    {
+      shown: { isConfirmed: false, hasNetworkKey: true, relatedIds: [] },
+      asks: "Block this network and decline this request? The address is not blocked: nobody confirmed it.",
+    },
+    {
+      shown: { isConfirmed: false, hasNetworkKey: false, relatedIds: [] },
+      asks: "Decline this request as abuse? Nothing else is blocked: nobody confirmed the address.",
+    },
+    {
+      shown: { isConfirmed: true, hasNetworkKey: false, relatedIds: [] },
+      asks: "Block this address and decline this request? Anything they hid comes back, and nothing is sent to them.",
+    },
+  ])("asks what the block will reach: $asks", async ({ shown, asks }) => {
+    await renderWithRouter(
+      <RemovalRequests
+        onChanged={vi.fn()}
+        asOf={0}
+        requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1", ...shown })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Block and decline all" }));
+    expect(screen.getByText(asks)).toBeVisible();
+  });
+
+  it("says a request someone decided first was decided, and takes it off the list", async () => {
+    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "decided" });
+    await renderWithRouter(
+      <RemovalRequests
+        onChanged={vi.fn()}
+        asOf={0}
+        requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
+        decide={vi.fn<DecideFn>()}
+        block={block}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await user.click(
+      within(part("block") ?? document.body).getByRole("button", {
+        name: "Block and decline all",
+      }),
+    );
+    expect(
+      await screen.findByText("Someone already decided this request."),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(part("removal-request")).toBeNull();
+    });
+  });
+
   it("asks before it blocks, can be cancelled, and takes every request of theirs off the list", async () => {
     const block = vi
       .fn<BlockFn>()
@@ -1063,7 +1133,7 @@ describe("Review · removal requests", () => {
     );
     expect(
       row.getByText(
-        "Block this requester and decline all 2 of their requests? Anything they hid comes back, and nothing is sent to them.",
+        "Block this network and decline all 2 of these requests? The address is not blocked: nobody confirmed it.",
       ),
     ).toBeVisible();
     await user.click(row.getByRole("button", { name: "Cancel" }));
@@ -1105,7 +1175,7 @@ describe("Review · removal requests", () => {
       .click(screen.getByRole("button", { name: "Block and decline all" }));
     expect(
       screen.getByText(
-        "Block this requester and decline this request? Anything they hid comes back, and nothing is sent to them.",
+        "Block this network and decline this request? The address is not blocked: nobody confirmed it.",
       ),
     ).toBeVisible();
   });

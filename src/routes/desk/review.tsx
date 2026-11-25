@@ -9,6 +9,7 @@ import { CopyrightHolds } from "../../modules/safety/takedowns/components/Copyri
 import { QuarantineRecords } from "../../modules/safety/takedowns/components/QuarantineRecords";
 import { ReleaseHolds } from "../../modules/safety/review/components/ReleaseHolds";
 import { RemovalRequests } from "../../modules/safety/takedowns/components/RemovalRequests";
+import { TakedownBlocks } from "../../modules/safety/takedowns/components/TakedownBlocks";
 import { ReviewQueue } from "../../modules/safety/review/components/ReviewQueue";
 import { Takedown } from "../../modules/safety/takedowns/components/Takedown";
 import {
@@ -28,6 +29,7 @@ import {
   reportersAction,
   reviewHandleAction,
   reviewQueueQuery,
+  unblockTakedownRequesterAction,
 } from "../../modules/safety/functions";
 
 /**
@@ -47,6 +49,7 @@ function ReviewPage() {
   const {
     queue,
     requests,
+    blocks,
     requestsPending,
     quarantine,
     holds,
@@ -74,6 +77,11 @@ function ReviewPage() {
         onChanged={() => {
           void router.invalidate();
         }}
+      />
+      {/* Design 137: what Block and decline all blocked, and Unblock. */}
+      <TakedownBlocks
+        blocks={blocks}
+        unblock={unblockTakedownRequesterAction}
       />
       <ReviewQueue
         queue={queue}
