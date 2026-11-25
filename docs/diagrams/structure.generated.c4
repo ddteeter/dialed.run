@@ -154,6 +154,7 @@ model {
   cf.app.account.exportBuild -[imports]-> cf.app.ops.owedEmail
   cf.app.account.exportBuild -[imports]-> cf.app.weather
   cf.app.account.handles -[imports]-> cf.app.account.terms
+  cf.app.account.handles -[imports]-> cf.app.email
   cf.app.account.handles -[imports]-> cf.app.notifications
   cf.app.account.handles -[imports]-> cf.app.ops
   cf.app.account.handles -[imports]-> cf.app.safety
