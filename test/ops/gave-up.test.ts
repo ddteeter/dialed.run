@@ -306,6 +306,22 @@ describe("gaveUpJobs", () => {
   });
 });
 
+describe("gaveUpJobs past a hundred rows", () => {
+  it("names every row's subject, the last kind's too, when three kinds list more than a hundred", async () => {
+    const upload = await failedImport(await runner());
+    await gaveUpFor("import", upload.id, 1);
+    for (let index = 0; index < GAVE_UP_LIST_LIMIT; index += 1) {
+      await gaveUpFor("weather", `run-${String(index)}`, 100 + index);
+      await gaveUpFor("enrichment", `product-${String(index)}`, 200 + index);
+    }
+
+    const jobs = await gaveUpJobs();
+
+    expect(jobs).toHaveLength(GAVE_UP_LIST_LIMIT * 2 + 1);
+    expect(jobs.at(-1)?.doing).toBe("Read @sam's run file");
+  });
+});
+
 describe("todayCounts' Gave up", () => {
   it("is zero, with no oldest, when nothing gave up", async () => {
     const counts = await todayCounts();
