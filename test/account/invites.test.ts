@@ -1163,6 +1163,7 @@ describe("confirmAccessAsk (Au5's link)", () => {
         note: accessRequests.note,
         status: accessRequests.status,
         blockedRegion: accessRequests.blockedRegion,
+        createdAt: accessRequests.createdAt,
         updatedAt: accessRequests.updatedAt,
       })
       .from(accessRequests)
@@ -1173,6 +1174,7 @@ describe("confirmAccessAsk (Au5's link)", () => {
         note: "New.",
         status: "pending",
         blockedRegion: NOTHING,
+        createdAt: 9,
         updatedAt: 9,
       },
       {
@@ -1180,6 +1182,7 @@ describe("confirmAccessAsk (Au5's link)", () => {
         note: NOTHING,
         status: "pending",
         blockedRegion: "TN",
+        createdAt: 9,
         updatedAt: 9,
       },
       {
@@ -1187,6 +1190,7 @@ describe("confirmAccessAsk (Au5's link)", () => {
         note: "Old.",
         status: "invited",
         blockedRegion: NOTHING,
+        createdAt: 1,
         updatedAt: 1,
       },
     ]);
@@ -1231,6 +1235,107 @@ describe("confirmAccessAsk (Au5's link)", () => {
     const [token = ""] = tokensSent(asking.mail);
     await confirmAt(token, 6);
     expect(await db.select().from(rateLimits)).toStrictEqual([]);
+  });
+});
+
+/**
+ * `count` pending requests, one second apart from `from`, on `domain`,
+ * inserted ten a statement (D1 binds at most 100 parameters).
+ */
+async function seedPending(
+  count: number,
+  {
+    from = 1,
+    domain = "held.test",
+    status = "pending",
+  }: Readonly<{
+    from?: number;
+    domain?: string;
+    status?: "pending" | "invited" | "declined";
+  }> = {},
+) {
+  const rows = Array.from({ length: count }, (_, n) => ({
+    id: newUlid(),
+    email: `a${String(n)}@${domain}`,
+    status,
+    createdAt: from + n,
+    updatedAt: from + n,
+  }));
+  for (let at = 0; at < rows.length; at += 10) {
+    await db.insert(accessRequests).values(rows.slice(at, at + 10));
+  }
+  return rows;
+}
+
+describe("D7's queue", () => {
+  it("queues a re-opened request behind the ones asked for since", async () => {
+    const held = await seedPending(DESK_LIST_LIMIT, { status: "declined" });
+    await db.insert(accessRequests).values({
+      id: newUlid(),
+      email: "real@x.test",
+      status: "pending",
+      createdAt: 250,
+      updatedAt: 250,
+    });
+    const asking = askMail();
+    for (const { email } of held) await askAs(asking, { email }, 400);
+    for (const token of tokensSent(asking.mail)) await confirmAt(token, 401);
+
+    const desk = await accessDesk(db);
+    expect(desk.requests[0]?.email).toBe("real@x.test");
+    expect(desk.requests.slice(1).map((row) => row.createdAt)).toStrictEqual(
+      Array.from({ length: DESK_LIST_LIMIT - 1 }, () => 401),
+    );
+  });
+
+  it("counts every pending request, not the page, and pages past the limit oldest first", async () => {
+    const rows = await seedPending(DESK_LIST_LIMIT + 1);
+    // Answered requests are not waiting.
+    await seedPending(2, {
+      from: 5000,
+      domain: "done.test",
+      status: "invited",
+    });
+
+    const first = await accessDesk(db);
+    expect(first.waiting).toBe(DESK_LIST_LIMIT + 1);
+    expect(first.requests.map((row) => row.email)).toStrictEqual(
+      rows.slice(0, DESK_LIST_LIMIT).map((row) => row.email),
+    );
+    expect(first.next).toBeDefined();
+
+    const second = await accessDesk(db, first.next);
+    expect(second.waiting).toBe(DESK_LIST_LIMIT + 1);
+    expect(second.requests.map((row) => row.email)).toStrictEqual([
+      rows[DESK_LIST_LIMIT]?.email,
+    ]);
+    expect(second.next).toBeUndefined();
+  });
+
+  it("pages through requests of the same second by id", async () => {
+    const at = 7;
+    const ids = [newUlid(), newUlid(), newUlid()].toSorted((a, b) =>
+      a.localeCompare(b),
+    );
+    // Inserted, and named, in the reverse of id order, so neither the
+    // table's order nor the address's is the one the page follows.
+    await db.insert(accessRequests).values(
+      ids.toReversed().map((id, n) => ({
+        id,
+        email: `t${String(n)}@x.test`,
+        createdAt: at,
+        updatedAt: at,
+      })),
+    );
+    const page = await accessDesk(db, `${String(at)}.${ids[0] ?? ""}`);
+    expect(page.requests.map((row) => row.id)).toStrictEqual(ids.slice(1));
+  });
+
+  it("has no next page at exactly the limit", async () => {
+    await seedPending(DESK_LIST_LIMIT);
+    const desk = await accessDesk(db);
+    expect(desk.waiting).toBe(DESK_LIST_LIMIT);
+    expect(desk.next).toBeUndefined();
   });
 });
 

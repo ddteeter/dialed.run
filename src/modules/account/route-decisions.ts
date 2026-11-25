@@ -1,6 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { MAX_RUN_START } from "../../lib/contracts";
 import { isOpenWebPath } from "../../lib/open-web";
 import { returnPathSchema } from "../../lib/return-path";
 import {
@@ -352,6 +353,19 @@ export function legalDocOrNotFound(doc: LegalDoc | undefined): LegalDoc {
 }
 
 /**
+ * D7 Access's search: `after`, the page the list starts after, as the
+ * last request of the page before (`<created_at>.<id>`, the Desk's own
+ * `next`). Anything else is dropped, and the list starts at the oldest.
+ */
+export const deskAccessSearch = z.object({
+  after: z
+    .string()
+    .regex(/^\d{1,16}\.[0-9A-HJKMNP-TV-Z]{26}$/u)
+    .optional()
+    .catch(undefined),
+});
+
+/**
  * `/account/leaving`'s search: the date a request just answered (epoch
  * seconds), for the signed-out "Your account goes on …", and the zone the
  * runner's home is in, so that page names the same day the sheet and the
@@ -361,7 +375,14 @@ export function legalDocOrNotFound(doc: LegalDoc | undefined): LegalDoc {
  * Anything else is dropped, and the page answers as it would with none.
  */
 export const leavingSearch = z.object({
-  on: z.coerce.number().int().positive().optional().catch(undefined),
+  // Up to the last instant a `Date` holds, so the page can name its day.
+  on: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(MAX_RUN_START)
+    .optional()
+    .catch(undefined),
   zone: z.string().max(64).optional().catch(undefined),
 });
 

@@ -13,6 +13,7 @@ export {
   accountSectionSearch,
   checkEmailSearch,
   checkEmailView,
+  deskAccessSearch,
   gateOnHandle,
   homeIfNothingToSay,
   leavingSearch,

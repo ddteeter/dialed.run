@@ -304,7 +304,8 @@ export async function confirmAccessAsk(
 /**
  * The request's upsert, written only where `allowed` holds: a repeat of a
  * pending or invited request changes nothing, and a declined one is
- * pending again with this ask's note, place and time.
+ * pending again with this ask's note, place and time — its `created_at`
+ * too, so it queues on D7 behind the requests made since.
  */
 function upsertRequest(
   db: Db,
@@ -331,6 +332,7 @@ function upsertRequest(
       set: {
         note: sql`CASE WHEN ${declinedBefore} THEN ${note} ELSE ${accessRequests.note} END`,
         blockedRegion: sql`CASE WHEN ${declinedBefore} THEN ${blockedRegion} ELSE ${accessRequests.blockedRegion} END`,
+        createdAt: sql`CASE WHEN ${declinedBefore} THEN ${now} ELSE ${accessRequests.createdAt} END`,
         updatedAt: sql`CASE WHEN ${declinedBefore} THEN ${now} ELSE ${accessRequests.updatedAt} END`,
         status: sql`CASE WHEN ${declinedBefore} THEN 'pending' ELSE ${accessRequests.status} END`,
       },

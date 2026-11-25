@@ -6,7 +6,7 @@
  * The code's shape and its words are `lib/contracts/access.ts`'s; the gate that
  * calls these at sign-up is `modules/auth/access-hook.ts`.
  */
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -228,6 +228,16 @@ function regionOrEmpty() {
 
 export interface AccessDesk {
   readonly requests: readonly DeskRequest[];
+  /**
+  Every pending request, on this page or not.
+  */
+  readonly waiting: number;
+  /**
+   * The page after this one (`deskAccessSearch`'s `after`): the last
+   * request listed, as `<created_at>.<id>`. Nothing when this page is the
+   * last.
+   */
+  readonly next: string | undefined;
   readonly codes: readonly DeskCode[];
 }
 
@@ -239,8 +249,9 @@ export interface AccessDesk {
 export const DESK_LIST_LIMIT = 200;
 
 /**
- * D7 Access: pending requests oldest first, and codes newest first with
- * who spent them. One batch of three reads; the used-by rows are grouped
+ * D7 Access: a page of pending requests oldest first and how many are
+ * waiting in all, and codes newest first with who spent them. One batch
+ * of four reads; the used-by rows are grouped
  * onto their codes in code, which is a join's shape and not a filter.
  */
 function listedCodeIds(db: Db) {
@@ -275,9 +286,44 @@ function requestLabelOr(label: SQLiteColumn) {
   >`coalesce(${accessRequests.email} || ' (request)', ${label})`;
 }
 
-export async function accessDesk(db: Db): Promise<AccessDesk> {
+/**
+ * `after` as `accessDesk` reads it: `<created_at>.<id>`, the shape
+ * `deskAccessSearch` admits.
+ */
+function cursorOf(after: string) {
+  const dot = after.indexOf(".");
+  return { at: Number(after.slice(0, dot)), id: after.slice(dot + 1) };
+}
+
+/**
+ * The pending requests after `after` (the start when there is none), in
+ * D7's order: oldest first, and by id within one second, so a page ends
+ * on one row and the next starts on the row after it.
+ */
+function pendingAfter(after: string | undefined): SQL | undefined {
+  const pending = eq(accessRequests.status, "pending");
+  if (after === undefined) return pending;
+  const { at, id } = cursorOf(after);
+  return and(
+    pending,
+    sql`(${accessRequests.createdAt}, ${accessRequests.id}) > (${at}, ${id})`,
+  );
+}
+
+/**
+The last listed request as the next page's `after`, when a row was read past the page.
+*/
+function nextAfter(read: readonly DeskRequest[]): string | undefined {
+  const last =
+    read.length > DESK_LIST_LIMIT ? read[DESK_LIST_LIMIT - 1] : undefined;
+  return last === undefined
+    ? undefined
+    : `${String(last.createdAt)}.${last.id}`;
+}
+
+export async function accessDesk(db: Db, after?: string): Promise<AccessDesk> {
   const listed = inArray(inviteRedemptions.codeId, listedCodeIds(db));
-  const [requests, codes, spent] = await db.batch([
+  const [read, counted, codes, spent] = await db.batch([
     db
       .select({
         id: accessRequests.id,
@@ -287,9 +333,14 @@ export async function accessDesk(db: Db): Promise<AccessDesk> {
         createdAt: accessRequests.createdAt,
       })
       .from(accessRequests)
-      .where(eq(accessRequests.status, "pending"))
-      .orderBy(accessRequests.createdAt)
-      .limit(DESK_LIST_LIMIT),
+      .where(pendingAfter(after))
+      .orderBy(accessRequests.createdAt, accessRequests.id)
+      // One past the page, to know whether there is a next one.
+      .limit(DESK_LIST_LIMIT + 1),
+    db
+      .select({ waiting: count() })
+      .from(accessRequests)
+      .where(eq(accessRequests.status, "pending")),
     db
       .select({
         id: inviteCodes.id,
@@ -323,7 +374,10 @@ export async function accessDesk(db: Db): Promise<AccessDesk> {
       .orderBy(inviteRedemptions.redeemedAt),
   ]);
   return {
-    requests,
+    requests: read.slice(0, DESK_LIST_LIMIT),
+    // A count is always one row.
+    waiting: counted.reduce((sum, row) => sum + row.waiting, 0),
+    next: nextAfter(read),
     codes: codes.map(({ revokedAt, ...code }) => ({
       ...code,
       isRevoked: revokedAt !== null,

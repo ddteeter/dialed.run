@@ -1,4 +1,4 @@
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
@@ -109,11 +109,20 @@ function RequestRow({
  */
 export function DeskAccess({
   requests,
+  waiting,
+  next,
+  after,
   asOf,
   sendInvite,
   decline,
 }: Readonly<{
   requests: AccessDesk["requests"];
+  waiting: AccessDesk["waiting"];
+  next: AccessDesk["next"];
+  /**
+  The page the list starts after, or nothing on the first.
+  */
+  after: string | undefined;
   asOf: number;
   sendInvite: RowAction;
   decline: RowAction;
@@ -126,12 +135,53 @@ export function DeskAccess({
       <FormStatus>{said}</FormStatus>
       <RequestsSection
         requests={requests}
+        waiting={waiting}
         asOf={asOf}
         actions={{ sendInvite, decline }}
         onChanged={onChanged}
         announce={setSaid}
       />
+      <RequestPages shown={requests.length} next={next} after={after} />
     </div>
+  );
+}
+
+const PAGE_LINK_CLASS =
+  "target inline-flex items-center text-ink underline underline-offset-4";
+
+/**
+ * The way past the page and back (owner, 2026-11-24): "Next {n} →" while
+ * there is a next page, and "← Back to the oldest" from any page but the
+ * first. A page with a next one is always full, so `shown` is the page's
+ * size.
+ */
+function RequestPages({
+  shown,
+  next,
+  after,
+}: Readonly<{
+  shown: number;
+  next: string | undefined;
+  after: string | undefined;
+}>): JSX.Element | undefined {
+  if (next === undefined && after === undefined) return undefined;
+  return (
+    <p className="m-0 flex flex-wrap gap-x-6">
+      {after === undefined ? undefined : (
+        <Link to="/desk/access" className={PAGE_LINK_CLASS}>
+          ← Back to the oldest
+        </Link>
+      )}
+      {next === undefined ? undefined : (
+        <Link
+          to="/desk/access"
+          search={{ after: next }}
+          className={PAGE_LINK_CLASS}
+        >
+          {`Next ${String(shown)} →`}
+        </Link>
+      )}
+    </p>
   );
 }
 
@@ -150,12 +200,14 @@ function useReload(): () => Promise<void> {
  */
 function RequestsSection({
   requests,
+  waiting,
   asOf,
   actions,
   onChanged,
   announce,
 }: Readonly<{
   requests: AccessDesk["requests"];
+  waiting: number;
   asOf: number;
   actions: { sendInvite: RowAction; decline: RowAction };
   onChanged: () => Promise<void>;
@@ -177,10 +229,11 @@ function RequestsSection({
     <section aria-labelledby="desk-requests" className="flex flex-col gap-2">
       {/* R58·279: the muted kicker with its count, as Review's sections,
           under the page's one display heading. One string, so it is heard
-          as one line. */}
+          as one line. The count is every request waiting, on this page or
+          not. */}
       <h2 id="desk-requests" className="m-0">
         <Mono step="xs" className="text-muted">
-          {`Requests · ${String(requests.length)} waiting · oldest first`}
+          {`Requests · ${String(waiting)} waiting · oldest first`}
         </Mono>
       </h2>
       <ul className="m-0 flex list-none flex-col p-0">
