@@ -210,10 +210,8 @@ model {
   cf.app.enrichment -[imports]-> cf.app.email
   cf.app.enrichment -[imports]-> cf.app.products
   cf.app.feed -[wiring]-> cf.app.auth
-  cf.app.feed -[wiring]-> cf.app.onboarding
   cf.app.feed -[wiring]-> cf.app.ops
   cf.app.feed -[wiring]-> cf.app.safety
-  cf.app.feed -[wiring]-> cf.app.weather
   cf.app.feed.attach -[imports]-> cf.app.closet
   cf.app.feed.attach -[imports]-> cf.app.feed.conditions
   cf.app.feed.attach -[imports]-> cf.app.feed.entries
@@ -221,7 +219,6 @@ model {
   cf.app.feed.conditions -[imports]-> cf.app.safety
   cf.app.feed.conditions -[imports]-> cf.app.weather
   cf.app.feed.consensus -[imports]-> cf.app.feed.conditions
-  cf.app.feed.consensus -[wiring]-> cf.app.onboarding
   cf.app.feed.consensus -[imports]-> cf.app.ops
   cf.app.feed.consensus -[imports]-> cf.app.safety
   cf.app.feed.entries -[imports]-> cf.app.account
@@ -261,8 +258,6 @@ model {
   cf.app.notifications -[wiring]-> cf.app.runs
   cf.app.onboarding -[wiring]-> cf.app.auth
   cf.app.onboarding -[imports]-> cf.app.closet
-  cf.app.onboarding -[imports]-> cf.app.feed
-  cf.app.onboarding -[wiring]-> cf.app.notifications
   cf.app.onboarding -[wiring]-> cf.app.ops
   cf.app.onboarding -[imports]-> cf.app.products
   cf.app.onboarding -[imports]-> cf.app.weather

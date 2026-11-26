@@ -3,8 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireSession } from "../../modules/auth/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
-import { CallLadder } from "../../modules/onboarding/components/CallLadder";
-import { callLadderQuery } from "../../modules/onboarding/functions";
+import { CallLadder } from "../../modules/feed/consensus/components/CallLadder";
+import { callLadderQuery } from "../../modules/feed/functions";
 import { Page } from "../../ui";
 
 /**

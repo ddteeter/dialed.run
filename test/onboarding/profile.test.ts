@@ -10,7 +10,8 @@ import {
   calibrationInput,
   sharingInput,
 } from "../../src/modules/onboarding/inputs";
-import { placeInput, savePlace } from "../../src/modules/onboarding";
+import { placeInput } from "../../src/lib/contracts/city-lookup";
+import { savePlace } from "../../src/modules/onboarding";
 import {
   completeOnboarding,
   currentSettings,

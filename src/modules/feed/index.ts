@@ -11,26 +11,15 @@
  * directly, as they always have, and a barrel that re-exported everything
  * would invite other lanes to reach into surfaces the feed lane has not
  * agreed to keep stable. Widen it when a second consumer has a second
- * need — which task 115 is: DS2's table is
- * `modules/runs/components/VerdictBacklog` (the packet's ownership) and
- * its rows are outfit entries (this module's). The four below are
- * **types only**, so nothing server-side crosses: `backlog.ts` reaches
- * `src/env`, and a value export from here would put `cloudflare:workers`
- * in the client bundle of every route that touches the barrel.
+ * need. DS2's backlog row types, once here for
+ * `modules/runs/components/VerdictBacklog`, are `lib/contracts/backlog.ts`
+ * since design 276.
  *
  * Server-fn glue stays in ./functions (imported directly by routes), so
  * this barrel remains loadable in the vitest workers pool — the same split
  * `modules/auth` and `modules/closet` make.
  */
-export { type CoverageBand, coverageLadder } from "./consensus";
 export { runnerVisibleToViewer } from "./conditions";
-export type {
-  Backlog,
-  BacklogKit,
-  BacklogRow,
-  BacklogSuggestion,
-} from "./attach";
-export type { Conditions } from "../../lib/contracts";
 
 // Task 128 · SAF-3: the delete primitives account deletion (126 · ACC-9)
 // and run deletion call, rather than writing a second delete.

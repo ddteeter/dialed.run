@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
-import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
+import { CALL_VERDICT_THRESHOLD } from "../../../../lib/contracts";
 import {
   ACTION_PRIMARY,
   Bracketed,
@@ -10,8 +10,8 @@ import {
   PhoneBell,
   Spoken,
   WeatherAttribution,
-} from "../../../ui";
-import type { CoverageLevel } from "../../../ui";
+} from "../../../../ui";
+import type { CoverageLevel } from "../../../../ui";
 import { verdictsIn, type Ladder } from "../ladder";
 
 /**

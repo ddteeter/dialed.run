@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type {
   CityLookup,
   FoundPlace,
+  Place,
 } from "../../../../lib/contracts/city-lookup";
 import type { ResolvedPlace, Units } from "../../../../lib/contracts";
 import {
@@ -26,7 +27,6 @@ import {
   useControlAction,
   WeatherAttribution,
 } from "../../../../ui";
-import type { Place } from "../../../onboarding";
 import type { ConsensusBand, ConsensusResult } from "../consensus";
 import { SHARE_WORDS, summarySentence, withShares } from "../bar-share";
 import type { BarShare } from "../bar-share";

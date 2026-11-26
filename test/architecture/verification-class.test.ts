@@ -207,7 +207,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // The runner's own saved place, and E1's compact line from it (FEED-9):
   // the same read of their own conditions.
   "feed/functions.ts feedConditionsQuery": "unconfirmed",
-  "feed/functions.ts saveConditionsCityAction": "unconfirmed",
+  "feed/functions.ts callLadderQuery": "unconfirmed",
   "feed/functions.ts viewerUnitsQuery": "sessionless",
   "feed/functions.ts ownProfileQuery": "unconfirmed",
   "feed/functions.ts runnerHandleQuery": "unconfirmed",
@@ -236,9 +236,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // R-96 (3): a read of the runner's own home zone, seen by no one else.
   "notifications/functions.ts viewerZoneFn": "unconfirmed",
   // ---- onboarding
-  "onboarding/functions.ts callLadderQuery": "unconfirmed",
   "onboarding/functions.ts localeUnitsQuery": "sessionless",
   "onboarding/functions.ts saveCalibrationFn": "unconfirmed",
+  "onboarding/functions.ts saveConditionsCityAction": "unconfirmed",
   "onboarding/functions.ts starterListQuery": "unconfirmed",
   "onboarding/functions.ts completeOnboardingFn": "unconfirmed",
   "onboarding/functions.ts settingsQuery": "unconfirmed",

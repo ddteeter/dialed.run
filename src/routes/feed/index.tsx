@@ -10,7 +10,6 @@ import { Feed } from "../../modules/feed/following/components/Feed";
 import {
   feedConditionsQuery,
   followingFeedQuery,
-  saveConditionsCityAction,
   setUsefulAction,
   unjudgedRunCountQuery,
   viewerUnitsQuery,
@@ -20,7 +19,10 @@ import { requireSignedIn } from "../../modules/feed/client";
 import { geolocate } from "../../modules/onboarding/client";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
-import { lookUpCityFn } from "../../modules/onboarding/functions";
+import {
+  lookUpCityFn,
+  saveConditionsCityAction,
+} from "../../modules/onboarding/functions";
 import { nowSeconds } from "../../lib/now";
 
 export const Route = createFileRoute("/feed/")({

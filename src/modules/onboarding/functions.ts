@@ -3,18 +3,16 @@
  * pattern) — keeps this module's other files loadable in the vitest
  * workers pool with no TanStack virtual entries.
  */
-import type { BellState } from "../notifications";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 
 import { coreDb, waitUntil } from "../../env";
-import { cityLookupInput } from "../../lib/contracts/city-lookup";
+import { cityLookupInput, placeInput } from "../../lib/contracts/city-lookup";
 import { isFirstPartyRequest } from "../../lib/fetch-site";
 import { nowSeconds } from "../../lib/now";
 import { noInput } from "../../lib/no-input";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import { nameItem } from "../closet";
-import { coverageLadder } from "../feed";
 import { captureException, purgePublicPagesFor } from "../ops";
 import { climateNormalsFor, resolvePlaceFor, timeZoneAtFor } from "../weather";
 import { countsInTotals, setCountInTotals } from "./aggregate-prefs";
@@ -27,7 +25,6 @@ import {
   sharingInput,
   unitsInput,
 } from "./inputs";
-import { ladderFrom } from "./ladder";
 import { lookUpCity } from "./place";
 import { placeStampsFromEnv } from "./place-stamp-env";
 import {
@@ -35,6 +32,7 @@ import {
   currentSettings,
   requiresOnboarding,
   saveFoundCalibration,
+  saveFoundPlace,
   savePreferences,
 } from "./profile";
 import { saveSharing, setPublicProfile } from "./public-profile";
@@ -60,10 +58,6 @@ function zonesFor(userId: string) {
   };
 }
 
-export const callLadderQuery = createServerFn({ method: "GET" }).handler(
-  async () => ladderFrom(await coverageLadder(await requireUserId())),
-);
-
 export const localeUnitsQuery = createServerFn({ method: "GET" }).handler(() =>
   unitsFromLocale(getRequestHeaders().get("accept-language")),
 );
@@ -73,6 +67,22 @@ export const saveCalibrationFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     return saveFoundCalibration(db(), userId, data, {
+      verifyStamp: placeStampsFromEnv().verifyStamp,
+      zones: zonesFor(userId),
+    });
+  });
+
+/**
+ * Location denied: Use this on the place Find came back with (round 26
+ * #12) saves it as the profile's place, through the one writer of those
+ * columns (FEED-5), with the zone it is in (design 142), and the tab never
+ * asks again.
+ */
+export const saveConditionsCityAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => placeInput.parse(input))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return saveFoundPlace(db(), userId, data, {
       verifyStamp: placeStampsFromEnv().verifyStamp,
       zones: zonesFor(userId),
     });
@@ -109,11 +119,14 @@ export const settingsQuery = createServerFn({ method: "GET" }).handler(
  * another module's `functions.ts` would be the deep-import
  * `no-cross-module-deep-imports` forbids. The two settings sub-page routes
  * (units, sharing) call this instead of each hand-rolling the same
- * `Promise.all`.
+ * `Promise.all`. Generic over the bell's state, so this module names no
+ * type of `notifications`' (design 276).
  */
-export async function settingsSubPageData(bell: Promise<BellState>): Promise<{
+export async function settingsSubPageData<TBell>(
+  bell: Promise<TBell>,
+): Promise<{
   current: Awaited<ReturnType<typeof settingsQuery>>;
-  bell: BellState;
+  bell: TBell;
 }> {
   const [current, resolvedBell] = await Promise.all([settingsQuery(), bell]);
   return { current, bell: resolvedBell };

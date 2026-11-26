@@ -10,12 +10,12 @@ import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { CALL_VERDICT_THRESHOLD } from "../../src/lib/contracts";
-import type { CoverageBand } from "../../src/modules/feed";
+import type { CoverageBand } from "../../src/modules/feed/consensus";
 import {
   CallLadder,
   LogThisNext,
-} from "../../src/modules/onboarding/components/CallLadder";
-import { ladderFrom } from "../../src/modules/onboarding/ladder";
+} from "../../src/modules/feed/consensus/components/CallLadder";
+import { ladderFrom } from "../../src/modules/feed/consensus/ladder";
 import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
 import { ACTION_PRIMARY } from "../../src/ui";
 

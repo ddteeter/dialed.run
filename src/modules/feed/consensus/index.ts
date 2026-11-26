@@ -7,3 +7,4 @@ export { consensusAt } from "./consensus";
 export { bandsAscending, tallyCoverage, type CoverageBand } from "./coverage";
 export { garmentBandCountOrNone, garmentBandsInput } from "./garment-bands";
 export { coverageLadder } from "./ladder-read";
+export { ladderFrom } from "./ladder";
