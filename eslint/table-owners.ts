@@ -51,6 +51,7 @@ type ColumnOf<N extends TableName> = N extends TableName
 export const AREAS = [
   "account",
   "auth",
+  "call",
   "closet",
   "dispatch",
   "email",
