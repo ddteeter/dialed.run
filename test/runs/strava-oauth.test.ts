@@ -1,5 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   rateLimits,
@@ -32,6 +32,7 @@ import {
 } from "../../src/modules/runs/strava/oauth";
 
 import { nowSeconds } from "../../src/lib/now";
+import { beforeNextWriteBatch } from "../before-write-batch";
 /**
  * `captureException` is injected (the same seam as `StravaApi` and the
  * revoke queue) rather than imported from `modules/ops`, so this module has
@@ -1033,5 +1034,53 @@ describe("completeStravaConnect: a grant made now", () => {
         inArray(stravaRevocations.refreshToken, [refreshToken, otherToken]),
       );
     expect(owed).toStrictEqual([{ token: otherToken }]);
+  });
+});
+
+describe("a revoke is of the grant the batch removes", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("revokes the grant a disconnect deletes, when a reconnect replaced the one it read", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const read = `refresh-read-${userId}`;
+    const replacing = `refresh-replacing-${userId}`;
+    await completeStravaConnect(db, exchanging(newUlid(), read), userId, "c1");
+    beforeNextWriteBatch(() =>
+      completeStravaConnect(db, exchanging(newUlid(), replacing), userId, "c2"),
+    );
+
+    await disconnectStrava(
+      db,
+      fakeRevokeQueue(),
+      userId,
+      captureExceptionSpy().captureException,
+    );
+
+    expect(await getStravaConnection(db, userId)).toBeUndefined();
+    expect(await owedFor(replacing)).toHaveLength(1);
+    expect(await owedFor(read)).toHaveLength(1);
+  });
+
+  it("revokes the grant a connect overwrites, when another connect landed first", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const first = `refresh-first-${userId}`;
+    const between = `refresh-between-${userId}`;
+    const last = `refresh-last-${userId}`;
+    await completeStravaConnect(db, exchanging(newUlid(), first), userId, "c1");
+    beforeNextWriteBatch(() =>
+      completeStravaConnect(db, exchanging(newUlid(), between), userId, "c2"),
+    );
+
+    await completeStravaConnect(db, exchanging(newUlid(), last), userId, "c3");
+
+    expect(await owedFor(first)).toHaveLength(1);
+    expect(await owedFor(between)).toHaveLength(1);
+    expect(await owedFor(last)).toStrictEqual([]);
+    const connection = await getStravaConnection(db, userId);
+    expect(connection?.refreshToken).toBe(last);
   });
 });

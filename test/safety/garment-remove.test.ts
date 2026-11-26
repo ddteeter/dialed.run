@@ -33,6 +33,7 @@ import { preservedKeysOf } from "../../src/modules/safety/takedowns/quarantine";
 import type { Report } from "../../src/modules/feed/entries/retract";
 import { addAccount } from "../feed/helpers";
 import { makeItem, makeUser, resetSafetyTables } from "./helpers";
+import { beforeNextWriteBatch } from "../before-write-batch";
 
 /**
  * R-167, design 159: a person's Remove of a garment photo takes it off the
@@ -692,5 +693,123 @@ describe("a refused garment quarantine and the copies it made", () => {
     await expect(taking).rejects.toThrow(/NOT NULL/u);
     expect(copiesDeleted(deletes)).toStrictEqual([]);
     expect(report).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The owner putting a new photo on the garment: a new version, waiting on
+ * its screening, which has already said something of it.
+ */
+async function replacedPhoto(owner: string, itemId: string) {
+  const newKey = `items/${owner}/${itemId}/${newUlid()}`;
+  await core()
+    .update(wardrobeItems)
+    .set({
+      photoKey: newKey,
+      photoFingerprint: sql`NULL`,
+      visibility: "pending",
+    })
+    .where(eq(wardrobeItems.id, itemId));
+  await core()
+    .delete(photoScreenings)
+    .where(eq(photoScreenings.photoId, itemId));
+  await core().insert(photoScreenings).values({
+    id: newUlid(),
+    photoScope: "garment",
+    photoId: itemId,
+    decision: "review",
+    scores: "{}",
+    model: "test",
+    createdAt: 2,
+  });
+  return newKey;
+}
+
+async function screeningsOf(itemId: string) {
+  return core()
+    .select({ decision: photoScreenings.decision })
+    .from(photoScreenings)
+    .where(eq(photoScreenings.photoId, itemId));
+}
+
+describe("a garment decision holds to the photo version it was made on", () => {
+  beforeEach(cleared);
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("leaves a replaced photo alone on a Remove, and still records the decision and its fingerprint", async () => {
+    const { owner, itemId } = await heldGarment();
+    let newKey = "";
+    const gap = beforeNextWriteBatch(async () => {
+      newKey = await replacedPhoto(owner, itemId);
+    });
+
+    const outcome = await moderateGarmentPhoto(
+      core(),
+      { actorId: "rev", itemId, action: "remove", reason: "intimate" },
+      quiet,
+    );
+
+    expect(gap.fired()).toBe(true);
+    expect(outcome).toBe("removed");
+    const garment = await garmentOf(itemId);
+    expect(garment).toMatchObject({ photoKey: newKey, visibility: "pending" });
+    expect(await screeningsOf(itemId)).toStrictEqual([{ decision: "review" }]);
+    expect(await bellOf(owner)).toStrictEqual([]);
+    expect(await owedEmails()).toStrictEqual([]);
+    const audit = await core()
+      .select({ id: moderationActions.id, action: moderationActions.action })
+      .from(moderationActions)
+      .where(eq(moderationActions.subjectId, itemId));
+    expect(audit).toMatchObject([{ action: "remove" }]);
+    expect(await core().select().from(removedFingerprints)).toMatchObject([
+      { fingerprint: FINGERPRINT, moderationActionId: audit[0]?.id },
+    ]);
+  });
+
+  it("leaves a replaced photo alone on a quarantine, and still records the version it copied", async () => {
+    const { owner, itemId, photoKey } = await heldGarment();
+    let newKey = "";
+    beforeNextWriteBatch(async () => {
+      newKey = await replacedPhoto(owner, itemId);
+    });
+
+    const outcome = await moderateGarmentPhoto(
+      core(),
+      { actorId: "rev", itemId, action: "quarantine", reason: "explicit" },
+      quiet,
+    );
+
+    expect(outcome).toBe("removed");
+    const garment = await garmentOf(itemId);
+    expect(garment?.photoKey).toBe(newKey);
+    expect(await screeningsOf(itemId)).toStrictEqual([{ decision: "review" }]);
+    const records = await core()
+      .select({ snapshot: quarantinedContent.photosSnapshot })
+      .from(quarantinedContent)
+      .where(eq(quarantinedContent.subjectId, itemId));
+    expect(
+      records.map(({ snapshot }) => preservedKeysOf(snapshot)),
+    ).toStrictEqual([
+      { ok: true, keys: [quarantineKeyFor(`${photoKey}/card.webp`)] },
+    ]);
+  });
+
+  it("still takes down the photo it was made on when nothing changed", async () => {
+    const { owner, itemId } = await heldGarment();
+    const gap = beforeNextWriteBatch(() => Promise.resolve());
+
+    await moderateGarmentPhoto(
+      core(),
+      { actorId: "rev", itemId, action: "remove", reason: "home" },
+      quiet,
+    );
+
+    expect(gap.fired()).toBe(true);
+    const garment = await garmentOf(itemId);
+    expect(garment?.photoKey).toBeNull();
+    expect(await screeningsOf(itemId)).toStrictEqual([]);
+    expect(await bellOf(owner)).toHaveLength(1);
   });
 });

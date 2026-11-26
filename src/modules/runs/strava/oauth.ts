@@ -26,7 +26,8 @@
  * A grant the runner kills on Strava's side arrives as a deauthorization
  * event instead (./deauthorize.ts).
  */
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 
 import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
@@ -267,27 +268,17 @@ export async function completeStravaConnect(
   code: string,
 ): Promise<void> {
   const tokens = await api.exchangeCode(code);
-  const replaced = await getStravaConnection(db, userId);
   const connection = {
     athleteId: tokens.athleteId,
     refreshToken: tokens.refreshToken,
     connectedAt: nowSeconds(),
   };
-  // A reconnect cancels a revocation still owed for the same grant, in the
-  // same batch: Strava may hand back the refresh token it issued before,
-  // and a stale `strava_revocations` row would then revoke the grant the
-  // runner has just made.
-  const owed =
-    replaced === undefined || replaced.athleteId === tokens.athleteId
-      ? []
-      : [
-          db.insert(stravaRevocations).values({
-            id: newUlid(),
-            refreshToken: replaced.refreshToken,
-            createdAt: connection.connectedAt,
-          }),
-        ];
+  // The grant this connection replaces is the row the upsert below
+  // overwrites, read when the batch runs, before it: another athlete's
+  // owes a revoke, the same athlete's none.
+  const anotherAthletes = sql`${stravaConnections.userId} = ${userId} and ${stravaConnections.athleteId} <> ${tokens.athleteId}`;
   await db.batch([
+    revocationOf(db, newUlid(), connection.connectedAt, anotherAthletes),
     db
       .insert(stravaConnections)
       .values({ userId, ...connection })
@@ -295,11 +286,34 @@ export async function completeStravaConnect(
         target: stravaConnections.userId,
         set: connection,
       }),
+    // A reconnect cancels a revocation still owed for the same grant, in
+    // the same batch: Strava may hand back the refresh token it issued
+    // before, and a stale `strava_revocations` row would then revoke the
+    // grant the runner has just made.
     db
       .delete(stravaRevocations)
       .where(eq(stravaRevocations.refreshToken, tokens.refreshToken)),
-    ...owed,
   ]);
+}
+
+/**
+ * A revocation of the grant in each connection row `which` picks, when
+ * the statement runs: `INSERT … SELECT` from the row itself, placed ahead
+ * of the write that deletes or replaces it in the same batch, so what is
+ * revoked is exactly what that write removes. Nothing, when no row
+ * matches.
+ */
+function revocationOf(db: CoreDb, id: string, createdAt: number, which: SQL) {
+  // In the table's column order, which is the order drizzle names them in.
+  const revoked = db
+    .select({
+      id: sql<string>`${id}`.as(stravaRevocations.id.name),
+      createdAt: sql<number>`${createdAt}`.as(stravaRevocations.createdAt.name),
+      refreshToken: stravaConnections.refreshToken,
+    })
+    .from(stravaConnections)
+    .where(which);
+  return db.insert(stravaRevocations).select(revoked);
 }
 
 /**
@@ -455,13 +469,12 @@ async function disconnect(
   if (connection === undefined) return;
 
   const revocationId = newUlid();
+  const theirs = eq(stravaConnections.userId, userId);
   await db.batch([
-    db.delete(stravaConnections).where(eq(stravaConnections.userId, userId)),
-    db.insert(stravaRevocations).values({
-      id: revocationId,
-      refreshToken: connection.refreshToken,
-      createdAt: nowSeconds(),
-    }),
+    // Revokes the row the delete below removes, read when the batch runs,
+    // whatever was read above.
+    revocationOf(db, revocationId, nowSeconds(), theirs),
+    db.delete(stravaConnections).where(theirs),
     // The athlete's dead-lettered reminders on the Desk hold their Strava
     // ids (R-142); a runner who disconnects, or leaves, takes them along.
     gaveUpClearPrefix(
