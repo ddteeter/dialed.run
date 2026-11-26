@@ -22,6 +22,10 @@ The purge forgets each runner-keyed counter with `email`'s
 - `test/architecture/module-shape.json`: `account`'s fan-out 9 → 8,
   `enrichment`'s door 20 → 19, and the knip-doors pin once A4 has landed.
   Each is measured on the rebased branch, not taken from this doc.
+- **One behaviour change (owner, 2026-11-26, #1076).** The purge also
+  forgets `handle-runner`, the one count whose subject is the runner's id
+  that it missed. The runner-keyed kinds become one list, `RUNNER_COUNTS`,
+  mapped onto `forgetRateLimit`, where a new kind is added.
 - `eslint/table-owners.ts` (A2): no line changes. The purge's
   `rate_limits` delete was already made inside `email`'s helper, which owns
   the table. The rebase onto A2 confirms that the lint stays clean.
@@ -36,16 +40,16 @@ The purge forgets each runner-keyed counter with `email`'s
 ## Test plan
 
 - `test/account/purge.test.ts` (worker) already covers the `enrich-runner`
-  count's deletion. Nothing new: the existing suite holds the behaviour.
+  count's deletion. New: the seed writes a `handle-runner` count, the
+  footprint reads it, and "forgets the runner's handle-claim count" checks
+  it is there before the purge, gone after, and another runner's stays.
 - The module ratchet's pins are lowered to the measured numbers.
 
 ## Issues
 
 - Closes #1072.
-- Opens: #1076, an owner question: the purge does not forget
-  `handle-runner`, a count whose subject is the runner's id. Adding it
-  changes behaviour, so it is not in this PR.
+- Closes #1076: the owner ruled yes, and the change is in this PR.
 
 ## Open questions
 
-None for the owner in this lane. See #1076.
+None.
