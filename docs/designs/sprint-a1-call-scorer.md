@@ -71,7 +71,8 @@ is no screen and no server hop.
 ## Open questions
 
 Each is built as one named constant or function, tested by name, and
-written out in `QUESTIONS.md` (Q1 to Q17) with a recommendation:
+written out in `QUESTIONS.md` (Q1 to Q17) with a recommendation; Q18 there
+is about the shared skeleton, not the scorer:
 
 1. Condition class is `PrecipClass`.
 2. The band is the 5 °C `bandFloorC` band.

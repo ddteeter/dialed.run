@@ -175,3 +175,18 @@ answer changes one place. Design: `docs/designs/sprint-a1-call-scorer.md`.
 - Recommend: as built.
 - Meanwhile: as above. A replay export that renames ids changes tie order
   only.
+
+## Q18: The shared skeleton needs one more registration, in `eslint/table-owners.ts`
+
+- What: `test/eslint/table-owners.node.test.ts` ("names every module folder
+  and `src/db` as an area, and nothing else") fails as soon as
+  `src/modules/call/` exists, because `AREAS` in `eslint/table-owners.ts`
+  does not name `call`. It is the only failure in `npm test` on this branch,
+  and the pre-push preflight runs `npm test`, so no A lane can push until
+  the line is there. The file's own comment says a new module is named
+  there. It is not on the protected-paths list.
+- Cost: one line, `"call",` after `"auth",` in `AREAS`, identical in all
+  three A lanes like the Stryker entry.
+- Recommend: add it to the skeleton every lane carries.
+- Meanwhile: this lane has not edited the file, since it is outside the
+  lane's list, and so has not pushed. Everything else is committed.
