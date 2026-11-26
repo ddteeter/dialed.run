@@ -224,14 +224,15 @@ function isWaitingOnConfirm(template: RemovalReceipt): boolean {
  * and then the link the request is about, so its reader confirms only
  * their own.
  */
-function receiptBody(template: RemovalReceipt, due: string): string {
+function receiptBody(
+  template: RemovalReceipt,
+  due: string,
+  origin: string,
+): string {
   const decides = `We'll decide within 48 hours, by ${due}, and email you either way.`;
   const hidden = template.isHidden ? "The image is hidden while we look. " : "";
   if (template.confirmToken === undefined) return `${hidden}${decides}`;
-  const about =
-    template.location === undefined
-      ? ""
-      : ` This email is about the request for ${template.location}. Only confirm it if that is the link you sent us.`;
+  const about = aboutSentence(template.about, origin);
   if (isWaitingOnConfirm(template)) {
     return `${hidden}It isn't hidden yet. To have it hidden while we look, confirm this request. ${decides}${about}`;
   }
@@ -239,6 +240,25 @@ function receiptBody(template: RemovalReceipt, due: string): string {
     ? " The image is already hidden while we look."
     : "";
   return `${decides} Confirming tells us this address is yours.${already}${about}`;
+}
+
+/**
+ * What a receipt says its request is about (owner, 2026-11-25): only a
+ * link the app builds, for a kit of ours or a photo on one, and otherwise
+ * that it is not ours, never the link as typed.
+ */
+function aboutSentence(
+  about: RemovalReceipt["about"],
+  origin: string,
+): string {
+  if (about === undefined) return "";
+  if (about.kind === "elsewhere") {
+    return ` This email is about a request for something that isn't on ${new URL(origin).host}. Only confirm it if you sent us that request.`;
+  }
+  const kit = `${origin}/kit/${about.entryId}`;
+  return about.kind === "kit"
+    ? ` This email is about the request for the kit at ${kit}. Only confirm it if that is the kit you asked us about.`
+    : ` This email is about the request for a photo on the kit at ${kit}. Only confirm it if that is the photo you asked us about.`;
 }
 
 function utcMinute(epochSeconds: number): string {
@@ -520,7 +540,7 @@ const CONTENT: {
     return {
       subject: "We have your removal request",
       // Round 35 #58e. The hidden line is true only of what was hidden.
-      body: receiptBody(template, due),
+      body: receiptBody(template, due, origin),
       ...(template.confirmToken !== undefined && {
         button: {
           label: isWaitingOnConfirm(template)

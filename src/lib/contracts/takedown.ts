@@ -90,6 +90,24 @@ export type TakedownSubject = Readonly<{
   entryId: string;
 }>;
 
+/**
+ * The subject a request's Take it down records its takedown against:
+ * the one filing stored on the row, or, for a row that stored none, the
+ * one its link resolves to now. Read from the row first, so it still
+ * names a subject whose own row the takedown has since removed.
+ */
+export function takedownSubjectNamed(
+  filed: Readonly<{
+    subjectType: "entry" | "photo" | null;
+    subjectId: string | null;
+  }>,
+  resolved: Pick<TakedownSubject, "subjectType" | "subjectId"> | undefined,
+): Pick<TakedownSubject, "subjectType" | "subjectId"> | undefined {
+  return filed.subjectType === null || filed.subjectId === null
+    ? resolved
+    : { subjectType: filed.subjectType, subjectId: filed.subjectId };
+}
+
 const ENTRY_PATH = /^\/(?:feed\/entry|kit)\/([^/]+)\/?$/u;
 const PHOTO_PATH = /^\/feed\/photo\/entries\/[^/]+\/([^/]+)\/([^/]+)$/u;
 

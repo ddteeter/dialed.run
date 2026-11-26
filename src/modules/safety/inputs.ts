@@ -391,6 +391,19 @@ export function takedownConfirmSearch(
   };
 }
 
+/**
+ * Review's search: `after`, the page its removal requests start after, as
+ * the last request of the page before (`<waits>.<due_at>.<id>`, the list's
+ * own `next`). Anything else is dropped, and the list starts at the top.
+ */
+export const removalRequestsSearch = z.object({
+  after: z
+    .string()
+    .regex(/^[01]\.\d{1,16}\.[0-9A-HJKMNP-TV-Z]{26}$/u)
+    .optional()
+    .catch(undefined),
+});
+
 export const removalDecisionInput = z.discriminatedUnion("outcome", [
   removalRequestRef.extend({ outcome: z.literal("removed") }),
   removalRequestRef.extend({

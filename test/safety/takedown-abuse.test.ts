@@ -230,7 +230,7 @@ const waitingOn = z.strictObject({
   isHidden: z.boolean(),
   confirmRequestId: z.string(),
   waits: z.literal(true),
-  location: z.string(),
+  about: z.object({ kind: z.string() }).loose(),
 });
 
 /**
@@ -684,7 +684,7 @@ describe("a blocked requester", () => {
         isHidden: false,
         confirmRequestId: row.id,
         waits: false,
-        location: entryLink(a),
+        about: { kind: "kit", entryId: a },
       },
     ]);
   });
@@ -700,6 +700,77 @@ async function confirmedAt(id: string, at: number): Promise<void> {
     .where(eq(takedownRequests.id, id));
 }
 
+/**
+What the request's owed receipt says it is about.
+*/
+async function receiptAbout(requestId: string) {
+  const [receipt] = await owedWhere(
+    (email) => email.dedupeKey === `removal_request_received:${requestId}`,
+  );
+  return receipt?.email.template.about;
+}
+
+/**
+A receipt owed about the kit `entryId`, as its outbox row carries it.
+*/
+function receiptAboutKit(entryId: string) {
+  return {
+    kind: "removal_request_received",
+    dueAt: NOW,
+    isHidden: false,
+    about: { kind: "kit", entryId },
+  };
+}
+
+describe("a receipt's kit id, on the wire", () => {
+  const ID = "01JABCDEFGHJKMNPQRSTVWXYZ0";
+
+  it("is a kit id", () => {
+    expect(removalRequestReceived.parse(receiptAboutKit(ID))).toStrictEqual(
+      receiptAboutKit(ID),
+    );
+  });
+
+  it.each([`${ID}/x`, `x${ID}`, `${ID}"`, ID.toLowerCase(), ID.slice(1)])(
+    "refuses %s, so nothing but a kit id is built into its link",
+    (entryId) => {
+      expect(
+        removalRequestReceived.safeParse(receiptAboutKit(entryId)).success,
+      ).toBe(false);
+    },
+  );
+});
+
+describe("what every receipt says its request is about", () => {
+  it("is the kit, a photo on it, or something not ours, by what the link names", async () => {
+    const kit = await sharedEntry();
+    const photoKit = await sharedEntry();
+    const photoId = await photoOn(photoKit, "pass");
+    const kitRequest = await file("one@example.com", entryLink(kit));
+    const photoRequest = await file(
+      "two@example.com",
+      photoLink(photoKit, photoId),
+      { ip: "198.51.100.50" },
+    );
+    const elsewhere = await file(
+      "three@example.com",
+      "https://elsewhere.example/x",
+      { ip: "198.51.100.51" },
+    );
+    expect(await receiptAbout(kitRequest.id)).toStrictEqual({
+      kind: "kit",
+      entryId: kit,
+    });
+    expect(await receiptAbout(photoRequest.id)).toStrictEqual({
+      kind: "photo",
+      entryId: photoKit,
+    });
+    expect(await receiptAbout(elsewhere.id)).toStrictEqual({
+      kind: "elsewhere",
+    });
+  });
+});
+
 describe("every receipt's confirm link", () => {
   it("is owed with the request it is about, and names its link", async () => {
     const a = await sharedEntry();
@@ -713,7 +784,7 @@ describe("every receipt's confirm link", () => {
       isHidden: true,
       confirmRequestId: row.id,
       waits: false,
-      location: entryLink(a),
+      about: { kind: "kit", entryId: a },
     });
   });
 
@@ -1418,6 +1489,83 @@ async function sendReceipt(requestId: string): Promise<string> {
 }
 
 const LINKED_TOKEN = /takedown\/confirm\?token=([\da-f]{64})/u;
+
+/**
+A sent receipt with what differs between any two requests taken out.
+*/
+function asAnyRequest(sent: string, address: string): string {
+  return sent
+    .replaceAll(
+      new RegExp(LINKED_TOKEN.source, "gu"),
+      "takedown/confirm?token=TOKEN",
+    )
+    .replaceAll(address, "ADDRESS");
+}
+
+describe("a blocked requester's receipt", () => {
+  it("is sent as any other's is, link and words alike", async () => {
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: requesterKey("blocked@example.com"),
+        kind: "email",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+    const blocked = await file("blocked@example.com", "somewhere-1", {
+      ip: "198.51.100.40",
+    });
+    const ordinary = await file("ordinary@example.com", "somewhere-2", {
+      ip: "198.51.100.41",
+    });
+    expect(blocked.status).toBe("declined");
+
+    const sent = asAnyRequest(
+      await sendReceipt(blocked.id),
+      "blocked@example.com",
+    );
+    expect(sent).toContain("takedown/confirm?token=TOKEN");
+    expect(sent).toBe(
+      asAnyRequest(await sendReceipt(ordinary.id), "ordinary@example.com"),
+    );
+  });
+
+  it("confirms as any other's does, and changes nothing", async () => {
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: requesterKey("blocked@example.com"),
+        kind: "email",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+    const kit = await sharedEntry();
+    const blocked = await file("blocked@example.com", entryLink(kit));
+    const token = LINKED_TOKEN.exec(await sendReceipt(blocked.id))?.[1] ?? "";
+    const before = await kindsOwed();
+
+    expect(
+      await confirmTakedownRequest(
+        core(),
+        token,
+        { oweWhere: oweInCoreWhere, purge: noPurge },
+        NOW + 60,
+      ),
+    ).toBe("confirmed");
+    const [after] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, blocked.id));
+    expect(after).toMatchObject({
+      status: "declined",
+      holdState: "blocked",
+      confirmedAt: NOT_SET,
+      heldAt: NOT_SET,
+    });
+    expect(await entryStatus(kit)).toBe("ok");
+    expect(await kindsOwed()).toStrictEqual(before);
+  });
+});
 
 describe("the receipt's confirm token (SA-L18)", () => {
   it("is in no outbox row: the receipt is owed with its request", async () => {
@@ -2185,7 +2333,7 @@ describe("what a request that held something already out of view tells", () => {
       isHidden: true,
       confirmRequestId: row.id,
       waits: false,
-      location: row.location,
+      about: { kind: "kit", entryId },
     });
   });
 });
@@ -2342,12 +2490,12 @@ describe("what a request reads back, and its receipt's words", () => {
       isHidden: true,
       confirmRequestId: row.id,
       waits: false,
-      location: row.location,
+      about: { kind: "kit", entryId },
     });
   });
 
   it("tells a requester who must confirm that nothing is hidden yet", async () => {
-    const { request } = await pastTheCap();
+    const { entryId, request } = await pastTheCap();
 
     const [receipt] = await owedWhere(
       (email) => email.dedupeKey === `removal_request_received:${request.id}`,
@@ -2358,7 +2506,7 @@ describe("what a request reads back, and its receipt's words", () => {
       isHidden: false,
       confirmRequestId: request.id,
       waits: true,
-      location: request.location,
+      about: { kind: "kit", entryId },
     });
   });
 });

@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { afterOf } from "../../ui";
+
 import { DeskAccess } from "../../modules/account/access/components/DeskAccess";
 import { deskAccessSearch } from "../../modules/account/client";
 import {
@@ -20,8 +22,8 @@ import {
  */
 export const Route = createFileRoute("/desk/access")({
   validateSearch: deskAccessSearch,
-  loaderDeps: ({ search: { after } }) => ({ after }),
-  loader: async ({ deps: { after } }) => accessDeskQuery({ data: { after } }),
+  loaderDeps: afterOf,
+  loader: async ({ deps }) => accessDeskQuery({ data: deps }),
   component: AccessPage,
 });
 

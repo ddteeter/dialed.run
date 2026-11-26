@@ -5,4 +5,8 @@
  * `client-side-reaches-no-server` in `.dependency-cruiser.cjs` checks it at
  * commit. A component imports these files directly, never this door.
  */
-export { runnersFilterInput, takedownConfirmSearch } from "./inputs";
+export {
+  removalRequestsSearch,
+  runnersFilterInput,
+  takedownConfirmSearch,
+} from "./inputs";

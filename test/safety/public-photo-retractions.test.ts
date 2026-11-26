@@ -14,6 +14,7 @@ import {
 import { env } from "../../src/env";
 import { scopeOfTags, type PurgeTags } from "../../src/lib/cache-tags";
 import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
+import { removalRequestNotice } from "../../src/lib/contracts/takedown";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
@@ -414,6 +415,47 @@ async function filedByCopyUrl() {
   await expectWithdrawn(copy);
   return { copy, request: await requestFor(location) };
 }
+
+/**
+ * The request as a Take it down's first batch leaves it: its photo
+ * taken down and the notice recorded, its claim not landed yet.
+ */
+async function takenDownUnclaimed() {
+  const { copy, request } = await filedByCopyUrl();
+  await moderateContent(core(), {
+    actorId: "op-two",
+    action: "takedown",
+    subjectType: "photo",
+    subjectId: copy.photoId,
+    reason: "intimate",
+    notice: removalRequestNotice(request.id),
+  });
+  return request;
+}
+
+describe("a public copy's request whose Take it down's takedown has landed", () => {
+  it("refuses a Decline, though its photo no longer reads", async () => {
+    const request = await takenDownUnclaimed();
+    expect(
+      await decideRemovalRequest(core(), "op-one", request.id, {
+        outcome: "declined",
+        reason: "Not you",
+      }),
+    ).toBe("already_decided");
+    const after = await requestFor(request.location);
+    expect(after.status).toBe("pending");
+  });
+
+  it("is declined by no block, though its photo no longer reads", async () => {
+    const request = await takenDownUnclaimed();
+    expect(
+      await blockAndDeclineAll(core(), "op-one", request.id),
+    ).toStrictEqual({ status: "decided" });
+    const after = await requestFor(request.location);
+    expect(after.status).toBe("pending");
+    expect(await core().select().from(takedownBlocks)).toStrictEqual([]);
+  });
+});
 
 describe("a removal request naming a public copy's URL", () => {
   it.each([

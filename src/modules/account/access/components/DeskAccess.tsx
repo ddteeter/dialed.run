@@ -1,4 +1,4 @@
-import { Link, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
@@ -6,7 +6,7 @@ import {
   isBlockedRegion,
   regionInviteRefusal,
 } from "../../../../lib/contracts/access";
-import { Bracketed, FormStatus, Mono } from "../../../../ui";
+import { Bracketed, FormStatus, Mono, PageLinks } from "../../../../ui";
 import type { AccessDesk, DeskRequest } from "../invites";
 import {
   ageLabel,
@@ -141,47 +141,14 @@ export function DeskAccess({
         onChanged={onChanged}
         announce={setSaid}
       />
-      <RequestPages shown={requests.length} next={next} after={after} />
+      <PageLinks
+        to="/desk/access"
+        shown={requests.length}
+        next={next}
+        after={after}
+        backLabel="← Back to the oldest"
+      />
     </div>
-  );
-}
-
-const PAGE_LINK_CLASS =
-  "target inline-flex items-center text-ink underline underline-offset-4";
-
-/**
- * The way past the page and back (owner, 2026-11-24): "Next {n} →" while
- * there is a next page, and "← Back to the oldest" from any page but the
- * first. A page with a next one is always full, so `shown` is the page's
- * size.
- */
-function RequestPages({
-  shown,
-  next,
-  after,
-}: Readonly<{
-  shown: number;
-  next: string | undefined;
-  after: string | undefined;
-}>): JSX.Element | undefined {
-  if (next === undefined && after === undefined) return undefined;
-  return (
-    <p className="m-0 flex flex-wrap gap-x-6">
-      {after === undefined ? undefined : (
-        <Link to="/desk/access" className={PAGE_LINK_CLASS}>
-          ← Back to the oldest
-        </Link>
-      )}
-      {next === undefined ? undefined : (
-        <Link
-          to="/desk/access"
-          search={{ after: next }}
-          className={PAGE_LINK_CLASS}
-        >
-          {`Next ${String(shown)} →`}
-        </Link>
-      )}
-    </p>
   );
 }
 

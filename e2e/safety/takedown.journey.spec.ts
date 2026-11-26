@@ -7,8 +7,9 @@
  * then D-147 (design 152): the receipt points to StopNCII and Take It
  * Down, and the takedown keeps the photo's fingerprint — then design 137's
  * limits: past two open requests, the next waits for a confirm from its
- * receipt, and the operator blocks a confirmed request's address, then
- * lifts the block from Review's Blocked list.
+ * receipt; Review pages past fifty and back; and the operator blocks a
+ * confirmed request's address, then lifts the block from Review's
+ * Blocked list.
  * One journey, one video. A copy of a removed photo posted again, waiting
  * on Review with what it matched, is `takedown.spec.ts`'s.
  *
@@ -362,6 +363,43 @@ test("someone with no account asks for an intimate image to come down, and an op
         .where(eq(removedFingerprints.fingerprint, fingerprint)),
     );
     expect(kept).toHaveLength(1);
+
+    // Past fifty waiting, Review pages: a page at a time, and back to the
+    // soonest due. The extra requests go before the walk goes on.
+    await scene(page, "Review pages past fifty, and back to the soonest due");
+    const extra = Array.from({ length: 51 }, (_, index) => ({
+      id: newUlid(),
+      requesterEmail: `asker-${suffix}-page${String(index)}@example.com`,
+      requesterKey: `asker-${suffix}-page${String(index)}@example.com`,
+      signature: "Page Asker",
+      location: `a page of requests, ${String(index)}`,
+      dueAt: now + 172_800 + index,
+      createdAt: now,
+      idempotencyKey: newUlid(),
+      holdState: "confirm" as const,
+    }));
+    await withLocalDb(async ({ core }) => {
+      for (const row of extra) await core.insert(takedownRequests).values(row);
+    });
+    await page.goto("/desk/review");
+    await hydrated(page);
+    await page.getByRole("link", { name: "Next 50 →" }).click();
+    await expect(page).toHaveURL(/\/desk\/review\?after=/u);
+    await expect(page.locator("[data-part='requests-shown']")).toHaveText(
+      /^Showing 51–\d+ of \d+\.$/u,
+    );
+    await page.getByRole("link", { name: "← Back to the soonest due" }).click();
+    await expect(page).toHaveURL(/\/desk\/review$/u);
+    await withLocalDb(async ({ core }) =>
+      core.delete(takedownRequests).where(
+        inArray(
+          takedownRequests.id,
+          extra.map((row) => row.id),
+        ),
+      ),
+    );
+    await page.goto("/desk/review");
+    await hydrated(page);
 
     await scene(
       page,

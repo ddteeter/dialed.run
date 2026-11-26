@@ -45,14 +45,18 @@ requester.
      also stops a flood of outside links from filling operators' inboxes.
   4. Otherwise it hides, as today.
 - **Every receipt carries the confirm link** (`/takedown/confirm?token=…`)
-  and names the link its request was filed with, so its reader confirms
-  only their own. Pressing it proves the address (`confirmed_at`). A
-  request past the cap also waits for it: confirming applies the hold
-  through the same guards, the valve included. For any other request it
-  records `confirmed_at` and nothing else; its receipt's link carries
-  `for=address`, which chooses only the page's words. The page asks first,
-  with a Confirm button and no write on GET, because mail scanners follow
-  links.
+  and says what its request is about, so its reader confirms only their
+  own: for a kit of ours, the kit's page; for a photo of ours, the page of
+  the kit it is on, each built from the kit's id; for anything else, that
+  it is not on the app. Never the link as typed. Pressing it proves the
+  address (`confirmed_at`). A request past the cap also waits for it:
+  confirming applies the hold through the same guards, the valve
+  included. For any other request it records `confirmed_at` and nothing
+  else; its receipt's link carries `for=address`, which chooses only the
+  page's words. A blocked requester's receipt carries the same link and
+  words, and pressing it answers as any other and records nothing. The
+  page asks first, with a Confirm button and no write on GET, because mail
+  scanners follow links.
 - **Review** shows each request's state: `[hidden]`,
   `[waiting for confirm]`, `[valve]` or `[blocked]`. It shows the other
   open requests that share both of its keys ("2 more from this

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { EMAIL_MAX_LENGTH } from "../../src/lib/contracts/garments";
 import {
@@ -9,6 +10,7 @@ import {
   takedownRequestSchema,
   takedownSearchSchema,
   takedownSubjectOf,
+  takedownSubjectNamed,
 } from "../../src/lib/contracts/takedown";
 
 /**
@@ -216,5 +218,39 @@ describe("takedownSearchSchema", () => {
     expect(
       takedownSearchSchema.parse({ location: "x".repeat(LOCATION_MAX) }),
     ).toStrictEqual({ location: "x".repeat(LOCATION_MAX) });
+  });
+});
+
+describe("takedownSubjectNamed", () => {
+  /**
+  A column D1 left empty, as drizzle reads it back.
+  */
+  const NOT_SET = z.null().parse(JSON.parse("null"));
+  const resolved = { subjectType: "entry", subjectId: "kit-now" } as const;
+
+  it("names the subject filing stored, over what the link reads as now", () => {
+    expect(
+      takedownSubjectNamed(
+        { subjectType: "photo", subjectId: "photo-filed" },
+        resolved,
+      ),
+    ).toStrictEqual({ subjectType: "photo", subjectId: "photo-filed" });
+    expect(
+      takedownSubjectNamed(
+        { subjectType: "photo", subjectId: "photo-filed" },
+        undefined,
+      ),
+    ).toStrictEqual({ subjectType: "photo", subjectId: "photo-filed" });
+  });
+
+  it("names what the link reads as when filing stored no whole subject", () => {
+    for (const filed of [
+      { subjectType: NOT_SET, subjectId: NOT_SET },
+      { subjectType: "photo", subjectId: NOT_SET },
+      { subjectType: NOT_SET, subjectId: "photo-filed" },
+    ] as const) {
+      expect(takedownSubjectNamed(filed, resolved)).toBe(resolved);
+      expect(takedownSubjectNamed(filed, undefined)).toBeUndefined();
+    }
   });
 });

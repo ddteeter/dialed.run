@@ -22,6 +22,7 @@ import {
   lt,
   ne,
   notExists,
+  or,
   sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -38,7 +39,10 @@ import {
   takedownRequests,
   userProfiles,
 } from "../../../db/schema-core";
-import { removalRequestNotice } from "../../../lib/contracts/takedown";
+import {
+  removalRequestNotice,
+  takedownSubjectNamed,
+} from "../../../lib/contracts/takedown";
 import type {
   TakedownRequestValues,
   TakedownSubject,
@@ -207,12 +211,7 @@ export async function fileTakedownRequest<Attempt>(
     ...acts,
     ...operatorAlerts(deps.oweWhere, { id, dueAt, subject }, row.alerts(now)),
     ...valveAlerts(deps.oweWhere, now, row.owesSummary(now)),
-    ...receipts(
-      deps.oweWhere,
-      { id, email, dueAt, location: input.location },
-      row,
-      now,
-    ),
+    ...receipts(deps.oweWhere, { id, email, dueAt, subject }, row, now),
   ]);
   await purgeIfHeld(db, { id, subject }, now, deps.purge);
   return { status: "received" };
@@ -453,7 +452,7 @@ async function purgeIfHeld(
  * The requester's receipt, in the words the row as written earns: hidden
  * where it hid, waiting where it waits on its confirm, and otherwise
  * received. Every one carries the confirm link, which proves the address,
- * and names the link the request was filed with. One dedupe key, and exactly one of the three conditions holds;
+ * and says what the request is about (`aboutOf`). One dedupe key, and exactly one of the three conditions holds;
  * the plain receipt is owed first, so a second debt on the key (which
  * takes over the row's id and keeps its words) could never carry it.
  */
@@ -463,7 +462,7 @@ function receipts(
     readonly id: string;
     readonly email: string;
     readonly dueAt: number;
-    readonly location: string;
+    readonly subject: TakedownSubject | undefined;
   },
   row: ReturnType<typeof rowOf>,
   now: number,
@@ -486,7 +485,7 @@ function receipts(
             // while the request is pending and unconfirmed.
             confirmRequestId: request.id,
             waits: words.waits,
-            location: request.location,
+            about: aboutOf(request.subject),
           },
         },
         { dedupeKey: `removal_request_received:${request.id}` },
@@ -504,12 +503,28 @@ function receipts(
 }
 
 /**
+ * What a receipt names its request as about: a kit of ours or a photo on
+ * one, by the kit's id, or something that is not ours. Never the link as
+ * typed.
+ */
+function aboutOf(subject: TakedownSubject | undefined) {
+  if (subject === undefined) return { kind: "elsewhere" as const };
+  return {
+    kind:
+      subject.subjectType === "entry" ? ("kit" as const) : ("photo" as const),
+    entryId: subject.entryId,
+  };
+}
+
+/**
  * SA-L18: the confirm token a receipt's link carries, minted when the
  * receipt is sent rather than when the request is filed, so the outbox row
  * that owes it never holds a live token. Only its hash is written, and
- * only while the request still waits on a confirm: `undefined` once it was
- * confirmed or decided, and the receipt then goes without the link. A
- * second send mints again, and the last token sent is the one that works.
+ * only while the request is unconfirmed and pending, or a blocked
+ * requester's (design 137: its receipt is any other's): `undefined` once
+ * it was confirmed or decided, and the receipt then goes without the
+ * link. A second send mints again, and the last token sent is the one
+ * that works.
  */
 export async function mintReceiptConfirmToken(
   // Any dialed-core handle: the outbox's drain asks with its own.
@@ -517,13 +532,17 @@ export async function mintReceiptConfirmToken(
   requestId: string,
 ): Promise<string | undefined> {
   const { token, hash } = await newConfirmToken();
+  const open = or(
+    eq(takedownRequests.status, "pending"),
+    eq(takedownRequests.holdState, "blocked"),
+  );
   const minted = await db
     .update(takedownRequests)
     .set({ confirmTokenHash: hash })
     .where(
       and(
         eq(takedownRequests.id, requestId),
-        eq(takedownRequests.status, "pending"),
+        open,
         isNull(takedownRequests.confirmedAt),
       ),
     )
@@ -856,7 +875,11 @@ export async function confirmTakedownRequest(
     eq(takedownRequests.confirmTokenHash, await confirmTokenHash(token)),
   );
   if (request === undefined) return "not_found";
-  if (request.status !== "pending") return "decided";
+  // A blocked requester's link answers as any other's, and does nothing:
+  // its request is not pending, so the claim below lands nowhere and the
+  // batch held to it writes nothing.
+  const isBlocked = request.holdState === "blocked";
+  if (!isBlocked && request.status !== "pending") return "decided";
   if (request.confirmedAt !== null) return "confirmed";
   // SA-L18: a confirm link lasts as long as the request's 48 hours, and
   // past them answers as an unknown link (owner, 2026-11-16).
@@ -982,25 +1005,114 @@ const LISTED_COLUMNS = {
 };
 
 /**
- * The open requests, those that may act first and then those waiting on a
- * confirm, each soonest due first — the order an operator must work them
- * in. Read on `takedown_requests_status_due`; `pendingTakedownCount` says
- * how many there are past `limit`.
+Whether a request waits on its confirm: 1, after those that may act (0).
+*/
+const WAITS = sql<number>`(${takedownRequests.holdState} is 'confirm')`;
+
+/**
+ * A page's place in Review's order, `<waits>.<due_at>.<id>`: the last
+ * request of the page before (`removalRequestsSearch` admits nothing else).
+ */
+function keyOfCursor(after: string) {
+  const [waits, dueAt, id] = after.split(".", 3);
+  return sql`(${Number(waits)}, ${Number(dueAt)}, ${id})`;
+}
+
+/**
+The pending requests at or before (`<=`) or after (`>`) a page's place.
+*/
+function pendingFrom(after: string | undefined, side: ">" | "<="): SQL {
+  const pending = eq(takedownRequests.status, "pending");
+  if (after === undefined) return pending;
+  const key = sql`(${WAITS}, ${takedownRequests.dueAt}, ${takedownRequests.id})`;
+  return sql`${pending} and ${key} ${sql.raw(side)} ${keyOfCursor(after)}`;
+}
+
+/**
+ * The open requests after `after` (from the top when there is none), those
+ * that may act first and then those waiting on a confirm, each soonest
+ * due first and then by id — the order an operator must work them in, and
+ * one a page ends and the next starts on. Read on
+ * `takedown_requests_status_due`.
+ */
+function listedRows(db: Db, limit: number, after: string | undefined) {
+  return db
+    .select(LISTED_COLUMNS)
+    .from(takedownRequests)
+    .where(pendingFrom(after, ">"))
+    .orderBy(WAITS, asc(takedownRequests.dueAt), asc(takedownRequests.id))
+    .limit(limit);
+}
+
+/**
+ * One page of Review's removal requests (owner, 2026-11-24): `limit` of
+ * them after `after`, the page after this one as `next` (nothing on the
+ * last), and how many pending requests come `before` it. Keyed, not
+ * counted, so a request decided or lapsed since moves no other past the
+ * page's place. A request confirmed since moves from waiting to may act,
+ * at its own due time, and a pass from the top reaches it there.
+ */
+export async function pendingTakedownPage(
+  db: Db,
+  page: { readonly after?: string | undefined; readonly now?: number },
+  limit = 50,
+): Promise<{
+  readonly requests: PendingTakedownRequest[];
+  readonly next: string | undefined;
+  readonly before: number;
+}> {
+  const { after, now = nowSeconds() } = page;
+  // One past the page, to know whether there is a next one.
+  const read = await listedRows(db, limit + 1, after);
+  const last = read.length > limit ? read[limit - 1] : undefined;
+  const before =
+    after === undefined
+      ? 0
+      : counted(
+          await db
+            .select({ n: sql<number>`count(*)` })
+            .from(takedownRequests)
+            .where(pendingFrom(after, "<=")),
+        );
+  return {
+    requests: await describedRows(db, read.slice(0, limit), now),
+    next: last === undefined ? undefined : cursorAt(last),
+    before,
+  };
+}
+
+/**
+A row's place as the next page's `after`.
+*/
+function cursorAt(row: {
+  readonly holdState: string | null;
+  readonly dueAt: number;
+  readonly id: string;
+}): string {
+  const waits = row.holdState === "confirm" ? "1" : "0";
+  return `${waits}.${String(row.dueAt)}.${row.id}`;
+}
+
+/**
+ * The first `limit` open requests in Review's order
+ * (`pendingTakedownPage` for the pages past them).
  */
 export async function pendingTakedownRequests(
   db: Db,
   now = nowSeconds(),
   limit = 50,
 ): Promise<PendingTakedownRequest[]> {
-  const rows = await db
-    .select(LISTED_COLUMNS)
-    .from(takedownRequests)
-    .where(eq(takedownRequests.status, "pending"))
-    .orderBy(
-      sql`${takedownRequests.holdState} is 'confirm'`,
-      asc(takedownRequests.dueAt),
-    )
-    .limit(limit);
+  return describedRows(db, await listedRows(db, limit, undefined), now);
+}
+
+/**
+What Review shows of each row read, and the others listed beside it.
+*/
+async function describedRows(
+  db: Db,
+  rows: Awaited<ReturnType<typeof listedRows>>,
+  now: number,
+): Promise<PendingTakedownRequest[]> {
   // Counted among the rows already read rather than by a query per row:
   // the list is at most `limit` long, and a requester past it is still
   // one whose other requests show once these are decided.
@@ -1187,6 +1299,9 @@ export async function blockAndDeclineAll(
   const stillOpen = exists(rowsWhere(db, takedownRequests, pressedOpen));
   const declined = [...others, request];
   const subjects = await requestSubjectsOf(db, declined);
+  const named = declined.map((row, index) =>
+    takedownSubjectNamed(row, subjects[index]),
+  );
   // Each decline also waits on no Take it down recorded for its request.
   const decline = (index: number, also?: SQL) => {
     const row = declined[index] ?? request;
@@ -1202,7 +1317,7 @@ export async function blockAndDeclineAll(
         and(
           eq(takedownRequests.id, row.id),
           eq(takedownRequests.status, "pending"),
-          notTakenDown(row.id, subjects[index]),
+          notTakenDown(row.id, named[index]),
           also,
         ),
       );
@@ -1251,13 +1366,14 @@ export async function blockAndDeclineAll(
 }
 
 /**
- * No Take it down recorded for the request: an audit row on its subject
- * whose reason carries the request's notice (`removalRequestNotice`).
- * Always true of a request naming nothing of ours.
+ * No Take it down recorded for the request: an audit row on the subject
+ * it names (`takedownSubjectNamed`) whose reason carries the request's
+ * notice (`removalRequestNotice`). Always true of a request naming
+ * nothing of ours.
  */
 function notTakenDown(
   requestId: string,
-  subject: TakedownSubject | undefined,
+  subject: ReturnType<typeof takedownSubjectNamed>,
 ): SQL | undefined {
   if (subject === undefined) return undefined;
   return sql`not exists (select 1 from ${moderationActions} where ${and(
