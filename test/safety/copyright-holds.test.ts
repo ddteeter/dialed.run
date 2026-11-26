@@ -939,11 +939,11 @@ describe("the runner's own delete of what a hold names (SA-L09)", () => {
       const { author, runId, entryId, photoId, key } = await posted();
       // The Desk's takedown commits after every read the delete makes,
       // just before its batch.
-      const racing = firstBatchAfter(() => takeDown("entry", entryId));
+      const landing = firstBatchAfter(() => takeDown("entry", entryId));
       const attempts = {
-        kit: () => retractEntry(racing, author, entryId, quiet),
-        run: () => deleteRun(racing, author, runId, quiet),
-        photo: () => deleteEntryPhoto(racing, author, photoId, quiet, noPurge),
+        kit: () => retractEntry(landing, author, entryId, quiet),
+        run: () => deleteRun(landing, author, runId, quiet),
+        photo: () => deleteEntryPhoto(landing, author, photoId, quiet, noPurge),
       };
 
       expect(await refusalOf(attempts[noun]())).toBe(heldSentence(noun));

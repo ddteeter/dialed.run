@@ -1092,7 +1092,7 @@ describe("the rename cap (SA-L02)", () => {
     expect(await handleOf(userId)).toBe("late_current");
   });
 
-  it("keeps an old handle in the history when a parallel change refuses taking it back", async () => {
+  it("keeps an old handle in the history when another change refuses taking it back", async () => {
     const userId = await runner({ username: "back_current" });
     const now = nowSeconds();
     await db.insert(usernameHistory).values([
@@ -1101,16 +1101,16 @@ describe("the rename cap (SA-L02)", () => {
       // Retired before the window, so taking it back would fit the cap.
       { username: "back_old", userId, retiredAt: now - RENAME_WINDOW_S - 60 },
     ]);
-    // A change of the runner's own lands between the take-back's read and
-    // its write, and spends the last rename.
-    const racing = beforeBatch(async () => {
-      expect(
-        await claimUsername(db, userId, "back_new", CLEAR),
-      ).toMatchObject({ kind: "claimed" });
+    // Another change of the runner's own lands just before the take-back's
+    // write, and spends the last rename.
+    const landing = beforeBatch(async () => {
+      expect(await claimUsername(db, userId, "back_new", CLEAR)).toMatchObject({
+        kind: "claimed",
+      });
     });
 
     expect(
-      await claimUsername(racing, userId, "back_old", CLEAR),
+      await claimUsername(landing, userId, "back_old", CLEAR),
     ).toMatchObject({ kind: "too_often" });
     expect(await handleOf(userId)).toBe("back_new");
     const history = await historyOf(userId);
