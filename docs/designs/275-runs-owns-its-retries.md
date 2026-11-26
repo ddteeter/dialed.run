@@ -49,8 +49,8 @@ an owed `import_file_expire` from `ops`.
 ## Contract touches
 
 - Schema changes: **none**. Bindings, queues, crons: **none**.
-- Protected path: none expected (no pin changes). The owner map, when
-  A2 lands.
+- Protected paths: `stryker.conf.json` (`runs/retries.ts` joins `runs`'
+  explicit entry), and the owner map when A2 lands. No pin changes.
 
 ## Diagrams
 
