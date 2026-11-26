@@ -1,8 +1,10 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "src/router.tsx",
-    "src/routes/**/*.tsx",
+    "src/server.ts!",
+    "src/start.ts!",
+    "src/router.tsx!",
+    "src/routes/**/*.tsx!",
     "vite.config.ts",
     "vitest.config.ts",
     "drizzle-core.config.ts",
@@ -20,11 +22,9 @@
     "src/ui/icons.tsx",
     "src/ui/motion.ts",
     "playwright.config.ts",
-    "e2e/**/*.spec.ts",
-    "src/modules/*/index.ts",
-    "src/modules/*/functions.ts"
+    "e2e/**/*.spec.ts"
   ],
-  "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
+  "project": ["src/**/*.{ts,tsx}!", "test/**/*.{ts,tsx}"],
   "ignoreDependencies": [
     "@stryker-mutator/command-runner",
     "@tailwindcss/typography",
