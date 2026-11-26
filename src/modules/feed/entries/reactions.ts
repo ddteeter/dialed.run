@@ -98,10 +98,15 @@ export async function setUsefulReaction(
     countedUsefulOf(eq(reactions.entryId, entryId)),
     entrySeenBy(entryId, userId),
   );
+  // The mark asks the rule again as it lands, so a block, a ban or a
+  // change of audience since the check above leaves no mark. The columns
+  // in the table's order: entry, runner, kind, time.
   const write = isUseful
     ? database
         .insert(reactions)
-        .values({ entryId, userId, kind: "useful", createdAt: nowSeconds() })
+        .select(
+          sql`SELECT ${entryId}, ${userId}, 'useful', ${nowSeconds()} WHERE ${entrySeenBy(entryId, userId)}`,
+        )
         .onConflictDoNothing()
     : database.delete(reactions).where(mine);
   const [, all, own] = await database.batch([
