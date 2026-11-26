@@ -66,7 +66,7 @@ const DAY_SECONDS = 24 * 60 * 60;
 
 /**
  * A statement that fails its whole batch when a hold `holds` picks out
- * exists as the batch runs, for a delete a live hold refuses (SA-L09): it
+ * exists as the batch runs, for a delete a live hold refuses: it
  * blanks the hold's NOT NULL status, so one match fails the batch and none
  * changes nothing. `isHeldRefusal` names the failure.
  */

@@ -273,7 +273,7 @@ function waitingAsRead(filers: readonly Filer[]): SQL {
 
 /**
  * A runner the read found is still waiting on `value`: what Apply writes
- * to the product, and decides, only while it holds (SA-L11).
+ * to the product, and decides, only while it holds.
  */
 function valueStillWaited(filers: readonly Filer[], value: string): SQL {
   return sql`exists (select 1 from ${productCorrections} where ${waitingAsRead(filers)} and ${eq(productCorrections.value, value)})`;

@@ -237,7 +237,7 @@ export function deletionCacheTags(
 
 /**
  * What a delete does beyond its rows: report, purge, and for the runner's
- * own delete of one row, the hold that refuses it (SA-L09).
+ * own delete of one row, the hold that refuses it.
  */
 interface Effects {
   readonly report: Report;
