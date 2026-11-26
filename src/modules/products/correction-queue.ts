@@ -214,9 +214,12 @@ export interface CorrectionKey {
  * answer the row can say.
  */
 /**
- * What Apply did: `applied` (a repeat too), or refused because another
- * product of the brand has that name, or because the value on screen is
- * no longer one a runner is waiting on (SA-L11).
+ * What Apply did: `applied` (a repeat read after the first landed too),
+ * or refused because another product of the brand has that name, or
+ * because the value on screen is no longer one a runner is waiting on
+ * (SA-L11). `changed` also answers an Apply whose write found nothing
+ * left to do because a Decline, a filing again or another Apply landed
+ * first, so a double-click's second press can answer `changed`.
  */
 export interface ApplyOutcome {
   readonly outcome: "applied" | "name_taken" | "changed";
@@ -338,6 +341,8 @@ function decisionWrites(
  * Apply (R48·130): writes the value to the product, decides every waiting
  * correction to that field, and tells each runner, in one batch. A row
  * already decided has nobody left in it: a repeat, answered as applied.
+ * A repeat read before the first's write lands finds nothing left by its
+ * own write, and answers `changed`.
  */
 export async function applyCorrection({
   actorId,

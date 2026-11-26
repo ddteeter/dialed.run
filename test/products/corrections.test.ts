@@ -687,6 +687,22 @@ describe("a decision another lands first", () => {
     expect(await bellOf(bo.userId)).toStrictEqual([]);
   });
 
+  it("answers a second Apply that read before the first landed as changed, ringing once", async () => {
+    const { productId } = await product();
+    const ada = await owner(productId);
+    await file(ada, productId, "weight", "light");
+    // A double-click: the first press lands after the second's read.
+    landingBeforeTheWrite(() =>
+      applyCorrection({ actorId: "op", key: weightLight(productId) }),
+    );
+
+    expect(
+      await applyCorrection({ actorId: "op", key: weightLight(productId) }),
+    ).toStrictEqual({ outcome: "changed" });
+    expect(await productRow(productId)).toMatchObject({ weight: "light" });
+    expect(await bellOf(ada.userId)).toHaveLength(1);
+  });
+
   it("tells nobody it was kept when an Apply lands first", async () => {
     const { productId } = await product();
     const ada = await owner(productId);
