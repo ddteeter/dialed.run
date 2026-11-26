@@ -20,7 +20,6 @@ export {
   type EnrichmentDeps,
 } from "./consume";
 export { enqueueEnrichment } from "./enqueue";
-export { forgetRunnerEnrichmentLimit } from "./spend-limit";
 export { extractionModelFromEnv } from "./model/from-env";
 export { type EnrichJob } from "./queue-messages";
 export {

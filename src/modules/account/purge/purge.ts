@@ -82,7 +82,6 @@ import { listedPages } from "../../../lib/sql/r2-pages";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { nowSeconds } from "../../../lib/now";
 import { forgetRateLimit, forgetSendLimits } from "../../email";
-import { forgetRunnerEnrichmentLimit } from "../../enrichment";
 import { deleteRuns, deleteRunsThrough, LIVE_HOLD } from "../../feed";
 import { captureException, outboxInsert, oweOutbox } from "../../ops";
 import { disconnectStrava } from "../../runs";
@@ -714,7 +713,7 @@ async function deleteAccountRows(
     forgetRateLimit(db, "correction-runner", userId),
     forgetRateLimit(db, "strava-connect-runner", userId),
     forgetRateLimit(db, "shared-row-runner", userId),
-    forgetRunnerEnrichmentLimit(db, userId),
+    forgetRateLimit(db, "enrich-runner", userId),
     ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post
     // is that runner's record too — but name nobody (the development

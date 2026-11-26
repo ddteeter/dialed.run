@@ -18,7 +18,6 @@ import {
   canSpendProxyCall,
   canSpendRunnerRequest,
   ENRICHMENT_REQUESTS_PER_RUNNER_PER_DAY,
-  forgetRunnerEnrichmentLimit,
   MODEL_CALLS_PER_HOUR,
   PAGE_FETCHES_PER_HOUR,
   PROXY_CALLS_PER_DAY,
@@ -181,21 +180,5 @@ describe("the rate limits' daily sweep, over spend counts", () => {
     // Long after, it goes.
     await sweepRateLimits(db, NOW + 3 * DAY);
     expect(await countOf("enrich-runner", runner)).toBeUndefined();
-  });
-});
-
-describe("forgetRunnerEnrichmentLimit", () => {
-  it("deletes that runner's count and no other", async () => {
-    const runner = newUlid();
-    const other = newUlid();
-    await canSpendRunnerRequest(db, runner, NOW);
-    await canSpendRunnerRequest(db, other, NOW);
-    await canSpendPageFetch(db, NOW);
-
-    await forgetRunnerEnrichmentLimit(db, runner);
-
-    expect(await countOf("enrich-runner", runner)).toBeUndefined();
-    expect(await countOf("enrich-runner", other)).toBe(1);
-    expect(await countOf("page-fetch")).toBe(1);
   });
 });

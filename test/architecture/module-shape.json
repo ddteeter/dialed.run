@@ -1,6 +1,6 @@
 {
   "fanOut": {
-    "account": 9,
+    "account": 8,
     "feed": 10
   },
   "doorWidth": {
@@ -22,7 +22,7 @@
   },
   "reasons": {
     "fanOut": {
-      "account": "A ceiling, not a debt (design 261 ruling 10): the runner's whole account is here, so deleting, exporting and forgetting it reach every area that keeps the runner's rows. It falls by one with B1, and further when each module owns its forget step (D1).",
+      "account": "A ceiling, not a debt (design 261 ruling 10): the runner's whole account is here, so deleting, exporting and forgetting it reach every area that keeps the runner's rows. It fell by one with B1, and falls further when each module owns its forget step (D1).",
       "feed": "A ceiling, not a debt (design 261 ruling 10): a shared kit joins a closet's garments, a run, its weather and the Desk's rules, and notifies, emails and reports through notifications, email and ops. It falls by one with B2."
     }
   }
