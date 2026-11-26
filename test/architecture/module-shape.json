@@ -1,7 +1,6 @@
 {
   "fanOut": {
     "account": 9,
-    "dispatch": 11,
     "feed": 10,
     "safety": 8
   },
@@ -12,5 +11,23 @@
     "closet": 1,
     "runs": 1
   },
-  "files": {}
+  "files": {},
+  "parentDoor": {
+    "account": 35,
+    "auth": 19,
+    "feed": 16,
+    "ops": 24,
+    "runs": 16,
+    "safety": 95,
+    "weather": 23
+  },
+  "direction": {
+    "modules": 3
+  },
+  "reasons": {
+    "fanOut": {
+      "account": "A ceiling, not a debt (design 261 ruling 10): the runner's whole account is here, so deleting, exporting and forgetting it reach every area that keeps the runner's rows. It falls by one with B1, and further when each module owns its forget step (D1).",
+      "feed": "A ceiling, not a debt (design 261 ruling 10): a shared kit joins a closet's garments, a run, its weather and the Desk's rules, and notifies, emails and reports through notifications, email and ops. It falls by one with B2."
+    }
+  }
 }

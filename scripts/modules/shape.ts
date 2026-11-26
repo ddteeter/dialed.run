@@ -1,6 +1,6 @@
 /**
- * The module ratchet (design 240, #796 step 3): four numbers about each
- * module, measured from the imports, each with a budget. A number at or
+ * The module ratchet (design 240, #796 step 3; design 262): six numbers
+ * about the modules, measured from the imports, each with a budget. A number at or
  * under its budget moves freely. A number over it is pinned in
  * `test/architecture/module-shape.json` and may only go down:
  * `test/architecture/module-shape.node.test.ts` fails when it rises, and
@@ -8,7 +8,8 @@
  * given back. `npm run modules:pin` lowers the pins.
  *
  * - **fan-out**, of a module: the other modules its files import,
- *   sub-modules included.
+ *   sub-modules included. `dispatch` is not measured: composing every
+ *   module is its job (design 261 ruling 10).
  * - **door width**, of a door (a module's `index.ts`, a sub-module's, or a
  *   module's client-safe `client.ts`, design 255): the names it exports.
  * - **past the door**, of a module: the imports of its files from outside
@@ -19,6 +20,17 @@
  *   with no remedy would only block.
  * - **files**, of a unit (a module, or a sub-module): the files in its
  *   folder, a sub-module's own files not counted in its module's.
+ * - **parent door**, of a module that holds a sub-module: the names its
+ *   own `index.ts` exports. Its budget is 0, so every one is pinned and
+ *   only falls (design 240 rule 4, design 261 ruling 11). It is the one
+ *   kind `npm run modules:pin` may add a pin to, when a module is first
+ *   split.
+ * - **direction**, of the modules as a whole (`modules`): the fewest
+ *   imports to cut so that no module reaches itself (`direction.ts`,
+ *   design 261 ruling 4).
+ *
+ * A pin may carry a reason, in the pins file's `reasons`: a ceiling the
+ * owner accepted, where a pin with none is a debt (design 261 ruling 10).
  *
  * Pure: facts in, numbers and problems out. The imports are read by
  * dependency-cruiser and the door names by TypeScript (`read.ts`), as the
@@ -33,6 +45,11 @@ import {
   unitFolders,
   type ImportEdge,
 } from "../diagrams/structure";
+import {
+  DIRECTION_LISTS,
+  directionOf,
+  type DirectionLists,
+} from "./direction";
 
 const MODULES_ROOT = "src/modules/";
 const DOOR_FILE = "/index.ts";
@@ -42,10 +59,27 @@ A `.ts` file in a `components/` folder is a component's helper: a route may impo
 */
 const COMPONENTS_FOLDER = "/components/";
 
-export const shapeKinds = ["fanOut", "doorWidth", "pastDoor", "files"] as const;
+export const shapeKinds = [
+  "fanOut",
+  "doorWidth",
+  "pastDoor",
+  "files",
+  "parentDoor",
+  "direction",
+] as const;
 export type ShapeKind = (typeof shapeKinds)[number];
 
 type Numbers = Readonly<Record<string, number>>;
+
+/**
+Modules whose fan-out is not measured: they compose the others.
+*/
+const OUTSIDE_FAN_OUT: ReadonlySet<string> = new Set(["dispatch"]);
+
+/**
+The one unit the direction is about.
+*/
+export const DIRECTION_UNIT = "modules";
 
 /**
 Each number, by the module or unit it is about (`feed`, `runs/parsers`).
@@ -61,6 +95,8 @@ export const BUDGETS: Readonly<Record<ShapeKind, number>> = {
   doorWidth: 45,
   pastDoor: 0,
   files: 50,
+  parentDoor: 0,
+  direction: 0,
 };
 
 const WORDS: Readonly<Record<ShapeKind, string>> = {
@@ -68,18 +104,24 @@ const WORDS: Readonly<Record<ShapeKind, string>> = {
   doorWidth: "the names its door exports",
   pastDoor: "the imports that go around its doors",
   files: "the files in its folder",
+  parentDoor: "the names its parent door exports",
+  direction: "the imports to cut so that no module reaches itself",
 };
 
 const pinned = z.record(z.string(), z.number().int().positive());
+const reasons = z.record(z.string(), z.string().min(1));
 
 /**
-`test/architecture/module-shape.json`: the numbers over budget.
+`test/architecture/module-shape.json`: the numbers over budget, and why some may stay.
 */
 export const pinsSchema = z.strictObject({
   fanOut: pinned,
   doorWidth: pinned,
   pastDoor: pinned,
   files: pinned,
+  parentDoor: pinned,
+  direction: pinned,
+  reasons: z.partialRecord(z.enum(shapeKinds), reasons),
 });
 export type Pins = z.infer<typeof pinsSchema>;
 
@@ -115,7 +157,11 @@ function sorted(numbers: ReadonlyMap<string, number>): Numbers {
 }
 
 function fanOut(facts: ShapeFacts, modules: readonly string[]): Numbers {
-  const imported = new Map(modules.map((name) => [name, new Set<string>()]));
+  const imported = new Map(
+    modules
+      .filter((name) => !OUTSIDE_FAN_OUT.has(name))
+      .map((name) => [name, new Set<string>()]),
+  );
   for (const edge of facts.imports) {
     const from = moduleOf(edge.from);
     const to = moduleOf(edge.to);
@@ -204,9 +250,26 @@ function files(
 }
 
 /**
-The four numbers, for every module and unit under `src/modules`.
+Each module that holds a sub-module, by the names on its own `index.ts`.
 */
-export function measureShape(facts: ShapeFacts): Shape {
+function parentDoor(doorWidths: Numbers, folders: readonly string[]): Numbers {
+  const units = folders.map((folder) => unitName(folder));
+  return Object.fromEntries(
+    Object.entries(doorWidths).filter(
+      ([unit]) =>
+        !unit.includes("/") &&
+        units.some((other) => other.startsWith(`${unit}/`)),
+    ),
+  );
+}
+
+/**
+The six numbers, for every module and unit under `src/modules`.
+*/
+export function measureShape(
+  facts: ShapeFacts,
+  lists: DirectionLists = DIRECTION_LISTS,
+): Shape {
   const modulePaths = facts.paths.filter((path) =>
     path.startsWith(MODULES_ROOT),
   );
@@ -214,11 +277,16 @@ export function measureShape(facts: ShapeFacts): Shape {
   const modules = folders
     .map((folder) => unitName(folder))
     .filter((unit) => !unit.includes("/"));
+  const doorWidths = doorWidth(facts, folders);
   return {
     fanOut: fanOut(facts, modules),
-    doorWidth: doorWidth(facts, folders),
+    doorWidth: doorWidths,
     pastDoor: pastDoor(facts, modules),
     files: files(modulePaths, folders),
+    parentDoor: parentDoor(doorWidths, folders),
+    direction: {
+      [DIRECTION_UNIT]: directionOf(facts.imports, folders, lists).cuts,
+    },
   };
 }
 
@@ -229,7 +297,7 @@ function overBudget(numbers: Numbers, budget: number): Record<string, number> {
 }
 
 /**
-What the pins file holds for this shape: each number over its budget.
+What the pins file holds for this shape: each number over its budget, and no reasons.
 */
 export function pinsOf(
   shape: Shape,
@@ -240,13 +308,35 @@ export function pinsOf(
     doorWidth: overBudget(shape.doorWidth, budgets.doorWidth),
     pastDoor: overBudget(shape.pastDoor, budgets.pastDoor),
     files: overBudget(shape.files, budgets.files),
+    parentDoor: overBudget(shape.parentDoor, budgets.parentDoor),
+    direction: overBudget(shape.direction, budgets.direction),
+    reasons: {},
   };
 }
 
-const REMEDY =
-  "Bring it back down, or propose a sub-module (design 240, CLAUDE.md); " +
+/**
+The kinds `npm run modules:pin` may add a pin to: a module split for the first time.
+*/
+const ADDABLE: ReadonlySet<ShapeKind> = new Set(["parentDoor"]);
+
+const OWNER_ONLY =
   "a pin is raised or added only on the owner's say, by hand in " +
   "test/architecture/module-shape.json.";
+const REMEDY = `Bring it back down, or propose a sub-module (design 240, CLAUDE.md); ${OWNER_ONLY}`;
+const REMEDIES: Readonly<Record<ShapeKind, string>> = {
+  fanOut: REMEDY,
+  doorWidth: REMEDY,
+  pastDoor: REMEDY,
+  files: REMEDY,
+  parentDoor:
+    "Export the name from the sub-module's door, and import it from there " +
+    `(design 240 rule 4); ${OWNER_ONLY}`,
+  direction:
+    "Cut the import: move the code to the module below, or hand the " +
+    "function in from a functions.ts (docs/architecture.md, Composing " +
+    "across modules). `npm run modules:pin -- --print` names the imports " +
+    `to cut; ${OWNER_ONLY}`,
+};
 const LOWER = "Run `npm run modules:pin` and commit the result.";
 
 interface Reading {
@@ -258,18 +348,26 @@ interface Reading {
 }
 
 /**
+What is wrong with a number nothing pins, if anything.
+*/
+function unpinnedProblem(reading: Reading, what: string): string | undefined {
+  const { kind, value, budget } = reading;
+  if (value <= budget) return undefined;
+  const remedy = ADDABLE.has(kind)
+    ? `A module split for the first time is pinned where it stands. ${LOWER}`
+    : REMEDIES[kind];
+  return `${what} is ${String(value)}, over the budget of ${String(budget)}, and not pinned. ${remedy}`;
+}
+
+/**
 What is wrong with one number, if anything.
 */
 function readingProblem(reading: Reading): string | undefined {
   const { kind, unit, value, pin, budget } = reading;
   const what = `${unit}: ${WORDS[kind]} (${kind})`;
-  if (pin === undefined) {
-    return value > budget
-      ? `${what} is ${String(value)}, over the budget of ${String(budget)}, and not pinned. ${REMEDY}`
-      : undefined;
-  }
+  if (pin === undefined) return unpinnedProblem(reading, what);
   if (value > pin) {
-    return `${what} rose from ${String(pin)} to ${String(value)}. ${REMEDY}`;
+    return `${what} rose from ${String(pin)} to ${String(value)}. ${REMEDIES[kind]}`;
   }
   if (value < pin) {
     return `${what} fell from ${String(pin)} to ${String(value)}: lower the pin so it cannot rise again. ${LOWER}`;
@@ -298,23 +396,56 @@ function kindProblems(
 }
 
 /**
+A reason left on a pin that is gone: it would explain the next pin of that name.
+*/
+function reasonProblems(pins: Pins): string[] {
+  return shapeKinds.flatMap((kind) =>
+    Object.keys(pins.reasons[kind] ?? {})
+      .filter((unit) => !Object.hasOwn(pins[kind], unit))
+      .map(
+        (unit) =>
+          `${unit}: the reason for its ${kind} pin is left, and the pin is not. ${LOWER}`,
+      ),
+  );
+}
+
+/**
  * Every way the shape and the pins disagree, as a sentence each. Empty
- * when each number is within its budget or exactly at its pin.
+ * when each number is within its budget or exactly at its pin, and each
+ * reason has its pin.
  */
 export function shapeProblems(
   shape: Shape,
   pins: Pins,
   budgets: Readonly<Record<ShapeKind, number>> = BUDGETS,
 ): string[] {
-  return shapeKinds.flatMap((kind) =>
-    kindProblems(kind, shape[kind], pins[kind], budgets[kind]),
+  return [
+    ...shapeKinds.flatMap((kind) =>
+      kindProblems(kind, shape[kind], pins[kind], budgets[kind]),
+    ),
+    ...reasonProblems(pins),
+  ];
+}
+
+/**
+The reasons whose pins `next` keeps.
+*/
+function keptReasons(reasons: Pins["reasons"], next: Pins): Pins["reasons"] {
+  return Object.fromEntries(
+    shapeKinds.flatMap((kind) => {
+      const kept = Object.entries(reasons[kind] ?? {}).filter(([unit]) =>
+        Object.hasOwn(next[kind], unit),
+      );
+      return kept.length === 0 ? [] : [[kind, Object.fromEntries(kept)]];
+    }),
   );
 }
 
 /**
  * The pins file for this shape, for `npm run modules:pin` to write.
- * Throws when writing it would raise a pin or add one: the command only
- * lowers. With no pins yet (`undefined`), it writes the first set.
+ * Throws when writing it would raise a pin, or add one of a kind not in
+ * `ADDABLE`: the command only lowers. A reason stays while its pin does.
+ * With no pins yet (`undefined`), it writes the first set.
  */
 export function repinned(
   shape: Shape,
@@ -323,9 +454,12 @@ export function repinned(
 ): Pins {
   const next = pinsOf(shape, budgets);
   if (pins === undefined) return next;
+  const ceiling = (kind: ShapeKind, unit: string): number =>
+    pins[kind][unit] ??
+    (ADDABLE.has(kind) ? Infinity : budgets[kind]);
   const raised = shapeKinds.flatMap((kind) =>
     Object.entries(next[kind])
-      .filter(([unit, value]) => value > (pins[kind][unit] ?? budgets[kind]))
+      .filter(([unit, value]) => value > ceiling(kind, unit))
       .map(
         ([unit, value]) =>
           `${unit}: ${WORDS[kind]} (${kind}) is ${String(value)}, and is pinned at ${String(pins[kind][unit] ?? "nothing")}`,
@@ -334,5 +468,5 @@ export function repinned(
   if (raised.length > 0) {
     throw new Error(`${raised.join("\n")}\n${REMEDY}`);
   }
-  return next;
+  return { ...next, reasons: keptReasons(pins.reasons, next) };
 }
