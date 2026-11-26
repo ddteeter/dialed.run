@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   imports,
@@ -26,6 +26,7 @@ import {
   oweInCore,
   weatherLater,
 } from "../queue-fakes";
+import { beforeNextWriteBatch } from "../before-write-batch";
 import validTcx from "./fixtures/valid.tcx?raw";
 
 /**
@@ -308,6 +309,58 @@ describe("a reminder for a run already uploaded is not written", () => {
     expect(rows).toHaveLength(2);
     expect(rows.filter((row) => !row.read)).toHaveLength(1);
     expect(await pairedAt(morning)).toBe(day + 9.5 * HOUR);
+  });
+});
+
+async function claimsOf(objectId: string) {
+  return coreDb()
+    .select()
+    .from(processedWebhookEvents)
+    .where(eq(processedWebhookEvents.objectId, objectId));
+}
+
+describe("two reminders racing for one upload (design 278)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("writes the reminder of the one whose pairing lost, and claims it", async () => {
+    const userId = newUlid();
+    const athleteId = await connect(userId);
+    const landedAt = 1_800_500_000;
+    const runId = await seedFileRun(userId, landedAt - HOUR, 3000);
+    const objectId = newUlid();
+    // The other reminder pairs the run between this one's read and its batch.
+    const gap = beforeNextWriteBatch(() =>
+      pairRunWith(coreDb(), runId, landedAt - 60),
+    );
+
+    await deliver({
+      type: "strava_reminder",
+      athleteId,
+      objectId,
+      aspectType: "create",
+      eventTime: landedAt,
+    });
+
+    expect(gap.fired()).toBe(true);
+    expect(await pairedAt(runId)).toBe(landedAt - 60);
+    expect(await reminders(userId)).toHaveLength(1);
+    expect(await claimsOf(objectId)).toHaveLength(1);
+  });
+
+  it("pairs a second unpaired upload instead, when there is one", async () => {
+    const userId = newUlid();
+    const athleteId = await connect(userId);
+    const landedAt = 1_800_600_000;
+    const taken = await seedFileRun(userId, landedAt - 2 * HOUR, 3000);
+    const next = await seedFileRun(userId, landedAt - HOUR, 3000);
+    beforeNextWriteBatch(() => pairRunWith(coreDb(), taken, landedAt - 60));
+
+    await landReminder(athleteId, landedAt);
+
+    expect(await pairedAt(next)).toBe(landedAt);
+    expect(await reminders(userId)).toStrictEqual([]);
   });
 });
 
