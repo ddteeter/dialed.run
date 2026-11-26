@@ -81,7 +81,7 @@ All in `scripts/modules/`, read by `test/architecture/module-shape.node.test.ts`
 ## Issues
 
 - Closes: #1043
-- Opens: ruling 6's watch issue (`kind:watch`), number in the PR.
+- Opens: #1056, ruling 6's watch issue (`kind:watch`).
 
 ## Open questions
 
