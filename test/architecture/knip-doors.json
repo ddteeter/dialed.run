@@ -62,7 +62,6 @@
     "PerformanceSummary",
     "PhotoSize",
     "PhotoUploadResult",
-    "TAP_LIST",
     "TapListSelection",
     "addFromTapList",
     "climateBands",
@@ -74,6 +73,7 @@
     "getOwnedItem",
     "photoSizes",
     "retireItem",
+    "tapList",
     "tapListSelectionSchema",
     "unretireItem",
     "updateItemWithProduct"
