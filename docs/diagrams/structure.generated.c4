@@ -230,7 +230,6 @@ model {
   cf.app.feed.entries -[wiring]-> cf.app.feed.attach
   cf.app.feed.entries -[imports]-> cf.app.feed.conditions
   cf.app.feed.entries -[wiring]-> cf.app.feed.following
-  cf.app.feed.entries -[imports]-> cf.app.feed.publicWeb
   cf.app.feed.entries -[imports]-> cf.app.notifications
   cf.app.feed.entries -[imports]-> cf.app.ops
   cf.app.feed.entries -[imports]-> cf.app.ops.owedEmail
@@ -240,7 +239,6 @@ model {
   cf.app.feed.following -[imports]-> cf.app.feed.conditions
   cf.app.feed.following -[imports]-> cf.app.feed.consensus
   cf.app.feed.following -[imports]-> cf.app.feed.entries
-  cf.app.feed.following -[imports]-> cf.app.feed.publicWeb
   cf.app.feed.following -[imports]-> cf.app.notifications
   cf.app.feed.following -[imports]-> cf.app.ops
   cf.app.feed.following -[imports]-> cf.app.safety

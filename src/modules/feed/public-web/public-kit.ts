@@ -40,7 +40,7 @@ import {
 } from "../../../lib/contracts/measures";
 import { precipClassOf } from "../../../lib/contracts/temperature";
 import { entryCacheTag } from "../../../lib/cache-tags";
-import { dayLabel, runZoneOf } from "../../../lib/dates";
+import { runDayOf } from "../../../lib/dates";
 import { ulidSchema } from "../../../lib/ids";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import {
@@ -115,7 +115,7 @@ export async function publicKitRead(
   const kit = {
     entryId: entry.id,
     handle: runner.username,
-    day: runDayOf(run.startedAt, conditions, runner.timeZone),
+    day: runDayOf(run.startedAt, conditions?.timeZone, runner.timeZone),
     ...conditionsOf(conditions, entry.verdict, units),
     ...(verdict !== undefined && { verdict }),
     ...statsOf(run, units),
@@ -126,21 +126,6 @@ export async function publicKitRead(
     kit: { ...kit, cardVersion: await versionOf(entryCardOf(kit)) },
     runnerId: entry.userId,
   };
-}
-
-/**
- * The run's day where it was run (R-96), never a time: its observation's
- * zone, else the runner's own place's, else UTC. The profile's kit rows
- * date their runs with it too. `format` is how the day is spelled: the
- * mono label's "Sat Aug 29" by default, or G's prose "Sat, Aug 29".
- */
-export function runDayOf(
-  startedAt: number,
-  conditions: Conditions | undefined,
-  runnerZone: string | null | undefined,
-  format: (epochSeconds: number, timeZone?: string) => string = dayLabel,
-): string {
-  return format(startedAt, runZoneOf(conditions?.timeZone, runnerZone));
 }
 
 /**

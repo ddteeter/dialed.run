@@ -19,6 +19,7 @@ import {
   viewerClockLabel,
   viewerDayTimeLabel,
   spanLabel,
+  runDayOf,
   runZoneOf,
 } from "../../src/lib/dates";
 
@@ -175,6 +176,39 @@ describe("runZoneOf (#925)", () => {
 
   it("is none, which reads as UTC, when neither is known", () => {
     expect(runZoneOf(undefined, undefined)).toBeUndefined();
+  });
+});
+
+describe("runDayOf (R-96)", () => {
+  // 02:00 UTC on Saturday 29 August 2026: still Friday in Chicago, already
+  // Saturday in Tokyo and in UTC, so each zone reads its own day.
+  const lateFriday = Date.UTC(2026, 7, 29, 2) / 1000;
+
+  it("reads the day where the run was observed, whatever its runner's zone", () => {
+    const day = runDayOf(lateFriday, "America/Chicago", "Asia/Tokyo");
+    expect(day).toBe(dayLabel(lateFriday, "America/Chicago"));
+    expect(day).not.toBe(dayLabel(lateFriday, "Asia/Tokyo"));
+  });
+
+  it("falls back to its runner's saved place, and then to UTC", () => {
+    expect(runDayOf(lateFriday, undefined, "America/Chicago")).toBe(
+      dayLabel(lateFriday, "America/Chicago"),
+    );
+    expect(runDayOf(lateFriday, undefined, undefined)).toBe(dayLabel(lateFriday));
+    expect(dayLabel(lateFriday)).not.toBe(
+      dayLabel(lateFriday, "America/Chicago"),
+    );
+  });
+
+  it("spells the day in the format it is given", () => {
+    const prose = runDayOf(
+      lateFriday,
+      "America/Chicago",
+      undefined,
+      proseDayLabel,
+    );
+    expect(prose).toBe(proseDayLabel(lateFriday, "America/Chicago"));
+    expect(prose).not.toBe(dayLabel(lateFriday, "America/Chicago"));
   });
 });
 

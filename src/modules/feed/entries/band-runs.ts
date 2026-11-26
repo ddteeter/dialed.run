@@ -8,12 +8,11 @@ import {
   wardrobeItems,
 } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
-import { monthDayLabel } from "../../../lib/dates";
+import { monthDayLabel, runDayOf } from "../../../lib/dates";
 import { ulidSchema } from "../../../lib/ids";
 import { viewerZone } from "../../notifications";
 import { verdictedEntriesInBand } from "./entries";
 import type { InBandEntry } from "./entries";
-import { runDayOf } from "../public-web";
 
 /**
  * The band history on A2's and A3's desk rails (round 25): the runner's
@@ -73,7 +72,7 @@ export async function recentRunsInBand(
     ...entry,
     day: runDayOf(
       startedAt.get(entry.id) ?? 0,
-      entry.conditions,
+      entry.conditions.timeZone,
       home.homeZone,
       monthDayLabel,
     ),
