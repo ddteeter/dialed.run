@@ -83,7 +83,7 @@ own adapter writes are not drizzle calls in our code and are not seen.
 ## Issues
 
 - Closes #1044.
-- Opens: one issue for the writers no lane moves (`closet` deleting
+- Opens: #1063, the writers no 261 lane moves (`closet` deleting
   `outfit_entry_items`; `notifications` written by four other modules).
 
 ## Open questions
