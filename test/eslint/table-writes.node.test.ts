@@ -8,7 +8,7 @@
  * In the `node` project because ESLint reads the config from disk.
  */
 import { ESLint } from "eslint";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { areaOf } from "../../eslint/table-writes";
 
@@ -44,6 +44,18 @@ async function messagesIn(
   });
   return (result?.messages ?? []).map((message) => message.message);
 }
+
+/**
+ * The first lint builds the typed program for the whole repo, which took
+ * 20s on CI's runner (and the harness's deadline is 20s), so it runs once
+ * here, under a deadline of its own, as `blur-detect`'s cold model load
+ * does. Every probe after it reuses the program.
+ */
+const COLD_PROGRAM_MS = 120_000;
+
+beforeAll(async () => {
+  await messagesIn("feed", "export {};");
+}, COLD_PROGRAM_MS);
 
 const NOT_LISTED =
   /^`(\w+)` writes `(\w+)` \((\w+)\), which the owner map gives to `(\w+)`/u;
