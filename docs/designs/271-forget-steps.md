@@ -125,7 +125,7 @@ When this is built, these views change and their lane redraws them:
 ## Issues
 
 - Closes: #1067
-- Opens: the owner question below, in Needs owner. Folds in #1055.
+- Opens: #1068, the owner question below, in Needs owner. Folds in #1055.
 
 ## Questions for the owner
 
