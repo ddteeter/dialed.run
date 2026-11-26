@@ -161,7 +161,6 @@ model {
   cf.app.account.purge -[imports]-> cf.app.account.access
   cf.app.account.purge -[imports]-> cf.app.account.data
   cf.app.account.purge -[imports]-> cf.app.email
-  cf.app.account.purge -[imports]-> cf.app.enrichment
   cf.app.account.purge -[imports]-> cf.app.feed
   cf.app.account.purge -[imports]-> cf.app.notifications
   cf.app.account.purge -[imports]-> cf.app.ops
