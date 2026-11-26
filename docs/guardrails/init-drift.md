@@ -35,7 +35,9 @@ list is not expected: stop and ask the owner.
   one (owner, 2026-11-23). It runs them under the machine-wide gate lock,
   re-entering itself with `GUARDRAILS_PREFLIGHT=1`, and releases the lock
   before the gate takes it, so two full test suites never run side by side
-  (owner, 2026-11-24).
+  (owner, 2026-11-24). It takes that lock through `guardrails lock --`
+  rather than a raw `lockf`, so a gate queued behind it names it and the
+  hold is logged (owner, 2026-11-26, #1054).
 - **`.github/workflows/guardrails.yml`** names a full version tag on every
   action, locked in `actions.lock` (D-182), and has a concurrency group, a
   Chromium install and a MediaPipe staging step. The template has floating

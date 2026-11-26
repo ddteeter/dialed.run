@@ -40,11 +40,12 @@ describe("what a forced guardrails init would remove", () => {
 
   it("runs the preflight steps under the gate lock, released before the gate", () => {
     const gate = prePush.indexOf('node "$cli" gate --mode=push');
-    const locked = prePush.indexOf('lockf -k "$lock" $unset_git sh "$0"');
-    expect(prePush).toContain('lock="$HOME/.guardrails-gate.lock"');
+    const locked = prePush.indexOf(
+      'node "$cli" lock -- $unset_git sh "$0" </dev/null || exit 1',
+    );
     expect(locked).toBeGreaterThan(-1);
     expect(locked).toBeLessThan(gate);
-    expect(prePush).toContain('flock "$lock" $unset_git sh "$0"');
+    expect(prePush).not.toMatch(/\b(lockf|flock) /);
   });
 
   it("runs none of them for a push that only deletes refs", () => {
