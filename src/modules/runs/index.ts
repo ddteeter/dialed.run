@@ -12,6 +12,13 @@ export {
   type ImportJob,
   type ReminderJob,
 } from "./queue-messages";
+// The writes another module asks of `runs` (design 275): the Desk's two
+// retries and a kit's pick of effort.
+export {
+  retryFailedImport,
+  retryFailedWeather,
+  runEffortStatement,
+} from "./retries";
 export { stravaApiFromEnv } from "./strava";
 export { runsAwaitingVerdict, runsWithEntry } from "./awaiting-verdict";
 export { runCountsOf } from "./counts";

@@ -7,7 +7,7 @@
  * marks their own status (`db/gave-up.ts`). This file reads it and
  * acts on it; it never writes a failure.
  */
-import { and, desc, eq, getTableColumns, inArray, lte } from "drizzle-orm";
+import { desc, eq, getTableColumns, inArray, lte } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { sql } from "drizzle-orm";
 
@@ -16,7 +16,6 @@ import {
   brands,
   gaveUp,
   imports,
-  outbox,
   products,
   productSnapshots,
   runs,
@@ -28,11 +27,11 @@ import { chunked, IN_LIST_CHUNK } from "../../../lib/chunked";
 import type { GaveUpKind } from "../../../lib/contracts/gave-up";
 import { clockLabel, monthDayLabel } from "../../../lib/dates";
 import { firstColumnWhere, firstRowWhere } from "../../../lib/sql/keyed-read";
-import { dedupeKeyFor } from "../../../lib/sql/outbox";
 import { reextract, retryFailedEnrichment } from "../../enrichment";
 import {
-  importJob,
   reminderFromSubject,
+  retryFailedImport,
+  retryFailedWeather,
   type ImportJob,
   type ReminderJob,
 } from "../../runs";
@@ -343,84 +342,27 @@ async function retryEnrichment(
 }
 
 /**
- * Weather goes back to `pending`, which is the hourly cron's own marker
- * (law 8c, reconciliation): no message to send, and nothing lost if the
- * Desk's request dies after the batch.
+ * Weather goes back to `pending` (`runs`' `retryFailedWeather`), with the
+ * row settled in its batch.
  */
-async function retryWeather(row: Row, deps: RetryDeps): Promise<RetryOutcome> {
-  const { db } = deps;
-  const run = await firstColumnWhere(
-    db,
-    runs,
-    runs.id,
-    eq(runs.id, row.subjectId),
+function retryWeather(row: Row, deps: RetryDeps): Promise<RetryOutcome> {
+  return retryFailedWeather(deps.db, row.subjectId, () =>
+    gaveUpClear(deps.db, "weather", row.subjectId),
   );
-  const stillFailed = and(
-    eq(runs.id, row.subjectId),
-    eq(runs.weatherStatus, "failed"),
-  );
-  await db.batch([
-    db.update(runs).set({ weatherStatus: "pending" }).where(stillFailed),
-    gaveUpClear(db, "weather", row.subjectId),
-  ]);
-  return run === undefined ? "gone" : "retried";
 }
 
 /**
- * An import goes back to `pending`, its owed file deletion is cancelled —
- * the file is to be read again, and reading it owes its deletion (D-116) — and
- * `import` is sent. A send that fails leaves the import `pending`, which
- * the stalled-import sweep re-dispatches, so the send's failure is
- * reported rather than thrown. A retry that fails again re-owes the
- * deletion, as every failure does.
+ * An import goes back to `pending` and is sent again (`runs`'
+ * `retryFailedImport`), with the row settled in its batch, or alone when
+ * the import or its file has gone.
  */
-async function retryImport(row: Row, deps: RetryDeps): Promise<RetryOutcome> {
-  const { db } = deps;
-  const importRow = await firstRowWhere(
-    db,
-    imports,
-    eq(imports.id, row.subjectId),
-  );
-  // An import whose file has gone — its 30-day expiry paid, or the
-  // account purged — cannot be read again: re-sending it would fail at
-  // once and send its runner a second, misleading failure notice. So the
-  // row goes, and nothing is sent.
-  if (
-    importRow === undefined ||
-    !(await deps.importFileExists(importRow.r2Key))
-  ) {
-    await gaveUpClear(db, "import", row.subjectId);
-    return "gone";
-  }
-  const expiry = dedupeKeyFor({
-    kind: "import_file_expire",
-    payload: { userId: importRow.userId, key: importRow.r2Key },
+function retryImport(row: Row, deps: RetryDeps): Promise<RetryOutcome> {
+  return retryFailedImport(deps.db, row.subjectId, {
+    settle: () => gaveUpClear(deps.db, "import", row.subjectId),
+    queue: deps.importsQueue,
+    importFileExists: deps.importFileExists,
+    report: captureException,
   });
-  const stillFailed = and(
-    eq(imports.id, importRow.id),
-    eq(imports.status, "failed"),
-  );
-  const owedExpiry = and(
-    eq(outbox.kind, "import_file_expire"),
-    eq(outbox.dedupeKey, expiry),
-  );
-  await db.batch([
-    db
-      .update(imports)
-      .set({ status: "pending", failureReason: sql`NULL` })
-      .where(stillFailed),
-    db.delete(outbox).where(owedExpiry),
-    gaveUpClear(db, "import", row.subjectId),
-  ]);
-  try {
-    await deps.importsQueue.send(importJob(importRow.id));
-  } catch (error) {
-    captureException(error, {
-      surface: "desk-retry-import",
-      importId: importRow.id,
-    });
-  }
-  return "retried";
 }
 
 /**
