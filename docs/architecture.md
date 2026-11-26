@@ -185,6 +185,31 @@ Rules: modules import foundation freely; cross-module imports go through the
 target module's `index.ts`; only `env/` reads bindings; route files import
 modules but are imported by nothing; no cycles.
 
+**The modules have a direction** (D-207, design 262): no module reaches
+itself through what it imports. `no-circular` holds cycles between files,
+and that stops holding cycles between modules once an importer takes a
+sub-module's door instead of the parent's. So the module ratchet
+(`test/architecture/module-shape.node.test.ts`) counts the fewest imports
+to cut so that the modules fall into one order, pinned and only falling.
+Components and type imports count. Each `functions.ts` and the
+composers (the dispatch and the purge) are outside it, because joining
+the modules is their job, and the floor units count apart from their
+parents, so a module `ops` or `safety` imports may still import them.
+Both lists are `DIRECTION_LISTS` in `scripts/modules/direction.ts`. `npm run modules:pin -- --print` names the imports to cut. The
+`modules` view above draws service code only, so a component's import the
+direction counts may be an arrow it does not show.
+
+**`safety` stays under the content it moderates** (design 261 ruling 6).
+The arrow runs `feed` → `safety` (above, "One rule decides public
+visibility"), and nothing in `safety` imports `feed`, `closet` or
+`products`. The cost is five of Moderation's facts kept on other areas'
+rows and written by `safety`: `outfit_entries.moderation_status`,
+`entry_photos.screen_status`, `wardrobe_items.visibility`,
+`products.status` and `user_profiles.banned_at` (design 260). The owner
+map of table writers lists them as `safety`'s own, and a Desk decision
+on content is carried out in `feed/moderation`. #1056 watches for the
+day this stops being the right cut.
+
 `lib` is foldered by where its code may run, and two dependency-cruiser
 rules hold the split (R-50's bug class, made visible in the path):
 `lib/contracts/` (domain truth and derived tables, behind the
