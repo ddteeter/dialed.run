@@ -15,7 +15,7 @@ vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
 /**
  * Screen O3, against design round 6 §AA's six rules.
  *
- * The fixture is synthetic rather than the real `TAP_LIST`, and on purpose
+ * The fixture is synthetic rather than the real `tapList()`, and on purpose
  * twice over. The table is 18 rows today and 24 when R-49 closes, so a
  * test built on it would have to be rewritten to add a garment; and the
  * screen's whole contract is that it works *at any list length* — the fold
