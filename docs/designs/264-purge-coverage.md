@@ -57,7 +57,7 @@ outbox payload) are not columns holding an id; `purge.test.ts` covers them.
 ## Issues
 
 - Closes: #1045
-- Opens: a Needs owner issue for the exemptions no decision covers yet
+- Opens: #1055 (Needs owner), for the exemptions no decision covers yet
   (operators' ids on the Desk's records; a settled copyright hold's
   `owner_id`). The test exempts them pointing at it, so the build stays
   green while the question is open.
