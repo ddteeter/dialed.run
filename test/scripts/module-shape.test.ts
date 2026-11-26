@@ -73,7 +73,22 @@ function withClientDoor(
   };
 }
 
-const NO_PINS: Pins = { fanOut: {}, doorWidth: {}, pastDoor: {}, files: {} };
+/**
+The fixture has no floor and no composers: `module-direction.test.ts` tests those.
+*/
+function measure(shapeFacts: ShapeFacts): Shape {
+  return measureShape(shapeFacts, { composers: [], floor: [] });
+}
+
+const NO_PINS: Pins = {
+  fanOut: {},
+  doorWidth: {},
+  pastDoor: {},
+  files: {},
+  parentDoor: {},
+  direction: {},
+  reasons: {},
+};
 
 function shapeWith(overrides: Partial<Shape>): Shape {
   return {
@@ -81,13 +96,15 @@ function shapeWith(overrides: Partial<Shape>): Shape {
     doorWidth: { feed: 10 },
     pastDoor: { feed: 0 },
     files: { feed: 20 },
+    parentDoor: {},
+    direction: { modules: 0 },
     ...overrides,
   };
 }
 
 describe("measureShape: fan-out", () => {
   it("counts each other module once, from a sub-module's files too", () => {
-    const shape = measureShape(
+    const shape = measure(
       facts([
         [`${M}/feed/redirect.ts`, `${M}/safety/index.ts`],
         [`${M}/feed/functions.ts`, `${M}/safety/index.ts`],
@@ -102,9 +119,71 @@ describe("measureShape: fan-out", () => {
   });
 });
 
+describe("measureShape: fan-out of the dispatch", () => {
+  it("is not measured: composing every module is its job (design 261 ruling 10)", () => {
+    const base = facts([[`${M}/feed/redirect.ts`, `${M}/safety/index.ts`]]);
+    const withDispatch: ShapeFacts = {
+      ...base,
+      paths: [...base.paths, `${M}/dispatch/index.ts`, `${M}/dispatch/run.ts`],
+      imports: [
+        ...base.imports,
+        { from: `${M}/dispatch/run.ts`, to: `${M}/feed/index.ts` },
+        { from: `${M}/dispatch/run.ts`, to: `${M}/ops/index.ts` },
+      ],
+      doorNames: new Map([...base.doorNames, [`${M}/dispatch/index.ts`, []]]),
+    };
+
+    const shape = measure(withDispatch);
+
+    expect(shape.fanOut).toStrictEqual({ feed: 1, ops: 0, safety: 0 });
+    expect(shape.files.dispatch).toBe(2);
+  });
+});
+
+describe("measureShape: parent door", () => {
+  it("is the names on the door of each module that holds a sub-module, and no other", () => {
+    const shape = measure(
+      facts([], {
+        [`${M}/feed/index.ts`]: ["a", "b"],
+        [`${M}/feed/entries/index.ts`]: ["c"],
+        [`${M}/safety/index.ts`]: ["d"],
+      }),
+    );
+
+    expect(shape.parentDoor).toStrictEqual({ feed: 2 });
+  });
+});
+
+describe("measureShape: direction", () => {
+  it("is the imports to cut so that no module reaches itself", () => {
+    const shape = measure(
+      facts([
+        [`${M}/feed/redirect.ts`, `${M}/safety/index.ts`],
+        [`${M}/feed/entries/retract.ts`, `${M}/safety/index.ts`],
+        [`${M}/safety/visibility.ts`, `${M}/feed/index.ts`],
+      ]),
+    );
+
+    expect(shape.direction).toStrictEqual({ modules: 1 });
+  });
+
+  it("reads the lists it is given", () => {
+    const cycle = facts([
+      [`${M}/feed/redirect.ts`, `${M}/safety/index.ts`],
+      [`${M}/safety/visibility.ts`, `${M}/feed/entries/index.ts`],
+    ]);
+
+    expect(measure(cycle).direction).toStrictEqual({ modules: 1 });
+    expect(
+      measureShape(cycle, { composers: [], floor: ["feed/entries"] })
+        .direction,
+    ).toStrictEqual({ modules: 0 });
+  });
+});
+
 describe("measureShape: door width", () => {
   it("is the names each index.ts exports, a sub-module's under its own name", () => {
-    const shape = measureShape(
+    const shape = measure(
       facts([], {
         [`${M}/feed/index.ts`]: ["a", "b"],
         [`${M}/feed/entries/index.ts`]: ["c"],
@@ -120,7 +199,7 @@ describe("measureShape: door width", () => {
   });
 
   it("counts a module's client.ts as a door of its own, by its path", () => {
-    const shape = measureShape(withClientDoor([], ["x", "y", "z"]));
+    const shape = measure(withClientDoor([], ["x", "y", "z"]));
 
     expect(shape.doorWidth).toStrictEqual({
       feed: 0,
@@ -134,7 +213,7 @@ describe("measureShape: door width", () => {
   it("refuses a door nobody read, rather than counting it as empty", () => {
     const unread = { ...facts([]), doorNames: new Map<string, string[]>() };
 
-    expect(() => measureShape(unread)).toThrow(
+    expect(() => measure(unread)).toThrow(
       new Error(`${M}/feed/entries/index.ts was not read`),
     );
   });
@@ -142,7 +221,7 @@ describe("measureShape: door width", () => {
 
 describe("measureShape: past the door", () => {
   it("counts an import from outside the module to a file that is no door", () => {
-    const shape = measureShape(
+    const shape = measure(
       facts([
         ["src/server.ts", `${M}/feed/entries/retract.ts`],
         [`${M}/safety/visibility.ts`, `${M}/feed/redirect.ts`],
@@ -154,7 +233,7 @@ describe("measureShape: past the door", () => {
   });
 
   it("does not count a door, the module's own or a sub-module's", () => {
-    const shape = measureShape(
+    const shape = measure(
       facts([
         ["src/server.ts", `${M}/feed/index.ts`],
         ["src/server.ts", `${M}/feed/entries/index.ts`],
@@ -166,7 +245,7 @@ describe("measureShape: past the door", () => {
   });
 
   it("counts a route's import of a file that is no door (design 255)", () => {
-    const shape = measureShape(
+    const shape = measure(
       facts([
         ["src/routes/feed/index.tsx", `${M}/feed/redirect.ts`],
         ["src/routes/feed/index.tsx", `${M}/feed/entries/retract.ts`],
@@ -177,7 +256,7 @@ describe("measureShape: past the door", () => {
   });
 
   it("does not count a module's client.ts, nor a helper in a components/ folder", () => {
-    const shape = measureShape(
+    const shape = measure(
       withClientDoor([
         ["src/routes/feed/index.tsx", CLIENT],
         ["src/routes/feed/index.tsx", `${M}/feed/components/feed-rows.ts`],
@@ -189,7 +268,7 @@ describe("measureShape: past the door", () => {
   });
 
   it("counts a client.ts deeper than a module's own folder as a plain file", () => {
-    const shape = measureShape(
+    const shape = measure(
       withClientDoor([["src/routes/feed/index.tsx", NESTED_CLIENT]]),
     );
 
@@ -197,7 +276,7 @@ describe("measureShape: past the door", () => {
   });
 
   it("does not count wiring, nor the module's own", () => {
-    const shape = measureShape(
+    const shape = measure(
       facts([
         ["src/server.ts", `${M}/feed/functions.ts`],
         ["src/server.ts", `${M}/feed/components/Feed.tsx`],
@@ -212,7 +291,7 @@ describe("measureShape: past the door", () => {
 
 describe("measureShape: files", () => {
   it("counts a file for the deepest unit that holds it", () => {
-    const shape = measureShape(facts([]));
+    const shape = measure(facts([]));
 
     expect(shape.files).toStrictEqual({
       feed: 4,
@@ -225,7 +304,7 @@ describe("measureShape: files", () => {
   it("refuses a file in a folder with no index.ts above it", () => {
     const stray = { ...facts([]), paths: [...PATHS, `${M}/stray/thing.ts`] };
 
-    expect(() => measureShape(stray)).toThrow(
+    expect(() => measure(stray)).toThrow(
       new Error(
         `${M}/stray/thing.ts is in no module: its folder has no index.ts`,
       ),
@@ -247,6 +326,9 @@ describe("pinsOf", () => {
       doorWidth: { safety: BUDGETS.doorWidth + 1 },
       pastDoor: { ops: BUDGETS.pastDoor + 1 },
       files: { feed: BUDGETS.files + 1 },
+      parentDoor: {},
+      direction: {},
+      reasons: {},
     });
   });
 
@@ -257,14 +339,36 @@ describe("pinsOf", () => {
       pastDoor: { feed: 3 },
       files: { feed: 3 },
     });
-    const budgets = { fanOut: 2, doorWidth: 3, pastDoor: 4, files: 5 };
+    const budgets = {
+      fanOut: 2,
+      doorWidth: 3,
+      pastDoor: 4,
+      files: 5,
+      parentDoor: 6,
+      direction: 7,
+    };
 
     expect(pinsOf(shape, budgets)).toStrictEqual({
+      ...NO_PINS,
       fanOut: { feed: 3 },
-      doorWidth: {},
-      pastDoor: {},
-      files: {},
     });
+  });
+});
+
+describe("pinsOf: parent doors and the direction", () => {
+  it("pins every parent door and any direction over 0", () => {
+    const shape = shapeWith({
+      parentDoor: { feed: 1 },
+      direction: { modules: 1 },
+    });
+
+    expect(pinsOf(shape)).toStrictEqual({
+      ...NO_PINS,
+      parentDoor: { feed: 1 },
+      direction: { modules: 1 },
+    });
+    expect(BUDGETS.parentDoor).toBe(0);
+    expect(BUDGETS.direction).toBe(0);
   });
 });
 
@@ -340,12 +444,83 @@ describe("shapeProblems", () => {
       pastDoor: { feed: 3 },
       files: { feed: 3 },
     });
-    const budgets = { fanOut: 9, doorWidth: 9, pastDoor: 2, files: 9 };
+    const budgets = {
+      fanOut: 9,
+      doorWidth: 9,
+      pastDoor: 2,
+      files: 9,
+      parentDoor: 9,
+      direction: 9,
+    };
     const pins = { ...NO_PINS, files: { feed: 2 } };
 
     expect(shapeProblems(shape, pins, budgets)).toStrictEqual([
       `feed: the imports that go around its doors (pastDoor) is 3, over the budget of 2, and not pinned. ${REMEDY}`,
       `feed: the files in its folder (files) rose from 2 to 3. ${REMEDY}`,
+    ]);
+  });
+});
+
+describe("shapeProblems: the new kinds and the reasons", () => {
+  const OWNER_ONLY =
+    "a pin is raised or added only on the owner's say, by hand in " +
+    "test/architecture/module-shape.json.";
+  const LOWER = "Run `npm run modules:pin` and commit the result.";
+
+  it("asks for a pin on a module split for the first time", () => {
+    const shape = shapeWith({ parentDoor: { feed: 3 } });
+
+    expect(shapeProblems(shape, NO_PINS)).toStrictEqual([
+      `feed: the names its parent door exports (parentDoor) is 3, over the budget of 0, and not pinned. A module split for the first time is pinned where it stands. ${LOWER}`,
+    ]);
+  });
+
+  it("sends a parent door that rose to the sub-module's door", () => {
+    const shape = shapeWith({ parentDoor: { feed: 4 } });
+
+    expect(
+      shapeProblems(shape, { ...NO_PINS, parentDoor: { feed: 3 } }),
+    ).toStrictEqual([
+      `feed: the names its parent door exports (parentDoor) rose from 3 to 4. Export the name from the sub-module's door, and import it from there (design 240 rule 4); ${OWNER_ONLY}`,
+    ]);
+  });
+
+  it("names the remedy when the direction rises, and lets it sit at its pin", () => {
+    const shape = shapeWith({ direction: { modules: 4 } });
+
+    expect(
+      shapeProblems(shape, { ...NO_PINS, direction: { modules: 3 } }),
+    ).toStrictEqual([
+      "modules: the imports to cut so that no module reaches itself (direction) rose from 3 to 4. " +
+        "Cut the import: move the code to the module below, or hand the function in from a " +
+        "functions.ts (docs/architecture.md, Composing across modules). " +
+        `\`npm run modules:pin -- --print\` names the imports to cut; ${OWNER_ONLY}`,
+    ]);
+    expect(
+      shapeProblems(shape, { ...NO_PINS, direction: { modules: 4 } }),
+    ).toStrictEqual([]);
+  });
+
+  it("refuses a direction over 0 that nothing pins, on the owner's say", () => {
+    const shape = shapeWith({ direction: { modules: 1 } });
+
+    expect(shapeProblems(shape, NO_PINS)).toStrictEqual([
+      expect.stringMatching(
+        /^modules: .* \(direction\) is 1, over the budget of 0, and not pinned\. Cut the import/u,
+      ),
+    ]);
+  });
+
+  it("lets a reason sit beside its pin, and fails one whose pin is gone", () => {
+    const shape = shapeWith({ fanOut: { feed: 9 } });
+    const pins: Pins = {
+      ...NO_PINS,
+      fanOut: { feed: 9 },
+      reasons: { fanOut: { feed: "a ceiling" }, files: { feed: "gone" } },
+    };
+
+    expect(shapeProblems(shape, pins)).toStrictEqual([
+      `feed: the reason for its files pin is left, and the pin is not. ${LOWER}`,
     ]);
   });
 });
@@ -396,6 +571,53 @@ describe("repinned", () => {
   });
 });
 
+describe("repinned: parent doors and reasons", () => {
+  it("adds a parent-door pin where there was none, and only that kind", () => {
+    const split = shapeWith({ parentDoor: { feed: 5 } });
+
+    expect(repinned(split, NO_PINS)).toStrictEqual({
+      ...NO_PINS,
+      parentDoor: { feed: 5 },
+    });
+    expect(() =>
+      repinned(shapeWith({ direction: { modules: 1 } }), NO_PINS),
+    ).toThrow(/^modules: .* \(direction\) is 1, and is pinned at nothing\n/u);
+  });
+
+  it("refuses to raise a parent-door pin", () => {
+    const pins = { ...NO_PINS, parentDoor: { feed: 4 } };
+
+    expect(() =>
+      repinned(shapeWith({ parentDoor: { feed: 5 } }), pins),
+    ).toThrow(/^feed: .* \(parentDoor\) is 5, and is pinned at 4\n/u);
+  });
+
+  it("keeps a reason while its pin stays, and drops it with the pin", () => {
+    const pins: Pins = {
+      ...NO_PINS,
+      fanOut: { feed: 10, ops: 9 },
+      reasons: { fanOut: { feed: "a ceiling", ops: "another" } },
+    };
+    const shape = shapeWith({ fanOut: { feed: 9, ops: 7 } });
+
+    expect(repinned(shape, pins)).toStrictEqual({
+      ...NO_PINS,
+      fanOut: { feed: 9 },
+      reasons: { fanOut: { feed: "a ceiling" } },
+    });
+  });
+
+  it("drops a kind whose reasons are all gone", () => {
+    const pins: Pins = {
+      ...NO_PINS,
+      files: { feed: 60 },
+      reasons: { files: { feed: "gone soon" } },
+    };
+
+    expect(repinned(shapeWith({}), pins).reasons).toStrictEqual({});
+  });
+});
+
 describe("pinsSchema", () => {
   it("reads the file's shape and refuses anything else in it", () => {
     expect(pinsSchema.parse(NO_PINS)).toStrictEqual(NO_PINS);
@@ -406,5 +628,17 @@ describe("pinsSchema", () => {
     expect(
       pinsSchema.safeParse({ ...NO_PINS, files: { feed: 1.5 } }).success,
     ).toBe(false);
+    expect(
+      pinsSchema.safeParse({ ...NO_PINS, reasons: { lines: { feed: "x" } } })
+        .success,
+    ).toBe(false);
+    expect(
+      pinsSchema.safeParse({ ...NO_PINS, reasons: { fanOut: { feed: "" } } })
+        .success,
+    ).toBe(false);
+    expect(
+      pinsSchema.parse({ ...NO_PINS, reasons: { fanOut: { feed: "why" } } })
+        .reasons,
+    ).toStrictEqual({ fanOut: { feed: "why" } });
   });
 });

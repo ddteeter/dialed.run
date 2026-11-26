@@ -94,6 +94,13 @@ src/
   `src/server.ts` because a barrel cannot export it. A new top-level
   module is for code that belongs to no area: ask the owner. A pin is
   never raised to pass the test.
+- **The modules have a direction** (D-207): no module reaches itself
+  through what it imports, components and type imports included. The
+  module ratchet counts the fewest imports to cut, and the count only
+  falls; `npm run modules:pin -- --print` names them. Each `functions.ts`
+  and the composers are outside it, and the floor units count apart from
+  their parents, so any module may import them: both lists are in
+  `scripts/modules/direction.ts`. A floor unit imports no feature module.
 - **A component never imports a server function.** `modules/*/functions.ts`
   pulls TanStack Start's virtual entry, so anything that reaches it cannot be
   imported by a test. Routes wire server functions and pass them down as props.
