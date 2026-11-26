@@ -20,6 +20,7 @@ todos.json
 .guardrails/state/*
 !.guardrails/state/recurrence.json
 reports/mutation/
+reports/guardrails-run.json
 reports/stryker-incremental.json
 reports/stryker-incremental.fingerprint.json
 .stryker-tmp/
