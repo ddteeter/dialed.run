@@ -50,6 +50,26 @@ cite "CLAUDE.md law N" or "§D1 discipline" mean the sections below.
   not — when you move a statement into a batch, the `await` is what you
   delete, and forgetting the array entry silently drops the write.
 
+## Which module writes which table
+
+`eslint/table-owners.ts` maps every table to its owner module and lists
+every other module that writes it, with what it writes (design 261 ruling
+5, design 263). The lint rule `dialed/table-writes` fails an `insert`,
+`update` or `delete` the map does not list, for the module the call is in.
+
+- **To write another module's table, call a function that module exports.**
+  If it has to be your write, add it to the map in the same PR: the kind,
+  or for an update the columns, and a `why`. A column group (`safety`'s
+  status columns on the rows it moderates, ruling 6) lets a module update
+  only those columns.
+- **A move edits the map.** The old writer's line goes, the new one's comes.
+- **The rule reads the table from its type.** An array of tables is checked
+  table by table. A helper that takes the table as a parameter
+  (`didClaim`) is checked where it is called, in the caller's module. Don't
+  annotate a table as `SQLiteTable` outside a helper's parameter (use
+  `as const`), and don't hand a writing helper on as a value: the rule
+  reports both, since it can't see the table.
+
 ## Trust boundaries: parse, don't validate
 
 Everything from outside — form data, search params, webhook payloads, weather

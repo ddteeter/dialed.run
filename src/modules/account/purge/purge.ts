@@ -39,7 +39,7 @@ import {
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
-import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import { account, session, user, verification } from "../../../db/schema-auth";
 import {
@@ -677,14 +677,14 @@ async function deleteAccountRows(
   // the same way, on a pair rather than a bare table. Order is load-bearing
   // (comment at the call site): the profile, then Better Auth's rows, then
   // the account and the claim, last.
-  const namedByOwnColumn: readonly (readonly [SQLiteTable, SQLiteColumn])[] = [
+  const namedByOwnColumn = [
     [userProfiles, userProfiles.userId],
     [verification, verification.value],
     [session, session.userId],
     [account, account.userId],
     [user, user.id],
     [accountDeletions, accountDeletions.userId],
-  ];
+  ] as const;
   await db.batch([
     db.delete(follows).where(eitherFollow),
     db.delete(blocks).where(eitherBlock),

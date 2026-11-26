@@ -75,9 +75,10 @@ own adapter writes are not drizzle calls in our code and are not seen.
   another file (`didClaim`) is checked at the call; `SQLiteTable` erasure,
   unknown columns and a helper passed as a value each report; an R2 or
   `Set` delete is ignored.
-- `test/eslint/table-owners.node.test.ts` (node): every `Area` is a real
-  folder, every table is a real table (tsc holds the rest), and every
-  non-owner writer has a `why`.
+- `test/eslint/table-owners.node.test.ts` (node): the map's keys are the
+  schema's tables at run time, every module it names is a real folder, and
+  no owner is also listed among its table's other writers. tsc holds the
+  columns and the required `why`.
 - `npm run lint` stays green over `src`.
 
 ## Issues
