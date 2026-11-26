@@ -909,3 +909,76 @@ describe("the runner's weather budget (SA-M13)", () => {
     expect(fetchSpy).toHaveBeenCalled();
   });
 });
+
+/**
+ * The provider's answer, after `meanwhile` lands: the runner retiming the
+ * run while this attach waits on the hours it read the run for.
+ */
+function answeringAfter(meanwhile: () => Promise<unknown>) {
+  const fetchSpy = mockVisualCrossing();
+  const answer = fetchSpy.getMockImplementation();
+  if (answer === undefined) throw new Error("the fixture answers nothing");
+  fetchSpy.mockImplementationOnce(async (input, init) => {
+    await meanwhile();
+    return answer(input, init);
+  });
+  return fetchSpy;
+}
+
+function retimed(runId: Ulid, set: Partial<typeof runs.$inferInsert>) {
+  return () => coreDb().update(runs).set(set).where(eq(runs.id, runId));
+}
+
+describe("a run retimed while its hours were fetched (design 278)", () => {
+  it("stays pending when it was moved to a new start, for the cron to settle", async () => {
+    const runId = await insertRun({ lat: 61.25, lng: 21.25 });
+    answeringAfter(
+      retimed(runId, {
+        startedAt: OBSERVATION_HOUR_EPOCH + 3600,
+        weatherStatus: "pending",
+      }),
+    );
+
+    await attachObservation(runId);
+
+    expect(await statusOf(runId)).toBe("pending");
+  });
+
+  it("stays pending when its length changed", async () => {
+    const runId = await insertRun({ lat: 62.25, lng: 22.25 });
+    answeringAfter(
+      retimed(runId, { durationS: 2400, weatherStatus: "pending" }),
+    );
+
+    await attachObservation(runId);
+
+    expect(await statusOf(runId)).toBe("pending");
+  });
+
+  it("does not put back to pending a run another attach settled at its new start", async () => {
+    silenceWarn();
+    const runId = await insertRun({ lat: 63.25, lng: 23.25 });
+    const fetchSpy = mockFetchJson({ unexpected: "shape" });
+    fetchSpy.mockImplementationOnce(async () => {
+      await retimed(runId, {
+        startedAt: OBSERVATION_HOUR_EPOCH + 3600,
+        weatherStatus: "attached",
+      })();
+      return Response.json({ unexpected: "shape" });
+    });
+
+    expect(await attachObservation(runId)).toBe("pending");
+
+    expect(await statusOf(runId)).toBe("attached");
+  });
+
+  it("still attaches a run nobody moved", async () => {
+    const runId = await insertRun({ lat: 64.25, lng: 24.25 });
+    const fetchSpy = answeringAfter(() => Promise.resolve());
+
+    await attachObservation(runId);
+
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(await statusOf(runId)).toBe("attached");
+  });
+});
