@@ -225,6 +225,34 @@ export function clearedPhoto(
 }
 
 /**
+ * A statement that fails the takedown's whole batch unless the garment
+ * still has the photo version the decision was made on, read when the
+ * batch runs: it would set the garment's owner, which may not be empty,
+ * to nothing. First in the batch after any Review hold, so a photo its
+ * owner replaced since is never cleared, forgotten or announced in the
+ * old one's name. A garment deleted since matches nothing and refuses
+ * nothing: the owner's delete already took its rows.
+ */
+function versionHeld(db: Db, { item, photoKey }: Found) {
+  const sameVersion = sql`${wardrobeItems.photoKey} = ${photoKey}`;
+  return db
+    .update(wardrobeItems)
+    .set({
+      userId: sql`(case when ${sameVersion} then ${wardrobeItems.userId} else null end)`,
+    })
+    .where(eq(wardrobeItems.id, item.id));
+}
+
+/**
+ * Whether an error is `versionHeld`'s refusal: a NOT NULL refusal of
+ * `wardrobe_items.user_id`, matched on the parts SQLite's own text keeps.
+ */
+function isVersionRefusal(error: unknown): boolean {
+  const text = String(error);
+  return text.includes("NOT NULL") && text.includes("wardrobe_items.user_id");
+}
+
+/**
  * What every takedown of the photo writes, whichever it is: the audit row,
  * the photo's review and screenings, and the photo off the garment.
  */
@@ -274,14 +302,16 @@ async function quarantineWrites(
     uploaderSnapshot: await uploaderContextOf(db, item.userId),
     quarantinedAt: nowSeconds(),
   });
+  const kept: Statements = [writes[0], record];
   return {
     statements: [...writes, record] satisfies Statements,
     debts: [],
+    kept,
     landing: {
       subjectType: "garment",
       subjectId: item.id,
       ownerId: item.userId,
-      statements: [writes[0], record],
+      statements: kept,
     } satisfies QuarantineLanding,
   };
 }
@@ -301,9 +331,12 @@ async function removalWrites(db: Db, input: GarmentModeration, found: Found) {
   const { item, photoKey } = found;
   const id = newUlid();
   const isFlagged = await wasFlaggedAutomatically(db, "garment", item.id);
+  const [audit, ...takedown] = takedownWrites(db, input, found, { id });
+  const fingerprint = keptGarmentFingerprint(db, input.reason, item, id);
   const statements: Statements = [
-    ...takedownWrites(db, input, found, { id }),
-    ...keptGarmentFingerprint(db, input.reason, item, id),
+    audit,
+    ...takedown,
+    ...fingerprint,
     notificationRaise(db, {
       userId: item.userId,
       kind: "content_removed",
@@ -324,7 +357,11 @@ async function removalWrites(db: Db, input: GarmentModeration, found: Found) {
     },
     { dedupeKey: `content_removed:garment:${photoKey}` },
   );
-  return { statements, debts: [oweOutbox(email)] };
+  return {
+    statements,
+    debts: [oweOutbox(email)],
+    kept: [audit, ...fingerprint] satisfies Statements,
+  };
 }
 
 /**
@@ -344,13 +381,14 @@ export async function moderateGarmentPhoto(
       : "not_found";
   }
   const { userId, id: itemId } = found.item;
-  const { statements, debts, landing } =
+  const { statements, debts, kept, landing } =
     input.action === "quarantine"
       ? await quarantineWrites(db, input, found)
       : { ...(await removalWrites(db, input, found)), landing: undefined };
   const { heldTo } = input;
+  const versioned: Statements = [versionHeld(db, found), ...statements];
   const held: Statements =
-    heldTo === undefined ? statements : [heldTo.statement, ...statements];
+    heldTo === undefined ? versioned : [heldTo.statement, ...versioned];
   try {
     await commit(
       db,
@@ -362,7 +400,13 @@ export async function moderateGarmentPhoto(
       report,
     );
   } catch (error: unknown) {
-    await passedOn(db, error, heldTo, landing, report);
+    // The owner replaced the photo since it was read: the decision still
+    // stands for the version it was made on, so its record lands (the
+    // audit row, and the quarantine's record or the removal's kept
+    // fingerprint), and nothing touches the photo the garment has now.
+    await (isVersionRefusal(error)
+      ? commit(db, kept, [], report)
+      : passedOn(db, error, heldTo, landing, report));
   }
   return "removed";
 }
