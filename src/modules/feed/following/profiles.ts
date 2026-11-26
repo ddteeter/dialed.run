@@ -26,13 +26,12 @@ import {
 } from "../conditions";
 import { readInChunks } from "../../../lib/chunked";
 import { bandForms } from "../../../lib/contracts/measures";
-import { proseDayLabel } from "../../../lib/dates";
+import { proseDayLabel, runDayOf } from "../../../lib/dates";
 import { topByCount } from "../../../lib/top-by-count";
 import { bandsAscending, tallyCoverage, type CoverageBand } from "../consensus";
 import { followerCount, followingCount, isFollowing } from "./follows";
 import { lookUpHandle } from "../../account";
 import { isUnderReviewForAuthor, publiclyVisibleEntry } from "../../safety";
-import { runDayOf } from "../public-web";
 import { columnWhere } from "../../../lib/sql/keyed-read";
 import type { Units } from "../../../lib/contracts";
 import type { Conditions } from "../../../lib/contracts";
@@ -179,7 +178,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
         createdAt: e.createdAt,
         day: runDayOf(
           e.startedAt,
-          conditions,
+          conditions?.timeZone,
           profile?.timeZone,
           proseDayLabel,
         ),
@@ -355,7 +354,12 @@ export async function otherProfile(
       return {
         entryId: e.id,
         // G's prose day, so one row reads the same on both (R55·210).
-        day: runDayOf(e.run.startedAt, conditions, runnerZone, proseDayLabel),
+        day: runDayOf(
+          e.run.startedAt,
+          conditions?.timeZone,
+          runnerZone,
+          proseDayLabel,
+        ),
         verdict: e.verdict,
         distanceM: e.distanceM,
         indoor: e.indoor,

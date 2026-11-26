@@ -13,3 +13,4 @@ export {
 export { garmentLoader } from "./garment-page";
 export { closetSearch } from "./inputs";
 export { photoUrlFor } from "./photo-url";
+export { PIECE_NOT_FOUND } from "./piece-not-found";

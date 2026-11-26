@@ -38,7 +38,8 @@ import {
   runnerInStanding,
   unitsFor,
 } from "../conditions";
-import { conditionsOf, runDayOf, verdictOf } from "./public-kit";
+import { runDayOf } from "../../../lib/dates";
+import { conditionsOf, verdictOf } from "./public-kit";
 import {
   FIRST_KITS,
   type PublicKitRow,
@@ -184,7 +185,7 @@ function shapedRow(
   return {
     entryId: row.entryId,
     ...(photo !== undefined && { photo }),
-    day: runDayOf(row.run.startedAt, conditions, runnerZone),
+    day: runDayOf(row.run.startedAt, conditions?.timeZone, runnerZone),
     ...conditionsOf(conditions, row.verdict, units),
     ...(verdict !== undefined && { verdict }),
     distance: {

@@ -408,6 +408,22 @@ export function runZoneOf(
 }
 
 /**
+ * The run's day where it was run (R-96), never a time: in `runZoneOf`'s
+ * zone, the observation's else the runner's own place's, else UTC. The
+ * public kit, the profiles' kit rows and the band's runs date their runs
+ * with it. `format` is how the day is spelled: the mono label's
+ * "Sat Aug 29" by default, or G's prose "Sat, Aug 29".
+ */
+export function runDayOf(
+  startedAt: number,
+  observedZone: string | null | undefined,
+  runnerZone: string | null | undefined,
+  format: (epochSeconds: number, timeZone?: string) => string = dayLabel,
+): string {
+  return format(startedAt, runZoneOf(observedZone, runnerZone));
+}
+
+/**
  * A stored home zone, kept only if `Intl` accepts it — the column is
  * written from a third party's answer, so it is checked again on the way
  * out (see `isTimeZone`).

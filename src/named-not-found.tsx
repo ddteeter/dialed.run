@@ -1,10 +1,10 @@
 import type { JSX } from "react";
 
 import { NotFoundState } from "./modules/auth/components/SystemState";
-import { PIECE_NOT_FOUND } from "./modules/closet/piece-not-found";
+import { PIECE_NOT_FOUND } from "./modules/closet/client";
 import { bellLoader } from "./modules/notifications/components/bell-loader";
 import { bellStateFn } from "./modules/notifications/functions";
-import { RUN_NOT_FOUND } from "./modules/runs/run-not-found";
+import { RUN_NOT_FOUND } from "./modules/runs/client";
 
 /**
  * Round 55 · 185's named not-founds, beside the router's own (`router.tsx`)
