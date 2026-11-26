@@ -520,14 +520,16 @@ async function processReminderJob(
   // The claim lands only with the pairing (design 278): two reminders
   // read the same unpaired run, and the one whose pairing lost would
   // otherwise be claimed with nothing written, its run never reminded.
-  // When it did not land, the run was paired first by another reminder,
-  // so this one is decided again from what is there now.
+  // Then the job is decided again from what is there now: a claim that
+  // landed stops it at its first read, and one that did not means another
+  // reminder paired the run first, so this one finds another upload or
+  // writes its reminder.
   if (uploaded !== undefined) {
-    const [, claimed] = await deps.db.batch([
+    await deps.db.batch([
       pairRunWith(deps.db, uploaded, job.eventTime),
       claimWhere(deps.db, job, runPairedAt(deps.db, uploaded, job.eventTime)),
     ]);
-    if (claimed.length === 0) await processReminderJob(deps, job);
+    await processReminderJob(deps, job);
     return;
   }
 
@@ -566,9 +568,8 @@ async function processReminderJob(
 }
 
 /**
- * The event's claim, landing only if `onlyIf` holds when it runs, and
- * saying whether it did.
- */
+The event's claim, landing only if `onlyIf` holds when it runs.
+*/
 function claimWhere(db: CoreDb, job: ReminderJob, onlyIf: SQL) {
   const row = {
     objectId: job.objectId,
@@ -578,8 +579,7 @@ function claimWhere(db: CoreDb, job: ReminderJob, onlyIf: SQL) {
   return db
     .insert(processedWebhookEvents)
     .select(rowWhere(processedWebhookEvents, row, onlyIf))
-    .onConflictDoNothing()
-    .returning({ objectId: processedWebhookEvents.objectId });
+    .onConflictDoNothing();
 }
 
 /**
