@@ -49,6 +49,7 @@ import {
   DIRECTION_LISTS,
   directionOf,
   type DirectionLists,
+  unitName,
 } from "./direction";
 
 const MODULES_ROOT = "src/modules/";
@@ -206,13 +207,6 @@ function pastDoor(facts: ShapeFacts, modules: readonly string[]): Numbers {
     }
   }
   return sorted(counts);
-}
-
-/**
-`src/modules/runs/parsers` is `runs/parsers`.
-*/
-function unitName(folder: string): string {
-  return folder.slice(MODULES_ROOT.length);
 }
 
 /**

@@ -60,7 +60,7 @@ function isAtOrUnder(unit: string, outer: string): boolean {
 /**
 `src/modules/runs/parsers` is `runs/parsers`.
 */
-function unitName(folder: string): string {
+export function unitName(folder: string): string {
   return folder.slice(MODULES_ROOT.length);
 }
 
