@@ -16,8 +16,8 @@ This file is the repo's, not guardrails'. `init` does not write it.
   not the merge would write anything.
 - A warning that `core.hooksPath` is already set. The hooks are active.
 
-Checked on 0.14.0, 0.14.1, 0.14.2, 0.15.0 and 0.16.0. A different list is
-not expected: stop and ask the owner.
+Checked on 0.14.0, 0.14.1, 0.14.2, 0.15.0, 0.16.0 and 0.17.0. A different
+list is not expected: stop and ask the owner.
 
 ## Why each drifted file must stay as it is
 
@@ -65,12 +65,13 @@ only "drift". So compare, every time:
 ## The one thing `--apply` writes that nobody wants
 
 `.codex/hooks.json`: `--apply` reorders the hook entries and changes none
-of them. It was reverted on the 0.11.1, 0.12.0 and 0.16.0 upgrades. If
-you run `--apply` in the checkout, revert that file. If the diff is ever
+of them. It was reverted on the 0.11.1, 0.12.0, 0.16.0 and 0.17.0
+upgrades. If you run `--apply` in the checkout, revert that file. If the diff is ever
 more than a reorder, read it as a real change.
 
 `.guardrails/scaffold.json` is the one file `--apply` in the checkout
-should change. Since 0.16.0 it records the new version and re-records the
-hash of an owned file that already matches its template, so a file brought
-up to a template by hand reads as unchanged at the next upgrade instead of
-as drift.
+should change. Since 0.16.0 it re-records the hash of an owned file that
+already matches its template, so a file brought up to a template by hand
+reads as unchanged at the next upgrade instead of as drift. It records the
+new version only when it writes a hash: at 0.17.0 no template changed, so
+`--apply` left the file naming 0.16.0, and that is expected.

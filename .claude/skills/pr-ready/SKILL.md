@@ -133,8 +133,18 @@ queues pushes; you never wait for another lane yourself.
     --attach=test-results/<dir>/demo.mp4 --attach=diagrams.demo.mp4
   ```
 
-- On `gate-blocked` or `ci-red`, fix it and ship again. A lane dispatched by a
-  coordinator messages it on `green`; the coordinator merges and cleans up.
+- On `gate-blocked`, fix it and ship again. On `ci-red`, the summary line
+  ends with `next: …`, from the status file's `diagnosis.advice`: `fix`
+  means fix it and ship again; `rebase` means `origin/main` moved since
+  the commit was tested, so rebase and ship with `--force-with-lease`;
+  `rerun-failed` means a failure outside the diff (the npm registry's
+  "invalid json response" flake, say), so run
+  `npm run ship -- --rerun-failed` under `run_in_background`. It re-runs
+  the failed jobs of the pushed commit and waits for them, and pushes
+  nothing. A re-run reuses the PR's old merge commit, so a mutation check
+  that timed out or ran cold takes a rebase, not a re-run. A lane
+  dispatched by a coordinator messages it on `green`; the coordinator
+  merges and cleans up.
 
 A push is not done until its checks are green: CI covers the client-bundle
 build and browser e2e, which the local gates do not.
