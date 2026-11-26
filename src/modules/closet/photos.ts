@@ -214,12 +214,19 @@ export async function uploadItemPhoto(
   // Read before the batch (design 232): a photo replaced under review
   // keeps its fingerprint and its record.
   const kept = await withdrawnGarmentUnderReview(db, userId, itemId);
+  // The replaced photo's verdicts and open review go with it (design
+  // 157), before the new photo's hold, if any, opens a review again; the
+  // keep goes ahead of the settle, which closes the review it asks about.
+  const [forgetVerdicts, settleReview] = garmentPhotoForgotten(
+    db,
+    userId,
+    itemId,
+  );
   try {
     await db.batch([
-      // The replaced photo's verdicts and open review go with it (design
-      // 157), before the new photo's hold, if any, opens a review again.
-      ...garmentPhotoForgotten(db, userId, itemId),
+      forgetVerdicts,
       ...kept,
+      settleReview,
       pointAtNewVersion,
       ...(isCopyOfRemoved
         ? [
@@ -347,9 +354,16 @@ export async function removeItemPhoto(
     .where(stillNamesAPhoto);
   // Read before the batch (design 232).
   const kept = await withdrawnGarmentUnderReview(db, userId, itemId);
+  // The keep goes ahead of the settle, which closes the review it asks about.
+  const [forgetVerdicts, settleReview] = garmentPhotoForgotten(
+    db,
+    userId,
+    itemId,
+  );
   await db.batch([
-    ...garmentPhotoForgotten(db, userId, itemId),
+    forgetVerdicts,
     ...kept,
+    settleReview,
     clearPhoto,
     outboxInsert(db, debt),
   ]);

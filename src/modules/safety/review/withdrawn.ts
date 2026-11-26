@@ -31,7 +31,7 @@ import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { qualified } from "../../../lib/sql/qualified";
 import { reportHidingAtOnce, requestHolds } from "../limits";
 import { removalStatements } from "../rules";
-import { moderationActionInsert, moderationActionInsertWhere } from "../rules";
+import { moderationActionInsertWhere } from "../rules";
 import {
   keptFingerprints,
   keptGarmentFingerprint,
@@ -116,7 +116,9 @@ export async function withdrawnUnderReview(
 /**
  * The garment-photo form, for an owner's replace, remove or garment
  * delete: the same keep and record when the garment's photo is held as a
- * copy of a removed image and still under review. Read before the batch.
+ * copy of a removed image and still under review. Read before the batch,
+ * and held to it again in SQL: the review still open, and the garment
+ * still the photo read. So it goes ahead of the review settle.
  */
 export async function withdrawnGarmentUnderReview(
   db: Db,
@@ -131,16 +133,26 @@ export async function withdrawnGarmentUnderReview(
   );
   if (item === undefined) return [];
   const id = newUlid();
+  const asRead = and(
+    eq(wardrobeItems.id, item.id),
+    sql`${wardrobeItems.photoFingerprint} is ${item.photoFingerprint}`,
+    held,
+  );
+  const stillHeld = sql`exists (select 1 from ${wardrobeItems} where ${asRead})`;
   return [
-    moderationActionInsert(db, {
-      id,
-      actorId: ownerId,
-      action: "withdrawn",
-      subjectType: "garment",
-      subjectId: item.id,
-      subjectOwnerId: ownerId,
-      reason: removalStatements.intimate,
-    }),
-    ...keptGarmentFingerprint(db, "intimate", item, id),
+    moderationActionInsertWhere(
+      db,
+      {
+        id,
+        actorId: ownerId,
+        action: "withdrawn",
+        subjectType: "garment",
+        subjectId: item.id,
+        subjectOwnerId: ownerId,
+        reason: removalStatements.intimate,
+      },
+      stillHeld,
+    ),
+    ...keptGarmentFingerprint(db, "intimate", item, id, stillHeld),
   ];
 }

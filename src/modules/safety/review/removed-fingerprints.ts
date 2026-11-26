@@ -120,6 +120,7 @@ export function keptGarmentFingerprint(
   reason: RemovalReason,
   item: Readonly<{ id: string; photoFingerprint: string | null }>,
   moderationActionId: string,
+  onlyIf: SQL = sql`1`,
 ) {
   const fingerprint = item.photoFingerprint;
   if (
@@ -128,14 +129,13 @@ export function keptGarmentFingerprint(
     !isDistinctive(fingerprint)
   )
     return [];
+  // The table's columns in order: id, fingerprint, photo, action, time.
   return [
-    db.insert(removedFingerprints).values({
-      id: newUlid(),
-      fingerprint,
-      photoId: item.id,
-      moderationActionId,
-      createdAt: nowSeconds(),
-    }),
+    db
+      .insert(removedFingerprints)
+      .select(
+        sql`SELECT ${newUlid()}, ${fingerprint}, ${item.id}, ${moderationActionId}, ${nowSeconds()} WHERE ${onlyIf}`,
+      ),
   ];
 }
 

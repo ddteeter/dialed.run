@@ -65,6 +65,7 @@ import {
   makeItem,
   makeRun,
   makeUser,
+  firstBatchAfter,
   opened,
   resetSafetyTables,
 } from "./helpers";
@@ -1085,6 +1086,13 @@ async function heldGarment() {
     });
   const garment = await closetGarment();
   await upload(garment, bytes, neverAsked());
+  // Held, not screened: a case that reached the hold ceiling would test
+  // nothing.
+  const [row] = await core()
+    .select({ visibility: wardrobeItems.visibility })
+    .from(wardrobeItems)
+    .where(eq(wardrobeItems.id, garment.itemId));
+  expect(row).toStrictEqual({ visibility: "hidden_pending_review" });
   return { ...garment, fingerprint: await fingerprintOfBytes(bytes) };
 }
 
@@ -1112,6 +1120,8 @@ async function keptFor(itemId: string) {
 }
 
 describe("an owner's garment-photo delete under review (design 232)", () => {
+  beforeEach(freshState);
+
   it("keeps the fingerprint and writes the record when the owner removes a held photo", async () => {
     const garment = await heldGarment();
 
@@ -1161,6 +1171,38 @@ describe("an owner's garment-photo delete under review (design 232)", () => {
     expect(await garmentWithdrawals(garment.itemId)).toMatchObject([
       { subjectId: garment.itemId },
     ]);
+  });
+
+  it("keeps nothing when the review is decided between the remove's read and its write", async () => {
+    const garment = await heldGarment();
+    // A moderator's Approve commits after the remove read the review open.
+    const racing = firstBatchAfter(() =>
+      core()
+        .update(reviewQueue)
+        .set({ status: "approved" })
+        .where(eq(reviewQueue.subjectId, garment.itemId)),
+    );
+
+    await removeItemPhoto(racing, garment.userId, garment.itemId);
+
+    expect(await garmentWithdrawals(garment.itemId)).toStrictEqual([]);
+    expect(await keptFor(garment.itemId)).toStrictEqual([]);
+  });
+
+  it("keeps nothing when the photo it read is replaced before its write", async () => {
+    const garment = await heldGarment();
+    // Another of the owner's requests points the garment at a new photo.
+    const racing = firstBatchAfter(() =>
+      core()
+        .update(wardrobeItems)
+        .set({ photoFingerprint: "0f0f0f0f0f0f0f0f" })
+        .where(eq(wardrobeItems.id, garment.itemId)),
+    );
+
+    await removeItemPhoto(racing, garment.userId, garment.itemId);
+
+    expect(await garmentWithdrawals(garment.itemId)).toStrictEqual([]);
+    expect(await keptFor(garment.itemId)).toStrictEqual([]);
   });
 
   it("keeps nothing for a garment photo that is not held", async () => {
