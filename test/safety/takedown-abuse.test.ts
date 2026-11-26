@@ -710,6 +710,37 @@ async function receiptAbout(requestId: string) {
   return receipt?.email.template.about;
 }
 
+/**
+A receipt owed about the kit `entryId`, as its outbox row carries it.
+*/
+function receiptAboutKit(entryId: string) {
+  return {
+    kind: "removal_request_received",
+    dueAt: NOW,
+    isHidden: false,
+    about: { kind: "kit", entryId },
+  };
+}
+
+describe("a receipt's kit id, on the wire", () => {
+  const ID = "01JABCDEFGHJKMNPQRSTVWXYZ0";
+
+  it("is a kit id", () => {
+    expect(removalRequestReceived.parse(receiptAboutKit(ID))).toStrictEqual(
+      receiptAboutKit(ID),
+    );
+  });
+
+  it.each([`${ID}/x`, `x${ID}`, `${ID}"`, ID.toLowerCase(), ID.slice(1)])(
+    "refuses %s, so nothing but a kit id is built into its link",
+    (entryId) => {
+      expect(
+        removalRequestReceived.safeParse(receiptAboutKit(entryId)).success,
+      ).toBe(false);
+    },
+  );
+});
+
 describe("what every receipt says its request is about", () => {
   it("is the kit, a photo on it, or something not ours, by what the link names", async () => {
     const kit = await sharedEntry();
@@ -734,7 +765,9 @@ describe("what every receipt says its request is about", () => {
       kind: "photo",
       entryId: photoKit,
     });
-    expect(await receiptAbout(elsewhere.id)).toStrictEqual({ kind: "elsewhere" });
+    expect(await receiptAbout(elsewhere.id)).toStrictEqual({
+      kind: "elsewhere",
+    });
   });
 });
 

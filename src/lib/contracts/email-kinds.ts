@@ -273,6 +273,7 @@ export const removalReminderSummary = emailKind("removal_reminder_summary", {
 const receiptAboutSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.enum(["kit", "photo"]),
+    // Built into the receipt's link, so a kit id and nothing around it.
     entryId: z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/u),
   }),
   z.object({ kind: z.literal("elsewhere") }),
