@@ -4,10 +4,10 @@
  * missing or the classifier never answered.
  */
 import { shownRowOf } from "./helpers";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { ulid } from "ulidx";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   entryPhotos,
@@ -43,6 +43,7 @@ import {
   STUCK_AFTER_SECONDS,
 } from "../../src/modules/safety/screening/stuck";
 
+import { beforeNextWriteBatch } from "../before-write-batch";
 import {
   makeEntry,
   makeItem,
@@ -331,6 +332,84 @@ describe("a photo still pending a day after upload", () => {
     expect(anomalies).toHaveLength(2);
     expect(anomalies[0]).toContain("OPENAI_API_KEY");
     expect(anomalies[1]).toContain(`photo ${gone} (missing)`);
+  });
+});
+
+describe("a stuck photo that changed during the pass (design 278)", () => {
+  beforeEach(resetSafetyTables);
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("opens no row for a kit photo deleted while the pass ran, and still escalates the rest", async () => {
+    const now = nowSeconds();
+    const gone = await entryPhoto(now, DAY + 60);
+    const stays = await entryPhoto(now, DAY + 60);
+    const gap = beforeNextWriteBatch(() =>
+      core().delete(entryPhotos).where(eq(entryPhotos.id, gone)),
+    );
+
+    const report = await retryPendingScreenings(unavailable, [], now);
+
+    expect(gap.fired()).toBe(true);
+    expect(report.escalated).toBe(1);
+    expect(await queuedIds()).toStrictEqual([stays]);
+  });
+
+  it("opens no row for a kit photo screened while the pass ran", async () => {
+    const now = nowSeconds();
+    const photoId = await entryPhoto(now, DAY + 60);
+    beforeNextWriteBatch(() =>
+      core()
+        .update(entryPhotos)
+        .set({ screenStatus: "pass" })
+        .where(eq(entryPhotos.id, photoId)),
+    );
+
+    const report = await retryPendingScreenings(unavailable, [], now);
+
+    expect(report.escalated).toBe(0);
+    expect(await queuedIds()).toStrictEqual([]);
+  });
+
+  it("opens no row for a garment whose photo its owner removed", async () => {
+    const now = nowSeconds();
+    const itemId = await garmentPhoto(now, DAY + 60);
+    beforeNextWriteBatch(() =>
+      core()
+        .update(wardrobeItems)
+        .set({ photoKey: sql`null` })
+        .where(eq(wardrobeItems.id, itemId)),
+    );
+
+    await retryPendingScreenings(unavailable, [], now);
+
+    expect(await queuedIds()).toStrictEqual([]);
+  });
+
+  it("opens no row for a garment photo no longer pending", async () => {
+    const now = nowSeconds();
+    const itemId = await garmentPhoto(now, DAY + 60);
+    beforeNextWriteBatch(() =>
+      core()
+        .update(wardrobeItems)
+        .set({ visibility: "pass" })
+        .where(eq(wardrobeItems.id, itemId)),
+    );
+
+    await retryPendingScreenings(unavailable, [], now);
+
+    expect(await queuedIds()).toStrictEqual([]);
+  });
+
+  it("still opens the row for a garment photo that stayed pending", async () => {
+    const now = nowSeconds();
+    const itemId = await garmentPhoto(now, DAY + 60);
+    beforeNextWriteBatch(() => Promise.resolve());
+
+    await retryPendingScreenings(unavailable, [], now);
+
+    expect(await queuedIds()).toStrictEqual([itemId]);
   });
 });
 

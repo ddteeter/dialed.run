@@ -36,9 +36,7 @@ export function TakedownBlocks({
 }>): JSX.Element {
   return (
     <ListSection title="Blocked" items={blocks} hasCards>
-      {(block) => (
-        <BlockRow key={block.key} block={block} unblock={unblock} />
-      )}
+      {(block) => <BlockRow key={block.key} block={block} unblock={unblock} />}
     </ListSection>
   );
 }

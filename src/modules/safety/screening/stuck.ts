@@ -16,7 +16,7 @@ import { coreDb } from "../../../env";
 import { readInChunks } from "../../../lib/chunked";
 
 import { enqueueForReview } from "../review";
-import { queueSubjectOf, type PhotoScope } from "./screening";
+import { photoStillThere, queueSubjectOf, type PhotoScope } from "./screening";
 
 /**
 How long a photo may wait on screening before a person is asked: a day.
@@ -76,7 +76,12 @@ export async function escalateStuck(
         subjectId: photo.photoId,
         source: sourceOf(photo, held),
       },
-      lt(reviewQueue.resolvedAt, now - STUCK_AFTER_SECONDS),
+      {
+        reopenOnlyIf: lt(reviewQueue.resolvedAt, now - STUCK_AFTER_SECONDS),
+        // Still there and still waiting, read when the batch runs (design
+        // 278): the list was read before a pass that can take minutes.
+        onlyIf: photoStillThere(photo, { whilePending: true }),
+      },
     ).returning({ subjectId: reviewQueue.subjectId }),
   );
   if (first === undefined) return [];

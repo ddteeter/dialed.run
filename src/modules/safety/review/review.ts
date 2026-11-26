@@ -48,6 +48,7 @@ import type { GarmentCategory } from "../../../lib/contracts/garment-fields";
 import { garmentLabel } from "../../../lib/garment-label";
 import { inJsonList } from "../../../lib/sql/json-list";
 import { qualified } from "../../../lib/sql/qualified";
+import { rowWhere } from "../../../lib/sql/row-where";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
@@ -104,12 +105,24 @@ export type EnqueueInput = Pick<
 export function enqueueForReview<TSchema extends Record<string, unknown>>(
   database: DrizzleD1Database<TSchema>,
   input: EnqueueInput,
-  /**
-   * When an existing row may be re-opened; every time, unless given. A
-   * stuck photo's escalation (D-157) re-opens only a row settled more than
-   * a day ago, so the hourly sweep never undoes a decision just made.
-   */
-  reopenOnlyIf: SQL = sql`1`,
+  {
+    reopenOnlyIf = sql`1`,
+    onlyIf = sql`1`,
+  }: {
+    /**
+     * When an existing row may be re-opened; every time, unless given. A
+     * stuck photo's escalation (D-157) re-opens only a row settled more
+     * than a day ago, so the hourly sweep never undoes a decision just made.
+     */
+    reopenOnlyIf?: SQL;
+    /**
+     * Whether the write happens at all, read when the statement runs
+     * (design 278): neither a new row nor a re-opening unless it holds. A
+     * screening's verdict passes "the photo is still there", so an answer
+     * that lands after its runner deleted the photo asks nobody about it.
+     */
+    onlyIf?: SQL;
+  } = {},
 ) {
   const now = nowSeconds();
   const stillOpen = sql`${reviewQueue.status} in ('pending', 'reviewing')`;
@@ -121,16 +134,22 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
   return (
     database
       .insert(reviewQueue)
-      .values({
-        id: newUlid(),
-        subjectType: input.subjectType,
-        subjectId: input.subjectId,
-        source: input.source,
-        status: "pending",
-        createdAt: now,
-        openedAt: now,
-        hid: input.hid,
-      })
+      .select(
+        rowWhere(
+          reviewQueue,
+          {
+            id: newUlid(),
+            subjectType: input.subjectType,
+            subjectId: input.subjectId,
+            source: input.source,
+            status: "pending",
+            createdAt: now,
+            openedAt: now,
+            hid: input.hid,
+          },
+          onlyIf,
+        ),
+      )
       // UNIQUE(subject_type, subject_id): a subject already queued stays one
       // decision. Re-opening a resolved row is deliberate — a subject
       // approved last week and reported again today needs looking at again,
