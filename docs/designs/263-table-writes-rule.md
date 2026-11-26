@@ -79,6 +79,10 @@ own adapter writes are not drizzle calls in our code and are not seen.
   schema's tables at run time, every module it names is a real folder, and
   no owner is also listed among its table's other writers. tsc holds the
   columns and the required `why`.
+- `test/eslint/table-owners-used.node.test.ts` (node, owner's ask on
+  #1079): lints `src` with a recording copy of the rule and fails on any
+  `others` kind or column no write uses. `AREAS` is also checked against
+  the module folders in both directions.
 - `npm run lint` stays green over `src`.
 
 ## Issues

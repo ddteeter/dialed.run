@@ -63,6 +63,8 @@ every other module that writes it, with what it writes (design 261 ruling
   status columns on the rows it moderates, ruling 6) lets a module update
   only those columns.
 - **A move edits the map.** The old writer's line goes, the new one's comes.
+  `test/eslint/table-owners-used.node.test.ts` fails on an `others` kind or
+  column that no write in `src` uses, so a forgotten old line is caught.
 - **The rule reads the table from its type.** An array of tables is checked
   table by table. A helper that takes the table as a parameter
   (`didClaim`) is checked where it is called, in the caller's module. Don't

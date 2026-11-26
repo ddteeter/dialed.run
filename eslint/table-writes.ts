@@ -425,6 +425,21 @@ interface Write {
 }
 
 /**
+ * One write the map allowed through an `others` entry: which table, which
+ * module, which kind and, for an update, which listed columns it set.
+ * `test/eslint/table-owners-used.node.test.ts` collects these to find an
+ * entry nothing uses.
+ */
+export interface Use {
+  readonly table: string;
+  readonly area: string;
+  readonly kind: Kind;
+  readonly columns: readonly string[];
+}
+
+export type OnUse = (use: Use) => void;
+
+/**
 An update by a column-limited writer: its columns must all be listed.
 */
 function checkColumns(
@@ -432,12 +447,16 @@ function checkColumns(
   allowed: readonly string[],
   data: Record<string, string>,
   report: (messageId: string, extra?: Record<string, string>) => void,
+  onUse: OnUse,
 ): void {
   const columns = write.columns();
   if (columns === undefined) {
     report("columnsUnknown");
     return;
   }
+  const { area, table, kind } = write;
+  const listed = columns.filter((column) => allowed.includes(column));
+  onUse({ area, table, kind, columns: listed });
   const missing = columns.filter((column) => !allowed.includes(column));
   if (missing.length > 0) {
     report("columnsNotListed", { ...data, columns: missing.join(", ") });
@@ -447,7 +466,12 @@ function checkColumns(
 /**
 Whether `write.area` may make this write; reports at `node` if not.
 */
-function checkWrite(write: Write, node: ts.Node, report: Report): void {
+function checkWrite(
+  write: Write,
+  node: ts.Node,
+  report: Report,
+  onUse: OnUse,
+): void {
   const { area, table, kind } = write;
   const entry = owners.get(table);
   if (entry === undefined) {
@@ -465,11 +489,12 @@ function checkWrite(write: Write, node: ts.Node, report: Report): void {
   if (writer === undefined) {
     at("notListed");
   } else if (kind !== "update") {
-    if (writer[kind] !== true) at("kindNotListed");
+    if (writer[kind] === true) onUse({ area, table, kind, columns: [] });
+    else at("kindNotListed");
   } else if (writer.update === undefined) {
     at("kindNotListed");
   } else {
-    checkColumns(write, writer.update, data, at);
+    checkColumns(write, writer.update, data, at, onUse);
   }
 }
 
@@ -478,6 +503,7 @@ function checkCall(
   call: ts.CallExpression,
   area: string,
   report: Report,
+  onUse: OnUse,
 ): void {
   for (const site of checks.sitesAt(call)) {
     const names = checks.tableNames(site.table);
@@ -490,74 +516,92 @@ function checkCall(
     }
     const columns = () => checks.siteColumns(site);
     for (const table of names) {
-      checkWrite({ area, table, kind: site.kind, columns }, call, report);
+      checkWrite(
+        { area, table, kind: site.kind, columns },
+        call,
+        report,
+        onUse,
+      );
     }
   }
 }
 
-export const tableWrites: Rule.RuleModule = {
-  meta: {
-    type: "problem",
-    docs: {
-      description:
-        "A module writes only the tables the owner map lists for it (design 263).",
-    },
-    schema: [],
-    messages: {
-      noTypes:
-        "dialed/table-writes needs type information: run it with typed linting.",
-      noEntry:
-        "`{{table}}` has no entry in the owner map (eslint/table-owners.ts).",
-      notListed:
-        "`{{area}}` writes `{{table}}` ({{kind}}), which the owner map gives to `{{owner}}`. Call a function `{{owner}}` exports, or list the write in eslint/table-owners.ts with its reason.",
-      kindNotListed:
-        "`{{area}}` makes a {{kind}} on `{{table}}` (owned by `{{owner}}`), and the owner map lists no {{kind}} for it.",
-      columnsNotListed:
-        "`{{area}}` updates `{{table}}`.{{columns}}, which the owner map does not list for it (`{{owner}}` owns the table).",
-      columnsUnknown:
-        "`{{area}}` may update only some columns of `{{table}}`, and this update's columns cannot be read here. Pass `.set()` an object whose type names them.",
-      unnamedTable:
-        "Which table this {{kind}} writes cannot be read from its type. Let the type name it (drop a `SQLiteTable` annotation, or use `as const`), or take it as a parameter of a named function.",
-      helperAsValue:
-        "This function writes a table it is passed, and is handed on here as a value, so the table it writes cannot be checked. Call it.",
-    },
+const meta: Rule.RuleMetaData = {
+  type: "problem",
+  docs: {
+    description:
+      "A module writes only the tables the owner map lists for it (design 263).",
   },
-  create(context) {
-    const program = programOf(context.sourceCode.parserServices);
-    const sourceFile = program?.getSourceFile(context.filename);
-    return {
-      Program(node) {
-        if (program === undefined || sourceFile === undefined) {
-          context.report({ node, messageId: "noTypes" });
-          return;
-        }
-        const checks = createChecks(program.getTypeChecker());
-        const area = areaOf(context.filename);
-        const report: Report = (at, messageId, data) => {
-          context.report({
-            loc: {
-              start: context.sourceCode.getLocFromIndex(
-                at.getStart(sourceFile),
-              ),
-              end: context.sourceCode.getLocFromIndex(at.getEnd()),
-            },
-            messageId,
-            ...(data !== undefined && { data }),
-          });
-        };
-        const visit = (current: ts.Node): void => {
-          if (ts.isCallExpression(current)) {
-            checkCall(checks, current, area, report);
-          } else if (
-            ts.isIdentifier(current) &&
-            checks.isWritingHelperValue(current)
-          ) {
-            report(current, "helperAsValue");
-          }
-          ts.forEachChild(current, visit);
-        };
-        visit(sourceFile);
-      },
-    };
+  schema: [],
+  messages: {
+    noTypes:
+      "dialed/table-writes needs type information: run it with typed linting.",
+    noEntry:
+      "`{{table}}` has no entry in the owner map (eslint/table-owners.ts).",
+    notListed:
+      "`{{area}}` writes `{{table}}` ({{kind}}), which the owner map gives to `{{owner}}`. Call a function `{{owner}}` exports, or list the write in eslint/table-owners.ts with its reason.",
+    kindNotListed:
+      "`{{area}}` makes a {{kind}} on `{{table}}` (owned by `{{owner}}`), and the owner map lists no {{kind}} for it.",
+    columnsNotListed:
+      "`{{area}}` updates `{{table}}`.{{columns}}, which the owner map does not list for it (`{{owner}}` owns the table).",
+    columnsUnknown:
+      "`{{area}}` may update only some columns of `{{table}}`, and this update's columns cannot be read here. Pass `.set()` an object whose type names them.",
+    unnamedTable:
+      "Which table this {{kind}} writes cannot be read from its type. Let the type name it (drop a `SQLiteTable` annotation, or use `as const`), or take it as a parameter of a named function.",
+    helperAsValue:
+      "This function writes a table it is passed, and is handed on here as a value, so the table it writes cannot be checked. Call it.",
   },
 };
+
+function ignoreUse(): void {
+  // The lint run keeps no record; only the stale-entry test does.
+}
+
+/**
+ * The rule, telling `onUse` of each write an `others` entry let through.
+ */
+export function createTableWrites(onUse: OnUse = ignoreUse): Rule.RuleModule {
+  return { meta, create: (context) => createListener(context, onUse) };
+}
+
+export const tableWrites = createTableWrites();
+
+function createListener(
+  context: Rule.RuleContext,
+  onUse: OnUse,
+): Rule.RuleListener {
+  const program = programOf(context.sourceCode.parserServices);
+  const sourceFile = program?.getSourceFile(context.filename);
+  return {
+    Program(node) {
+      if (program === undefined || sourceFile === undefined) {
+        context.report({ node, messageId: "noTypes" });
+        return;
+      }
+      const checks = createChecks(program.getTypeChecker());
+      const area = areaOf(context.filename);
+      const report: Report = (at, messageId, data) => {
+        context.report({
+          loc: {
+            start: context.sourceCode.getLocFromIndex(at.getStart(sourceFile)),
+            end: context.sourceCode.getLocFromIndex(at.getEnd()),
+          },
+          messageId,
+          ...(data !== undefined && { data }),
+        });
+      };
+      const visit = (current: ts.Node): void => {
+        if (ts.isCallExpression(current)) {
+          checkCall(checks, current, area, report, onUse);
+        } else if (
+          ts.isIdentifier(current) &&
+          checks.isWritingHelperValue(current)
+        ) {
+          report(current, "helperAsValue");
+        }
+        ts.forEachChild(current, visit);
+      };
+      visit(sourceFile);
+    },
+  };
+}

@@ -42,26 +42,31 @@ type ColumnOf<N extends TableName> = N extends TableName
   : never;
 
 /**
- * Where a write is made: a module under `src/modules/`, or the folder of
- * `src/` it sits in when it is in none. `test/eslint/table-owners.node.test.ts`
- * checks each is a real folder.
+ * Where a write is made: each module under `src/modules/`, and `src/db`,
+ * the one folder outside them that writes a table today (B12 moves its
+ * writer to `ops`). `test/eslint/table-owners.node.test.ts` checks this
+ * list against the folders both ways, so a module added or removed fails
+ * until it is named here; a type cannot read folders.
  */
-export type Area =
-  | "account"
-  | "auth"
-  | "closet"
-  | "dispatch"
-  | "email"
-  | "enrichment"
-  | "feed"
-  | "notifications"
-  | "onboarding"
-  | "ops"
-  | "products"
-  | "runs"
-  | "safety"
-  | "src/db"
-  | "weather";
+export const AREAS = [
+  "account",
+  "auth",
+  "closet",
+  "dispatch",
+  "email",
+  "enrichment",
+  "feed",
+  "notifications",
+  "onboarding",
+  "ops",
+  "products",
+  "runs",
+  "safety",
+  "src/db",
+  "weather",
+] as const;
+
+export type Area = (typeof AREAS)[number];
 
 /**
 One module's writes on another's table, as the rule reads it.
