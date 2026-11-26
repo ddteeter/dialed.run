@@ -1,6 +1,14 @@
 import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
 import { countRow, countedKeys } from "../rate-limit-rows";
 
 import { account, session, user, verification } from "../../src/db/schema-auth";
@@ -2042,6 +2050,56 @@ async function dueRunner(isClosed: boolean): Promise<Seeded> {
   return runner;
 }
 
+/**
+ * Sets the runner's ban to `bannedAt` (lifted when undefined) just before the batch that deletes
+ * their profile runs, after the purge has read the profile: a Desk ban,
+ * or lifting one, landing in between. Statements are told apart by the
+ * SQL each was prepared from, carried onto the statement `bind` answers.
+ */
+function setBanBeforeProfileDelete(
+  userId: string,
+  bannedAt: number | undefined,
+) {
+  const binding = env.DIALED_CORE;
+  const sqlOf = new WeakMap<D1PreparedStatement, string>();
+  const prepare = binding.prepare.bind(binding);
+  const batch: D1Database["batch"] = binding.batch.bind(binding);
+  const prepared = vi
+    .spyOn(binding, "prepare")
+    .mockImplementation((query: string) => {
+      const statement = prepare(query);
+      const bind = statement.bind.bind(statement);
+      // `bind` answers a new statement, which is the one a batch is given.
+      statement.bind = (...values: unknown[]) => {
+        const bound = bind(...values);
+        sqlOf.set(bound, query);
+        return bound;
+      };
+      sqlOf.set(statement, query);
+      return statement;
+    });
+  const batched = vi
+    .spyOn(binding, "batch")
+    .mockImplementation(async <T>(statements: D1PreparedStatement[]) => {
+      const doesDeleteProfile = statements.some((statement) =>
+        sqlOf.get(statement)?.startsWith('delete from "user_profiles"'),
+      );
+      if (doesDeleteProfile) {
+        batched.mockRestore();
+        prepared.mockRestore();
+        await core
+          .update(userProfiles)
+          .set({ bannedAt: orSqlNull(bannedAt) })
+          .where(eq(userProfiles.userId, userId));
+      }
+      return batch<T>(statements);
+    });
+  onTestFinished(() => {
+    batched.mockRestore();
+    prepared.mockRestore();
+  });
+}
+
 async function closedKept() {
   return core
     .select({
@@ -2081,6 +2139,33 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
       hashes.toSorted(byText).map((hash) => ({ hash, closedAt: NOW })),
     );
     expect(anomalies).toStrictEqual([]);
+  });
+
+  it("keeps the fingerprints of an account banned after the purge read its profile", async () => {
+    const runner = await dueRunner(false);
+    setBanBeforeProfileDelete(runner.userId, NOW - 60);
+
+    await purge([], { ...depsAt(NOW).deps, closedAddressSecret: CLOSED_KEY });
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    const hashes = await Promise.all(
+      provedOf(runner.email).map((address) =>
+        closedAddressHash(CLOSED_KEY, address),
+      ),
+    );
+    expect(await closedKept()).toStrictEqual(
+      hashes.toSorted(byText).map((hash) => ({ hash, closedAt: NOW })),
+    );
+  });
+
+  it("keeps none for an account whose ban was lifted after the purge read its profile", async () => {
+    const runner = await dueRunner(true);
+    setBanBeforeProfileDelete(runner.userId, undefined);
+
+    await purge([], { ...depsAt(NOW).deps, closedAddressSecret: CLOSED_KEY });
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    expect(await closedKept()).toStrictEqual([]);
   });
 
   it("keeps and forgets nothing by address for a closed account that never confirmed its address", async () => {

@@ -634,6 +634,29 @@ const RUNNER_COUNTS = [
 ] as const satisfies readonly RateLimitKind[];
 
 /**
+ * One closed address's fingerprint, written only while the runner's
+ * profile carries a ban: `INSERT … SELECT … FROM user_profiles WHERE
+ * banned_at IS NOT NULL`, so the ban is the one in place when the
+ * statement runs, not when the profile was read.
+ */
+function keptIfClosed(
+  db: Db,
+  userId: string,
+  row: { hash: string; closedAt: number },
+) {
+  const fingerprint = {
+    hash: sql<string>`${row.hash}`.as("hash"),
+    closedAt: sql<number>`${row.closedAt}`.as("closed_at"),
+  };
+  const ifClosed = and(
+    eq(userProfiles.userId, userId),
+    isNotNull(userProfiles.bannedAt),
+  );
+  const whileClosed = db.select(fingerprint).from(userProfiles).where(ifClosed);
+  return db.insert(closedAddresses).select(whileClosed).onConflictDoNothing();
+}
+
+/**
  * Everything else, and the account itself — one batch, so the claim goes
  * only with the `user` row, and a purge that reaches here finishes whole.
  */
@@ -651,9 +674,14 @@ async function deleteAccountRows(
   );
   const handle = profile?.username ?? undefined;
   const isClosed = profile !== undefined && profile.bannedAt !== null;
-  const fingerprints = isClosed
-    ? await closedAddressRows(deps.closedAddressSecret, addresses, now)
-    : [];
+  // Hashed whatever the profile said when read: whether they are kept is
+  // decided by the batch itself, from the ban as it stands then
+  // (`keptIfClosed`).
+  const fingerprints = await closedAddressRows(
+    deps.closedAddressSecret,
+    addresses,
+    now,
+  );
   // Both directions. `follows` has no index led by the followee, so the
   // second clause scans it — once, for a deletion.
   const eitherFollow = involvingEither(
@@ -722,10 +750,10 @@ async function deleteAccountRows(
     // kept. No index leads with the owner, so this scans once.
     db.delete(heldTakeDowns).where(eq(heldTakeDowns.ownerId, userId)),
     ...addresses.flatMap((address) => forgetAddress(db, address)),
-    // What sign-up refuses for 3 years, in place of the addresses.
-    ...fingerprints.map((row) =>
-      db.insert(closedAddresses).values(row).onConflictDoNothing(),
-    ),
+    // What sign-up refuses for 3 years, in place of the addresses: kept
+    // only if the account is closed as this batch runs. Before the
+    // profile's delete, below, which is what the condition reads.
+    ...fingerprints.map((row) => keptIfClosed(db, userId, row)),
     ...RUNNER_COUNTS.map((kind) => forgetRateLimit(db, kind, userId)),
     ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post
