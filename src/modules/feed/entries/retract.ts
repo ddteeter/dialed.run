@@ -291,20 +291,17 @@ export async function retractEntries(
     userId,
     scope,
     { report, purge, held },
-    async (entries) => ({
+    (entries) => {
       // A photo under review keeps its fingerprint and its record
       // (design 232).
-      statements: keeping(
-        entryStatements(db, userId, entries),
-        await withdrawnUnderReview(
-          db,
-          userId,
-          inArray(entryPhotos.entryId, entries),
-        ),
-      ),
-      debts: mediaDebts(userId, scope),
-      tags: deletionCacheTags(userId, scope),
-    }),
+      const photos = inArray(entryPhotos.entryId, entries);
+      const kept = withdrawnUnderReview(db, userId, photos);
+      return Promise.resolve({
+        statements: keeping(entryStatements(db, userId, entries), kept),
+        debts: mediaDebts(userId, scope),
+        tags: deletionCacheTags(userId, scope),
+      });
+    },
   );
 }
 
@@ -487,13 +484,9 @@ export async function deleteEntryPhoto(
     and(eq(entryPhotos.id, photoId), eq(outfitEntries.userId, userId)),
   );
   if (photo === undefined) throw new NotFoundError("photo not found");
-  // Read before the batch (design 232): a photo under review keeps its
-  // fingerprint and its record.
-  const kept = await withdrawnUnderReview(
-    db,
-    userId,
-    eq(entryPhotos.id, photoId),
-  );
+  // A photo under review keeps its fingerprint and its record (design
+  // 232), asked in the batch.
+  const kept = withdrawnUnderReview(db, userId, eq(entryPhotos.id, photoId));
   await commit(
     db,
     keeping(photoDeletion(db, photoId, userId), kept),
@@ -537,16 +530,16 @@ function uploadsOf(userId: string, ownedRuns: ReturnType<typeof owned>) {
  * fingerprint and its record, design 232), the runs' notifications,
  * upload rows and copies, then the runs.
  */
-async function runStatements(
+function runStatements(
   db: Db,
   userId: string,
   ownedRuns: ReturnType<typeof owned>,
   theirEntries: ReturnType<typeof owned>,
-): Promise<Statements> {
+): Statements {
   return [
     ...keeping(
       entryStatements(db, userId, theirEntries),
-      await withdrawnUnderReview(
+      withdrawnUnderReview(
         db,
         userId,
         inArray(entryPhotos.entryId, theirEntries),
@@ -617,7 +610,7 @@ export async function deleteRuns(
     const bandRuns = scope === "all" ? [] : await ownedRuns;
     const theirEntries = owned(db, outfitEntries, userId, entryScope);
     return {
-      statements: await runStatements(db, userId, ownedRuns, theirEntries),
+      statements: runStatements(db, userId, ownedRuns, theirEntries),
       debts: [
         ...mediaDebts(userId, entryScope),
         ...uploads.map((upload) =>
@@ -661,7 +654,7 @@ export async function deleteRunsThrough(
     "all",
     inArray(outfitEntries.runId, ownedRuns),
   );
-  const statements = await runStatements(db, userId, ownedRuns, theirEntries);
+  const statements = runStatements(db, userId, ownedRuns, theirEntries);
   await commit(db, statements, [], report);
   purge(deletionCacheTags(userId, "all"));
 }

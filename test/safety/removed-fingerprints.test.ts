@@ -958,22 +958,77 @@ describe("an owner's delete under review (design 232)", () => {
     expect(await withdrawals()).toMatchObject([{ subjectId: first.photoId }]);
   });
 
-  it("keeps nothing when the review is decided between the delete's read and its write", async () => {
+  it("keeps nothing when the review is decided before the delete's write", async () => {
     const first = await posted(await sceneJpeg(4));
     await reportedAs("intimate", "photo", first.photoId);
-    // A moderator's Approve commits after the delete read the review open.
-    const racing = firstBatchAfter(() =>
+    // A moderator's Approve commits after the delete began, just before
+    // its batch.
+    const landing = firstBatchAfter(() =>
       core()
         .update(reviewQueue)
         .set({ status: "approved" })
         .where(eq(reviewQueue.subjectId, first.photoId)),
     );
 
-    await deleteEntryPhoto(racing, first.userId, first.photoId, quiet, noPurge);
+    await deleteEntryPhoto(
+      landing,
+      first.userId,
+      first.photoId,
+      quiet,
+      noPurge,
+    );
 
     expect(await withdrawals()).toStrictEqual([]);
     expect(await keptRows()).toStrictEqual([]);
     expect(await photoRow(first.photoId)).toBeUndefined();
+  });
+
+  it("keeps a photo another runner's report hides before the delete's write", async () => {
+    const first = await posted(await sceneJpeg(4));
+    // The report commits after the kit's delete began, just before its
+    // batch.
+    const landing = firstBatchAfter(() =>
+      reportedAs("intimate", "photo", first.photoId),
+    );
+
+    await retractEntries(
+      landing,
+      first.userId,
+      [first.entryId],
+      quiet,
+      noPurge,
+    );
+
+    expect(await withdrawals()).toMatchObject([
+      { actorId: first.userId, subjectId: first.photoId },
+    ]);
+    expect(await keptRows()).toMatchObject([{ photoId: first.photoId }]);
+  });
+
+  it("keeps a held copy the owner uploads to the kit before the run's delete writes", async () => {
+    const bytes = await sceneJpeg(4);
+    const original = await posted(bytes);
+    await removed("photo", original.photoId);
+    const kit = await posted(await sceneJpeg(3));
+    const [entry] = await core()
+      .select({ runId: outfitEntries.runId })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, kit.entryId));
+    if (entry === undefined) throw new Error("no kit");
+    // The owner's own upload of a copy of the removed image, held for a
+    // person, lands after the run's delete began, just before its batch.
+    const copy: { photoId?: string } = {};
+    const landing = firstBatchAfter(async () => {
+      const held = await posted(await copyOf(bytes), kit);
+      copy.photoId = held.photoId;
+    });
+
+    await deleteRuns(landing, kit.userId, [entry.runId], quiet, noPurge);
+
+    expect(copy.photoId).toBeDefined();
+    expect(await withdrawals()).toMatchObject([
+      { actorId: kit.userId, subjectId: copy.photoId },
+    ]);
   });
 
   it("keeps nothing once the review is decided", async () => {
