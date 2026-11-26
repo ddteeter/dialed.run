@@ -6,3 +6,4 @@
 export { COHORT_MIN_RUNNERS } from "./floor";
 export { score } from "./score";
 export { ENGINE_VERSION } from "./version";
+export { workedRange } from "./worked-range";
