@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   accountDeletions,
+  rateLimits,
   userProfiles,
   usernameHistory,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
+import { HANDLE_CLAIMS_PER_HOUR } from "../../src/lib/contracts/rate-limits";
 import {
   claimUsername,
   forceRename,
@@ -34,7 +36,11 @@ const db = drizzle(env.DIALED_CORE);
 
 // One database for the whole file: every case starts with no handles.
 beforeEach(async () => {
-  await db.batch([db.delete(userProfiles), db.delete(usernameHistory)]);
+  await db.batch([
+    db.delete(userProfiles),
+    db.delete(usernameHistory),
+    db.delete(rateLimits),
+  ]);
 });
 
 /**
@@ -1103,6 +1109,89 @@ describe("the rename cap (SA-L02)", () => {
     expect(claim.kind === "too_often" && claim.until).toBeLessThanOrEqual(
       nowSeconds(),
     );
+  });
+
+  it("asks the screen about at most the hour's claims, then says when to try again and asks nothing", async () => {
+    const userId = await runner({ username: "side_a" });
+    await db
+      .update(userProfiles)
+      .set({ timeZone: "America/Chicago" })
+      .where(eq(userProfiles.userId, userId));
+    const screen = vi.fn(CLEAR);
+    // Switching between two own handles is never capped by the rename
+    // cap, so only the count stops these.
+    for (let attempt = 0; attempt < HANDLE_CLAIMS_PER_HOUR; attempt += 1) {
+      const handle = attempt % 2 === 0 ? "side_b" : "side_a";
+      expect(await claimUsername(db, userId, handle, screen)).toMatchObject({
+        kind: "claimed",
+      });
+    }
+    expect(screen).toHaveBeenCalledTimes(HANDLE_CLAIMS_PER_HOUR);
+    screen.mockClear();
+    const before = nowSeconds();
+
+    const claim = await claimUsername(db, userId, "side_c", screen);
+
+    expect(claim).toStrictEqual({
+      kind: "busy",
+      until: expect.any(Number) as unknown,
+      viewer: { homeZone: "America/Chicago" },
+    });
+    expect(claim.kind === "busy" && claim.until).toBeGreaterThan(before);
+    expect(claim.kind === "busy" && claim.until).toBeLessThanOrEqual(
+      nowSeconds() + 3600,
+    );
+    expect(screen).not.toHaveBeenCalled();
+    // Nothing written: the runner keeps the handle they had.
+    const [profile] = await db
+      .select({ username: userProfiles.username })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    expect(profile?.username).toBe("side_a");
+  });
+
+  it("counts claims the screen refuses too, and each runner on their own", async () => {
+    const userId = await runner();
+    const flagged = vi.fn(FLAGGED);
+    for (let attempt = 0; attempt < HANDLE_CLAIMS_PER_HOUR; attempt += 1) {
+      await claimUsername(db, userId, "rude_one", flagged);
+    }
+    expect(flagged).toHaveBeenCalledTimes(HANDLE_CLAIMS_PER_HOUR);
+    expect(await claimUsername(db, userId, "rude_one", flagged)).toMatchObject({
+      kind: "busy",
+    });
+    expect(flagged).toHaveBeenCalledTimes(HANDLE_CLAIMS_PER_HOUR);
+
+    const other = await runner();
+    expect(await claimUsername(db, other, "kind_one", CLEAR)).toMatchObject({
+      kind: "claimed",
+    });
+  });
+
+  it("tells a runner with no profile yet when to try again, on no home zone", async () => {
+    // No profile row: refused claims write none, so the count still runs.
+    const userId = newUlid();
+    for (let attempt = 0; attempt < HANDLE_CLAIMS_PER_HOUR; attempt += 1) {
+      await claimUsername(db, userId, "rude_one", FLAGGED);
+    }
+    expect(await claimUsername(db, userId, "kind_one", CLEAR)).toStrictEqual({
+      kind: "busy",
+      until: expect.any(Number) as unknown,
+      viewer: { homeZone: undefined },
+    });
+  });
+
+  it("does not count what is answered before the screen: a reserved word, the handle held, a placeholder", async () => {
+    const userId = await runner({ username: "side_a" });
+    const screen = vi.fn(CLEAR);
+    for (let attempt = 0; attempt < HANDLE_CLAIMS_PER_HOUR + 1; attempt += 1) {
+      await claimUsername(db, userId, "side_a", screen);
+      await claimUsername(db, userId, "admin", screen);
+    }
+    expect(screen).not.toHaveBeenCalled();
+    expect(await claimUsername(db, userId, "side_b", screen)).toMatchObject({
+      kind: "claimed",
+    });
   });
 
   it("lets a runner switch back and forth between two handles", async () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  busyMessage,
   capRefusal,
   capSaid,
   tooOftenMessage,
@@ -36,5 +37,26 @@ describe("the rename cap's sentence", () => {
     );
     expect(capRefusal({ kind: "claimed", username: "maya" })).toBeUndefined();
     expect(capSaid({ kind: "claimed", username: "maya" })).toBeUndefined();
+  });
+});
+
+describe("the hour's claims' sentence", () => {
+  it("names the time on the runner's clock", () => {
+    expect(busyMessage(UNTIL, CHICAGO)).toBe(
+      "You've tried 20 handles this hour. You can try again at 6:00 AM.",
+    );
+    expect(busyMessage(UNTIL, { homeZone: "UTC" })).toBe(
+      "You've tried 20 handles this hour. You can try again at 12:00 PM UTC.",
+    );
+  });
+
+  it("is the band's answer past the hour's claims too", () => {
+    const busy = { kind: "busy", until: UNTIL, viewer: CHICAGO } as const;
+
+    expect(capRefusal(busy)).toBe(busyMessage(UNTIL, CHICAGO));
+    expect(capSaid(busy)).toBe(`Not changed. ${busyMessage(UNTIL, CHICAGO)}`);
+    expect(
+      capRefusal({ kind: "taken", username: "maya", suggestion: undefined }),
+    ).toBeUndefined();
   });
 });

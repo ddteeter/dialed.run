@@ -44,6 +44,7 @@ import {
   readBackDigits,
 } from "../../../lib/contracts/profanity";
 import { followRowsNaming, followRowsOpeningWith } from "../../notifications";
+import { claimLimit } from "../../email";
 import { purgePublicPages } from "../../ops";
 import { isPlaceholderHandle } from "../../safety";
 import type { ScreenHandle } from "./handle-screen";
@@ -248,6 +249,16 @@ export type HandleClaim =
       readonly kind: "taken";
       readonly username: string;
       readonly suggestion: string | undefined;
+    }
+  | {
+      /**
+       * Past the hour's handle claims (`HANDLE_CLAIMS_PER_HOUR`): nothing
+       * was asked or written. `until` is when the hour ends, on the
+       * runner's own clock.
+       */
+      readonly kind: "busy";
+      readonly until: number;
+      readonly viewer: ViewerZone;
     };
 
 /**
@@ -276,6 +287,7 @@ async function profileOf(
   | {
       username: string | null;
       usernameResetReason: string | null;
+      timeZone: string | null;
     }
   | undefined
 > {
@@ -283,6 +295,7 @@ async function profileOf(
     .select({
       username: userProfiles.username,
       usernameResetReason: userProfiles.usernameResetReason,
+      timeZone: userProfiles.timeZone,
     })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
@@ -405,7 +418,8 @@ function ensureProfile(db: Db, userId: string) {
  * A reserved handle reads as taken with **no suggestion** (D-57): a
  * suggestion beside it would tell a prober which names are on the list.
  * So does one on the word list, and one `screen` (OpenAI's moderation)
- * flags — asked only once the handle has passed the list, and taken as
+ * flags — asked only once the handle has passed the list and the
+ * runner's hour of claims (`HANDLE_CLAIMS_PER_HOUR`) has room, and taken as
  * clear when it cannot answer (`./handle-screen.ts`). What it said is
  * stored beside the handle (`username_screen`), so a handle it could not
  * answer for is asked about again by the hourly re-ask
@@ -448,6 +462,15 @@ export async function claimUsername(
   // a reserved handle is, before it costs a screening call. Keeping the
   // one you were given is the branch above.
   if (isPlaceholderHandle(typed)) return refused;
+  // Every claim that would reach the screen is counted, refused or not.
+  const claim = await claimLimit(db, "handle-runner", userId);
+  if (!claim.isAllowed) {
+    return {
+      kind: "busy",
+      until: claim.until,
+      viewer: homeZoneOf(profile?.timeZone),
+    };
+  }
   const verdict = await screen(typed);
   if (verdict === "flagged") return refused;
   const taken = async (): Promise<HandleClaim> => ({

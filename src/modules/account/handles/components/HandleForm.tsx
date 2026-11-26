@@ -131,11 +131,11 @@ export function HandleForm({
     },
     successMessage,
     onSuccess: settle,
-    // Past the rename cap no edit to the field fixes it, so it is the
-    // band above Save, not a field error (R60, #820), and nothing is
-    // announced as saved.
+    // Past the rename cap or the hour's claims no edit to the field fixes
+    // it, so it is the band above Save, not a field error (R60, #820),
+    // and nothing is announced as saved.
     refusal: {
-      matches: (result) => result.kind === "too_often",
+      matches: (result) => capRefusal(result) !== undefined,
       answer: settle,
       said: capSaid,
     },
