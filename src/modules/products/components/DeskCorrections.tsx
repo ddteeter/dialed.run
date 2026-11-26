@@ -8,29 +8,31 @@ import {
   DECLINE_REASON_LABELS,
   DECLINE_REASONS,
   declineReasonSchema,
-} from "../../../../lib/contracts/product-corrections";
+} from "../../../lib/contracts/product-corrections";
 import type {
   CorrectionField,
   DeclineReason,
-} from "../../../../lib/contracts/product-corrections";
-import { valueWords } from "../../../../lib/correction-words";
-import { monthDayLabel } from "../../../../lib/dates";
+} from "../../../lib/contracts/product-corrections";
+import { valueWords } from "../../../lib/correction-words";
+import { monthDayLabel } from "../../../lib/dates";
 import {
   Bracketed,
   FailureBand,
   Mono,
   QUIET_CANCEL,
   useFormSubmit,
-} from "../../../../ui";
+  DeskForm,
+  PickOne,
+  RECORD_PANEL,
+  QuietAction,
+  counted,
+} from "../../../ui";
 import type {
   ApplyOutcome,
   CorrectionFiler,
   CorrectionGroup,
   CorrectionsQueue,
-} from "../../../products";
-import { DeskForm, PickOne, RECORD_PANEL } from "../../components/DeskForm";
-import { QuietAction } from "./RemovalDecision";
-import { counted } from "../../components/counted";
+} from "../correction-queue";
 
 /**
  * How a field and its values read on the Desk. Not the runner sheet's

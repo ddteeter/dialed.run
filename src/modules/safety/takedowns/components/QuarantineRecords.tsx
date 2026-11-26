@@ -9,10 +9,12 @@ import {
   Mono,
   TextField,
   useFormSubmit,
+  DeskForm,
+  RECORD_PANEL,
+  RecordHead,
 } from "../../../../ui";
 import { ncmecReportInput } from "../../inputs";
 import type { QuarantineSummary, recordNcmecReport } from "../quarantine";
-import { DeskForm, RECORD_PANEL, RecordHead } from "../../components/DeskForm";
 
 type RecordReport = (input: {
   data: { recordId: string; reportId?: string | undefined };

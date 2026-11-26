@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import type { JSX, ReactNode, Ref } from "react";
+import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
 import {
+  DeskForm,
   Mono,
+  PickOne,
   QUIET_CANCEL,
-  QUIET_PILL,
+  QuietAction,
   useFormSubmit,
   useReturnFocus,
 } from "../../../../ui";
@@ -17,7 +19,6 @@ import {
 } from "../../rules/contracts";
 import type { RemovalReason } from "../../rules/contracts";
 import type { ReviewSubjectType } from "../review";
-import { DeskForm, PickOne } from "../../components/DeskForm";
 
 /**
  * The Desk's decision to take something down, lifted out of the review
@@ -32,30 +33,6 @@ import { DeskForm, PickOne } from "../../components/DeskForm";
  */
 const REASON_LABELS: Readonly<Record<RemovalReason, string>> =
   removalStatements;
-
-/**
-A decision that needs no reason: an outline pill beside the row's submit.
-*/
-export function QuietAction({
-  label,
-  onPress,
-  buttonRef,
-}: Readonly<{
-  label: string;
-  onPress: () => void;
-  buttonRef?: Ref<HTMLButtonElement> | undefined;
-}>): JSX.Element {
-  return (
-    <button
-      ref={buttonRef}
-      className={`target ${QUIET_PILL}`}
-      type="button"
-      onClick={onPress}
-    >
-      {label}
-    </button>
-  );
-}
 
 /**
  * A review row's decision bar: the one that takes the picked reason as the

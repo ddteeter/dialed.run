@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { shortId } from "../../src/modules/safety/components/short-id";
+import { shortId } from "../../src/ui/short-id";
 
 describe("shortId (R55·197, 198)", () => {
   it("keeps the first and last four of a long id", () => {

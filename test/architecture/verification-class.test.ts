@@ -318,9 +318,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts deskRunnersQuery": "admin",
   "safety/functions.ts deskDuplicatesQuery": "admin",
   "safety/functions.ts deskKitQuery": "admin",
-  "safety/functions.ts deskCorrectionsQuery": "admin",
-  "safety/functions.ts applyCorrectionFn": "admin",
-  "safety/functions.ts declineCorrectionFn": "admin",
+  "products/functions.ts deskCorrectionsQuery": "admin",
+  "products/functions.ts applyCorrectionFn": "admin",
+  "products/functions.ts declineCorrectionFn": "admin",
   "safety/functions.ts reportersAction": "admin",
   // Design 136: `/takedown` is for anyone, with or without an account —
   // the person pictured is usually not a runner.

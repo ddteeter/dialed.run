@@ -1,9 +1,14 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { Mono, TextField, useFormSubmit } from "../../../../ui";
+import {
+  Mono,
+  TextField,
+  useFormSubmit,
+  DeskForm,
+  PickOne,
+} from "../../../../ui";
 import { takedownInput } from "../../inputs";
-import { DeskForm, PickOne } from "../../components/DeskForm";
 
 type Subject = "entry" | "photo";
 

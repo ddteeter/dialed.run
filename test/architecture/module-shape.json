@@ -1,8 +1,7 @@
 {
   "fanOut": {
     "account": 9,
-    "feed": 10,
-    "safety": 8
+    "feed": 10
   },
   "doorWidth": {
     "safety": 95
@@ -19,7 +18,7 @@
     "weather": 23
   },
   "direction": {
-    "modules": 3
+    "modules": 2
   },
   "reasons": {
     "fanOut": {

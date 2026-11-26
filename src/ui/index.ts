@@ -8,6 +8,17 @@ export { Bracketed } from "./Bracketed";
 export { afterOf, PageLinks } from "./PageLinks";
 export { BracketHeadline } from "./BracketHeadline";
 export { DeskDetail, DeskPaneName } from "./DeskDetail";
+export {
+  ACTION_BAR,
+  DeskForm,
+  PickOne,
+  QuietAction,
+  RECORD_BAR,
+  RECORD_PANEL,
+  RecordHead,
+} from "./DeskForm";
+export { counted } from "./counted";
+export { shortId } from "./short-id";
 export { DeskSplit, RailCard } from "./DeskSplit";
 export { Digits } from "./Digits";
 export { FileWell } from "./FileWell";

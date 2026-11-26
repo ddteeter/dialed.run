@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { counted } from "../../src/modules/safety/components/counted";
+import { counted } from "../../src/ui/counted";
 
 describe("counted", () => {
   it("says one in the singular and every other count in the plural", () => {

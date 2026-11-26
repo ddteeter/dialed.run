@@ -7,8 +7,8 @@ import { z } from "zod";
 import {
   DeskCorrections,
   type DeskCorrectionsProps,
-} from "../../src/modules/safety/review/components/DeskCorrections";
-import type { CorrectionGroup } from "../../src/modules/products";
+} from "../../src/modules/products/components/DeskCorrections";
+import type { CorrectionGroup } from "../../src/modules/products/correction-queue";
 import { QUIET_CANCEL } from "../../src/ui";
 import { renderWithRouter } from "../modules/run-fixtures";
 import { carriedSince } from "../ui/carry-spy";

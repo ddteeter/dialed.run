@@ -9,6 +9,9 @@ import {
   Mono,
   MONO_CASED_CLASS,
   useFormSubmit,
+  PickOne,
+  QuietAction,
+  shortId,
 } from "../../../../ui";
 import {
   renameReasonSchema,
@@ -29,7 +32,6 @@ import type {
   ReviewSource,
   ShownRow,
 } from "../review";
-import { PickOne } from "../../components/DeskForm";
 import { DueClock } from "../../components/DueClock";
 import { StatutoryLine } from "../../components/StatutoryLine";
 import {
@@ -48,14 +50,8 @@ import {
   renameMessage,
 } from "../../runners/components/DeskRunners";
 import { NotRenamedBand } from "../../runners/components/NotRenamedBand";
-import {
-  DecisionForm,
-  QuietAction,
-  RemovalDecision,
-  subjectWord,
-} from "./RemovalDecision";
+import { DecisionForm, RemovalDecision, subjectWord } from "./RemovalDecision";
 import { reviewPhotoSrc } from "./review-photo-src";
-import { shortId } from "../../components/short-id";
 import { useFocusWhen } from "../../components/use-focus-when";
 import { useSettled } from "../../components/use-settled";
 import { WhoReported, type LoadReporters } from "./WhoReported";

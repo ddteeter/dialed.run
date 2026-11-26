@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DeskPage } from "../../modules/ops/desk/components/DeskPage";
-import { DeskCorrections } from "../../modules/safety/review/components/DeskCorrections";
+import { DeskCorrections } from "../../modules/products/components/DeskCorrections";
 import {
   applyCorrectionFn,
   declineCorrectionFn,
   deskCorrectionsQuery,
-} from "../../modules/safety/functions";
+} from "../../modules/products/functions";
 
 /**
  * Desk · Corrections (D-163, R48·130): runners' corrections to shared

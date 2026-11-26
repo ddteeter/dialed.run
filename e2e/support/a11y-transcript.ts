@@ -69,7 +69,7 @@ export function normalize(phrase: string): string {
   return (
     phrase
       .replaceAll(/[0-9A-HJKMNP-TV-Z]{26}/gu, ":id")
-      // The Desk's short id (`safety/components/short-id.ts`): an id's
+      // The Desk's short id (`src/ui/short-id.ts`): an id's
       // first and last four, whose tail is the id's random part.
       .replaceAll(/[0-9A-HJKMNP-TV-Z]{4}…[0-9A-HJKMNP-TV-Z]{4}/gu, ":id")
       .replaceAll(DAY_NAME, ":day")
