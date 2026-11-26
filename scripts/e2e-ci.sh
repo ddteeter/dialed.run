@@ -37,13 +37,11 @@ if [ "${E2E_CI_LOCK_HELD:-}" != 1 ]; then
   E2E_CI_QUEUED_AT=$(date +%s)
   export E2E_CI_QUEUED_AT
   echo "e2e:ci: waiting for the gate lock ($lock)"
-  if command -v lockf >/dev/null 2>&1; then
-    exec lockf -k "$lock" sh "$0" "$@"
-  elif command -v flock >/dev/null 2>&1; then
-    exec flock "$lock" sh "$0" "$@"
-  fi
-  echo "e2e:ci: neither lockf nor flock is installed, so the gate lock cannot be taken." >&2
-  exit 2
+  # guardrails lock (0.18.0), not a raw lockf: a gate queued behind it names
+  # this run instead of "another checkout holds it", and the run is logged.
+  # It exits 75 if the wait runs out. Inside an outer `guardrails lock` it
+  # runs at once.
+  exec node ./node_modules/guardrails-core/dist/cli.mjs lock -- sh "$0" "$@"
 fi
 
 head=$(git rev-parse --short HEAD)

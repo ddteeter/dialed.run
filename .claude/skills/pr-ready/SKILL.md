@@ -54,9 +54,12 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    view changed (a comment or formatting edit), there is nothing to
    attach.
 8. **The push runs CI's first job for you.** `.githooks/pre-push` runs
-   `npm run build`, `npm test` and `npm run diagrams:check` before the
-   gate (owner, 2026-11-23), and the gate runs lint, typecheck and the
-   other analyzers over the branch. Together that is what CI's "Lint,
+   `npm run build`, `npm test` and `npm run diagrams:check` (owner,
+   2026-11-23), and the gate runs lint, typecheck and the other analyzers
+   over the branch. Since guardrails-core 0.18.0 `ship` runs the gate
+   itself before `git push`, so under `ship` the hook's three steps run
+   after the gate, and the hook's own gate finds ship's pass and returns
+   at once. Together that is what CI's "Lint,
    typecheck, test, build" job runs, so don't run them again by hand
    before shipping; run one only to work a failure. `build` is a gate
    too: `postbuild` runs `check:bundle`. A lane dispatched by a
@@ -68,7 +71,9 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    (owner, 2026-11-13). The push gate mutates the same files, seeded
    from main's CI run, so a cold local pass over them costs the same
    warm-up, takes the machine-wide gate lock a second time, and can
-   still score timeouts as kills that the gate calls survivors. Run
+   still score timeouts as kills that the gate calls survivors: since
+   0.18.0 the gate re-tests a `Timeout` no test is named as killing once,
+   alone, and one that finishes is scored as it finished. Run
    Stryker on one file only while working a survivor (skill
    `crushing-mutants`). If the gate reports survivors, fix them and
    ship again. Since guardrails-core 0.16.0 the gate mutates the whole
@@ -100,7 +105,7 @@ closing keyword only for an issue this PR is meant to close.
 The push gate takes ~26 minutes and Guardrails CI 40–45. **Never wait in the
 foreground** (`docs/proposals/2026-10-12-agent-wait-cost.md` has the cost).
 Ship with `npm run ship -- --body-file=<pr-body.md>` under
-`run_in_background`, then end the turn. It pushes the branch
+`run_in_background`, then end the turn. It runs the push gate, then pushes the branch
 (`git push -u origin HEAD`, so it lands on the branch's own name even when
 it tracks `origin/main`), finds or opens its PR, waits for CI, and writes one
 status: `green`, `gate-blocked`, `lock-timeout`, `ci-red`, `behind`,
@@ -121,6 +126,12 @@ queues pushes; you never wait for another lane yourself.
 - `ship` force-pushes only when asked. A branch you rebased after its first
   push ships with `npm run ship -- --body-file=<f> --force-with-lease`;
   without the flag, git's rejection comes back as `error`.
+- Since 0.18.0 nothing is pushed until `ship`'s own gate passes.
+  `gate-blocked` lists each finding in `failing` as
+  `<file>:<line> <rule>`. Don't commit or switch branches while it runs:
+  `ship` stops with `error` if HEAD moves, because the gate checked the
+  working tree and HEAD is what is pushed. An `error` whose tail says the
+  gate passed is a dropped connection: ship again.
 - `ship` attaches demo videos itself: add `--attach=<file>` (repeatable,
   optionally `--attach=<file>#<alt text>`). It goes on a new PR as the PR
   opens, or on an open PR as one comment, posted again on each run

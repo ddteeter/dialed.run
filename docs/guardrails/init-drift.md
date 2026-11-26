@@ -16,7 +16,10 @@ This file is the repo's, not guardrails'. `init` does not write it.
   not the merge would write anything.
 - A warning that `core.hooksPath` is already set. The hooks are active.
 
-Checked on 0.14.0, 0.14.1, 0.14.2, 0.15.0, 0.16.0 and 0.17.0. A different
+Checked on 0.14.0, 0.14.1, 0.14.2, 0.15.0, 0.16.0, 0.17.0 and 0.18.2.
+At 0.18.2 the plan also showed `update` on the two crushing-mutants
+files, which no one here edits: their templates gained 0.18.0's timeout
+re-test and `guardrails lock`. A different
 list is not expected: stop and ask the owner.
 
 ## Why each drifted file must stay as it is
@@ -65,7 +68,7 @@ only "drift". So compare, every time:
 ## The one thing `--apply` writes that nobody wants
 
 `.codex/hooks.json`: `--apply` reorders the hook entries and changes none
-of them. It was reverted on the 0.11.1, 0.12.0, 0.16.0 and 0.17.0
+of them. It was reverted on the 0.11.1, 0.12.0, 0.16.0, 0.17.0 and 0.18.2
 upgrades. If you run `--apply` in the checkout, revert that file. If the diff is ever
 more than a reorder, read it as a real change.
 
@@ -74,4 +77,5 @@ should change. Since 0.16.0 it re-records the hash of an owned file that
 already matches its template, so a file brought up to a template by hand
 reads as unchanged at the next upgrade instead of as drift. It records the
 new version only when it writes a hash: at 0.17.0 no template changed, so
-`--apply` left the file naming 0.16.0, and that is expected.
+`--apply` left the file naming 0.16.0, and that is expected. At 0.18.2
+two templates changed, so it names 0.18.2.
