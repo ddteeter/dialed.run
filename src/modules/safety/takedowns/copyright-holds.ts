@@ -65,6 +65,32 @@ export type HeldSubjectType =
 const DAY_SECONDS = 24 * 60 * 60;
 
 /**
+ * A statement that fails its whole batch when a hold `holds` picks out
+ * exists as the batch runs, for a delete a live hold refuses (SA-L09): it
+ * blanks the hold's NOT NULL status, so one match fails the batch and none
+ * changes nothing. `isHeldRefusal` names the failure.
+ */
+export function failsWhileHeld(
+  // Wider than this file's `Db`, so the feed's handle fits as well.
+  db: ReturnType<typeof drizzle>,
+  holds: SQL | undefined,
+) {
+  return db
+    .update(copyrightHolds)
+    .set({ status: sql`null` })
+    .where(holds);
+}
+
+/**
+ * Whether an error is `failsWhileHeld`'s: SQLite's NOT NULL text for the
+ * hold's status, wherever D1 or a wrapper puts it in the message.
+ */
+export function isHeldRefusal(error: unknown): boolean {
+  const text = String(error);
+  return text.includes("NOT NULL") && text.includes("copyright_holds.status");
+}
+
+/**
 Thirty days from the takedown to the purge (D-130).
 */
 export const COPYRIGHT_HOLD_SECONDS = 30 * DAY_SECONDS;

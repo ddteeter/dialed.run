@@ -2,6 +2,8 @@ export {
   type CaseOverOutcome,
   type ClaimedPurge,
   claimPurgeAfterCase,
+  failsWhileHeld,
+  isHeldRefusal,
   purgedWrite,
   restoreDueHolds,
   sweepClaims,

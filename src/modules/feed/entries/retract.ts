@@ -65,6 +65,7 @@ import {
   settleOpenReviews,
   withdrawnUnderReview,
 } from "../../safety";
+import { failsWhileHeld, isHeldRefusal } from "../../safety/takedowns";
 import { manualConditionsHandler } from "../../weather";
 import { clearEntryHalves, deleteRunCopies } from "../conditions";
 
@@ -367,36 +368,22 @@ export const LIVE_HOLD = ["hidden", "purging"] as const;
 
 /**
  * `statements` in one batch that a live hold on `check`'s kits refuses,
- * as the batch runs rather than from a read before it: the first
- * statement blanks the hold's NOT NULL status, which fails the whole
- * batch when one matches and changes nothing when none does.
+ * as the batch runs rather than from a read before it.
  */
 async function batchUnlessHeld(
   db: Db,
   check: HeldCheck,
   statements: Statements,
 ): Promise<void> {
-  const refuseIfHeld = db
-    .update(copyrightHolds)
-    .set({ status: sql`null` })
-    .where(and(inArray(copyrightHolds.status, LIVE_HOLD), check.entries));
+  const live = and(inArray(copyrightHolds.status, LIVE_HOLD), check.entries);
   try {
-    await db.batch([refuseIfHeld, ...statements]);
+    await db.batch([failsWhileHeld(db, live), ...statements]);
   } catch (error: unknown) {
-    if (!isHoldRefusal(error)) throw error;
+    if (!isHeldRefusal(error)) throw error;
     throw new ControlRefusal(
       `This ${check.noun} is held while a copyright claim is settled, so it can't be deleted yet.`,
     );
   }
-}
-
-/**
- * Whether an error is `batchUnlessHeld`'s refusal: SQLite's NOT NULL text
- * for the hold's status, wherever D1 or a wrapper puts it in the message.
- */
-function isHoldRefusal(error: unknown): boolean {
-  const text = String(error);
-  return text.includes("NOT NULL") && text.includes("copyright_holds.status");
 }
 
 /**
