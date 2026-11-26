@@ -6,6 +6,8 @@ import sonarjs from "eslint-plugin-sonarjs";
 import unicorn from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 
+import { tableWrites } from "./eslint/table-writes.ts";
+
 /**
  * `no-restricted-syntax` is REPLACED, not merged, when a later flat-config
  * block redefines it. Selectors therefore live in composed arrays rather
@@ -429,6 +431,17 @@ export default tseslint.config(
   ...Object.entries(primitiveExemptions).map(([path, without]) =>
     exemptBlock(path, without),
   ),
+  {
+    /**
+     * Which module writes which table (design 261 ruling 5, design 263).
+     * The owner map is `eslint/table-owners.ts`; the rule reads each
+     * write's table from its type, follows helpers to their callers, and
+     * checks an update's columns where the map lists a column group.
+     */
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    plugins: { dialed: { rules: { "table-writes": tableWrites } } },
+    rules: { "dialed/table-writes": "error" },
+  },
   {
     /**
      * Tailwind drops a class it does not know in silence — no error, an
