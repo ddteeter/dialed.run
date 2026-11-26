@@ -5,7 +5,7 @@
  * Decline keeps the product as it is. Every runner decided hears it on the
  * bell, and nothing is emailed (R48·129f).
  */
-import { and, asc, count, desc, eq, gte, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ne, sql, type SQL } from "drizzle-orm";
 
 import {
   productCorrections,
@@ -22,9 +22,9 @@ import {
 import { NotFoundError } from "../../lib/errors";
 import { normalizeIdentity } from "../../lib/normalize";
 import { nowSeconds } from "../../lib/now";
-import { inJsonList } from "../../lib/sql/json-list";
+import { inJsonList, jsonEach } from "../../lib/sql/json-list";
 import { orSqlNull } from "../../lib/sql/sql-null";
-import { notificationInsert } from "../notifications";
+import { notificationInsertWhere } from "../notifications";
 import {
   brandNameColumn,
   currentValues,
@@ -262,8 +262,28 @@ async function toDecide(key: CorrectionKey, isWholeField: boolean) {
 type Filer = Awaited<ReturnType<typeof toDecide>>["filers"][number];
 
 /**
+ * The filers' rows still waiting with the value each was read with: a
+ * runner who filed again since replaced theirs in place, under the same
+ * id. An id is a fixed-length ULID, so id and value joined name one pair.
+ */
+function waitingAsRead(filers: readonly Filer[]): SQL {
+  const pairs = filers.map((filer) => `${filer.id}${filer.value}`);
+  return sql`${eq(productCorrections.status, "waiting")} and ${productCorrections.id} || ${productCorrections.value} in (select value from ${jsonEach(pairs)})`;
+}
+
+/**
+ * A runner the read found is still waiting on `value`: what Apply writes
+ * to the product, and decides, only while it holds (SA-L11).
+ */
+function valueStillWaited(filers: readonly Filer[], value: string): SQL {
+  return sql`exists (select 1 from ${productCorrections} where ${waitingAsRead(filers)} and ${eq(productCorrections.value, value)})`;
+}
+
+/**
  * The batch's tail: the corrections marked decided, and each filer's bell
- * row, which opens the garment they filed from.
+ * row, which opens the garment they filed from. Only a row the update
+ * decided rings, so a decision another landed first sends nothing, and
+ * `onlyIf` (Apply's) holds the update to the product's write.
  */
 function decisionWrites(
   db: CoreDb,
@@ -273,17 +293,21 @@ function decisionWrites(
     actorId: string;
     reason: string | undefined;
     body: string;
+    onlyIf?: SQL | undefined;
   },
 ) {
   const kind =
     decision.status === "applied"
       ? "correction_applied"
       : "correction_declined";
-  const filerIds = filers.map((filer) => filer.id);
-  const stillWaiting = and(
-    inJsonList(productCorrections.id, filerIds),
-    eq(productCorrections.status, "waiting"),
-  );
+  const decidedAt = nowSeconds();
+  const decidedHere = (id: string) =>
+    sql`exists (select 1 from ${productCorrections} where ${and(
+      eq(productCorrections.id, id),
+      eq(productCorrections.status, decision.status),
+      eq(productCorrections.decidedBy, decision.actorId),
+      eq(productCorrections.decidedAt, decidedAt),
+    )})`;
   return [
     db
       .update(productCorrections)
@@ -291,17 +315,21 @@ function decisionWrites(
         status: decision.status,
         reason: orSqlNull(decision.reason),
         decidedBy: decision.actorId,
-        decidedAt: nowSeconds(),
+        decidedAt,
       })
-      .where(stillWaiting),
+      .where(and(waitingAsRead(filers), decision.onlyIf)),
     ...filers.map((filer) =>
-      notificationInsert(db, {
-        userId: filer.userId,
-        kind,
-        subjectId: filer.id,
-        linkId: filer.garmentId,
-        body: decision.body,
-      }),
+      notificationInsertWhere(
+        db,
+        {
+          userId: filer.userId,
+          kind,
+          subjectId: filer.id,
+          linkId: filer.garmentId,
+          body: decision.body,
+        },
+        decidedHere(filer.id),
+      ),
     ),
   ] as const;
 }
@@ -335,16 +363,25 @@ export async function applyCorrection({
   const patch = productPatch(key.field, key.value);
   const named = isName ? key.value : product.name;
   const db = primaryCoreDb();
-  await db.batch([
-    db.update(products).set(patch).where(eq(products.id, key.productId)),
+  // Held to a runner still waiting on the value as the batch runs: a
+  // Decline or a filing again since the read writes nothing here.
+  const stillWaited = valueStillWaited(filers, key.value);
+  const theProduct = and(eq(products.id, key.productId), stillWaited);
+  const [written] = await db.batch([
+    db
+      .update(products)
+      .set(patch)
+      .where(theProduct)
+      .returning({ id: products.id }),
     ...decisionWrites(db, filers, {
       status: "applied",
       actorId,
       reason: undefined,
       body: `We fixed the ${CORRECTION_FIELD_NOUNS[key.field]} on ${named}. Thanks.`,
+      onlyIf: stillWaited,
     }),
   ]);
-  return { outcome: "applied" };
+  return { outcome: written.length === 0 ? "changed" : "applied" };
 }
 
 async function isNameTaken(
