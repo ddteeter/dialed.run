@@ -188,5 +188,6 @@ answer changes one place. Design: `docs/designs/sprint-a1-call-scorer.md`.
 - Cost: one line, `"call",` after `"auth",` in `AREAS`, identical in all
   three A lanes like the Stryker entry.
 - Recommend: add it to the skeleton every lane carries.
-- Meanwhile: this lane has not edited the file, since it is outside the
-  lane's list, and so has not pushed. Everything else is committed.
+- Meanwhile: the owner approved the line for this lane (2026-11-26). It is
+  a commit of its own on this branch, so it can be dropped if the skeleton
+  takes it another way.
