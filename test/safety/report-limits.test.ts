@@ -26,9 +26,11 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
+  moderationThresholds,
   reconcileUnhiddenReports,
   resolveReview,
 } from "../../src/modules/safety";
+import { reportersToHide } from "../../src/modules/safety/screening/thresholds";
 import {
   AT_ONCE_HIDES_PER_DAY,
   REPORTS_PER_DAY,
@@ -685,5 +687,88 @@ describe("one bar for the request and the sweep (design 232)", () => {
     const outcome = await reconcileUnhiddenReports(oweInCore, noPurge);
 
     expect(outcome.found).toBe(1);
+  });
+});
+
+/**
+ * The core binding, with `before` landing just ahead of a report's one
+ * batch, its hide: after it counted the reports over the bar.
+ */
+function landingBeforeTheHide(before: () => Promise<unknown>): void {
+  const binding = env.DIALED_CORE;
+  const batch: D1Database["batch"] = binding.batch.bind(binding);
+  const spy = vi
+    .spyOn(binding, "batch")
+    .mockImplementation(async <T>(statements: D1PreparedStatement[]) => {
+      spy.mockRestore();
+      await before();
+      return batch<T>(statements);
+    });
+  onTestFinished(() => {
+    spy.mockRestore();
+  });
+}
+
+async function unreadHiddenNotices() {
+  return core()
+    .select({ userId: notifications.userId })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.kind, "content_hidden"),
+        eq(notifications.read, false),
+      ),
+    );
+}
+
+describe("a photo's report when an Approve lands between its count and its hide", () => {
+  beforeEach(resetSafetyTables);
+
+  it("re-opens nothing, hides nothing and tells its author nothing", async () => {
+    const bar = reportersToHide("explicit", moderationThresholds());
+    expect(bar).toBeGreaterThan(1);
+    const photo = await photoOn(await kit());
+    for (let n = 0; n < bar; n += 1) {
+      await report({
+        reporterId: await makeUser(),
+        subjectType: "photo",
+        subjectId: photo,
+        reason: "explicit",
+      });
+    }
+    await core()
+      .update(reports)
+      .set({ createdAt: nowSeconds() - 100 });
+    await core().update(notifications).set({ read: true });
+    const [row] = await core()
+      .select({ id: reviewQueue.id })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.subjectId, photo));
+    if (row === undefined) throw new Error("nothing queued");
+    const screenStatus = async () => {
+      const [found] = await core()
+        .select({ screenStatus: entryPhotos.screenStatus })
+        .from(entryPhotos)
+        .where(eq(entryPhotos.id, photo));
+      return found?.screenStatus;
+    };
+    const approved: { status?: string | undefined } = {};
+    landingBeforeTheHide(async () => {
+      await resolveReview(row.id, await makeUser(), "approve");
+      approved.status = await screenStatus();
+    });
+
+    await report({
+      reporterId: await makeUser(),
+      subjectType: "photo",
+      subjectId: photo,
+      reason: "explicit",
+    });
+
+    // As the Approve left it: back out of the hide, not hidden again.
+    expect(approved.status).not.toBe("hidden_pending_review");
+    expect(await screenStatus()).toBe(approved.status);
+    expect(await queueRowOf(photo)).toMatchObject({ status: "approved" });
+    expect(await unreadHiddenNotices()).toStrictEqual([]);
   });
 });

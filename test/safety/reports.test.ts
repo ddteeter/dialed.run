@@ -1,6 +1,14 @@
 import { and, eq, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
 
 import {
   notifications,
@@ -566,6 +574,80 @@ describe("after a person approved it", () => {
       hiddenPendingReview: true,
     });
     expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("re-opens and hides nothing when an Approve lands between the count and the hide", async () => {
+    expect(autoHideReporterThreshold).toBeGreaterThan(1);
+    const entryId = await reportableEntry();
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await report(entryId, await makeUser(), "explicit");
+    }
+    await core()
+      .update(reports)
+      .set({ createdAt: nowSeconds() - 100 });
+    const [row] = await pendingReviewQueue();
+    if (row === undefined) throw new Error("nothing queued");
+    // The moderator's Approve commits after the new report was counted
+    // over the bar, just before its hide: the report's one batch.
+    const binding = env.DIALED_CORE;
+    const batch: D1Database["batch"] = binding.batch.bind(binding);
+    const spy = vi
+      .spyOn(binding, "batch")
+      .mockImplementation(async <T>(statements: D1PreparedStatement[]) => {
+        spy.mockRestore();
+        await resolveReview(row.id, await makeUser(), "approve");
+        return batch<T>(statements);
+      });
+    onTestFinished(() => {
+      spy.mockRestore();
+    });
+
+    expect(await report(entryId, await makeUser(), "explicit")).toMatchObject({
+      status: "filed",
+    });
+    expect(await moderationStatusOf(entryId)).toBe("ok");
+    expect(await pendingReviewQueue()).toStrictEqual([]);
+    const [settled] = await core()
+      .select({ status: reviewQueue.status })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.subjectId, entryId));
+    expect(settled).toStrictEqual({ status: "approved" });
+  });
+
+  it("still hides on a report that is over the bar alone when an Approve lands first", async () => {
+    const entryId = await reportableEntry();
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await report(entryId, await makeUser(), "explicit");
+    }
+    const [row] = await pendingReviewQueue();
+    if (row === undefined) throw new Error("nothing queued");
+    const binding = env.DIALED_CORE;
+    const batch: D1Database["batch"] = binding.batch.bind(binding);
+    const spy = vi
+      .spyOn(binding, "batch")
+      .mockImplementation(async <T>(statements: D1PreparedStatement[]) => {
+        spy.mockRestore();
+        await resolveReview(row.id, await makeUser(), "approve");
+        return batch<T>(statements);
+      });
+    onTestFinished(() => {
+      spy.mockRestore();
+    });
+
+    // A reason that hides at once is over its bar on one report, so the
+    // Approve before it answers nothing this report needs.
+    await report(entryId, await makeUser(), "intimate");
+
+    expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
+    const [reopened] = await core()
+      .select({
+        status: reviewQueue.status,
+        approvedAt: reviewQueue.approvedAt,
+      })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.subjectId, entryId));
+    expect(reopened?.status).toBe("pending");
+    expect(reopened?.approvedAt).toBeTypeOf("number");
   });
 
   it("counts a report filed in the Approve's own second, and none before it", async () => {
