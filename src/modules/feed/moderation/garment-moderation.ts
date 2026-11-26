@@ -227,8 +227,8 @@ export function clearedPhoto(
 /**
  * A statement that fails the takedown's whole batch unless the garment
  * still has the photo version the decision was made on, read when the
- * batch runs: it would set the garment's owner, which may not be empty,
- * to nothing. First in the batch after any Review hold, so a photo its
+ * batch runs: it would set the garment's visibility, which may not be
+ * empty, to nothing (a column this module already writes). First in the batch after any Review hold, so a photo its
  * owner replaced since is never cleared, forgotten or announced in the
  * old one's name. A garment deleted since matches nothing and refuses
  * nothing: the owner's delete already took its rows.
@@ -238,18 +238,20 @@ function versionHeld(db: Db, { item, photoKey }: Found) {
   return db
     .update(wardrobeItems)
     .set({
-      userId: sql`(case when ${sameVersion} then ${wardrobeItems.userId} else null end)`,
+      visibility: sql`(case when ${sameVersion} then ${wardrobeItems.visibility} else null end)`,
     })
     .where(eq(wardrobeItems.id, item.id));
 }
 
 /**
  * Whether an error is `versionHeld`'s refusal: a NOT NULL refusal of
- * `wardrobe_items.user_id`, matched on the parts SQLite's own text keeps.
+ * `wardrobe_items.visibility`, matched on the parts SQLite's own text keeps.
  */
 function isVersionRefusal(error: unknown): boolean {
   const text = String(error);
-  return text.includes("NOT NULL") && text.includes("wardrobe_items.user_id");
+  return (
+    text.includes("NOT NULL") && text.includes("wardrobe_items.visibility")
+  );
 }
 
 /**
