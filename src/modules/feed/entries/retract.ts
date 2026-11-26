@@ -84,15 +84,16 @@ type Debt = OutboxDebtOf<keyof typeof settledHere>;
 export type Statements = [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 
 /**
- * `statements` with `kept` after the first, so ahead of every delete
- * (design 232): the first of a photo's or a kit's statements is a review
- * settle, which no keep depends on.
+ * `statements` with `kept` ahead of them all (design 232): each keep asks
+ * in SQL whether its photo is still under review, so it goes before the
+ * review settle that opens a photo's or a kit's statements.
  */
 function keeping(
-  [first, ...rest]: Statements,
+  statements: Statements,
   kept: readonly BatchItem<"sqlite">[],
 ): Statements {
-  return [first, ...kept, ...rest];
+  const [keep, ...more] = kept;
+  return keep === undefined ? statements : [keep, ...more, ...statements];
 }
 
 /**
@@ -198,15 +199,23 @@ export function mediaDebts(userId: string, scope: Scope): Debt[] {
 }
 
 /**
-The batch, then the fast path for each debt.
-*/
+ * The batch, then the fast path for each debt. Given a `held` check (the
+ * runner's own deletes), the batch opens with it, so a live hold refuses
+ * the delete as the batch runs.
+ */
 export async function commit(
   db: Db,
   statements: Statements,
   debts: readonly Debt[],
   report: Report,
+  held?: HeldCheck,
 ): Promise<void> {
-  await db.batch([...statements, ...debts.map((d) => outboxInsert(db, d))]);
+  const owed = debts.map((d) => outboxInsert(db, d));
+  if (held === undefined) {
+    await db.batch([...statements, ...owed]);
+  } else {
+    await batchUnlessHeld(db, held, [...statements, ...owed]);
+  }
   for (const debt of debts) await settleOutbox(db, debt, settledHere, report);
 }
 
@@ -226,6 +235,16 @@ export function deletionCacheTags(
 }
 
 /**
+ * What a delete does beyond its rows: report, purge, and for the runner's
+ * own delete of one row, the hold that refuses it (SA-L09).
+ */
+interface Effects {
+  readonly report: Report;
+  readonly purge: PurgeTags;
+  readonly held?: HeldCheck | undefined;
+}
+
+/**
  * The frame every scope-taking delete shares: resolve `scope` to the
  * runner's own rows in `table`, hand them to `build` (which may itself read
  * before it can say what to write — a batch cannot branch on its own
@@ -241,7 +260,7 @@ async function retractScoped(
   table: typeof outfitEntries | typeof runs,
   userId: string,
   scope: Scope,
-  effects: { readonly report: Report; readonly purge: PurgeTags },
+  effects: Effects,
   build: (rows: ReturnType<typeof owned>) => Promise<{
     statements: Statements;
     debts: readonly Debt[];
@@ -250,7 +269,7 @@ async function retractScoped(
 ): Promise<void> {
   const rows = owned(db, table, userId, scope);
   const { statements, debts, tags } = await build(rows);
-  await commit(db, statements, debts, effects.report);
+  await commit(db, statements, debts, effects.report, effects.held);
   effects.purge(tags);
 }
 
@@ -263,13 +282,14 @@ export async function retractEntries(
   scope: Scope,
   report: Report = captureException,
   purge: PurgeTags = purgePublicPages,
+  held?: HeldCheck,
 ): Promise<void> {
   await retractScoped(
     db,
     outfitEntries,
     userId,
     scope,
-    { report, purge },
+    { report, purge, held },
     async (entries) => ({
       // A photo under review keeps its fingerprint and its record
       // (design 232).
@@ -322,8 +342,7 @@ async function retractOne(
   held: HeldCheck,
 ): Promise<void> {
   await assertOwned(db, table, userId, id, notFoundMessage);
-  await assertNotHeld(db, held);
-  await deleteScoped(db, userId, [id], effects.report, effects.purge);
+  await deleteScoped(db, userId, [id], effects.report, effects.purge, held);
 }
 
 /**
@@ -346,17 +365,38 @@ export interface HeldCheck {
  */
 export const LIVE_HOLD = ["hidden", "purging"] as const;
 
-async function assertNotHeld(db: Db, check: HeldCheck): Promise<void> {
-  const [hold] = await db
-    .select({ id: copyrightHolds.id })
-    .from(copyrightHolds)
-    .where(and(inArray(copyrightHolds.status, LIVE_HOLD), check.entries))
-    .limit(1);
-  if (hold !== undefined) {
+/**
+ * `statements` in one batch that a live hold on `check`'s kits refuses,
+ * as the batch runs rather than from a read before it: the first
+ * statement blanks the hold's NOT NULL status, which fails the whole
+ * batch when one matches and changes nothing when none does.
+ */
+async function batchUnlessHeld(
+  db: Db,
+  check: HeldCheck,
+  statements: Statements,
+): Promise<void> {
+  const refuseIfHeld = db
+    .update(copyrightHolds)
+    .set({ status: sql`null` })
+    .where(and(inArray(copyrightHolds.status, LIVE_HOLD), check.entries));
+  try {
+    await db.batch([refuseIfHeld, ...statements]);
+  } catch (error: unknown) {
+    if (!isHoldRefusal(error)) throw error;
     throw new ControlRefusal(
       `This ${check.noun} is held while a copyright claim is settled, so it can't be deleted yet.`,
     );
   }
+}
+
+/**
+ * Whether an error is `batchUnlessHeld`'s refusal: SQLite's NOT NULL text
+ * for the hold's status, wherever D1 or a wrapper puts it in the message.
+ */
+function isHoldRefusal(error: unknown): boolean {
+  const text = String(error);
+  return text.includes("NOT NULL") && text.includes("copyright_holds.status");
 }
 
 /**
@@ -368,6 +408,7 @@ type ScopedDelete = (
   scope: Scope,
   report: Report,
   purge: PurgeTags,
+  held: HeldCheck,
 ) => Promise<void>;
 
 /**
@@ -459,10 +500,6 @@ export async function deleteEntryPhoto(
     and(eq(entryPhotos.id, photoId), eq(outfitEntries.userId, userId)),
   );
   if (photo === undefined) throw new NotFoundError("photo not found");
-  await assertNotHeld(db, {
-    entries: eq(copyrightHolds.entryId, photo.entryId),
-    noun: "photo",
-  });
   // Read before the batch (design 232): a photo under review keeps its
   // fingerprint and its record.
   const kept = await withdrawnUnderReview(
@@ -475,6 +512,7 @@ export async function deleteEntryPhoto(
     keeping(photoDeletion(db, photoId, userId), kept),
     mediaDebts(userId, [photo.entryId]),
     report,
+    { entries: eq(copyrightHolds.entryId, photo.entryId), noun: "photo" },
   );
   if (photo.audience === WORLD_AUDIENCE) {
     purge(kitCacheTags(userId, photo.entryId));
@@ -562,8 +600,9 @@ export async function deleteRuns(
   scope: Scope,
   report: Report = captureException,
   purge: PurgeTags = purgePublicPages,
+  held?: HeldCheck,
 ): Promise<void> {
-  const effects = { report, purge };
+  const effects = { report, purge, held };
   await retractScoped(db, runs, userId, scope, effects, async (ownedRuns) => {
     const uploads =
       scope === "all"

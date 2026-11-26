@@ -51,7 +51,7 @@ import {
 import { queriesDuring } from "../d1-spy";
 import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
 import { noPurge } from "../purge-spy";
-import { opened } from "./helpers";
+import { firstBatchAfter, opened } from "./helpers";
 
 /**
  * D-147 (design 152): a photo removed as an intimate image keeps its
@@ -956,6 +956,24 @@ describe("an owner's delete under review (design 232)", () => {
     await deleteEntryPhoto(core(), first.userId, first.photoId, quiet, noPurge);
 
     expect(await withdrawals()).toMatchObject([{ subjectId: first.photoId }]);
+  });
+
+  it("keeps nothing when the review is decided between the delete's read and its write", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await reportedAs("intimate", "photo", first.photoId);
+    // A moderator's Approve commits after the delete read the review open.
+    const racing = firstBatchAfter(() =>
+      core()
+        .update(reviewQueue)
+        .set({ status: "approved" })
+        .where(eq(reviewQueue.subjectId, first.photoId)),
+    );
+
+    await deleteEntryPhoto(racing, first.userId, first.photoId, quiet, noPurge);
+
+    expect(await withdrawals()).toStrictEqual([]);
+    expect(await keptRows()).toStrictEqual([]);
+    expect(await photoRow(first.photoId)).toBeUndefined();
   });
 
   it("keeps nothing once the review is decided", async () => {

@@ -6,7 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeaders } from "@tanstack/react-start/server";
 
-import { coreDb, waitUntil } from "../../env";
+import { coreDb, primaryCoreDb, waitUntil } from "../../env";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import {
   attachKitInput,
@@ -392,7 +392,7 @@ export const retractEntryAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     await retractEntry(
-      coreDb(),
+      primaryCoreDb(),
       userId,
       data.entryId,
       captureException,
@@ -405,7 +405,7 @@ export const deleteEntryPhotoAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     await deleteEntryPhoto(
-      coreDb(),
+      primaryCoreDb(),
       userId,
       data.photoId,
       captureException,

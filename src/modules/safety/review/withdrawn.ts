@@ -31,7 +31,7 @@ import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { qualified } from "../../../lib/sql/qualified";
 import { reportHidingAtOnce, requestHolds } from "../limits";
 import { removalStatements } from "../rules";
-import { moderationActionInsert } from "../rules";
+import { moderationActionInsert, moderationActionInsertWhere } from "../rules";
 import {
   keptFingerprints,
   keptGarmentFingerprint,
@@ -73,9 +73,11 @@ function underReview(): SQL {
 
 /**
  * What an owner's delete of these kit photos keeps, for the delete's
- * batch, ahead of the statements that take the photos: read first,
- * since a batch cannot branch. `photosInScope` is a condition on
- * `entry_photos`; only `ownerId`'s photos are read.
+ * batch, ahead of the statement that settles their reviews. The photos
+ * are read first, since a batch cannot branch, and each keep is held to
+ * the review again in SQL: a review settled since the read keeps
+ * nothing. `photosInScope` is a condition on `entry_photos`; only
+ * `ownerId`'s photos are read.
  */
 export async function withdrawnUnderReview(
   db: Db,
@@ -91,17 +93,22 @@ export async function withdrawnUnderReview(
     );
   return withdrawn.flatMap((photo) => {
     const id = newUlid();
+    const stillUnderReview = sql`${eq(entryPhotos.id, photo.id)} and ${underReview()}`;
     return [
-      moderationActionInsert(db, {
-        id,
-        actorId: ownerId,
-        action: "withdrawn",
-        subjectType: "photo",
-        subjectId: photo.id,
-        subjectOwnerId: ownerId,
-        reason: removalStatements.intimate,
-      }),
-      ...keptFingerprints(db, "intimate", eq(entryPhotos.id, photo.id), id),
+      moderationActionInsertWhere(
+        db,
+        {
+          id,
+          actorId: ownerId,
+          action: "withdrawn",
+          subjectType: "photo",
+          subjectId: photo.id,
+          subjectOwnerId: ownerId,
+          reason: removalStatements.intimate,
+        },
+        sql`exists (select 1 from ${entryPhotos} where ${stillUnderReview})`,
+      ),
+      ...keptFingerprints(db, "intimate", stillUnderReview, id),
     ];
   });
 }

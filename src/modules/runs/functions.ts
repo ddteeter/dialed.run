@@ -40,7 +40,7 @@ import {
   getRunSummary,
   listRunPage,
 } from "./service";
-import { env, waitUntil } from "../../env";
+import { env, primaryCoreDb, waitUntil } from "../../env";
 import { noInput } from "../../lib/no-input";
 import { captureException, oweInCore } from "../ops";
 import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava";
@@ -236,5 +236,5 @@ export const deleteRunFn = createServerFn({ method: "POST" })
   .validator(runIdInput)
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await deleteRun(coreDb(), userId, data.runId);
+    await deleteRun(primaryCoreDb(), userId, data.runId);
   });
