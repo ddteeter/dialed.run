@@ -1535,6 +1535,57 @@ describe("purgeDueAccounts — a live copyright hold", () => {
     },
   );
 
+  it("keeps the runs of an account a hold lands on after the purge claimed it", async () => {
+    const runner = await seedAccount();
+    await claim(runner.userId, NOW - 1);
+    const { deps, reported } = depsAt(NOW);
+    const forgetBands = deps.forgetBands;
+    // Just before the first page of runs goes: after the claim.
+    const held: PurgeDeps = {
+      ...deps,
+      forgetBands: async (runIds) => {
+        await holdOn(runner.userId, "hidden");
+        await forgetBands(runIds);
+      },
+    };
+
+    await purge([], held);
+
+    const left = await footprint(runner);
+    expect(left.runs).not.toStrictEqual([]);
+    expect(left.entries).not.toStrictEqual([]);
+    expect(await hasProfile(runner.userId)).toBe(true);
+    const [claimRow] = await claimOf(runner.userId);
+    expect(claimRow?.purgeStartedAt).toBe(NOW);
+    expect(reported.map(({ error }) => String(error))).toStrictEqual([
+      expect.stringMatching(/held while a copyright claim is settled/u),
+    ]);
+  });
+
+  it("keeps an account without runs that a hold lands on after the purge claimed it", async () => {
+    const owner = await claimedProfile(NOW - 60);
+    const { deps, reported } = depsAt(NOW);
+    const revokeStrava = deps.revokeStrava;
+    // The purge's first step after its claim; with no runs, the next
+    // delete is every kit of theirs at once.
+    const held: PurgeDeps = {
+      ...deps,
+      revokeStrava: async (userId) => {
+        await holdOn(owner, "hidden");
+        await revokeStrava(userId);
+      },
+    };
+
+    await purge([], held);
+
+    expect(await hasProfile(owner)).toBe(true);
+    const [claimRow] = await claimOf(owner);
+    expect(claimRow?.purgeStartedAt).toBe(NOW);
+    expect(reported.map(({ error }) => String(error))).toStrictEqual([
+      expect.stringMatching(/held while a copyright claim is settled/u),
+    ]);
+  });
+
   it("says nothing of a held account that is not yet due", async () => {
     const held = await claimedProfile(NOW + 60);
     await holdOn(held, "hidden");

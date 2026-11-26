@@ -300,6 +300,16 @@ function due(now: number) {
  * the hold's material is evidence until the Desk settles it, and the purge
  * would delete it with the rest. The hold's own end lets the next firing in.
  */
+/**
+ * The runner's live holds, checked by the run deletes' own batches as
+ * they run: the claim only waited for the holds there were when it was
+ * taken. A hold placed since fails the batch, the claim is kept, and the
+ * next firing waits (`claimable`).
+ */
+function heldBy(userId: string) {
+  return { entries: eq(copyrightHolds.ownerId, userId), noun: "run" } as const;
+}
+
 function liveHold() {
   const live = and(
     eq(copyrightHolds.ownerId, accountDeletions.userId),
@@ -379,7 +389,7 @@ export async function purgeAccount(
   if (!(await didDeleteEveryRun(deps, userId, budget))) return undefined;
   // 128's SAF-3 primitive (seam 4): every entry left — with their items,
   // tags, reactions, photos and notifications — and the media prefix owed.
-  await deleteRuns(core, userId, "all", report);
+  await deleteRuns(core, userId, "all", report, undefined, heldBy(userId));
   await deleteCloset(core, userId);
   await deleteStoredFiles(deps.importsBucket, userId);
   return deleteAccountRows(core, userId, deps);
@@ -436,7 +446,14 @@ async function didDeleteEveryRun(
     if (last === undefined) return true;
     budget.left -= page.length;
     await deps.forgetBands(page.map((run) => run.id));
-    await deleteRunsThrough(deps.core, userId, last.id, deps.report);
+    await deleteRunsThrough(
+      deps.core,
+      userId,
+      last.id,
+      deps.report,
+      undefined,
+      heldBy(userId),
+    );
   }
   return false;
 }
