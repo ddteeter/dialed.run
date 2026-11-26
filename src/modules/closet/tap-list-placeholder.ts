@@ -3,7 +3,7 @@
  * link read (`garment-link.ts`) can ask it without importing `tap-list.ts`,
  * which imports `service.ts`, which imports `garment-link.ts`.
  */
-import { TAP_LIST } from "./tap-list-data";
+import { tapList } from "./tap-list-data";
 
 /**
  * Whether a row still carries the name the tap list gave it — "Merino
@@ -20,7 +20,7 @@ import { TAP_LIST } from "./tap-list-data";
 export function isTapListPlaceholder(
   row: Readonly<{ category: string; name: string }>,
 ): boolean {
-  return TAP_LIST.some(
+  return tapList().some(
     ({ garment }) =>
       garment.category === row.category && garment.name === row.name,
   );

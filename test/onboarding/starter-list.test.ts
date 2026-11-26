@@ -5,7 +5,7 @@ import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import type { ClimateNormals, ClimatePlace } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
-import { TAP_LIST, TAP_LIST_FOLD } from "../../src/modules/closet";
+import { tapList, TAP_LIST_FOLD } from "../../src/modules/closet";
 import { saveCalibration } from "../../src/modules/onboarding/profile";
 import {
   normalsForRequest,
@@ -51,7 +51,7 @@ describe("starterList", () => {
       Promise.resolve(COLD_NORMALS),
     );
 
-    expect(entries).toHaveLength(TAP_LIST.length);
+    expect(entries).toHaveLength(tapList().length);
     expect(fold).toBe(TAP_LIST_FOLD);
     expect(entries[0]?.key).toBe("tights");
     // The July row is still on offer, further down. That sentence is the
@@ -66,7 +66,7 @@ describe("starterList", () => {
       Promise.resolve(HOT_NORMALS),
     );
 
-    expect(entries).toHaveLength(TAP_LIST.length);
+    expect(entries).toHaveLength(tapList().length);
     expect(entries[0]?.key).toBe("shorts-5");
     // Mittens fall behind the fold, not out of existence.
     const mittens = entries.findIndex((row) => row.key === "mittens");
@@ -83,7 +83,7 @@ describe("starterList", () => {
       Promise.reject(new Error("provider down")),
     );
 
-    expect(entries).toHaveLength(TAP_LIST.length);
+    expect(entries).toHaveLength(tapList().length);
     expect(entries[0]?.key).toBe("tights");
   });
 
@@ -127,7 +127,7 @@ describe("starterList", () => {
       Promise.reject(new Error("provider down")),
     );
 
-    expect(entries).toHaveLength(TAP_LIST.length);
+    expect(entries).toHaveLength(tapList().length);
     expect(entries[0]?.key).toBe("tee");
   });
 
@@ -165,7 +165,7 @@ describe("starterList", () => {
     const { entries } = await starterList(coreDb(), userId, normalsFor);
 
     expect(normalsFor).not.toHaveBeenCalled();
-    expect(entries).toHaveLength(TAP_LIST.length);
+    expect(entries).toHaveLength(tapList().length);
     // The mild ordering: a tee first, not tights and not 5" shorts.
     expect(entries[0]?.key).toBe("tee");
   });

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { garmentSchema } from "../../src/lib/contracts";
 import {
   climateBands,
-  TAP_LIST,
+  tapList,
   TAP_LIST_FOLD,
   tapListFor,
   tapListSelectionSchema,
@@ -15,20 +15,22 @@ import {
  * leads with: **the band never removes a row.**
  */
 function garmentFor(key: string) {
-  return TAP_LIST.find((row) => row.key === key)?.garment;
+  return tapList().find((row) => row.key === key)?.garment;
 }
 
 describe("the tap-list table", () => {
   it("holds only garments the contract accepts", () => {
-    for (const { garment } of TAP_LIST) {
+    for (const { garment } of tapList()) {
       expect(garmentSchema.safeParse(garment).success).toBe(true);
     }
   });
 
   it("keys every row uniquely, and names every row distinctly", () => {
-    expect(new Set(TAP_LIST.map((row) => row.key)).size).toBe(TAP_LIST.length);
-    expect(new Set(TAP_LIST.map((row) => row.garment.name)).size).toBe(
-      TAP_LIST.length,
+    expect(new Set(tapList().map((row) => row.key)).size).toBe(
+      tapList().length,
+    );
+    expect(new Set(tapList().map((row) => row.garment.name)).size).toBe(
+      tapList().length,
     );
   });
 
@@ -44,7 +46,7 @@ describe("the tap-list table", () => {
   it("gives no row a type", () => {
     // Type is a property of the *product*, written on match or by
     // enrichment — never inferred from a tap-list label.
-    for (const { garment } of TAP_LIST) {
+    for (const { garment } of tapList()) {
       expect(garment).not.toHaveProperty("type");
     }
   });
@@ -52,7 +54,7 @@ describe("the tap-list table", () => {
   it("ranks every row in every band", () => {
     // A missing rank sorts as `undefined` and puts the row somewhere
     // arbitrary, which looks like a deliberate order and is not.
-    for (const row of TAP_LIST) {
+    for (const row of tapList()) {
       for (const band of climateBands) {
         expect(typeof row.rank[band]).toBe("number");
       }
@@ -61,8 +63,8 @@ describe("the tap-list table", () => {
 
   it("gives each band a total order, with no ties", () => {
     for (const band of climateBands) {
-      const ranks = TAP_LIST.map((row) => row.rank[band]);
-      expect(new Set(ranks).size).toBe(TAP_LIST.length);
+      const ranks = tapList().map((row) => row.rank[band]);
+      expect(new Set(ranks).size).toBe(tapList().length);
     }
   });
 });
@@ -72,9 +74,9 @@ describe("tapListFor", () => {
     // The rule from the artboard: a Minneapolis runner owns tights and a
     // singlet. Mittens fall behind the fold in Phoenix, not out of it.
     for (const band of climateBands) {
-      expect(tapListFor(band)).toHaveLength(TAP_LIST.length);
+      expect(tapListFor(band)).toHaveLength(tapList().length);
       expect(new Set(tapListFor(band).map((row) => row.key))).toStrictEqual(
-        new Set(TAP_LIST.map((row) => row.key)),
+        new Set(tapList().map((row) => row.key)),
       );
     }
   });
@@ -131,14 +133,23 @@ describe("tapListFor", () => {
   it("does not reorder the table itself", () => {
     // `sort` mutates, so a version without the copy would leave whichever
     // band asked last as everyone's order.
-    const before = TAP_LIST.map((row) => row.key);
+    const before = tapList().map((row) => row.key);
     tapListFor("hot");
 
-    expect(TAP_LIST.map((row) => row.key)).toStrictEqual(before);
+    expect(tapList().map((row) => row.key)).toStrictEqual(before);
+  });
+
+  it("builds a fresh table on every call, so one caller cannot reorder another's", () => {
+    // #1048: the table is built on call so its mutants are not static. A
+    // cached module-scope copy would bring every one back to re-running
+    // the whole suite.
+    const first = tapList();
+    expect(tapList()).not.toBe(first);
+    expect(tapList()).toStrictEqual(first);
   });
 
   it("folds with rows left over, so the disclosure has something to say", () => {
-    expect(TAP_LIST.length).toBeGreaterThan(TAP_LIST_FOLD);
+    expect(tapList().length).toBeGreaterThan(TAP_LIST_FOLD);
   });
 });
 
@@ -165,7 +176,7 @@ describe("tapListSelectionSchema", () => {
     // garment, not an error — and to make this schema's home depend on
     // how long that table is, which is what stopped it living in `lib/`
     // where O3's form can reach it.
-    const everything = TAP_LIST.map((row) => row.key);
+    const everything = tapList().map((row) => row.key);
 
     expect(
       tapListSelectionSchema.safeParse({ keys: [...everything, "tee", "tee"] })

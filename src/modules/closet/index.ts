@@ -33,7 +33,7 @@ export {
   climateBandSchema,
   climateBands,
   isTapListPlaceholder,
-  TAP_LIST,
+  tapList,
   TAP_LIST_FOLD,
   tapListFor,
   tapListSelectionSchema,

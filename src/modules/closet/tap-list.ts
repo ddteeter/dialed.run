@@ -14,19 +14,19 @@ import { garmentSchema } from "../../lib/contracts";
 import type { TapListSelection } from "../../lib/contracts";
 import { createItem } from "./service";
 import type { WardrobeItemRow } from "./service";
-import { climateBands, TAP_LIST } from "./tap-list-data";
+import { climateBands, tapList } from "./tap-list-data";
 import type { ClimateBand, TapListEntry } from "./tap-list-data";
 
 type Db = ReturnType<typeof drizzle>;
 
-export { climateBands, TAP_LIST, TAP_LIST_FOLD } from "./tap-list-data";
+export { climateBands, tapList, TAP_LIST_FOLD } from "./tap-list-data";
 export { isTapListPlaceholder } from "./tap-list-placeholder";
 export type { ClimateBand, TapListEntry } from "./tap-list-data";
 
 export const climateBandSchema = z.enum(climateBands);
 
 function findEntry(key: string): TapListEntry | undefined {
-  return TAP_LIST.find((candidate) => candidate.key === key);
+  return tapList().find((candidate) => candidate.key === key);
 }
 
 /**
@@ -39,8 +39,8 @@ function findEntry(key: string): TapListEntry | undefined {
 export function tapListFor(band: ClimateBand): TapListEntry[] {
   // `toSorted`, so the table itself is never reordered — `sort` mutates,
   // and the copy that avoids it is easy to forget when someone later
-  // "simplifies" this line.
-  return TAP_LIST.toSorted((a, b) => a.rank[band] - b.rank[band]);
+  // "simplifies" this line, or makes `tapList()` a cached constant again.
+  return tapList().toSorted((a, b) => a.rank[band] - b.rank[band]);
 }
 
 /**
