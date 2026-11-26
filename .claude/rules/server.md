@@ -43,6 +43,16 @@ cite "CLAUDE.md law N" or "§D1 discipline" mean the sections below.
   gap after it loses the work for good; a delete plus whatever cleans up
   after it. A batch cannot branch on its own results, so a read that decides
   what to write goes _before_ it — a reason to reorder, not to split.
+- **A guard that misses is not an error.** An `UPDATE … WHERE status =
+'pending'` that matches nothing changes 0 rows, and the statements after
+  it still commit. When they depend on it, first fold the condition into
+  each dependent statement's own WHERE (`EXISTS`/`NOT EXISTS`), so the
+  batch is right either way. When a miss must stop everything, or must be
+  reported, wrap the write in `guarded()` and run the batch with
+  `runGuarded()` (`lib/sql/batch-guard.ts`, design 277): a miss rolls the
+  batch back and comes back as `{ ok: false, missed }`. Never guard a write
+  that may miss on its own (a cleanup that found nothing), and remember
+  the guard is one more statement in the results.
 - **A drizzle builder is lazy.** `db.insert(t).values(v)` assembles SQL and
   sends nothing until it is `await`ed or passed to `batch()`. A bare builder
   statement is now a lint error (`no-floating-promises` with
