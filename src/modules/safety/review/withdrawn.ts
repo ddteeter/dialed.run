@@ -125,7 +125,14 @@ export function withdrawnUnderReview(
   const recorded = sql`exists (select 1 from ${into} where ${recordOfThisPhoto})`;
   return [
     db.insert(moderationActions).select(records),
-    ...keptFingerprints(db, "intimate", recorded, recordId),
+    // Scoped as the records are, so the read seeks the photos in scope
+    // rather than scanning every photo for a record.
+    ...keptFingerprints(
+      db,
+      "intimate",
+      and(photosInScope, theirs, recorded),
+      recordId,
+    ),
   ];
 }
 

@@ -1031,6 +1031,71 @@ describe("an owner's delete under review (design 232)", () => {
     ]);
   });
 
+  it.each([
+    [
+      "a photo",
+      "SEARCH entry_photos USING INDEX sqlite_autoindex_entry_photos_1 (id=?)",
+      (kit: Awaited<ReturnType<typeof posted>>) =>
+        deleteEntryPhoto(core(), kit.userId, kit.photoId, quiet, noPurge),
+    ],
+    [
+      "a kit",
+      "SEARCH entry_photos USING INDEX entry_photos_idempotency (entry_id=?)",
+      (kit: Awaited<ReturnType<typeof posted>>) =>
+        retractEntries(core(), kit.userId, [kit.entryId], quiet, noPurge),
+    ],
+  ])(
+    "keeps the fingerprints of %s by seeking its photos, never a scan of every photo",
+    async (_what, seek, work) => {
+      const kit = await posted(await sceneJpeg(4));
+      const { prepared } = await queriesDuring(() => work(kit));
+      const keep = prepared.find((query) =>
+        query.includes('insert into "removed_fingerprints"'),
+      );
+      if (keep === undefined) throw new Error("no fingerprint keep");
+      const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${keep}`)
+        .bind(...Array.from(keep.matchAll(/\?/g), () => 0))
+        .all<{ detail: string }>();
+      const details = plan.results.map((row) => row.detail);
+
+      expect(details).toContain(seek);
+      expect(details).not.toContain("SCAN entry_photos");
+    },
+  );
+
+  it("keeps each photo under review under its own record, and nothing more", async () => {
+    const first = await posted(await sceneJpeg(4));
+    const second = await posted(await sceneJpeg(3), first);
+    await posted(await sceneJpeg(2), first);
+    const theirs = await posted(await sceneJpeg(1));
+    for (const photo of [first, second, theirs]) {
+      await reportedAs("intimate", "photo", photo.photoId);
+    }
+
+    await retractEntries(core(), first.userId, [first.entryId], quiet, noPurge);
+
+    const records = await core()
+      .select({
+        id: moderationActions.id,
+        subjectId: moderationActions.subjectId,
+      })
+      .from(moderationActions)
+      .where(eq(moderationActions.action, "withdrawn"));
+    expect(new Set(records.map((row) => row.id)).size).toBe(2);
+    expect(
+      byPhoto(records.map((row) => [row.subjectId, row.id])),
+    ).toMatchObject(
+      byPhoto([
+        [first.photoId, expect.any(String)],
+        [second.photoId, expect.any(String)],
+      ]),
+    );
+    const kept = await keptRows();
+    expect(
+      byPhoto(kept.map((row) => [row.photoId ?? "", row.moderationActionId])),
+    ).toStrictEqual(byPhoto(records.map((row) => [row.subjectId, row.id])));
+  });
+
   it("keeps nothing once the review is decided", async () => {
     const first = await posted(await sceneJpeg(4));
     await reportedAs("intimate", "photo", first.photoId);
@@ -1044,6 +1109,13 @@ describe("an owner's delete under review (design 232)", () => {
     expect(await withdrawals()).toStrictEqual([]);
   });
 });
+
+/**
+`[photo, record]` pairs in photo order, so two lists of them compare.
+*/
+function byPhoto(pairs: readonly (readonly [string, unknown])[]) {
+  return pairs.toSorted(([one], [other]) => one.localeCompare(other));
+}
 
 /**
 The fingerprint an owner's delete kept, the only one kept.

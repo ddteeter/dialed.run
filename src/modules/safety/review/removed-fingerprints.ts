@@ -64,7 +64,7 @@ type Db = ReturnType<typeof drizzle>;
 export function keptFingerprints(
   db: Db,
   reason: RemovalReason,
-  photosInScope: SQL,
+  photosInScope: SQL | undefined,
   moderationActionId: string | SQL,
 ) {
   return reason === "intimate"
