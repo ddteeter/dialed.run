@@ -1,8 +1,12 @@
 # Design: 277 three guardrails on D1 batches
 
-> Wave 19, lane F3. Docs only: nothing past the spike is built until the
-> owner rules (§Owner question). Over the template's page on purpose: three
-> options, each with its measurement.
+> Wave 19, lane F3. Over the template's page on purpose: three options,
+> each with its measurement, then the ruling.
+>
+> **Owner ruled 2026-11-26** (§Ruling): build §2's `guarded()` helper, then
+> a rule that holds batched writes to it (§4), then §1b. Drop §3 and §1a.
+> `eslint.config.js` is granted for this lane only, to register the two
+> rules.
 
 ## Problem
 
@@ -33,7 +37,7 @@ a constraint that fails the batch; (3) a changes check after the batch with
 a conflict response. The three guardrails below support those shapes. None
 of them replaces them.
 
-## 1. A lint rule: reads that decide a write batch come from the primary
+## 1. A lint rule: reads that decide a write batch come from the primary (§1b ruled in, §1a dropped)
 
 **The rule.** A function that writes with `.batch(` must read through the
 primary any value it reads before that batch: `primaryCoreDb()`, a pinned
@@ -153,7 +157,7 @@ where a miss must stop everything.
 **Where it lives.** `src/lib/sql/` (no grant). A paragraph in
 `.claude/rules/server.md` §D1 discipline. In the mutation ratchet at 100%.
 
-## 3. A changes check in the worker tests
+## 3. A changes check in the worker tests (dropped)
 
 **The check.** In the worker tests, record each batch statement's
 `meta.changes`, and fail a batch in which a write changed 0 rows while a
@@ -189,7 +193,62 @@ or a hook exported from `d1-session.ts` and set from
 hook, which the mutation ratchet must still cover). `src/env/d1.ts` does
 not need to change.
 
-## Recommendation
+## 4. A rule that holds batched writes to `guarded()` (ruled in)
+
+Added by the ruling. §2 acts only where code opts in, so this rule makes
+opting out the visible choice.
+
+**The rule.** An `update` or `delete` builder whose WHERE goes beyond the
+row's key, built to go into a multi-statement `db.batch()`, must be wrapped
+in `guarded()`, or carry an opt-out on the line before it:
+
+```ts
+// batch-unguarded -- <why a miss here is meant to be a no-op>
+```
+
+The rule itself rejects an opt-out without a reason of 20 characters or
+more, which is the bar `fallow-ignore` sets (`fallow-ignore-has-reason`).
+Putting the check in the rule means it needs no protected test.
+
+**Scope heuristic.**
+
+- _Beyond the key_: the WHERE names a column that is in no single primary
+  key, `.unique()` column or `uniqueIndex(...).on(...)` of the target
+  table, or it holds anything the rule cannot read as `eq`/`inArray`/`and`
+  on that table's own columns: a subquery, `sql`, another table, or a
+  predicate built elsewhere. The keys are read from the `sqliteTable(...)`
+  call in `src/db/schema-*.ts` through the type checker, so there is no
+  second copy of them (derive, don't mirror).
+- _Built for a batch_: the builder is an element of a `.batch([...])` with
+  more than one element or a spread, or it is held in a variable, returned,
+  or put in an array instead of awaited. A directly awaited write is one
+  statement, so it is out of scope.
+- `insert … select … where` and `onConflictDoUpdate({ where })` are not
+  in the first version, and a later PR can add them.
+
+**Measured on main** (scratch TS-compiler script, not committed): 191
+update/delete builders on tables with a key.
+
+| where the builder goes                       | beyond the key | key only |
+| -------------------------------------------- | -------------- | -------- |
+| written in a multi-statement `.batch([...])` | 48             | 14       |
+| held, returned, or in an array batched later | 52             | 26       |
+| awaited on its own (out of scope)            | 31             | 20       |
+
+So the rule fires **100 times on main**. By the shape of the WHERE, about 8
+are time-cutoff sweeps and about 18 carry a visible status, null, EXISTS or
+version guard. The rest name the owner or a parent row (cleanups such as
+"delete this runner's sessions"), or use a predicate built elsewhere, which
+needs a read to judge. Most cleanups are correct no-ops on a miss, so they
+take the opt-out. A WHERE that also holds an ownership check is a guard, and
+the rule is right to ask about it. The rule cannot tell those two apart, so
+a person chooses at each site.
+
+**Cost.** About 2 days for the rule and its tests. Then each of the 100
+sites needs `guarded()` or an opt-out. Some of them are in files other lanes
+are changing this wave (§Open question).
+
+## Recommendation (before the ruling)
 
 **Build §2, then §1b. Do not build §3 or §1a.**
 
@@ -212,13 +271,32 @@ The brief planned the lint first if the owner rules during the wave. This
 recommends the reverse, because §2 is smaller, needs no grant, and gives
 §1b's hits a fix to use.
 
+## Ruling
+
+Owner ruled 2026-11-26 (relayed by the wave coordinator, recorded on
+#1097):
+
+1. **§2, the `guarded()` helper**, first. No grant.
+2. **§4**, the rule that holds batched writes beyond the key to `guarded()`
+   or an opt-out with its reason.
+3. **§1b**, the type-aware rule with a primary-handle brand for reads
+   that decide a write.
+
+§3 and §1a are dropped. The `eslint.config.js` change that registers rules
+2 and 3 is granted for this lane only. That PR records the grant and needs
+the owner's `owner-approved` label.
+
+PRs: this design; then the helper (PR 2); then §4 and §1b together (PR 3).
+The helper's first users are the batch fixes in lanes F1 and F2. This lane
+does not edit their files, and the helper PR lists them under Deferred.
+
 ## Contract touches
 
 - Schema changes needed: **none** for any recommendation. The CHECK-table
   and trigger variants of §2 would need one, and are not recommended.
 - New route files: none. New bindings/queues/crons: **none**.
-- Grants: `eslint.config.js` (to register the §1 rule); `vitest.config.ts`
-  only if §3 is built with a test binding.
+- Grants: `eslint.config.js`, to register the §4 and §1b rules (owner,
+  2026-11-26, this lane only).
 - Screens: none.
 
 ## Test plan
@@ -234,23 +312,30 @@ Per option, if built (worker unless named):
   when it hits; sits directly after its statement whatever comes before;
   `runGuarded` returns the missed label and rethrows other errors; the
   pinned SQLite error text.
-- §3: the recorder flags a miss followed by a hit, and not a miss alone,
-  a miss followed by misses, or a read-only batch.
+- §4: a rule test (`RuleTester`, `node`) per case: a beyond-key update in a
+  two-statement batch fails; the same inside `guarded()` passes; a key-only
+  write passes; an awaited write passes; a returned or held builder fails;
+  an opt-out with a reason passes; an opt-out with a short reason or none
+  fails; a composite key and a `uniqueIndex` key count as keys.
 
 ## Issues
 
-- Opens: one build issue for whichever options the owner picks.
+- Owner questions: #1097 (which to build; answered, Ready) and #1098
+  (inline opt-outs or a baseline for §4; Needs owner, before PR 3).
+- The helper's PR opens one issue for its first users, the batch fixes in
+  lanes F1 and F2.
 
-## Owner question
+## Owner question (answered)
 
-Which of these to build, and in what order?
+Which of the three to build, and in what order? Answered 2026-11-26: §2,
+then §4, then §1b (§Ruling).
 
-1. §2 then §1b, with the `eslint.config.js` grant for §1b's rule
-   (recommended);
-2. §1b then §2 (the brief's order: the lint first);
-3. §2 only;
-4. something else, including §3 or §1a despite the measurements.
+## Open question (before PR 3)
 
-For §1b, the grant is one entry in `eslint.config.js` that registers a
-local typescript-eslint rule from a new `eslint-rules/` folder, applied to
-`src/modules/**` and `src/lib/**`.
+The §4 rule fires 100 times on main. Inline opt-outs at all of them mean
+PR 3 edits dozens of files, some of which lanes F1 and F2 are changing
+this wave. The alternative is a baseline: the existing sites go in a list
+the rule reads, the list may only shrink (like the module ratchet's pins),
+and new code gets no baseline entry. The recommendation is the baseline,
+with each entry cleared as its file is next touched. PR 3 waits for the
+answer (#1098).
