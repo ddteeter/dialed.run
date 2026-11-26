@@ -89,12 +89,8 @@ export type Statements = [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
  * in SQL whether its photo is still under review, so it goes before the
  * review settle that opens a photo's or a kit's statements.
  */
-function keeping(
-  statements: Statements,
-  kept: readonly BatchItem<"sqlite">[],
-): Statements {
-  const [keep, ...more] = kept;
-  return keep === undefined ? statements : [keep, ...more, ...statements];
+function keeping(statements: Statements, kept: Statements): Statements {
+  return [...kept, ...statements];
 }
 
 /**

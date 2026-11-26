@@ -906,6 +906,20 @@ describe("Apply (R48·130)", () => {
     expect(await bellOf(ada.userId)).toHaveLength(0);
   });
 
+  it("answers changed, before asking whether the name is taken, for a name no runner is waiting on", async () => {
+    const { productId } = await product();
+    await product("Rover Half-Zip");
+    const ada = await owner(productId);
+    // The runner filed again since the page showed "Rover Half-Zip".
+    await file(ada, productId, "name", "Trail Half-Zip");
+    expect(
+      await applyCorrection({
+        actorId: "op",
+        key: { productId, field: "name", value: "rover  half-zip" },
+      }),
+    ).toStrictEqual({ outcome: "changed" });
+  });
+
   it("allows a name that only differs from the product's own", async () => {
     const { productId } = await product();
     const ada = await owner(productId);

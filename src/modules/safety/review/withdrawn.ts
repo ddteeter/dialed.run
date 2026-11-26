@@ -86,7 +86,7 @@ export function withdrawnUnderReview(
   db: Db,
   ownerId: string,
   photosInScope: SQL | undefined,
-): BatchItem<"sqlite">[] {
+): [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] {
   const createdAt = nowSeconds();
   const theirs = inArray(
     entryPhotos.entryId,
