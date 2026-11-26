@@ -56,14 +56,14 @@ views {
         **If it fails:** the photo stays `pending`, and the hourly sweep screens it again.
       '''
     }
-    // source: src/modules/safety/screening/screening.ts screenPhoto (db.batch), screeningInsert, visibilityWrite, updateWhilePending, queueWritesFor, holdNoticeFor
+    // source: src/modules/safety/screening/screening.ts screenPhoto (db.batch), screeningInsert, visibilityWrite, updateWhilePending, queueWritesFor, holdNoticeFor, photoStillThere
     cf.app.safety.screening -> cf.coreDb 'writes the verdict, the visibility and any review, in one batch' {
       notes '''
         A pass publishes. The middle band publishes too, and puts the photo in front of a person. A flag hides it, puts it in front of a person, and tells its author.
 
         **Guard: only over `pending`.** A report or a removal that hid the photo while the classifier was answering is never undone by a late pass.
 
-        **Guard: the verdict is written only while the photo exists**, so an answer that lands after the runner deleted it writes nothing.
+        **Guard: the verdict, its Review row and its author\'s notice are written only while the photo exists**, read when the batch runs, so an answer that lands after the runner deleted it writes nothing and asks nobody.
       '''
     }
     // source: src/modules/feed/entries/photos.ts uploadPhoto (publish, syncPublicPhotosLater)
@@ -147,6 +147,8 @@ views {
           As a missing file, as unscreened, or as the classifier\'s when the breaker held its flag back. Its day is read from the id the upload minted.
 
           **Guard: one Review row a photo.** An open row is left alone, and one a person settled within the day stays settled, so a photo comes back once a day, not every hour.
+
+          **Guard: still there and still pending.** Each row is written only while its photo exists and still waits on its screening, read when the batch runs, since the list was read before a pass that can take minutes.
         '''
       }
       // source: src/modules/safety/screening/retry.ts retryPendingScreenings, namesOf
