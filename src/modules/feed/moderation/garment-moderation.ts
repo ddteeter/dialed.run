@@ -244,13 +244,13 @@ function versionHeld(db: Db, { item, photoKey }: Found) {
 }
 
 /**
- * Whether an error is `versionHeld`'s refusal: a NOT NULL refusal of
- * `wardrobe_items.visibility`, matched on the parts SQLite's own text keeps.
+ * Whether an error is `versionHeld`'s refusal: SQLite's own words for a
+ * NOT NULL refusal of `wardrobe_items.visibility`, wherever D1 or a
+ * wrapper puts them in the message.
  */
 function isVersionRefusal(error: unknown): boolean {
-  const text = String(error);
-  return (
-    text.includes("NOT NULL") && text.includes("wardrobe_items.visibility")
+  return String(error).includes(
+    "NOT NULL constraint failed: wardrobe_items.visibility",
   );
 }
 
