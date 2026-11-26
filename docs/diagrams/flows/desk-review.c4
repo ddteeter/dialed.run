@@ -1,0 +1,189 @@
+views {
+  dynamic view deskReviewStory {
+    title 'The Desk decides a photo held for review'
+
+    include
+      operator with {
+        description 'Works Review on the Desk'
+      }
+    include
+      cf.coreDb with {
+        description 'The review_queue row is the durable marker'
+      }
+
+    // source: src/routes/desk/review.tsx ReviewPage; src/modules/safety/functions.ts reviewQueueQuery
+    operator -> cf.app.safety.reviewQuery 'opens Review on the Desk' {
+      notes '''
+        One page holds every kind of row: photos the screener or reports held, copies of removed images, flagged handles and products. This flow follows a kit photo.
+      '''
+    }
+    // source: src/modules/safety/review/review.ts pendingReviewQueue, readAt, ShownRow
+    cf.app.safety.reviewQuery -> cf.coreDb 'reads the open rows, and when it read them' {
+      notes '''
+        Each row goes to the page with when it last went in front of a person, why, and when the page was read. A decision sends all three back.
+      '''
+    }
+    // source: src/routes/desk/review-photo.$.tsx Route; src/modules/feed/entries/photos.ts reviewerPhotoResponse, isReviewablePhotoKey
+    operator -> cf.app.feed.entries.reviewPhoto 'opens the held photo' {
+      notes '''
+        Its own route, because every photo here is hidden from the public read. Anyone but an operator, and any key that is not a photo\'s, gets not found.
+      '''
+    }
+    // source: src/modules/feed/entries/photos.ts reviewerPhotoResponse, bytesResponse
+    cf.app.feed.entries.reviewPhoto -> cf.mediaBucket 'reads the photo\'s bytes'
+    // source: src/modules/feed/functions.ts decideReviewAction; src/modules/safety/inputs.ts reviewActionInput; src/modules/feed/moderation/moderation.ts decideReview
+    operator -> cf.app.feed.decideReview 'presses Approve, Remove or Quarantine, with the row as the page showed it' {
+      notes '''
+        **Guard: held to the row as shown.** A row decided or re-opened since the page was read is not acted on.
+
+        A row for a missing file has a fourth answer, Clear photo. A garment\'s photo takes the same three answers; its Remove and Quarantine have their own writer.
+      '''
+      navigateTo deskReviewDecision
+    }
+    // source: src/modules/feed/moderation/moderation.ts decideReview; src/modules/safety/review/review.ts ResolveOutcome
+    operator <- cf.app.feed.decideReview 'answers: resolved, or already resolved' {
+      notes '''
+        **Timing boundary: the request ends here.** Review reloads and shows the row as it is now.
+      '''
+      navigateTo deskReviewRecovery
+    }
+  }
+
+  dynamic view deskReviewDecision {
+    title 'The Desk keeps, removes or quarantines a held photo'
+
+    include
+      cf.coreDb with {
+        description 'The review_queue row is the durable marker'
+      }
+
+    opt 'Approve' {
+      // source: src/modules/feed/moderation/moderation.ts decideReview; src/modules/safety/review/review.ts resolveReview, openRow
+      operator -> cf.app.feed.decideReview 'presses Approve'
+      // source: src/modules/safety/review/review.ts decide (db.batch), reviewResolution, heldFor, subjectWriters, approvedPhotoStatus, decisionNotices, notHeldByRequest
+      cf.app.feed.decideReview -> cf.coreDb 'settles the row approved, puts the photo back, and tells the reporters and the author, in one batch' {
+        notes '''
+          **Guard: held to the row as shown,** and to no report that hides at once filed after the page was read. Such an Approve settles nothing, and the reloaded page shows the report.
+
+          A photo the screener answered for, or never will, is published. Any other goes back to pending, for the screener to see first. A photo a copyright takedown hid, or a removal request still holds, stays where it is.
+
+          The notices are rows in the app, one a reporter.
+        '''
+      }
+      // source: src/modules/dispatch/scheduled.ts sweepPublicPhotoCopies; src/modules/ops/desk/crons.ts cronRegistry (15 * * * *)
+      cf.app.cronHourly15 -[recovery]-> cf.app.ops.publicWeb.sync 'copies it out within the hour, if its kit is PUBLIC' {
+        notes '''
+          **Timing boundary: up to an hour later.** An Approve makes no purge of its own, so the hourly sweep is the path that copies its photo out.
+        '''
+        navigateTo publicPhotosRecovery
+      }
+    }
+    opt 'Remove' {
+      // source: src/modules/feed/moderation/moderation.ts decideReview, wasTakenDown, takeDownOf; src/modules/safety/review/review.ts openSubject
+      operator -> cf.app.feed.decideReview 'presses Remove, with a reason'
+      // source: src/modules/feed/moderation/moderation.ts moderateContent, fingerprintWrites, authorNotice, deletions, takeDownPlanOf; src/modules/feed/entries/retract.ts commit, photoDeletion, mediaDebts; src/modules/safety/review/removed-fingerprints.ts keptFingerprints
+      cf.app.feed.decideReview -> cf.coreDb 'deletes the photo, settles the row, records the action, and tells the author and the reporters, in one batch' {
+        notes '''
+          **Guard: held to the row.** A statement in the batch fails it whole if the row was decided or re-opened since the page was read, so nothing is taken down.
+
+          The same batch owes the bytes\' delete and the author\'s email. An image removed as intimate keeps its fingerprint, so a copy uploaded later is held for a person.
+
+          If a live copyright hold keeps the photo, it is recorded as taken down and kept out of sight instead, and deleted when the hold ends.
+        '''
+        navigateTo copyrightHoldStory
+      }
+      // source: src/modules/feed/entries/retract.ts commit (settleOutbox); src/modules/ops/outbox/storage-handlers.ts reconcileEntryPhotos
+      cf.app.feed.decideReview -> cf.app.ops.outbox 'deletes the bytes and sends the email now: the fast path' {
+        notes '''
+          **Degrade, don\'t fail.** A failure is reported and the debt stays for the drains.
+        '''
+        navigateTo outboxRecovery
+      }
+      // source: src/modules/feed/moderation/moderation.ts moderateContent, purgeTakenDown; src/modules/ops/public-web/edge-purge.ts purgePublicPages, purgeAndSync
+      cf.app.feed.decideReview -[async]-> cf.app.ops.publicWeb.purge 'purges the kit\'s pages and the photo\'s public copy, after the response' {
+        notes '''
+          **Timing boundary: the decision has answered.**
+        '''
+        navigateTo publicPhotosWithdraw
+      }
+    }
+    opt 'Quarantine' {
+      // source: src/modules/feed/moderation/moderation.ts takeDownOf, moderateContent
+      operator -> cf.app.feed.decideReview 'presses Quarantine'
+      // source: src/modules/feed/moderation/moderation.ts preservation, copyBytes; src/modules/feed/moderation/garment-moderation.ts preserveObject; src/lib/entry-photo-key.ts quarantineKeyFor
+      cf.app.feed.decideReview -> cf.mediaBucket 'copies the photo\'s bytes under the quarantine prefix, before anything is deleted' {
+        notes '''
+          **Not atomic with the batch.** R2 and D1 are two systems.
+
+          **If it fails:** the decision errors and deletes nothing. Losing the evidence is the one outcome worse than a retry.
+        '''
+      }
+      // source: src/modules/feed/moderation/moderation.ts rowsOf, preservation, moderateContent; src/modules/safety/takedowns/quarantine.ts QUARANTINE_LOCK_DAYS
+      cf.app.feed.decideReview -> cf.coreDb 'deletes the photo as a Remove does, and writes the quarantine record, in one batch' {
+        notes '''
+          **Guard: held to the row,** as a Remove is.
+
+          Nobody is told: not the author, and not the reporters. The record keeps the rows as they stood and the copies\' keys, for a year.
+        '''
+        navigateTo deskReviewRecovery
+      }
+      // source: src/modules/feed/entries/retract.ts commit (settleOutbox), mediaDebts; src/modules/feed/moderation/moderation.ts purgeTakenDown
+      cf.app.feed.decideReview -> cf.app.ops.outbox 'deletes the original bytes now, and purges the kit\'s pages after the response' {
+        notes '''
+          **Degrade, don\'t fail.** The copies are under another prefix, so the delete leaves them.
+        '''
+        navigateTo outboxRecovery
+      }
+    }
+  }
+
+  dynamic view deskReviewRecovery {
+    title 'When a Desk decision on a photo does not land'
+
+    include
+      cf.coreDb with {
+        description 'The review_queue row is the durable marker'
+      }
+
+    try {
+      // source: src/modules/feed/moderation/moderation.ts moderateContent, wasTakenDown; src/modules/safety/review/review.ts openSubject, isHoldRefusal
+      cf.app.feed.decideReview -> cf.coreDb 'takes the photo down, held to the row'
+    }
+    catch 'the row was decided, re-opened or settled by its owner\'s delete since the page was read' {
+      // source: src/modules/feed/moderation/moderation.ts wasTakenDown, decideReview; src/modules/safety/review/review.ts resolveReview, openRow
+      cf.app.feed.decideReview -[recovery]-> cf.coreDb 'writes nothing, and asks safety\'s writer why: already resolved' {
+        notes '''
+          The failed batch takes back every write in it. The Desk reloads Review and decides on the row as it is now.
+        '''
+      }
+      // source: src/modules/feed/moderation/garment-moderation.ts passedOn, wasSettledByOwner
+      cf.app.feed.decideReview -[recovery]-> cf.coreDb 'for a quarantine the owner\'s delete beat, writes its record all the same' {
+        notes '''
+          The copies were made before the batch, so the record that lists them is written, and nothing else.
+        '''
+      }
+    }
+    opt 'the fast path or the email fails' {
+      // source: src/modules/dispatch/scheduled.ts runDailyDigest (drainOutbox), drainOwedEmail
+      cf.app.cronDaily1200 -[recovery]-> cf.app.ops.outbox 'drains the owed photo deletes, and the hourly firings the email' {
+        navigateTo outboxRecovery
+      }
+    }
+    opt 'a quarantine\'s copy was made and its batch failed' {
+      // source: src/modules/dispatch/scheduled.ts purgeExpiredQuarantine; src/modules/safety/takedowns/quarantine.ts sweepUnlistedCopies, copiesNoRecordLists, QUARANTINE_UNLISTED_GRACE_SECONDS
+      cf.app.cronDaily1200 -[recovery]-> cf.mediaBucket 'deletes copies no record lists, once they are a year and a day old' {
+        notes '''
+          A copy no record lists is kept as long as the lock on the prefix, and a day more. A retried Quarantine copies to the same keys, so its record lists them.
+        '''
+      }
+    }
+    opt 'a page purge fails' {
+      // source: src/modules/ops/public-web/edge-purge.ts purgePublicPages; src/modules/ops/public-web/public-cache.ts PUBLIC_PAGE_TTL_SECONDS (60)
+      cf.app.ops.publicWeb.purge -> sentry 'reports it, and the page expires within 60 seconds'
+      // source: src/modules/dispatch/scheduled.ts sweepPublicPhotoCopies
+      cf.app.cronHourly15 -[recovery]-> cf.app.ops.publicWeb.sync 'deletes any public copy the purge missed' {
+        navigateTo publicPhotosRecovery
+      }
+    }
+  }
+}

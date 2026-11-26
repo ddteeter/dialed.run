@@ -169,6 +169,26 @@ model {
     }
   }
 
+  // The Desk decides a photo held for review.
+  extend cf.app.safety {
+    reviewQuery = inRequest 'reviewQueueQuery' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'Desk: reads Review, each row as the page will show it'
+    }
+  }
+  extend cf.app.feed {
+    decideReview = inRequest 'decideReviewAction' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'Desk: Approve, Remove or Quarantine a Review row'
+    }
+  }
+  extend cf.app.feed.entries {
+    reviewPhoto = inRequest 'GET /desk/review-photo/{key}' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'The bytes of a photo in Review, for an operator only'
+    }
+  }
+
   // The systems we call and do not run.
   provider = external 'Visual Crossing' {
     description 'Weather provider, behind an adapter'
@@ -348,4 +368,15 @@ model {
   cf.app.cronDaily1200 -> cf.mediaBucket 'deletes a purged hold\'s bytes'
   cf.app.ops.publicWeb.purge -> sentry 'reports a failed purge'
   cf.app.cronDaily1200 -> sentry 'closes the check-in as an error when a sweep throws'
+
+  operator -> cf.app.safety.reviewQuery 'opens Review'
+  cf.app.safety.reviewQuery -> cf.coreDb 'reads the open Review rows'
+  operator -> cf.app.feed.entries.reviewPhoto 'looks at a held photo'
+  cf.app.feed.entries.reviewPhoto -> cf.mediaBucket 'reads the photo\'s bytes'
+  operator -> cf.app.feed.decideReview 'decides a Review row'
+  cf.app.feed.decideReview -> cf.coreDb 'settles the row and the photo, in one batch'
+  cf.app.feed.decideReview -> cf.mediaBucket 'copies a quarantined photo\'s bytes'
+  cf.app.feed.decideReview -> cf.app.ops.outbox 'deletes a removed photo\'s bytes now'
+  cf.app.feed.decideReview -[async]-> cf.app.ops.publicWeb.purge 'purges a removed photo\'s kit pages'
+  cf.app.cronDaily1200 -[recovery]-> cf.mediaBucket 'deletes quarantine copies no record lists'
 }
