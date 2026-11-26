@@ -65,14 +65,11 @@ if [ "$pushes_commits" = yes ]; then
   lock="$HOME/.guardrails-gate.lock"
   unset_git="env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_PREFIX -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY GUARDRAILS_PREFLIGHT=1"
   echo "guardrails: preflight: waiting for the gate lock ($lock)" >&2
-  if command -v lockf >/dev/null 2>&1; then
-    lockf -k "$lock" $unset_git sh "$0" </dev/null || exit 1
-  elif command -v flock >/dev/null 2>&1; then
-    flock "$lock" $unset_git sh "$0" </dev/null || exit 1
-  else
-    echo "guardrails: push blocked — neither lockf nor flock is installed, so the preflight cannot take the gate lock." >&2
-    exit 1
-  fi
+  # `guardrails lock` (0.18.0, owner, 2026-11-26, #1054), not a raw lockf:
+  # a gate queued behind the preflight names it rather than "another
+  # checkout holds it", and the hold is logged. It exits 75 when the wait
+  # (mutationLock.pushWaitSeconds) runs out, which blocks the push.
+  node "$cli" lock -- $unset_git sh "$0" </dev/null || exit 1
 fi
 
 node "$cli" gate --mode=push
