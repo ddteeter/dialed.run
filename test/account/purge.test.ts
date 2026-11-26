@@ -403,6 +403,7 @@ async function seedAccount(): Promise<Seeded> {
         countRow("correction-runner", userId, 1, NOW),
         countRow("strava-connect-runner", userId, 1, NOW),
         countRow("shared-row-runner", userId, 1, NOW),
+        countRow("handle-runner", userId, 1, NOW),
       ]),
     core.insert(inviteRedemptions).values({
       userId,
@@ -525,7 +526,8 @@ function runnersCount(
     | "deletion-notice"
     | "correction-runner"
     | "strava-connect-runner"
-    | "shared-row-runner",
+    | "shared-row-runner"
+    | "handle-runner",
   userId: string,
 ) {
   return and(eq(rateLimits.kind, kind), eq(rateLimits.subject, userId));
@@ -794,6 +796,10 @@ async function footprint(seeded: Seeded) {
       .select()
       .from(rateLimits)
       .where(runnersCount("upload-runner", userId)),
+    handleLimits: await core
+      .select()
+      .from(rateLimits)
+      .where(runnersCount("handle-runner", userId)),
     resetLinks: await core
       .select()
       .from(verification)
@@ -855,6 +861,7 @@ const GONE = {
   sendLimits: [],
   spendLimits: [],
   uploadLimits: [],
+  handleLimits: [],
   resetLinks: [],
   garments: [],
   imports: [],
@@ -1224,6 +1231,21 @@ describe("purgeDueAccounts — a full purge", () => {
       );
     expect(codes).toHaveLength(2);
     for (const code of codes) expect(code.label).toBeNull();
+  });
+
+  it("forgets the runner's handle-claim count (owner, 2026-11-26, #1076)", async () => {
+    const runner = await seedAccount();
+    const other = await seedAccount();
+    await claim(runner.userId, NOW - 1);
+    const before = await footprint(runner);
+    expect(before.handleLimits).toHaveLength(1);
+
+    await purge([], depsAt(NOW).deps);
+
+    const after = await footprint(runner);
+    const others = await footprint(other);
+    expect(after.handleLimits).toStrictEqual([]);
+    expect(others.handleLimits).toHaveLength(1);
   });
 
   it("writes no retired handle for a runner who never chose one", async () => {
