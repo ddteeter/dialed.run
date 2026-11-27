@@ -22,6 +22,7 @@ describe("words", () => {
       "cohortClimate",
       "cohortEveryone",
       "worksAt",
+      "warmRuns",
       "skipPiece",
       "probable",
       "borrowedInBand",
