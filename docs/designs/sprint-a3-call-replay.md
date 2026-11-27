@@ -33,9 +33,10 @@ pseudonymised export exist (both hard stops).
   Pieces take their group from `uiGroupFor` and their range from
   `estimateTempRange`; cohort cells are generated at 5+ runners.
 - `report.ts`: two versions' metrics as a plain-text table for a PR body.
-- `eval/call/run.ts` (optional): `npx tsx eval/call/run.ts <baseline> <candidate>`,
+- `eval/call/run.ts`: `npx tsx eval/call/run.ts <baseline> <candidate> [seed] [tolerance]`,
   each a module path whose default export is a `Scorer`, replays both over
-  the personas and prints the report. No npm script.
+  the personas, prints the report and exits 1 when the candidate does worse.
+  No npm script.
 
 **What the synthetic cases are.** They are v1-shaped histories: runs with a
 verdict and what was worn, before any Call was served. Replaying them asks
@@ -86,13 +87,22 @@ All vitest `worker`, `test/call/replay/*.test.ts`; no Playwright (no screen).
 
 ## Open questions
 
-1. Which metrics are the release bar, and the tolerance. Built: dialed
-   agreement and direction together, tolerance 0, unmeasured on either side
-   fails, coverage reported but not gated.
-2. The export's shape. `ReplayCase` is request + worn + verdict; the log must
-   keep the full request (conditions, history ids, closet with estimates,
-   cohort cells read), engine version, ranking, kit and the linked verdict.
-3. The forecast built for a historic run: `tempC` is the judged feel, wind 0,
-   `precipMm` a representative of the stored class (0, 1, 5).
-4. Manual-weather runs are left out of replay entirely (`isReplayable`).
-5. Climate zone strings are a guess (`Cfb`, `BWh`); no vocabulary exists yet.
+Each is a guess this branch proceeds on; `QUESTIONS.md` has the cost and the
+recommendation.
+
+1. The release bar: dialed agreement and direction, each on its own, at
+   tolerance 0; an unmeasured side fails; coverage is reported, not gated.
+2. The export's shape: what the call log must keep for a row to map onto
+   `ReplayCase`.
+3. v1-history replay (these personas) is not logged-Call replay.
+4. Manual-weather runs are out of replay entirely (`isReplayable`).
+5. The rebuilt forecast: judged feel as `tempC` and `feelsLikeC`, wind 0,
+   millimetres inside the class (0, 1, 5).
+6. Climate zones are Köppen codes (`Cfb`); nothing names them yet.
+7. The contract has no runtime list of `Confidence`; replay ranks them in a
+   compiler-checked record.
+8. One cohort snapshot serves every case; the export should carry the
+   generation each Call read.
+
+The flagged persona flags the long sleeve above 10°: in the seeded closet
+the shell, not the jacket, is what the persona wears above 3°.
