@@ -715,6 +715,54 @@ function holdable(
 }
 
 /**
+ * The operator's decision on a request (`feed`'s `decideRemovalRequest`)
+ * as the request records it, written only where `claimable` still holds
+ * as the batch runs: the claim the decision's email and give-back follow.
+ */
+export function requestDecidedWrite(
+  db: Db,
+  decision: Readonly<{
+    outcome: "removed" | "declined";
+    reason?: string | undefined;
+    now: number;
+    actorId: string;
+  }>,
+  claimable: SQL | undefined,
+) {
+  return db
+    .update(takedownRequests)
+    .set({
+      status: decision.outcome,
+      declineReason: decision.reason,
+      resolvedAt: decision.now,
+      resolvedBy: decision.actorId,
+    })
+    .where(claimable);
+}
+
+/**
+ * The takedown's hold on the request (`moderateContent`'s `heldTo`): it
+ * fails the takedown's batch when the request is no longer pending as it
+ * lands, setting its status, which may not be empty, to nothing.
+ * `refused` reads that failure.
+ */
+export function stillPendingHold(db: Db, requestId: string) {
+  const status = sql<"pending">`(case when ${takedownRequests.status} = 'pending' then ${takedownRequests.status} else null end)`;
+  return {
+    statement: db
+      .update(takedownRequests)
+      .set({ status })
+      .where(eq(takedownRequests.id, requestId)),
+    refused: (error: unknown) => {
+      const text = String(error);
+      return (
+        text.includes("NOT NULL") && text.includes("takedown_requests.status")
+      );
+    },
+  };
+}
+
+/**
 Each subject type's table, and its id.
 */
 const SUBJECT_ROWS = {

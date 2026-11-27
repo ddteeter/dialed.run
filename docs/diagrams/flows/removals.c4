@@ -92,7 +92,7 @@ views {
     opt 'Take it down' {
       // source: src/modules/feed/functions.ts decideRemovalRequestAction; src/modules/feed/moderation/removal-requests.ts decideRemovalRequest
       operator -> cf.app.feed.decideRemoval 'presses Take it down'
-      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (moderateContent), stillPending; src/modules/feed/moderation/moderation.ts moderateContent, keptFingerprints; src/modules/feed/entries/retract.ts commit, mediaDebts
+      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (moderateContent); src/modules/safety/takedowns/takedown-requests.ts stillPendingHold; src/modules/feed/moderation/moderation.ts moderateContent, keptFingerprints; src/modules/feed/entries/retract.ts commit, mediaDebts
       cf.app.feed.decideRemoval -> cf.coreDb 'deletes the subject, keeps its fingerprint, tells its author and owes its bytes, in one batch' {
         notes '''
           **Guard: held to the request.** The batch fails, and takes nothing down, unless the request is still pending as it lands. The Desk is told it was already decided.
@@ -110,7 +110,7 @@ views {
         '''
         navigateTo outboxRecovery
       }
-      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (db.batch, outboxInsertWhere, claimable), wasClaimedHere
+      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (db.batch, outboxInsertWhere, claimable), wasClaimedHere; src/modules/safety/takedowns/takedown-requests.ts requestDecidedWrite
       cf.app.feed.decideRemoval -> cf.coreDb 'claims the request as removed, and owes the requester\'s answer, in one batch' {
         notes '''
           **Guard: only a pending request is claimed**, and the answer is owed only where the claim landed, so the requester is told once. The Desk is told it is decided only when the row reads back as this claim left it.
@@ -125,7 +125,7 @@ views {
     opt 'Decline' {
       // source: src/modules/feed/functions.ts decideRemovalRequestAction; src/modules/feed/moderation/removal-requests.ts RemovalDecision
       operator -> cf.app.feed.decideRemoval 'presses Decline, with a reason'
-      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (db.batch), claimable, takenDownFor; src/modules/safety/takedowns/takedown-requests.ts releaseHoldWrites, giveBacks; src/modules/safety/review/request-holds.ts requestHolds
+      // source: src/modules/feed/moderation/removal-requests.ts decideRemovalRequest (db.batch), claimable, takenDownFor; src/modules/safety/takedowns/takedown-requests.ts requestDecidedWrite, releaseHoldWrites, giveBacks; src/modules/safety/review/request-holds.ts requestHolds
       cf.app.feed.decideRemoval -> cf.coreDb 'claims the request as declined, owes the answer, and gives the subject back, in one batch' {
         notes '''
           **Guard: no takedown for this request.** The claim lands only while the request is pending and no Take it down of it has been recorded, so a Take it down sent at the same moment and this Decline cannot both act.

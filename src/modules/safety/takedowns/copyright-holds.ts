@@ -176,9 +176,11 @@ const hideWriters: Record<
 };
 
 /**
-Statuses a hold is still holding in: hidden, or its delete owed.
-*/
-const LIVE = ["hidden", "purging"] as const;
+ * A hold's statuses while it is live: the material is hidden, or its
+ * delete is owed. A runner's own delete and the account purge wait on the
+ * same set.
+ */
+export const LIVE_HOLD = ["hidden", "purging"] as const;
 
 /**
  * How a takedown goes, as the holds see it (D-130; owner, 2026-11-21):
@@ -302,7 +304,7 @@ async function isCopyrightHeld(
       and(
         eq(copyrightHolds.subjectType, subjectType),
         eq(copyrightHolds.subjectId, subjectId),
-        inArray(copyrightHolds.status, [...LIVE]),
+        inArray(copyrightHolds.status, [...LIVE_HOLD]),
       ),
     )
     .limit(1);
@@ -337,7 +339,7 @@ interface KeptSubject {
  */
 function covering(subject: KeptSubject): SQL | undefined {
   const onTheKit = and(
-    inArray(copyrightHolds.status, [...LIVE]),
+    inArray(copyrightHolds.status, [...LIVE_HOLD]),
     eq(copyrightHolds.entryId, subject.entryId),
   );
   return subject.subjectType === "entry"

@@ -4,6 +4,7 @@ export {
   claimPurgeAfterCase,
   failsWhileHeld,
   isHeldRefusal,
+  LIVE_HOLD,
   purgedWrite,
   restoreDueHolds,
   sweepClaims,
@@ -19,4 +20,6 @@ export {
   declineLapsedRequests,
   mintReceiptConfirmToken,
   releaseHoldWrites,
+  requestDecidedWrite,
+  stillPendingHold,
 } from "./takedown-requests";

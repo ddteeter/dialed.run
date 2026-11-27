@@ -170,6 +170,7 @@ model {
   cf.app.account.purge -[imports]-> cf.app.ops
   cf.app.account.purge -[imports]-> cf.app.runs
   cf.app.account.purge -[imports]-> cf.app.safety
+  cf.app.account.purge -[imports]-> cf.app.safety.takedowns
   cf.app.account.purge -[imports]-> cf.app.weather
   cf.app.account.terms -[imports]-> cf.app.notifications
   cf.app.account.terms -[imports]-> cf.app.runs
@@ -255,6 +256,7 @@ model {
   cf.app.feed.moderation -[imports]-> cf.app.notifications
   cf.app.feed.moderation -[imports]-> cf.app.ops
   cf.app.feed.moderation -[imports]-> cf.app.safety
+  cf.app.feed.moderation -[imports]-> cf.app.safety.takedowns
   cf.app.feed.publicWeb -[imports]-> cf.app.account
   cf.app.feed.publicWeb -[imports]-> cf.app.closet
   cf.app.feed.publicWeb -[imports]-> cf.app.feed.conditions

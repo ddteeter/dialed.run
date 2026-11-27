@@ -17,7 +17,6 @@ export {
 export { photoUploadFrom, uploadPhotoAnswer } from "./photos";
 export { countedUsefulOf, setUsefulReaction } from "./reactions";
 export {
-  LIVE_HOLD,
   commit,
   deleteEntryPhoto,
   deleteRun,

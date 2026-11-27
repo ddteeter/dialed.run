@@ -324,15 +324,7 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
     },
   },
   takedown_blocks: { owner: "safety" },
-  takedown_requests: {
-    owner: "safety",
-    others: {
-      feed: {
-        update: ["status", "declineReason", "resolvedAt", "resolvedBy"],
-        why: "a removal request answered; B9 moves it behind safety's door",
-      },
-    },
-  },
+  takedown_requests: { owner: "safety" },
 
   // Operations.
   outbox: {

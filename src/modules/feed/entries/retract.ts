@@ -65,7 +65,11 @@ import {
   settleOpenReviews,
   withdrawnUnderReview,
 } from "../../safety";
-import { failsWhileHeld, isHeldRefusal } from "../../safety/takedowns";
+import {
+  LIVE_HOLD,
+  failsWhileHeld,
+  isHeldRefusal,
+} from "../../safety/takedowns";
 import { manualConditionsHandler } from "../../weather";
 import { clearEntryHalves, deleteRunCopies } from "../conditions";
 
@@ -352,12 +356,6 @@ export interface HeldCheck {
   entries: SQL;
   noun: "kit" | "run" | "photo";
 }
-
-/**
- * A hold's statuses while it is live: the material is hidden, or its purge
- * has started. The account purge waits on the same set.
- */
-export const LIVE_HOLD = ["hidden", "purging"] as const;
 
 /**
  * `statements` in one batch that a live hold on `check`'s kits refuses,
