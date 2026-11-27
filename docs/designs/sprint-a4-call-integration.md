@@ -80,13 +80,61 @@ All vitest `worker`; no Playwright (no screen, no server hop).
 
 ## Cut points
 
-The last commit of each chunk, where the four pull requests are cut. Filled
-in when the stack is built.
+The last commit of each chunk, where the four pull requests are cut. At each
+one `npx vitest run --project worker test/call/` and `tsc` pass and the
+structure diagram is current.
+
+| chunk | last commit | what it ends on                                   | Call tests |
+| ----- | ----------- | ------------------------------------------------- | ---------- |
+| 1     | `35b50a3`   | the result carries the count and the warm runs    | 172        |
+| 2     | `e1751e5`   | A2's questions in `QUESTIONS.md`, diagram redrawn | 240        |
+| 3     | `49dd04f`   | A3's questions in `QUESTIONS.md`, diagram redrawn | 330        |
+| 4     | branch head | this doc's numbers, after `7f932d7`               | 359        |
+
+A lane's commits that touched `QUESTIONS.md` or the generated diagram were
+picked with this branch's side of those two files, so each pick was clean.
+Each chunk then ends on one commit that adds the lane's section and
+regenerates the diagram. A2's and A3's lane commits do not typecheck against
+the new contract until their chunk's adapting commit; the cut points do.
 
 ## Replay report
 
-`scorer-1` over the seeded personas. Filled in when the wiring runs.
+`npx tsx eval/call/run.ts`: `scorer-1` held to itself over the six seeded
+personas, seed 1. Source: v1 history (rebuilt), 264 cases.
+
+| measure             | scorer-1                    |
+| ------------------- | --------------------------- |
+| coverage            | 66.3% (175/264)             |
+| dialed agreement    | 61.4% (172/280)             |
+| direction on misses | 38.5% (42/109), 64 no call  |
+| release check       | PASS, every measure `equal` |
+
+By confidence, dialed agreement then direction: borrowed 79.2% (38/48) and
+72.7% (8/11); probable 61.5% (118/192) and 35.4% (29/82); confident 40.0%
+(16/40) and 31.3% (5/16). Below the threshold: 89 cases, no kit judged.
+
+**These numbers tune nothing.** The personas are synthetic: each dresses
+from the estimate tables with random noise. That is the likely reason a
+Call that leans on estimates (borrowed) matches them better than one that
+leans on the persona's own noisy record (confident); it was not
+investigated, because either way it is a property of the fake runners and
+not a finding about the scorer. The report shows only that the scorer, the
+harness and the release check run end to end and are reproducible. Real
+numbers wait for the call log.
 
 ## Open questions
 
-None yet; anything the stack raises goes in `QUESTIONS.md` under A4.
+Four, in `QUESTIONS.md` under A4:
+
+1. A piece's line never reaches the cohort's share or the estimate: the
+   band's fact is on every piece and outranks both (A1 Q16 meets A2 Q9).
+2. Whether a result below the threshold offers a kit: the scorer fills one,
+   `b2View` lists it, replay counts none.
+3. What the warm-runs fact reads: the Call's own counted runs, the group a
+   piece was worn as, the closet's estimate today.
+4. The D-rows for #1103's Q14 and Q3 are owed with the scorer's PR.
+
+Not changed here: `ENGINE_VERSION` stays `scorer-1` (no version has served
+a Call, and no score moved). `eval/call/run.ts` now takes
+`[seed] [tolerance] [baseline]`; its candidate is always this checkout's
+scorer.
