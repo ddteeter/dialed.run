@@ -103,7 +103,7 @@ export function deletionEffectsFromEnv(): DeletionEffects {
  * 107b), UTC while that zone is owed. A day alone, so no UTC mark. The
  * delete sheet says its day the same way.
  */
-function deletionDay(epochSeconds: number, viewer: ViewerZone): string {
+export function deletionDay(epochSeconds: number, viewer: ViewerZone): string {
   return proseDayLabel(epochSeconds, viewer.homeZone);
 }
 

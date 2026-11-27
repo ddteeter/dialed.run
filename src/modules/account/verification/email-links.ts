@@ -146,7 +146,7 @@ export async function claimFreshEmailLink(
   db: Db,
   link: Readonly<{ userId: string; purpose: LinkPurpose; email: string }>,
   now = nowSeconds(),
-): Promise<{ token: string; tokenHash: string } | undefined> {
+): Promise<string | undefined> {
   const { token, values } = await freshLink(link, now);
   const written = await db
     .insert(emailVerifications)
@@ -157,9 +157,7 @@ export async function claimFreshEmailLink(
       setWhere: sql`${lte(emailVerifications.expiresAt, now)} AND ${isNull(emailVerifications.usedAt)}`,
     })
     .returning({ userId: emailVerifications.userId });
-  return written.length === 0
-    ? undefined
-    : { token, tokenHash: values.tokenHash };
+  return written.length === 0 ? undefined : token;
 }
 
 /**
