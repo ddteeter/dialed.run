@@ -198,8 +198,7 @@ runners.
   winter and summer temperatures there.
 - **The place you run.** When you save it, its rounded coordinates are sent
   to Visual Crossing once, to find its time zone. If that fails, we try
-  again each hour until a time zone is found. The answer is kept in the
-  same shared weather cache, keyed by that rounded location.
+  again each hour until a time zone is found.
 - **"Your conditions" on the feed.** If you allow it, your browser sends
   your current location to our server to look up recent weather near you
   from the cache. It is not stored, and it is not sent to Visual Crossing,
