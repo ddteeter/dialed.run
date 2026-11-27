@@ -107,6 +107,24 @@ describe("direction on misses", () => {
     expect(direction([outcome(["vest"], 1, ["jacket"])])).toEqual(hit);
   });
 
+  it("reads the floor first, the ceiling only when floors are equal", () => {
+    expect(direction([outcome(["shell"], -1, ["softshell"])])).toEqual(hit);
+    expect(direction([outcome(["softshell"], 1, ["shell"])])).toEqual(hit);
+  });
+
+  it("compares a kit piece only with what was worn in its own group", () => {
+    expect(
+      direction([outcome(["a-tee", "tights"], -1, ["m-long", "tights"])]),
+    ).toEqual(hit);
+  });
+
+  it("counts a kept worn piece as no change, even with no estimate", () => {
+    expect(direction([outcome(["shoes"], -1, ["shoes"])])).toEqual(miss);
+    expect(direction([outcome(["z-base", "m-long"], 1, ["m-long"])])).toEqual(
+      miss,
+    );
+  });
+
   it("puts an open floor below every floor, and an open ceiling above every ceiling", () => {
     expect(direction([outcome(["jacket"], -1, ["parka"])])).toEqual(hit);
     expect(direction([outcome(["parka"], 1, ["jacket"])])).toEqual(hit);

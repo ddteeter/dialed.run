@@ -87,7 +87,7 @@ const PIECES: readonly { pieceId: string; input: ThermalInput }[] = [
     input: { category: "top", layer: "outer", weight: "mid" },
   },
   { pieceId: "gloves", input: { category: "gloves", weight: "light" } },
-  { pieceId: "shoes", input: { category: "shoes", weight: "mid" } },
+  { pieceId: "shoes", input: { category: "shoes" } },
 ];
 
 /**
@@ -242,7 +242,8 @@ const SPECS: readonly PersonaSpec[] = [
   },
   {
     name: "flagged",
-    truth: "the long sleeve is flagged too much, and the run warm, above 10°",
+    truth:
+      "the long sleeve is flagged too much, and the run a bit warm, above 10°",
     runs: 40,
     needOffsetC: 0,
     climate: TEMPERATE,
@@ -308,7 +309,7 @@ function runFor(
     judgedFeelsLikeC: feelC,
     precip: precipFor(random()),
     source: "visualcrossing",
-    verdict: isFlagged && verdict <= 0 ? 1 : verdict,
+    verdict: isFlagged ? 1 : verdict,
     worn,
   };
 }

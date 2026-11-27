@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  type Comparison,
+  type MetricVerdict,
   noWorse,
   RELEASE_METRICS,
   type ReplayMetrics,
@@ -20,6 +22,13 @@ function metrics(
   };
 }
 
+function verdicts(comparison: Comparison): [MetricVerdict, MetricVerdict] {
+  return [
+    comparison.metrics.dialedAgreement.verdict,
+    comparison.metrics.direction.verdict,
+  ];
+}
+
 describe("noWorse", () => {
   const baseline = metrics([2, 4], [3, 4]);
 
@@ -30,85 +39,80 @@ describe("noWorse", () => {
   it("passes an equal candidate", () => {
     expect(noWorse(baseline, metrics([1, 2], [3, 4]), 0)).toEqual({
       tolerance: 0,
-      metrics: [
-        {
+      metrics: {
+        dialedAgreement: {
           metric: "dialedAgreement",
           baseline: 0.5,
           candidate: 0.5,
           verdict: "equal",
         },
-        {
+        direction: {
           metric: "direction",
           baseline: 0.75,
           candidate: 0.75,
           verdict: "equal",
         },
-      ],
+      },
       pass: true,
     });
   });
 
   it("passes a better candidate", () => {
     const comparison = noWorse(baseline, metrics([3, 4], [4, 4]), 0);
-    expect(comparison.metrics.map((m) => m.verdict)).toEqual([
-      "better",
-      "better",
-    ]);
+    expect(verdicts(comparison)).toEqual(["better", "better"]);
     expect(comparison.pass).toBe(true);
   });
 
   it("fails a candidate worse on one measure, even if better on the other", () => {
     const comparison = noWorse(baseline, metrics([4, 4], [2, 4]), 0);
-    expect(comparison.metrics.map((m) => m.verdict)).toEqual([
-      "better",
-      "worse",
-    ]);
+    expect(verdicts(comparison)).toEqual(["better", "worse"]);
     expect(comparison.pass).toBe(false);
-    expect(
-      noWorse(baseline, metrics([1, 4], [4, 4]), 0).metrics.map(
-        (m) => m.verdict,
-      ),
-    ).toEqual(["worse", "better"]);
+    const other = noWorse(baseline, metrics([1, 4], [4, 4]), 0);
+    expect(verdicts(other)).toEqual(["worse", "better"]);
+    expect(other.pass).toBe(false);
   });
 
   it("passes a drop of exactly the tolerance and fails one just past it", () => {
     const atTolerance = noWorse(baseline, metrics([1, 4], [2, 4]), 0.25);
-    expect(atTolerance.metrics.map((m) => m.verdict)).toEqual([
+    expect(verdicts(atTolerance)).toEqual([
       "within-tolerance",
       "within-tolerance",
     ]);
     expect(atTolerance.pass).toBe(true);
     const past = noWorse(baseline, metrics([1, 4], [3, 4]), 0.125);
-    expect(past.metrics.map((m) => m.verdict)).toEqual(["worse", "equal"]);
+    expect(verdicts(past)).toEqual(["worse", "equal"]);
     expect(past.pass).toBe(false);
     expect(
-      noWorse(baseline, metrics([3, 8], [3, 4]), 0.125).metrics[0]?.verdict,
+      noWorse(baseline, metrics([3, 8], [3, 4]), 0.125).metrics.dialedAgreement
+        .verdict,
     ).toBe("within-tolerance");
   });
 
   it("fails when either side judged nothing", () => {
     const empty = metrics([0, 0], [0, 0], 0);
     const comparison = noWorse(empty, empty, 0);
-    expect(comparison.metrics).toEqual([
-      {
+    expect(comparison.metrics).toEqual({
+      dialedAgreement: {
         metric: "dialedAgreement",
         baseline: undefined,
         candidate: undefined,
         verdict: "unmeasured",
       },
-      {
+      direction: {
         metric: "direction",
         baseline: undefined,
         candidate: undefined,
         verdict: "unmeasured",
       },
-    ]);
+    });
     expect(comparison.pass).toBe(false);
     expect(
-      noWorse(baseline, metrics([0, 0], [3, 4]), 0).metrics[0]?.verdict,
+      noWorse(baseline, metrics([0, 0], [3, 4]), 0).metrics.dialedAgreement
+        .verdict,
     ).toBe("unmeasured");
     expect(
-      noWorse(metrics([0, 0], [3, 4]), baseline, 0).metrics[0]?.verdict,
+      noWorse(metrics([0, 0], [3, 4]), baseline, 0).metrics.dialedAgreement
+        .verdict,
     ).toBe("unmeasured");
   });
 

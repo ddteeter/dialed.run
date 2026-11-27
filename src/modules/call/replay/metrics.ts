@@ -89,9 +89,13 @@ function agreementOf(outcome: ReplayOutcome): Share | undefined {
   return { hits, of: groups.length };
 }
 
-type Step = "warmer" | "cooler" | "same";
+/**
+ * A comparison of warmth, kit against worn: below zero the kit is warmer,
+ * above zero cooler, zero neither.
+ */
+type Step = -1 | 0 | 1;
 
-function order(a: number, b: number): number {
+function order(a: number, b: number): Step {
   if (a < b) return -1;
   return a > b ? 1 : 0;
 }
@@ -103,20 +107,18 @@ function order(a: number, b: number): number {
  */
 function stepBetween(kit: TempRange, worn: TempRange): Step {
   const byFloor = order(kit.lowC ?? -Infinity, worn.lowC ?? -Infinity);
-  const byBoth =
-    byFloor === 0
-      ? order(kit.highC ?? Infinity, worn.highC ?? Infinity)
-      : byFloor;
-  if (byBoth < 0) return "warmer";
-  return byBoth > 0 ? "cooler" : "same";
+  return byFloor === 0
+    ? order(kit.highC ?? Infinity, worn.highC ?? Infinity)
+    : byFloor;
 }
 
 type Estimates = ReadonlyMap<string, TempRange | undefined>;
 
 /**
- * The steps one group contributes. A worn piece the kit keeps is "same"; a
- * group the kit adds is warmer and one it drops is cooler. A piece with no
- * estimate, or one the closet no longer holds, cannot be compared.
+ * The steps one group contributes. A worn piece the kit keeps is no
+ * change; a group the kit adds is warmer and one it drops is cooler. A
+ * piece with no estimate, or one the closet no longer holds, cannot be
+ * compared.
  */
 function groupSteps(
   pick: ScoredPiece | undefined,
@@ -124,26 +126,25 @@ function groupSteps(
   estimates: Estimates,
 ): Step[] {
   if (pick !== undefined && worn.some((p) => p.pieceId === pick.pieceId)) {
-    return ["same"];
+    return [0];
   }
   const kitRange = pick === undefined ? undefined : estimates.get(pick.pieceId);
   const wornRanges = worn.flatMap((p) => {
     const range = estimates.get(p.pieceId);
     return range === undefined ? [] : [range];
   });
-  if (pick === undefined) return wornRanges.map(() => "cooler");
+  if (pick === undefined) return wornRanges.map((): Step => 1);
   if (kitRange === undefined) return [];
-  if (worn.length === 0) return ["warmer"];
+  if (worn.length === 0) return [-1];
   return wornRanges.map((range) => stepBetween(kitRange, range));
 }
 
-type Direction = Step | "mixed";
-
 /**
- * The kit against what was worn, over every group either side has.
+ * The kit against what was worn, over every group either side has: warmer
+ * only if some group is warmer and none cooler, and the other way round.
  * Undefined when no group could be compared.
  */
-function directionOf(outcome: ReplayOutcome): Direction | undefined {
+function directionOf(outcome: ReplayOutcome): Step | undefined {
   const { request, worn } = outcome.replayCase;
   const kit = outcome.result.kit;
   const estimates: Estimates = new Map(
@@ -161,36 +162,37 @@ function directionOf(outcome: ReplayOutcome): Direction | undefined {
     ),
   );
   if (steps.length === 0) return undefined;
-  const isWarmer = steps.includes("warmer");
-  const isCooler = steps.includes("cooler");
-  if (isWarmer && isCooler) return "mixed";
-  if (isWarmer) return "warmer";
-  return isCooler ? "cooler" : "same";
+  const isWarmer = steps.some((step) => step < 0);
+  const isCooler = steps.some((step) => step > 0);
+  if (isWarmer === isCooler) return 0;
+  return isWarmer ? -1 : 1;
 }
-
-type Judgement = "hit" | "miss" | "no-call";
 
 /**
  * What a miss asks of the kit: warmer after a cold verdict, cooler after a
  * warm one. A table rather than a sign test, so every verdict is named.
  */
 const WANTED: Readonly<Record<Exclude<VerdictValue, 0>, Step>> = {
-  [-2]: "warmer",
-  [-1]: "warmer",
-  1: "cooler",
-  2: "cooler",
+  [-2]: -1,
+  [-1]: -1,
+  1: 1,
+  2: 1,
 };
 
 /**
- * On a cold verdict the kit should be warmer than what was worn; on a warm
- * one, cooler. Undefined on a dialed run, which this measure does not judge.
+ * Adds one run to direction on misses. A dialed run is not judged; a run
+ * the Call offered no kit for, or could not compare, is a no call.
  */
-function judgeMiss(outcome: ReplayOutcome): Judgement | undefined {
+function tallyMiss(share: DirectionShare, outcome: ReplayOutcome): void {
   const verdict = outcome.replayCase.verdict;
-  if (verdict === 0) return undefined;
+  if (verdict === 0) return;
   const direction = hasKit(outcome) ? directionOf(outcome) : undefined;
-  if (direction === undefined) return "no-call";
-  return direction === WANTED[verdict] ? "hit" : "miss";
+  if (direction === undefined) {
+    share.noCall += 1;
+    return;
+  }
+  share.of += 1;
+  if (direction === WANTED[verdict]) share.hits += 1;
 }
 
 function splitOf(outcomes: readonly ReplayOutcome[]): ConfidenceSplit {
@@ -202,13 +204,7 @@ function splitOf(outcomes: readonly ReplayOutcome[]): ConfidenceSplit {
       dialedAgreement.hits += agreement.hits;
       dialedAgreement.of += agreement.of;
     }
-    const judgement = judgeMiss(outcome);
-    if (judgement === "no-call") {
-      direction.noCall += 1;
-    } else if (judgement !== undefined) {
-      direction.of += 1;
-      if (judgement === "hit") direction.hits += 1;
-    }
+    tallyMiss(direction, outcome);
   }
   return { dialedAgreement, direction };
 }
