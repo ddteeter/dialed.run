@@ -245,6 +245,39 @@ describe("readOutboxRow", () => {
     }
   });
 
+  it("reads an email row through the email schema, stripping what it does not name (design 283)", () => {
+    const email = {
+      to: { userId: "u1" },
+      template: { kind: "invite", code: "RUN-1" },
+    };
+    expect(
+      readOutboxRow(
+        "email",
+        JSON.stringify({
+          dedupeKey: "k1",
+          email: {
+            ...email,
+            extra: true,
+            template: { ...email.template, extra: 1 },
+          },
+        }),
+      ),
+    ).toStrictEqual({
+      ok: true,
+      message: { kind: "email", payload: { dedupeKey: "k1", email } },
+    });
+    for (const bad of [
+      undefined,
+      { ...email, template: { kind: "invite", code: "" } },
+      { ...email, to: { address: "not an address" } },
+      { to: email.to, template: { kind: "no_such_kind" } },
+    ]) {
+      expect(
+        readOutboxRow("email", JSON.stringify({ dedupeKey: "k1", email: bad })),
+      ).toStrictEqual(UNKNOWN);
+    }
+  });
+
   it("refuses a payload of the wrong shape, including empty ids", () => {
     expect(
       readOutboxRow("photo_delete", JSON.stringify({ userId: "u1" })),

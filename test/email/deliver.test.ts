@@ -198,8 +198,8 @@ describe("deliverEmail", () => {
   });
 
   it("holds only the kinds that need a confirmed address", () => {
-    const held = emailTemplateSchema.options
-      .map((option) => option.shape.kind.value)
+    const held = emailTemplateSchema()
+      .options.map((option) => option.shape.kind.value)
       .filter((kind) => requiresConfirmedAddress(kind));
     expect(held).toStrictEqual(["strava_disconnected"]);
   });
@@ -694,13 +694,13 @@ describe("the email outbox kind", () => {
 
   it("parses what it wrote back: the payload is the wire format", () => {
     expect(
-      emailPayloadSchema.safeParse({
+      emailPayloadSchema().safeParse({
         to: { userId: "u1", address: "a@example.com" },
         template: { kind: "existing_account" },
       }).success,
     ).toBe(false);
     expect(
-      emailPayloadSchema.safeParse({
+      emailPayloadSchema().safeParse({
         to: { address: "a@example.com" },
         template: { kind: "verify_email", url: "javascript:alert(1)" },
       }).success,

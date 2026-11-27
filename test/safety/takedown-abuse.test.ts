@@ -726,7 +726,7 @@ describe("a receipt's kit id, on the wire", () => {
   const ID = "01JABCDEFGHJKMNPQRSTVWXYZ0";
 
   it("is a kit id", () => {
-    expect(removalRequestReceived.parse(receiptAboutKit(ID))).toStrictEqual(
+    expect(removalRequestReceived().parse(receiptAboutKit(ID))).toStrictEqual(
       receiptAboutKit(ID),
     );
   });
@@ -735,7 +735,7 @@ describe("a receipt's kit id, on the wire", () => {
     "refuses %s, so nothing but a kit id is built into its link",
     (entryId) => {
       expect(
-        removalRequestReceived.safeParse(receiptAboutKit(entryId)).success,
+        removalRequestReceived().safeParse(receiptAboutKit(entryId)).success,
       ).toBe(false);
     },
   );
@@ -1634,9 +1634,9 @@ describe("the receipt's confirm token (SA-L18)", () => {
       isHidden: false,
       confirmToken: "c".repeat(64),
     };
-    expect(removalRequestReceived.parse(owed)).toStrictEqual(owed);
+    expect(removalRequestReceived().parse(owed)).toStrictEqual(owed);
     expect(
-      removalRequestReceived.safeParse({ ...owed, confirmToken: "" }).success,
+      removalRequestReceived().safeParse({ ...owed, confirmToken: "" }).success,
     ).toBe(false);
   });
 

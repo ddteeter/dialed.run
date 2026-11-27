@@ -12,6 +12,10 @@
  * the table it was written for: moving the table out lets `.fallowrc.jsonc`
  * ignore it without also blinding itself to `email.ts`'s real behaviour
  * (`preferenceFor`, the recipient and payload schemas).
+ *
+ * Each kind is a function that builds its schema, called on every parse
+ * and never cached (design 283): built at module scope, every mutant here
+ * was static and re-ran every test file that reaches this one.
  */
 import { z } from "zod";
 
@@ -22,8 +26,13 @@ import { EMAIL_MAX_LENGTH } from "./garments";
 /**
 A recipient's address, no longer than any mail path carries.
 */
-export const address = z.email().max(EMAIL_MAX_LENGTH);
-const link = z.url({ protocol: /^https?$/u });
+export function address() {
+  return z.email().max(EMAIL_MAX_LENGTH);
+}
+
+function link() {
+  return z.url({ protocol: /^https?$/u });
+}
 
 /**
  * One email kind: the literal that names it, plus whatever it carries.
@@ -45,29 +54,37 @@ function emailKind<Kind extends string, Fields extends z.core.$ZodShape>(
  * Round 26 #11's "Email verify": the link that confirms the address. Sent
  * now, never through the outbox — it carries a live token.
  */
-export const verifyEmail = emailKind("verify_email", { url: link });
+export function verifyEmail() {
+  return emailKind("verify_email", { url: link() });
+}
 
 /**
  * Round 26 #11's "Email existing account": what a sign-up for a
  * registered address sends instead, so the page can say the same thing
  * whoever typed it.
  */
-export const existingAccount = emailKind("existing_account", {});
+export function existingAccount() {
+  return emailKind("existing_account", {});
+}
 
 /**
 ACC-4: the link that sets a new password. Sent now, like `verify_email`.
 */
-export const resetPassword = emailKind("reset_password", { url: link });
+export function resetPassword() {
+  return emailKind("reset_password", { url: link() });
+}
 
 /**
  * ACC-8: the link that moves the account to a new address, sent to that
  * new address — confirming it is how the runner proves they hold it.
  * Sent now, like `verify_email`, never through the outbox (SA-L18).
  */
-export const emailChange = emailKind("email_change", {
-  url: link,
-  newEmail: address,
-});
+export function emailChange() {
+  return emailKind("email_change", {
+    url: link(),
+    newEmail: address(),
+  });
+}
 
 /**
  * An access request's confirm link (owner, 2026-11-21), sent to the
@@ -75,24 +92,30 @@ export const emailChange = emailKind("email_change", {
  * now, never through the outbox, as `verify_email` is: it carries a live
  * token.
  */
-export const accessConfirm = emailKind("access_confirm", { url: link });
+export function accessConfirm() {
+  return emailKind("access_confirm", { url: link() });
+}
 
 /**
  * ACC-8: the notice to the old address once the change is done, so a
  * change the runner did not make is seen by the one inbox that can say
  * so. Secondary to the change, so it rides the outbox.
  */
-export const emailChanged = emailKind("email_changed", { newEmail: address });
+export function emailChanged() {
+  return emailKind("email_changed", { newEmail: address() });
+}
 
 /**
  * Round 26 #19: the Strava run reminder — the one optional email. What
  * the sender knows is when the run landed, already in the runner's own
  * time ("6:58 AM"), and how many runs the one-a-day email is counting.
  */
-export const runReminder = emailKind("run_reminder", {
-  landedAt: z.string().min(1),
-  runs: z.int().min(1),
-});
+export function runReminder() {
+  return emailKind("run_reminder", {
+    landedAt: z.string().min(1),
+    runs: z.int().min(1),
+  });
+}
 
 /**
  * What a copyright takedown's author is told came after it (round 28 #8):
@@ -119,54 +142,58 @@ export const GARMENT_PHOTO_REMOVED =
  * (law 9): a row the build before this wrote has no `cause` and is a
  * moderator's Remove as it always was.
  */
-export const contentRemoved = emailKind("content_removed", {
-  /**
-   * What went: a kit, a kit photo, or a garment's photo (R-167, design
-   * 159), whose email says "your closet" where the others say "your run".
-   * Widened, never narrowed (law 9).
-   */
-  subject: z.enum(["entry", "photo", "garment"]),
-  reason: z.string().min(1),
-  cause: z.literal("copyright_notice").optional(),
-  /**
-   * The rule it broke, from the terms (C8, D-145): absent for a copyright
-   * notice, for the Desk's catch-all reason, and on a row owed before it
-   * existed (law 9).
-   */
-  rule: communityRuleSchema.optional(),
-  /**
-   * The automatic check flagged it before a person decided (C8). Absent
-   * is a person's own find, as every row owed before it was.
-   */
-  flagged: z.boolean().optional(),
-  /**
-   * The run's day as prose says it, "Sat, Aug 29" (round 40 C3), in the
-   * run's own zone, formatted when the debt is owed. Optional, and it must
-   * stay so (law 9): a row owed before it existed says "one of your runs".
-   */
-  runDay: z.string().min(1).optional(),
-});
+export function contentRemoved() {
+  return emailKind("content_removed", {
+    /**
+     * What went: a kit, a kit photo, or a garment's photo (R-167, design
+     * 159), whose email says "your closet" where the others say "your run".
+     * Widened, never narrowed (law 9).
+     */
+    subject: z.enum(["entry", "photo", "garment"]),
+    reason: z.string().min(1),
+    cause: z.literal("copyright_notice").optional(),
+    /**
+     * The rule it broke, from the terms (C8, D-145): absent for a copyright
+     * notice, for the Desk's catch-all reason, and on a row owed before it
+     * existed (law 9).
+     */
+    rule: communityRuleSchema.optional(),
+    /**
+     * The automatic check flagged it before a person decided (C8). Absent
+     * is a person's own find, as every row owed before it was.
+     */
+    flagged: z.boolean().optional(),
+    /**
+     * The run's day as prose says it, "Sat, Aug 29" (round 40 C3), in the
+     * run's own zone, formatted when the debt is owed. Optional, and it must
+     * stay so (law 9): a row owed before it existed says "one of your runs".
+     */
+    runDay: z.string().min(1).optional(),
+  });
+}
 
 /**
  * Round 27 #15's "Email ban": a moderator closed the account (task 128 ·
  * SAF-4), with the reason the notice quotes. Account mail, so always sent,
  * and no button — there is nothing to log in to.
  */
-export const accountClosed = emailKind("account_closed", {
-  reason: z.string().min(1),
-  /**
-   * The rule it broke (C8, D-145). Absent for a closure over suspected
-   * CSAM, which names none, and on a row owed before it existed (law 9).
-   */
-  rule: communityRuleSchema.optional(),
-  /**
-   * A closure over suspected CSAM (owner, 2026-10-24): the email says only
-   * that the account broke the community rules, with no reason and no
-   * rule. Optional (law 9); `reason` is still written for the build
-   * before this one, which requires it.
-   */
-  namesNoReason: z.literal(true).optional(),
-});
+export function accountClosed() {
+  return emailKind("account_closed", {
+    reason: z.string().min(1),
+    /**
+     * The rule it broke (C8, D-145). Absent for a closure over suspected
+     * CSAM, which names none, and on a row owed before it existed (law 9).
+     */
+    rule: communityRuleSchema.optional(),
+    /**
+     * A closure over suspected CSAM (owner, 2026-10-24): the email says only
+     * that the account broke the community rules, with no reason and no
+     * rule. Optional (law 9); `reason` is still written for the build
+     * before this one, which requires it.
+     */
+    namesNoReason: z.literal(true).optional(),
+  });
+}
 
 /**
  * D-89 (round 28 #8): an operator reopened a closed account. Account
@@ -179,15 +206,19 @@ export const accountClosed = emailKind("account_closed", {
  * one carries no handle. A runner closed before they picked one has none
  * either.
  */
-export const accountReopened = emailKind("account_reopened", {
-  handle: z.string().min(1).optional(),
-});
+export function accountReopened() {
+  return emailKind("account_reopened", {
+    handle: z.string().min(1).optional(),
+  });
+}
 
 /**
  * Round 26 #20's invite (task 126, ACC-5): the code D7's Send invite
  * minted for an access request, and the way in with it filled.
  */
-export const invite = emailKind("invite", { code: z.string().min(1) });
+export function invite() {
+  return emailKind("invite", { code: z.string().min(1) });
+}
 
 /**
  * What a deauthorization tells the runner, in the app (S1's row) and by
@@ -202,15 +233,19 @@ export const STRAVA_DISCONNECTED_LINE =
  * deauthorization arrived, the connection is gone, reminders have
  * stopped. It says nothing else — the event may not be the runner's.
  */
-export const stravaDisconnected = emailKind("strava_disconnected", {});
+export function stravaDisconnected() {
+  return emailKind("strava_disconnected", {});
+}
 
 /**
  * Round 27 #14's "Email delete scheduled" (task 126, ACC-9): the day the
  * account goes ("Sat, Oct 4"), and the way to keep it.
  */
-export const deletionScheduled = emailKind("deletion_scheduled", {
-  day: z.string().min(1),
-});
+export function deletionScheduled() {
+  return emailKind("deletion_scheduled", {
+    day: z.string().min(1),
+  });
+}
 
 /**
  * Round 27 #13's "Email export" (task 126, ACC-10; D-79): the ZIP is
@@ -219,9 +254,11 @@ export const deletionScheduled = emailKind("deletion_scheduled", {
  * for the export's owner, signed in (the board's "only while you're
  * logged in").
  */
-export const exportReady = emailKind("export_ready", {
-  token: exportTokenSchema,
-});
+export function exportReady() {
+  return emailKind("export_ready", {
+    token: exportTokenSchema,
+  });
+}
 
 /**
  * Design 136 (D-117): an operator's alert that a report hid something as
@@ -229,10 +266,12 @@ export const exportReady = emailKind("export_ready", {
  * (`dueAt`, epoch seconds, 48 hours on), in round 35 #58d's words.
  * Operator mail, so always sent.
  */
-export const removalDue = emailKind("removal_due", {
-  subject: z.enum(["entry", "photo"]),
-  dueAt: z.int().min(0),
-});
+export function removalDue() {
+  return emailKind("removal_due", {
+    subject: z.enum(["entry", "photo"]),
+    dueAt: z.int().min(0),
+  });
+}
 
 /**
  * Design 136 (D-117): an operator's alert that someone asked, through
@@ -240,10 +279,12 @@ export const removalDue = emailKind("removal_due", {
  * the link was one of ours (so Review shows the subject) or the operator
  * must find it. Placeholder words (design deltas item 58).
  */
-export const removalRequested = emailKind("removal_requested", {
-  dueAt: z.int().min(0),
-  isOurs: z.boolean(),
-});
+export function removalRequested() {
+  return emailKind("removal_requested", {
+    dueAt: z.int().min(0),
+    isOurs: z.boolean(),
+  });
+}
 
 /**
  * C6: an operator's reminder that a removal (a `/takedown` request or an
@@ -251,9 +292,11 @@ export const removalRequested = emailKind("removal_requested", {
  * up. Once per removal per operator. Operator mail, so always sent.
  * Placeholder words (design deltas).
  */
-export const removalReminder = emailKind("removal_reminder", {
-  dueAt: z.int().min(0),
-});
+export function removalReminder() {
+  return emailKind("removal_reminder", {
+    dueAt: z.int().min(0),
+  });
+}
 
 /**
  * C6 for the removal requests not reminded of one by one: those that did
@@ -262,22 +305,26 @@ export const removalReminder = emailKind("removal_reminder", {
  * One per operator per clock hour, saying how many reached their 40th
  * hour in it. Operator mail, so always sent.
  */
-export const removalReminderSummary = emailKind("removal_reminder_summary", {
-  count: z.int().min(1),
-});
+export function removalReminderSummary() {
+  return emailKind("removal_reminder_summary", {
+    count: z.int().min(1),
+  });
+}
 
 /**
  * What a removal receipt says its request is about: a kit of ours or a
  * photo on one, by the kit's id, or something that is not ours.
  */
-const receiptAboutSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.enum(["kit", "photo"]),
-    // Built into the receipt's link, so a kit id and nothing around it.
-    entryId: z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/u),
-  }),
-  z.object({ kind: z.literal("elsewhere") }),
-]);
+function receiptAboutSchema() {
+  return z.discriminatedUnion("kind", [
+    z.object({
+      kind: z.enum(["kit", "photo"]),
+      // Built into the receipt's link, so a kit id and nothing around it.
+      entryId: z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/u),
+    }),
+    z.object({ kind: z.literal("elsewhere") }),
+  ]);
+}
 
 /**
  * Design 136: the requester's receipt — what happens next and by when,
@@ -287,53 +334,59 @@ const receiptAboutSchema = z.discriminatedUnion("kind", [
  * Sent to the address they typed; they may have no account. Never shipped
  * before these fields, so `isHidden` is required.
  */
-export const removalRequestReceived = emailKind("removal_request_received", {
-  dueAt: z.int().min(0),
-  isHidden: z.boolean(),
-  /**
-   * SA-L18: the request the confirm is about. What is owed carries this,
-   * never a token: the email handler mints the token when it sends
-   * (`mintReceiptConfirmToken`), so no live token rests in the outbox.
-   */
-  confirmRequestId: z.string().min(1).optional(),
-  /**
-   * What the email renders the link from. Filled in at send time; a row
-   * owed before SA-L18 still carries one, and is read until those drain
-   * (law 9).
-   */
-  confirmToken: z.string().min(1).optional(),
-  /**
-   * Whether the request waits on the confirm before it hides anything.
-   * Absent on a row owed before it was written, where a link meant it
-   * waited (law 9).
-   */
-  waits: z.boolean().optional(),
-  /**
-   * What the request is about, which the receipt names beside its confirm:
-   * a kit of ours or a photo on one, by the kit's id (its link is built
-   * when the email is), or something that is not ours. Never the link as
-   * typed. Optional as every field added to a wire format is (law 9).
-   */
-  about: receiptAboutSchema.optional(),
-});
+export function removalRequestReceived() {
+  return emailKind("removal_request_received", {
+    dueAt: z.int().min(0),
+    isHidden: z.boolean(),
+    /**
+     * SA-L18: the request the confirm is about. What is owed carries this,
+     * never a token: the email handler mints the token when it sends
+     * (`mintReceiptConfirmToken`), so no live token rests in the outbox.
+     */
+    confirmRequestId: z.string().min(1).optional(),
+    /**
+     * What the email renders the link from. Filled in at send time; a row
+     * owed before SA-L18 still carries one, and is read until those drain
+     * (law 9).
+     */
+    confirmToken: z.string().min(1).optional(),
+    /**
+     * Whether the request waits on the confirm before it hides anything.
+     * Absent on a row owed before it was written, where a link meant it
+     * waited (law 9).
+     */
+    waits: z.boolean().optional(),
+    /**
+     * What the request is about, which the receipt names beside its confirm:
+     * a kit of ours or a photo on one, by the kit's id (its link is built
+     * when the email is), or something that is not ours. Never the link as
+     * typed. Optional as every field added to a wire format is (law 9).
+     */
+    about: receiptAboutSchema().optional(),
+  });
+}
 
 /**
  * Design 137: the site-wide valve shut — enough requests hid something in
  * the last hour that new ones hide nothing until it clears. One per
  * operator per hour, whatever trips it. Operator mail, so always sent.
  */
-export const takedownValve = emailKind("takedown_valve", {
-  perHour: z.int().min(1),
-});
+export function takedownValve() {
+  return emailKind("takedown_valve", {
+    perHour: z.int().min(1),
+  });
+}
 
 /**
  * Design 136: the requester is told the outcome. `reason` is the
  * operator's, for a request that was declined.
  */
-export const removalRequestDecided = emailKind("removal_request_decided", {
-  outcome: z.enum(["removed", "declined"]),
-  reason: z.string().min(1).optional(),
-});
+export function removalRequestDecided() {
+  return emailKind("removal_request_decided", {
+    outcome: z.enum(["removed", "declined"]),
+    reason: z.string().min(1).optional(),
+  });
+}
 
 /**
  * Operator Screens D5, the morning digest (task 125 · OPS-11): the Desk's
@@ -341,16 +394,18 @@ export const removalRequestDecided = emailKind("removal_request_decided", {
  * pipeline and never a quiet one. `oldestHours` is absent when nothing is
  * waiting.
  */
-export const digest = emailKind("digest", {
-  day: z.string().min(1),
-  waiting: z.int().min(0),
-  oldestHours: z.int().min(0).optional(),
-  screenerUnfinished: z.int().min(0),
-  bansThisWeek: z.int().min(0),
-  // Jobs the system gave up on (R-119): optional, because a digest owed by
-  // the deploy before this one sits in the outbox without it (law 9).
-  gaveUp: z.int().min(0).optional(),
-  // Queued jobs the morning's drain could not reach (design 168): optional
-  // for the same reason.
-  outboxBehind: z.int().min(0).optional(),
-});
+export function digest() {
+  return emailKind("digest", {
+    day: z.string().min(1),
+    waiting: z.int().min(0),
+    oldestHours: z.int().min(0).optional(),
+    screenerUnfinished: z.int().min(0),
+    bansThisWeek: z.int().min(0),
+    // Jobs the system gave up on (R-119): optional, because a digest owed by
+    // the deploy before this one sits in the outbox without it (law 9).
+    gaveUp: z.int().min(0).optional(),
+    // Queued jobs the morning's drain could not reach (design 168): optional
+    // for the same reason.
+    outboxBehind: z.int().min(0).optional(),
+  });
+}
