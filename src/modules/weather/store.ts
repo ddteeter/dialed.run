@@ -18,7 +18,7 @@ import { manualConditions, weatherObservations } from "../../db/schema-weather";
 import { weatherDb } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { newUlid } from "../../lib/ids";
-import type { OutboxHandler } from "../ops/outbox";
+import type { OutboxHandler } from "../../lib/sql/outbox";
 import type { ManualSky, WeatherObservation } from "../../lib/contracts";
 import { chunked, IN_LIST_CHUNK, readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";

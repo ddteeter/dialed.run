@@ -10,11 +10,19 @@
  */
 import type { drizzle } from "drizzle-orm/d1";
 
-import type { OutboxKind, OutboxMessageOf } from "../../../lib/sql/outbox";
+import type {
+  OutboxHandlers,
+  OutboxKind,
+  PayloadOf,
+} from "../../../lib/sql/outbox";
+
+export type {
+  OutboxHandler,
+  OutboxHandlers,
+  PayloadOf,
+} from "../../../lib/sql/outbox";
 
 type Db = ReturnType<typeof drizzle>;
-
-export type PayloadOf<K extends OutboxKind> = OutboxMessageOf<K>["payload"];
 
 /**
  * What a handler's run answers when it did part of the work and owes the
@@ -34,38 +42,6 @@ export const OWED_AGAIN: unique symbol = Symbol();
 export class Refused {
   constructor(readonly reason: string) {}
 }
-
-/**
- * Every kind's handler: what a drain is handed. A mapped type, compared
- * by shape, so one handler can serve two kinds whose payloads it fits
- * (the email handler, for `email` and `operator_email`).
- */
-export type OutboxHandlers = {
-  readonly [K in OutboxKind]: {
-    /**
-     * Does the work; throws when it could not, and the row stays owed.
-     * `rowId` is the row being worked, for a handler that must mark it
-     * before the delete (an email, once sent). `OWED_AGAIN` says the work is
-     * done in part and the rest is owed to the next drain (design 232): the
-     * row stays, with its attempts back at none, since nothing failed.
-     * A `Refused` says the far side will not take this row's work.
-     */
-    readonly run: (
-      db: Db,
-      payload: PayloadOf<K>,
-      rowId: string,
-    ) => Promise<unknown>;
-    /**
-    Sentry context for a failure (law 7): ids to act on, never secrets.
-    */
-    readonly context: (payload: PayloadOf<K>) => Record<string, string>;
-  };
-};
-
-/**
-One kind's handler.
-*/
-export type OutboxHandler<K extends OutboxKind> = OutboxHandlers[K];
 
 /**
 A message's work, bound to the handler that does it.
