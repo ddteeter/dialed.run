@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 62 &nbsp;/&nbsp; 340–367 · 2026-11-26</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">The Call says only what it counted.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Twenty-eight items. The Call's boards are redrawn to the engine: PROBABLE joins the header, O5 leaves the epic, C1b is a borrowed Call at home, why-nots fold three deep, and distance leaves B1. Elsewhere: A1 joins A2's group, the bar's pill counts toward "one ACTION_PILL", a verdict keeps two looks by role, and the runs row's height follows its type. Every example is seeded data, in °F.</p>
+    </div>
+
+    <!-- CALL BOARDS -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">363–366 · The Call, redrawn to the engine</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">B2 · PROBABLE · 390 LIGHT · 41°, FEELS 36°</span>
+          <div data-screen-label="B2 probable" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 24px 20px 32px; display: flex; flex-direction: column; gap: 24px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">TOMORROW · 6:10 AM · STEADY</span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em;">PROBABLY WEAR</span>
+              <span style="align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; padding: 4px 8px; border: 1px solid #0B0B0E; outline: 1px dashed #FF2D8A; outline-offset: 4px;">PROBABLE · 4 RUNS IN BAND</span>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+              <sc-for list="{{ wear }}" as="w" hint-placeholder-count="4">
+                <div style="padding: 12px 0; border-top: 1px solid #DCDBD2; display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; line-height: 1.2; letter-spacing: -0.025em;">{{ w.name }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; line-height: 1.3; letter-spacing: 0.1em; color: #4E4E44;">{{ w.line }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background: #F5FF3D; padding: 16px; font-size: 15px; line-height: 1.5;">You've been too cold twice in this band. Skip the gloves — too much twice in this band.</div>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64; padding-bottom: 8px;">WHY NOT</span>
+              <sc-for list="{{ why }}" as="y" hint-placeholder-count="3">
+                <div style="border-top: 1px solid #DCDBD2; display: flex; flex-direction: column;">
+                  <span style="min-height: 44px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 600;"><span>{{ y.q }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 400;">{{ y.mark }}</span></span>
+                  <sc-if value="{{ y.open }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size: 13px; line-height: 1.45; color: #4E4E44; padding-bottom: 12px;">{{ y.a }}</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <span style="border-top: 1px solid #DCDBD2; min-height: 44px; display: flex; align-items: center; font-size: 13px; font-weight: 600; text-decoration: underline;">▸ 2 more</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">PROBABLE takes CONFIDENT's slot and treatment, ink on paper; only BORROWED is hi-viz on ink. Each line sits under its piece's name, MONO.xs, never beside it; a long one wraps at its " · ". Why-nots: up to three in group order, one open at a time, the rest behind "▸ N more".</p>
+        </div>
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">C1b · BORROWED, AT HOME · 390 LIGHT · 82°</span>
+          <div data-screen-label="C1b borrowed at home" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 24px 20px 32px; display: flex; flex-direction: column; gap: 24px;">
+            <div style="background: #0B0B0E; color: #F5FF3D; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">BORROWED CALL</span>
+              <span style="font-size: 15px; line-height: 1.5;">You've logged 0 runs in 77–86°. This comes from runners in your climate, not from you.</span>
+            </div>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em;">PROBABLY WEAR</span>
+            <div style="display: flex; flex-direction: column;">
+              <sc-for list="{{ borrowed }}" as="w" hint-placeholder-count="3">
+                <div style="padding: 12px 0; border-top: 1px solid #DCDBD2; display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; line-height: 1.2; letter-spacing: -0.025em;">{{ w.name }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; line-height: 1.3; letter-spacing: 0.1em; color: #4E4E44;">{{ w.line }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">No place name, no altitude, no UV. No paragraph: nothing of the runner's own to say. "Log a verdict after…" goes. With all runners as the source, the body reads "from other runners".</p>
+        </div>
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">C0a · NO FORECAST · 390 LIGHT</span>
+          <div data-screen-label="C0a no forecast" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 24px 20px 32px; display: flex; flex-direction: column; gap: 24px;">
+            <div style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">TOMORROW · 6:10 AM · EASY</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">NO FORECAST FOR THIS HOUR</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">This Call comes from all your runs, not this hour's weather.</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; line-height: 1.05; letter-spacing: -0.035em;">PROBABLY WEAR</span>
+              <span style="align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; padding: 4px 8px; border: 1px solid #0B0B0E;">PROBABLE · 23 RUNS</span>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+              <sc-for list="{{ nofc }}" as="w" hint-placeholder-count="3">
+                <div style="padding: 12px 0; border-top: 1px solid #DCDBD2; display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; line-height: 1.2; letter-spacing: -0.025em;">{{ w.name }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; line-height: 1.3; letter-spacing: 0.1em; color: #4E4E44;">{{ w.line }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Effort on the card; no distance. The header drops "IN BAND" because there is no band. No hi-viz paragraph: the field is absent, not empty. Why-nots still show, with the two answers the engine has.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RUNS / FEED / SAFETY / SHELL BOARDS -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">353 · 354 · 355 · 356 · 344 · 361.5</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">353.1 · DS2 PICKED ROW · DARK AND LIGHT</span>
+          <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+            <div data-screen-label="353 picked row" style="width: 390px; background: {{ t.bg }}; color: {{ t.ink }}; padding: 8px 20px;">
+              <div style="height: 48px; border-bottom: 1px solid {{ t.hair }}; display: flex; align-items: center; justify-content: space-between; font-size: 15px;"><span>Thu Nov 12</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">8.1 MI</span></div>
+              <div style="height: 48px; background: {{ t.tint }}; box-shadow: inset 0 0 0 2px {{ t.ink }}; margin: 0 -8px; padding: 0 8px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 600;"><span>Mon Nov 9</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 400; letter-spacing: 0.06em;">6.2 MI</span></div>
+              <div style="height: 48px; display: flex; align-items: center; justify-content: space-between; font-size: 15px;"><span>Sat Nov 7</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">10.0 MI</span></div>
+            </div>
+          </sc-for>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The keys' row is a focus: it takes the Accessibility Contract's focus ring, 2px in the text colour, inset, over the tint. Weight goes to 600 on the date. Both read in both themes without a new colour.</p>
+        </div>
+
+        <div style="flex: 0 0 300px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">353.2 · A3 RAIL · RULED LIST · 300</span>
+          <div data-screen-label="353 rail list" style="width: 300px; background: #F4F3EF; color: #0B0B0E; padding: 16px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">IN THIS KIT</span>
+            <div style="display: flex; flex-direction: column; padding-top: 8px;">
+              <sc-for list="{{ rail }}" as="n" hint-placeholder-count="3">
+                <span style="padding: 8px 0; border-top: 1px solid #DCDBD2; font-size: 13px; line-height: 1.45;">{{ n }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The rail drops its chips for a ruled list, TYPE.small, hairline between, names wrap whole at word breaks. Never truncated. A2's band card follows.</p>
+        </div>
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">354 · R CONDITIONS · NO PLACE · 390 LIGHT</span>
+          <div data-screen-label="354 no place" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">CONDITIONS</span>
+            <span style="font-size: 15px; line-height: 1.5;">No place on this run, so no weather came.</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 0 20px; font-size: 13px; font-weight: 600;">
+              <span style="min-height: 44px; display: flex; align-items: center; text-decoration: underline;">Set conditions ›</span>
+              <span style="min-height: 44px; display: flex; align-items: center; text-decoration: underline;">Add where you run</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">"Set conditions ›" opens R2b without coordinates: typed weather, stored as manual, so the run counts toward the runner's own Call (N1). "Add where you run" goes to U1's How you run row (N3), and new runs get weather.</p>
+        </div>
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">355 · FOLLOWING · NO FOLLOWS, OWN POST · 390 LIGHT</span>
+          <div data-screen-label="355 following prompt" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 16px 20px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2; padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+              <span style="font-size: 15px; line-height: 1.5;">You don't follow anyone yet.</span>
+              <span style="height: 44px; padding: 0 20px; border-radius: 999px; border: 1px solid #BDBCB2; display: flex; align-items: center; font-size: 15px; font-weight: 700; white-space: nowrap;">Find a runner</span>
+            </div>
+            <span style="height: 120px; background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; display: flex; align-items: flex-end; padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">YOUR POST</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">One ruled row above the runner's own posts, until their first follow. The full E1v1 block stays for an empty tab. SECONDARY_PILL, as the row's one button.</p>
+        </div>
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">356 · REPORT CONTROL · HOLD, THEN AFTER</span>
+          <div data-screen-label="356 report sent" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 8px 20px; display: flex; flex-direction: column;">
+            <sc-for list="{{ report }}" as="p" hint-placeholder-count="3">
+              <div style="min-height: 44px; border-bottom: 1px solid #DCDBD2; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 13px; font-weight: {{ p.w }}; color: {{ p.c }};">{{ p.label }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">{{ p.state }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">§AF: the control says "Report sent" in its place for the fixed hold, then reads "Reported" as plain text, not a control. Not offered again to that runner for that entry.</p>
+        </div>
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">344 · EMAIL NOT ARRIVING · SHELL BAND · 390 LIGHT</span>
+          <div data-screen-label="344 email notice" style="width: 390px; background: #F4F3EF; color: #0B0B0E;">
+            <div style="height: 56px; border-bottom: 1px solid #DCDBD2; display: flex; align-items: center; padding: 0 20px; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Feed</div>
+            <div style="background: #E6E5DC; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">EMAIL NOT ARRIVING</span>
+              <span style="font-size: 15px; line-height: 1.5;">Our emails to mara@hey.com aren't getting through.</span>
+              <div style="display: flex; flex-wrap: wrap; gap: 0 20px; font-size: 13px; font-weight: 600;">
+                <span style="min-height: 44px; display: flex; align-items: center; text-decoration: underline;">Change address</span>
+                <span style="min-height: 44px; display: flex; align-items: center; text-decoration: underline;">Send a test</span>
+                <span style="min-height: 44px; display: flex; align-items: center; text-decoration: underline;">Not now</span>
+              </div>
+            </div>
+            <div style="height: 88px;"></div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The shell's notice band, RADIUS.none, under the bar on signed-in screens, plus the same sentence as a line on Settings › Email. It names the address, which is the runner's own.</p>
+        </div>
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">361.5 · VERDICT · TWO LOOKS BY ROLE</span>
+          <div data-screen-label="361.5 verdict looks" style="width: 390px; background: #F4F3EF; color: #0B0B0E; padding: 16px 20px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 13px; color: #4E4E44;">In a row or card · E1, D, /@handle, /kit</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; padding: 4px 8px; border-radius: 999px; background: #CDEDE8; color: #00594F;">DIALED</span></div>
+            <div style="display: flex; align-items: baseline; justify-content: space-between;"><span style="font-size: 13px; color: #4E4E44;">As the headline · G, H</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 32px; letter-spacing: -0.035em; color: #007A6C;">DIALED</span></div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The outlined pill goes. In a row or card, the T2 chip (Round 41). Where the verdict is the screen's payoff, the T2-coloured word at TYPE.display (R55·210).</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 62</span>
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="10">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93; padding-top: 12px;">{{ g.h }}</span>
+          <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 120px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+                <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+                <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') || v === 'NOTED' ? C : v.includes('DRAWN') ? D : A });
+    const wear = [
+      { name: 'Merino half-zip', line: 'DIALED 8 OF 9 · 32–41°' },
+      { name: 'Winter tights', line: 'TOO MUCH ONCE · 32–41°' },
+      { name: 'Thermal beanie', line: 'CLIMATE COHORT · 78% AT 32–41°' },
+      { name: 'Trail socks', line: 'NO VERDICTS YET' },
+    ];
+    const why = [
+      { q: 'Why not the vest?', mark: '−', open: true, a: 'Nothing in your verdicts says you need the vest at this hour.' },
+      { q: 'Why not the tee?', mark: '＋', open: false, a: '' },
+      { q: 'Why not the gloves?', mark: '＋', open: false, a: '' },
+    ];
+    const borrowed = [
+      { name: 'Singlet', line: 'CLIMATE COHORT · 81% AT 77–86°' },
+      { name: 'Split shorts', line: 'CLIMATE COHORT · 74% AT 77–86°' },
+      { name: 'Mesh cap', line: 'WORKS AT 68–90°' },
+    ];
+    const nofc = [
+      { name: 'Merino half-zip', line: 'DIALED 14 OF 17 · ALL YOUR RUNS' },
+      { name: 'Winter tights', line: '23 RUNS' },
+      { name: 'Trail socks', line: 'NO VERDICTS YET' },
+    ];
+    const themes = [
+      { bg: '#0B0B0E', ink: '#F4F3EF', hair: '#2A2A31', tint: '#16161B' },
+      { bg: '#F4F3EF', ink: '#0B0B0E', hair: '#DCDBD2', tint: '#EAE9E1' },
+    ];
+    const rail = ['Capilene Cool Lightweight Long-Sleeve Shirt', 'Novablast 5', 'Hidden Comfort'];
+    const report = [
+      { label: 'Report this entry', state: 'BEFORE', w: 600, c: '#0B0B0E' },
+      { label: 'Report sent', state: 'THE HOLD', w: 600, c: '#0B0B0E' },
+      { label: 'Reported', state: 'AFTER', w: 400, c: '#4E4E44' },
+    ];
+    const groups = [
+      { h: 'NOTICES', rows: [
+        R('N1 · The Call\'s engine', 'NOTED', `Boards 363–367 drawn to it. Every line a counted fact, no kicker words, no BEST GUESS, no receipt or promise.`),
+        R('N2 · Times with no place', 'NOTED', `" UTC" shows only when no zone resolves. No redraw.`),
+        R('N3 · How you run', 'NOTED', `354's way out points at U1's row.`),
+      ]},
+      { h: 'RUNS · A1, A2, A3, DS2, R', rows: [
+        R('340.1 · A1\'s column', 'CHANGED', `A1 joins the group: column at x=168 with an empty MEASURE.aside track to its right, so A1 → A2 doesn't jump. Supersedes R55·233's centring at desk; below desk unchanged.`),
+        R('340.2 · Foot lines', 'CHANGED', `From 720, A1's two foot lines go left under the hugging action, as A2's (R58·293). On a phone all three stay centred under the full-width action.`),
+        R('351 · Weather pending in A2', 'RULED', `"Suggestion comes with the weather · usually under a minute." It swaps in place when the weather lands, no reload, no shift of the rows below. "No weather on this run, so no suggestion." only once the fetch has given up.`),
+        R('352 · Flag chip garments', 'RULED', `Only layers that set warmth: tops, bottoms, outer, hands_head. Shoes and socks_extras never carry a warm or cold flag chip.`),
+        R('353.1 · DS2 picked row', 'DRAWN', `The Accessibility Contract's focus ring, 2px in the text colour, inset, over the --tint; date at 600. Reads in both themes.`),
+        R('353.2 · Long names in A3\'s rail', 'DRAWN', `A ruled list, TYPE.small, hairline between, wrapping whole words. Never truncated. A2's band card follows (shared component).`),
+        R('354 · R with no place', 'DRAWN', `"No place on this run, so no weather came." Two ways out: "Set conditions ›" (R2b without coordinates, typed weather stored as manual) and "Add where you run" (U1's How you run row).`),
+      ]},
+      { h: 'FEED · E1', rows: [
+        R('355 · No follows, own posts', 'DRAWN', `A ruled row above their posts: "You don't follow anyone yet." with SECONDARY_PILL "Find a runner". Until the first follow. The full E1v1 block stays for an empty tab.`),
+      ]},
+      { h: 'SAFETY · W1', rows: [
+        R('356 · After a report', 'DRAWN', `§AF wins. The Report control says "Report sent" in its place for the fixed hold, then reads "Reported" as plain text. Not offered again to that runner for that entry. Supersedes Round 42 #85's toast.`),
+      ]},
+      { h: 'CLOSET · THE GARMENT FORM', rows: [
+        R('341 · Lone "Pick another"', 'CONFIRMED', `The ink pill. It is the band's one way on, not a close; R54·167.1 holds.`),
+      ]},
+      { h: 'AUTH · AU5, REQUEST ACCESS', rows: [
+        R('357 · Check your email', 'CHANGED', `Au4's frame as built. The semicolon splits: "Open it to hold your place on the list. It lasts 48 hours."`),
+        R('358 · Confirm page', 'CONFIRMED', `Ask, receipt (blocked-region variant included) and unmatched state as built.`),
+      ]},
+      { h: 'DESK · REVIEW', rows: [
+        R('348 · Claimed handle', 'CHANGED', `MONO.xs REQUESTER SAYS, then "@maya_runs" in TYPE.small, not a link, then MONO.xs NOT CHECKED. A link would read as resolved.`),
+        R('350 · Kit link, notes, reasons', 'CHANGED', `1 and 3 confirmed. 2: each note sits under its reporter's line after MONO.xs THEIR NOTE, TYPE.small, SPACE[1] between, so it can't read as the Desk's words.`),
+        R('359 · Blocked list', 'CONFIRMED', `Row, words and ask as built, under the removal requests. "Unblock" is SECONDARY_PILL; the ask's "Unblock" the ink pill. The answered row stays until reload.`),
+        R('349 · Busy-hour email', 'RULED', `"Removal requests are coming in faster than usual: {count} in the last hour. Past {hideLimit}, new requests stop hiding anything. Past {emailLimit}, we stop emailing you about each one. Every request still waits in Review with its 48 hours." Then the Review link.`),
+      ]},
+      { h: 'SHELL · EVERY SCREEN', rows: [
+        R('342 · Root crash width', 'CHANGED', `MEASURE.panel, centred, as the signed-out pages: it has no bars and replaces no screen. R55·185 still governs every other system state.`),
+        R('344 · Email not arriving', 'DRAWN', `Shell notice band under the bar on signed-in screens, and the same line on Settings › Email; not the bell. Names the address. "Change address", "Send a test", "Not now" (hides the band for 7 days; Settings line stays). Goes when a send is delivered or a new address is confirmed. Signed out: Au4 adds "Our last email to this address didn't arrive." above Resend.`),
+        R('360 · Phone gutter', 'CHANGED', `SPACE[5] for every Page screen. The closet's 16 stays the one exception, recorded in SPACE_RULES.`),
+        R('361.1 · Duplicates corners', 'CHANGED', `197's card (RADIUS.card). Supersedes D2's square.`),
+        R('361.2 · Account\'s children', 'RULED', `"‹ Account".`),
+        R('361.3 · X1 tabs', 'RULED', `Never. A not-found page marks no tab.`),
+        R('361.4 · Indoor on /@handle', 'RULED', `INDOOR, as G, H and D.`),
+        R('361.5 · Verdict looks', 'DRAWN', `Two by role. Row or card (E1, D, /@handle, /kit): the T2 chip. Headline (G, H): the T2 word at TYPE.display. The outlined pill goes.`),
+      ]},
+      { h: 'EVERY SCREEN · PILL KINDS', rows: [
+        R('343 · One ACTION_PILL', 'RULED', `The bar's pill counts. An in-page pill is ACTION_PILL only when the bar shows none; otherwise the ink pill. So: own profile's "Log a run", the invite card from 720 and /how-it-works' close from 720 (and signed in) are the ink pill; below 720 they stay pink.`),
+        R('345 · ICON_BUTTON on a photo', 'CHANGED', `As built, everywhere: the page's ground fill with the hairline edge. One state, not two. Supersedes R61·334.4's "no fill".`),
+        R('346.1 · Follow on rows', 'CONFIRMED', `Rows keep R55·217. 334.3 is the profile header only.`),
+        R('346.2 · Follow height', 'RULED', `48 in the header (HEIGHT.control); 44 on rows.`),
+        R('346.3 · Held width', 'CONFIRMED', `The widest label, in-flight verbs included.`),
+        R('347.1 · "Open in the app"', 'RULED', `A pill in a bar is 44 whatever its kind, TYPE.body. The ink pill at 44.`),
+        R('347.2 · Suggestion chips', 'CONFIRMED', `Picked = the field holds its words. "Name it" never shows picked; unpicked words ink.`),
+        R('347.3 · ACTION_PILL fill', 'CHANGED', `Always hugs. The three filling pills hug.`),
+        R('347.4 · Contents names', 'CONFIRMED', `The contents column, ids and "Read the MIT licence" keep the short names.`),
+        R('347.5 · The 102', 'CHANGED', `The board's arithmetic. The spaces are the ruling; the row is a min-height and follows the type (about 106). Supersedes R61·336's 102.`),
+      ]},
+      { h: 'THE CALL TAB · K', rows: [
+        R('362 · Verdicts that don\'t count', 'RULED', `The meter reads "0 of 15 verdicts counted" in every state. With verdicts but none counted: "Verdicts count on runs with conditions. Yours so far have none." C0b carries it.`),
+      ]},
+      { h: 'THE CALL · B1, B2, C0a, C0b, C1b, O5', rows: [
+        R('363.1 · PROBABLE', 'DRAWN', `CONFIDENT's slot and treatment, ink on paper, introduced by PROBABLY WEAR. Only BORROWED is hi-viz on ink.`),
+        R('363.2 · O5', 'RULED', `Leaves the epic, source bars with it. No one-time framing; the first Call shows the header it has.`),
+        R('363.3 · C1b at home', 'DRAWN', `As the board: no place, no altitude or UV, no paragraph, source "runners in your climate" or "other runners".`),
+        R('363.4 · "Log a verdict after…"', 'RULED', `Both go.`),
+        R('364.1 · Line forms', 'DRAWN', `The six forms confirmed. Brackets are the engine's slots, not drawn. At 390 the line sits under the piece's name, MONO.xs, wrapping at its " · ".`),
+        R('364.2 · The paragraph', 'CONFIRMED', `One or two of the engine's sentences. With none, the hi-viz field is absent.`),
+        R('364.3 · NO VERDICTS YET', 'CONFIRMED', `Reads right; C2a's use agrees.`),
+        R('365 · Why-nots', 'DRAWN', `Under the paragraph, MONO.xs WHY NOT, up to three disclosure rows in group order, 44 each, one open at a time, the answer TYPE.small. The rest behind "▸ N more".`),
+        R('366.1 · Distance', 'RULED', `Leaves B1 and C0's header. The stepper goes; effort is the segment.`),
+        R('366.2 · Effort sentence', 'CHANGED', `"Harder runs dress lighter: a workout reads about 9° warmer." The table's figure, said of runs, not the runner.`),
+        R('366.3 · C0a no forecast', 'DRAWN', `Card: NO FORECAST FOR THIS HOUR, "This Call comes from all your runs, not this hour's weather." Header PROBABLE · [N RUNS], no "IN BAND". No paragraph.`),
+      ]},
+      { h: 'THE CALL · B2\'s SAME CONDITIONS', rows: [
+        R('367.1 · Source', 'RULED', `The feed's Same conditions, as built (everyone's shared runs). No follows-only read.`),
+        R('367.2 · Title and floor', 'RULED', `"RUNNERS IN THESE CONDITIONS". Under 5 runners the block is absent.`),
+        R('367.3 · The sentence', 'CHANGED', `Goes: "long-sleeve" has no source. The block's one line is the feed's dialed count, MONO.sm.`),
+      ]},
+    ];
+    return { wear, why, borrowed, nofc, themes, rail, report, groups };
+  }
+}
+</script>
+</body>
+</html>
