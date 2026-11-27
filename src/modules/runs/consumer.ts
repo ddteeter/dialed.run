@@ -328,20 +328,17 @@ async function processImportJob(
   );
 }
 
-const DUPLICATE = "duplicate";
-const RACED = "raced";
-
 /**
- * One try at the parsed run: saved, with its id; the import ended as a
- * duplicate of a run in the log; or `RACED`, when another import of the
- * same activity saved its run between the read and the batch, and the
- * caller tries again.
+ * One try at the parsed run: saved (and its conditions attempted), or the
+ * import ended as a duplicate of a run in the log, either of which settles
+ * it; or not settled, when another import of the same activity saved its
+ * run between the read and the batch, and the caller tries again.
  */
-async function saveDraft(
+async function didSettle(
   deps: ConsumerDeps,
   importRow: typeof imports.$inferSelect,
   draft: RunDraft,
-): Promise<Ulid | typeof DUPLICATE | typeof RACED> {
+): Promise<boolean> {
   const duplicate = await findDuplicateRun(
     deps.db,
     importRow.userId,
@@ -359,7 +356,7 @@ async function saveDraft(
       goes.write,
     ]);
     await goes.settle();
-    return DUPLICATE;
+    return true;
   }
 
   // The run, the import's conclusion, and what follows from the run now
@@ -428,9 +425,10 @@ async function saveDraft(
       body: "Add your kit for the run you just imported.",
     }),
   ]);
-  if (!saved.ok) return RACED;
+  if (!saved.ok) return false;
   await goes.settle();
-  return runId;
+  await attachIfPending(deps, runId, draft);
+  return true;
 }
 
 /**
@@ -463,23 +461,29 @@ async function parseAndSave(
     return;
   }
 
-  let runId = await saveDraft(deps, importRow, draft);
-  while (runId === RACED) runId = await saveDraft(deps, importRow, draft);
-  if (runId === DUPLICATE) return;
+  let isSettled = await didSettle(deps, importRow, draft);
+  while (!isSettled) isSettled = await didSettle(deps, importRow, draft);
+}
 
-  // Last, once the import is done: the conditions are secondary to it, and
-  // the upload screen keeps polling while the run's weather is pending. One
-  // attempt (law 3); `pending` is the reconciliation marker the hourly
-  // retry re-drives if this fails or the Worker dies first (law 8c — the
-  // observation lives in the other database).
-  if (initialWeatherStatus(draft) === "pending") {
-    try {
-      await deps.attachObservation(runId);
-    } catch (error) {
-      // Degrade, don't fail (law 5): the import stays done and the run
-      // pending, so a redelivery has nothing to redo.
-      deps.captureException(error, { runId, surface: "attachObservation" });
-    }
+/**
+ * Last, once the import is done: the conditions are secondary to it, and
+ * the upload screen keeps polling while the run's weather is pending. One
+ * attempt (law 3); `pending` is the reconciliation marker the hourly
+ * retry re-drives if this fails or the Worker dies first (law 8c — the
+ * observation lives in the other database).
+ */
+async function attachIfPending(
+  deps: ConsumerDeps,
+  runId: Ulid,
+  draft: RunDraft,
+): Promise<void> {
+  if (initialWeatherStatus(draft) !== "pending") return;
+  try {
+    await deps.attachObservation(runId);
+  } catch (error) {
+    // Degrade, don't fail (law 5): the import stays done and the run
+    // pending, so a redelivery has nothing to redo.
+    deps.captureException(error, { runId, surface: "attachObservation" });
   }
 }
 
@@ -553,7 +557,7 @@ async function processReminderJob(
   // The pairing is guarded, so a lost one writes nothing, and the job is
   // decided again from what is there now: another upload, or its reminder.
   if (uploaded !== undefined) {
-    const paired = await runGuarded(deps.db, [
+    await runGuarded(deps.db, [
       ...guarded(
         deps.db,
         pairRunWith(deps.db, uploaded, job.eventTime),
@@ -561,7 +565,9 @@ async function processReminderJob(
       ),
       claim,
     ]);
-    if (!paired.ok) await processReminderJob(deps, job);
+    // Decided again either way: a claim that landed stops it at its
+    // first read.
+    await processReminderJob(deps, job);
     return;
   }
 

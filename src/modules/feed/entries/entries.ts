@@ -234,14 +234,11 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
   // The entry's half of its run's copy (D-175) reads the row back, so it
   // follows the insert in the same batch.
   const copy = entryHalfStatement(database, entryId);
-  const kit =
-    input.itemIds.length === 0
-      ? []
-      : [kitRowsOf(database, entryId, [...input.itemIds])];
   const attached = await runGuarded(database, [
     ...guarded(database, insertEntry, "kit-run"),
     copy,
-    ...kit,
+    // A bare kit selects no garments, so writes no row.
+    kitRowsOf(database, entryId, [...input.itemIds]),
   ]);
   if (!attached.ok) throw new NotFoundError("run not found");
   return entryId;
