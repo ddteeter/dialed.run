@@ -490,6 +490,13 @@ owner keeps the deploy record. Lane 15a listed them (2026-11-18).
   classify step reads, and the metadata step outputs the dependency group.
 - **One run of each review job.** The egress probe's result after
   `harden-runner` starts.
+- **The lock on `dialed-media`'s `quarantine/` prefix**, before friends. With
+  the bucket lock rule in place (`docs/deployment.md`, "Lock
+  `quarantine/`"), put one test object under `quarantine/` through the
+  Worker's `MEDIA` binding (a one-off `wrangler dev --remote` script), then
+  through the same binding delete it and put it again. Note what each
+  answers: whether it throws, and its message. The test object stays for
+  the lock's 365 days.
 
 The owner's private deploy checklist holds the rest of the run-at-deploy
 checks; run it beside this list.
