@@ -202,37 +202,34 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
   // than writing a literal null) inserts SQL NULL either way. `verdict`
   // is the same, and is now written explicitly because a caller may have
   // it — see `AttachKitInput`.
-  const entry = {
-    id: entryId,
-    runId: input.runId,
-    userId: input.userId,
-    // **The runner's default, seeding this entry's own column.** Asked on
-    // review, and the distinction is the product rule: sharing is
-    // per-entry (`outfit_entries.audience`, which A3's toggle writes and
-    // `submitVerdict` carries on every save) *with* a per-user default
-    // that decides where a new one starts. This line is only that start.
-    // Changing the preference later republishes nothing, and an entry
-    // made private stays private. The run itself has no public flag —
-    // see `./share-default`.
-    audience,
-    // Present only for a caller that has both at once. `undefined` is
-    // what the phone flow passes and inserts SQL NULL, which is the
-    // unjudged state `shouldPromptForVerdict` looks for.
-    verdict: input.verdict,
-    createdAt: nowSeconds(),
-  };
   // Held to the run still being there as the batch runs (#1091), and
   // guarded: a run its runner deleted since the read stops the batch, so
   // no entry, copy or kit row is left naming it.
-  const entryRow = rowWhere(
-    outfitEntries,
-    entry,
-    runStillThere(database, input.runId),
-  );
-  const insertEntry = guarded(
-    database,
-    database.insert(outfitEntries).select(entryRow),
-    "kit-run",
+  const runIsThere = runStillThere(database, input.runId);
+  const insertEntry = database.insert(outfitEntries).select(
+    rowWhere(
+      outfitEntries,
+      {
+        id: entryId,
+        runId: input.runId,
+        userId: input.userId,
+        // **The runner's default, seeding this entry's own column.** Asked on
+        // review, and the distinction is the product rule: sharing is
+        // per-entry (`outfit_entries.audience`, which A3's toggle writes and
+        // `submitVerdict` carries on every save) *with* a per-user default
+        // that decides where a new one starts. This line is only that start.
+        // Changing the preference later republishes nothing, and an entry
+        // made private stays private. The run itself has no public flag —
+        // see `./share-default`.
+        audience,
+        // Present only for a caller that has both at once. `undefined` is
+        // what the phone flow passes and inserts SQL NULL, which is the
+        // unjudged state `shouldPromptForVerdict` looks for.
+        verdict: input.verdict,
+        createdAt: nowSeconds(),
+      },
+      runIsThere,
+    ),
   );
   // The entry's half of its run's copy (D-175) reads the row back, so it
   // follows the insert in the same batch.
@@ -241,7 +238,11 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     input.itemIds.length === 0
       ? []
       : [kitRowsOf(database, entryId, [...input.itemIds])];
-  const attached = await runGuarded(database, [...insertEntry, copy, ...kit]);
+  const attached = await runGuarded(database, [
+    ...guarded(database, insertEntry, "kit-run"),
+    copy,
+    ...kit,
+  ]);
   if (!attached.ok) throw new NotFoundError("run not found");
   return entryId;
 }
