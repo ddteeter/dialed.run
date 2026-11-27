@@ -9,7 +9,10 @@ import {
   entryPhotoKeyFor,
   entryPhotoPrefix,
 } from "../../src/lib/entry-photo-key";
-import { photoKeyFor } from "../../src/lib/garment-photo-key";
+import {
+  garmentPhotoPrefix,
+  photoKeyFor,
+} from "../../src/lib/garment-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import type { OutboxMessage } from "../../src/lib/sql/outbox";
@@ -75,7 +78,7 @@ async function owedRow(
     .values({
       id,
       kind: message.kind,
-      dedupeKey: `${message.payload.userId}:${message.payload.itemId}`,
+      dedupeKey: `${message.payload.userId}:${message.payload.itemId ?? "*"}`,
       payload: JSON.stringify(message.payload),
       nextAttemptAt: NOW,
       createdAt: NOW - 3600,
@@ -415,10 +418,12 @@ describe("drainOutbox", () => {
   it("claims only what it can swap, so overlapping runs work each row once", async () => {
     const ids = [await owedRow(), await owedRow(), await owedRow()];
     const worked: string[] = [];
-    const run = vi.fn(async (_db: unknown, payload: { itemId: string }) => {
-      worked.push(payload.itemId);
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    });
+    const run = vi.fn(
+      async (_db: unknown, payload: { itemId?: string | undefined }) => {
+        worked.push(payload.itemId ?? "*");
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      },
+    );
     const handlers = handlersRunning(run);
 
     await Promise.all([
@@ -548,6 +553,12 @@ describe("boundHandler", () => {
       payload: { userId: "u1", itemId: "i1" },
     });
     expect(photo.context()).toStrictEqual({ userId: "u1", itemId: "i1" });
+
+    const closet = boundHandler(outboxHandlers, {
+      kind: "photo_delete",
+      payload: { userId: "u1" },
+    });
+    expect(closet.context()).toStrictEqual({ userId: "u1", itemId: "*" });
 
     const entry = boundHandler(outboxHandlers, {
       kind: "entry_media_delete",
@@ -776,6 +787,112 @@ describe("reconcileItemPhotos", () => {
     await reconcileItemPhotos(db(), userId, item.id);
 
     expect(await stored(`${prefix}/`)).toStrictEqual([`${live}/card.webp`]);
+  });
+
+  it("reads only that garment's row, not the rest of the closet", async () => {
+    const userId = newUlid();
+    const item = await createItem(db(), userId, {
+      category: "top",
+      name: "Reconciled",
+    });
+    const other = await createItem(db(), userId, {
+      category: "bottom",
+      name: "Beside it",
+    });
+    const prefix = photoKeyFor(userId, item.id);
+    // A row naming a version under another garment's prefix: no write
+    // makes one, but a read of the whole closet would keep it.
+    await db()
+      .update(wardrobeItems)
+      .set({ photoKey: `${prefix}/01V1` })
+      .where(eq(wardrobeItems.id, other.id));
+    await env.MEDIA.put(`${prefix}/01V1/card.webp`, new Uint8Array([1]));
+
+    await reconcileItemPhotos(db(), userId, item.id);
+
+    expect(await stored(`${prefix}/`)).toStrictEqual([]);
+  });
+});
+
+describe("reconcileItemPhotos with no garment: the runner's whole closet", () => {
+  it("clears every page of every garment that is gone, and nothing beside it", async () => {
+    const userId = newUlid();
+    const garments = [newUlid(), newUlid(), newUlid()];
+    for (const itemId of garments) {
+      const prefix = photoKeyFor(userId, itemId);
+      await env.MEDIA.put(`${prefix}/01V1/card.webp`, new Uint8Array([1]));
+      await env.MEDIA.put(`${prefix}/card.webp`, new Uint8Array([1]));
+    }
+    const beside = `${garmentPhotoPrefix(userId).slice(0, -1)}X/i/card.webp`;
+    const theirs = `${photoKeyFor(newUlid(), garments[0] ?? "")}/card.webp`;
+    await env.MEDIA.put(beside, new Uint8Array([1]));
+    await env.MEDIA.put(theirs, new Uint8Array([1]));
+
+    await reconcileItemPhotos(db(), userId, undefined, 2);
+
+    expect(await stored(garmentPhotoPrefix(userId))).toStrictEqual([]);
+    expect(await stored(beside)).toStrictEqual([beside]);
+    expect(await stored(theirs)).toStrictEqual([theirs]);
+    await env.MEDIA.delete([beside, theirs]);
+  });
+
+  it("keeps the photo each of the runner's garments still names", async () => {
+    const userId = newUlid();
+    const kept = await createItem(db(), userId, {
+      category: "top",
+      name: "Kept",
+    });
+    const legacy = await createItem(db(), userId, {
+      category: "bottom",
+      name: "Unversioned",
+    });
+    const keptLive = `${photoKeyFor(userId, kept.id)}/01V2`;
+    const legacyLive = photoKeyFor(userId, legacy.id);
+    await db()
+      .update(wardrobeItems)
+      .set({ photoKey: keptLive })
+      .where(eq(wardrobeItems.id, kept.id));
+    await db()
+      .update(wardrobeItems)
+      .set({ photoKey: legacyLive })
+      .where(eq(wardrobeItems.id, legacy.id));
+    const gone = `${photoKeyFor(userId, newUlid())}/01V1/card.webp`;
+    const keys = [
+      `${photoKeyFor(userId, kept.id)}/01V1/card.webp`,
+      `${keptLive}/card.webp`,
+      `${legacyLive}/card.webp`,
+      `${legacyLive}/01V1/card.webp`,
+      gone,
+    ];
+    for (const key of keys) await env.MEDIA.put(key, new Uint8Array([1]));
+
+    await reconcileItemPhotos(db(), userId, undefined);
+
+    expect(await stored(garmentPhotoPrefix(userId))).toStrictEqual(
+      [`${keptLive}/card.webp`, `${legacyLive}/card.webp`].toSorted((a, b) =>
+        a.localeCompare(b),
+      ),
+    );
+    await env.MEDIA.delete(await stored(garmentPhotoPrefix(userId)));
+  });
+
+  it("keeps no photo another runner's garment names", async () => {
+    const userId = newUlid();
+    const other = newUlid();
+    const item = await createItem(db(), other, {
+      category: "top",
+      name: "Theirs",
+    });
+    const live = photoKeyFor(userId, item.id);
+    await db()
+      .update(wardrobeItems)
+      .set({ photoKey: live })
+      .where(eq(wardrobeItems.id, item.id));
+    await env.MEDIA.put(`${live}/card.webp`, new Uint8Array([1]));
+
+    await reconcileItemPhotos(db(), userId, undefined);
+
+    expect(await stored(garmentPhotoPrefix(userId))).toStrictEqual([]);
   });
 });
 

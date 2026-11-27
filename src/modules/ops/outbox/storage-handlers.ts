@@ -11,27 +11,33 @@ import { entryPhotos, wardrobeItems } from "../../../db/schema-core";
 import { env } from "../../../env";
 import { readInChunks } from "../../../lib/chunked";
 import { entryPhotoIdOf, entryPhotoPrefix } from "../../../lib/entry-photo-key";
-import { photoKeyFor } from "../../../lib/garment-photo-key";
-import type { OutboxHandler, OutboxHandlers } from "./handler";
+import {
+  garmentPhotoPrefix,
+  photoKeyFor,
+} from "../../../lib/garment-photo-key";
+import type { OutboxHandler, OutboxHandlers, PayloadOf } from "./handler";
 
 type Db = ReturnType<typeof drizzle>;
 
 /**
- * The photo the garment's row names, or undefined when it names none —
- * or when the garment is gone. Scoped by the runner as well as the item, as every
- * closet read is.
+ * The photos the runner's rows name: the one garment's, or every garment
+ * of theirs. Scoped by the runner as well as the item, as every closet
+ * read is; the whole closet is read only by account deletion's reconcile,
+ * which runs after the closet's rows are gone.
  */
-async function livePhotoKey(
+async function livePhotoKeys(
   db: Db,
   userId: string,
-  itemId: string,
-): Promise<string | undefined> {
+  itemId: string | undefined,
+): Promise<(string | undefined)[]> {
+  const theirs = eq(wardrobeItems.userId, userId);
   const rows = await db
     .select({ photoKey: wardrobeItems.photoKey })
     .from(wardrobeItems)
-    .where(and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, userId)))
-    .limit(1);
-  return rows[0]?.photoKey ?? undefined;
+    .where(
+      itemId === undefined ? theirs : and(theirs, eq(wardrobeItems.id, itemId)),
+    );
+  return rows.map((row) => row.photoKey ?? undefined);
 }
 
 /**
@@ -83,24 +89,26 @@ async function forEachPage(
 }
 
 /**
- * Bring a garment's R2 prefix into line with its row: delete every object
- * there except the photo the row names. One operation for all three debts
- * — Remove (the row names nothing), Delete (there is no row), Replace (the
- * row names the new version) — because each is "the prefix holds more
- * than the row says".
+ * Bring a garment's R2 prefix — or, with no garment, all of a runner's —
+ * into line with the rows: delete every object there except the photo its
+ * garment's row names. One operation for all four debts — Remove (the row
+ * names nothing), Delete (there is no row), Replace (the row names the new
+ * version) and account deletion (no rows at all) — because each is "the
+ * prefix holds more than the rows say".
  *
  * **Listed, not named**, because nothing records what a prefix holds: the
  * row forgot the old version in the same batch that owed this, and the
  * original's extension was never stored at all. A second run is a no-op.
  *
- * The row is read after each page is listed, never before. An upload puts
- * its objects first and names them in the row last, so an upload that
- * finished while this listed is kept. One narrow race is left, and it is
- * accepted: objects listed while an upload is still between its puts and
- * its row write are deleted, and that photo shows broken until the runner
- * uploads it again. It needs a second upload to the same garment in the
- * seconds this runs; the alternative, holding back recent objects, would
- * leave a photo the runner just removed in storage until the next drain.
+ * The rows are read after each page is listed, never before. An upload
+ * puts its objects first and names them in the row last, so an upload
+ * that finished while this listed is kept. One narrow race is left, and it
+ * is accepted: objects listed while an upload is still between its puts
+ * and its row write are deleted, and that photo shows broken until the
+ * runner uploads it again. It needs a second upload to the same garment in
+ * the seconds this runs; the alternative, holding back recent objects,
+ * would leave a photo the runner just removed in storage until the next
+ * drain.
  *
  * `pageSize` is R2's own cap by default; a test passes a small one so the
  * cursor is exercised without writing a thousand objects, and a small
@@ -109,17 +117,20 @@ async function forEachPage(
 export async function reconcileItemPhotos(
   db: Db,
   userId: string,
-  itemId: string,
+  itemId: string | undefined,
   pageSize = 1000,
   maxPages = MAX_LIST_PAGES,
 ): Promise<void> {
-  const prefix = `${photoKeyFor(userId, itemId)}/`;
+  const prefix =
+    itemId === undefined
+      ? garmentPhotoPrefix(userId)
+      : `${photoKeyFor(userId, itemId)}/`;
   await forEachPage({ prefix, limit: pageSize }, maxPages, async (page) => {
-    const live = await livePhotoKey(db, userId, itemId);
+    const live = await livePhotoKeys(db, userId, itemId);
     await env.MEDIA.delete(
       page.objects
         .map((object) => object.key)
-        .filter((key) => !isLiveObject(key, live)),
+        .filter((key) => live.every((photo) => !isLiveObject(key, photo))),
     );
   });
 }
@@ -187,24 +198,42 @@ const importFileDeleteHandler: OutboxHandler<"import_file_delete"> = {
 };
 
 /**
-A garment's prefix, brought into line with its row (`reconcileItemPhotos`).
+ * A handler for a kind that reconciles one prefix or, with no id, all of
+ * a runner's: the garment photos' and the entry photos'. Its context
+ * names the id, or `*` for every one.
+ */
+function prefixHandler<P extends { readonly userId: string }>(
+  reconcile: (db: Db, userId: string, id: string | undefined) => Promise<void>,
+  idOf: (payload: P) => string | undefined,
+  idName: string,
+) {
+  return {
+    run: (db: Db, payload: P) => reconcile(db, payload.userId, idOf(payload)),
+    context: (payload: P) => ({
+      userId: payload.userId,
+      [idName]: idOf(payload) ?? "*",
+    }),
+  };
+}
+
+/**
+A garment's prefix, or a runner's, brought into line (`reconcileItemPhotos`).
 */
-const photoDeleteHandler: OutboxHandler<"photo_delete"> = {
-  run: (db, payload) => reconcileItemPhotos(db, payload.userId, payload.itemId),
-  context: (payload) => ({ userId: payload.userId, itemId: payload.itemId }),
-};
+const photoDeleteHandler: OutboxHandler<"photo_delete"> = prefixHandler(
+  reconcileItemPhotos,
+  (payload: PayloadOf<"photo_delete">) => payload.itemId,
+  "itemId",
+);
 
 /**
 An entry's prefix, or a runner's, brought into line (`reconcileEntryPhotos`).
 */
-const entryMediaDeleteHandler: OutboxHandler<"entry_media_delete"> = {
-  run: (db, payload) =>
-    reconcileEntryPhotos(db, payload.userId, payload.entryId),
-  context: (payload) => ({
-    userId: payload.userId,
-    entryId: payload.entryId ?? "*",
-  }),
-};
+const entryMediaDeleteHandler: OutboxHandler<"entry_media_delete"> =
+  prefixHandler(
+    reconcileEntryPhotos,
+    (payload: PayloadOf<"entry_media_delete">) => payload.entryId,
+    "entryId",
+  );
 
 /**
 The kinds whose work is R2's alone, for the dispatch's registry.

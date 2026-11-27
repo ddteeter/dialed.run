@@ -78,6 +78,12 @@ describe("dedupeKeyFor", () => {
     ).toBe("u1:i1");
   });
 
+  it("makes one photo debt for all of a runner's garments", () => {
+    expect(
+      dedupeKeyFor({ kind: "photo_delete", payload: { userId: "u1" } }),
+    ).toBe("u1:*");
+  });
+
   it("makes one entry debt per entry, and one for all of a runner's", () => {
     expect(
       dedupeKeyFor({
@@ -134,6 +140,21 @@ describe("readOutboxRow", () => {
         payload: { userId: "u1", itemId: "i1" },
       },
     });
+  });
+
+  it("reads a photo debt with and without its garment", () => {
+    expect(
+      readOutboxRow("photo_delete", JSON.stringify({ userId: "u1" })),
+    ).toStrictEqual({
+      ok: true,
+      message: { kind: "photo_delete", payload: { userId: "u1" } },
+    });
+    expect(
+      readOutboxRow(
+        "photo_delete",
+        JSON.stringify({ userId: "u1", itemId: "" }),
+      ),
+    ).toStrictEqual(UNKNOWN);
   });
 
   it("names a payload that is not JSON, without throwing", () => {
@@ -280,7 +301,7 @@ describe("readOutboxRow", () => {
 
   it("refuses a payload of the wrong shape, including empty ids", () => {
     expect(
-      readOutboxRow("photo_delete", JSON.stringify({ userId: "u1" })),
+      readOutboxRow("photo_delete", JSON.stringify({ itemId: "i1" })),
     ).toStrictEqual(UNKNOWN);
     expect(
       readOutboxRow(

@@ -78,7 +78,7 @@ import {
 } from "../../../db/schema-core";
 import { coreDb, env } from "../../../env";
 import { importFilePrefix } from "../../../lib/import-file-key";
-import { columnWhere, firstRowWhere } from "../../../lib/sql/keyed-read";
+import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { listedPages } from "../../../lib/sql/r2-pages";
 import { rowWhere } from "../../../lib/sql/row-where";
 import { orSqlNull } from "../../../lib/sql/sql-null";
@@ -86,7 +86,12 @@ import { nowSeconds } from "../../../lib/now";
 import type { RateLimitKind } from "../../../lib/contracts/rate-limits";
 import { forgetRateLimit, forgetSendLimits } from "../../ops/limits";
 import { deleteRuns, deleteRunsThrough } from "../../feed";
-import { outboxInsert, oweOutbox } from "../../ops/outbox";
+import {
+  outboxInsert,
+  oweOutbox,
+  settleOutbox,
+  storageHandlers,
+} from "../../ops/outbox";
 import { captureException } from "../../ops/sentry";
 import { disconnectStrava } from "../../runs";
 import { followRowsNaming } from "../../notifications";
@@ -395,7 +400,7 @@ export async function purgeAccount(
   // 128's SAF-3 primitive (seam 4): every entry left — with their items,
   // tags, reactions, photos and notifications — and the media prefix owed.
   await deleteRuns(core, userId, "all", report, undefined, heldBy(userId));
-  await deleteCloset(core, userId);
+  await deleteCloset(core, userId, report);
   await deleteStoredFiles(deps.importsBucket, userId);
   return deleteAccountRows(core, userId, deps);
 }
@@ -531,26 +536,24 @@ async function forgetScreenings(db: Db, userId: string): Promise<void> {
 
 /**
  * The closet, and any upload that never became a run: the rows, and the
- * R2 each garment is owed (its photo prefix), in one batch. Left to the
- * drain rather than sent now: a closet is dozens of prefixes, and the
- * drain clears them within days. The uploads' files are not owed here:
- * `deleteStoredFiles` lists the runner's whole `imports/` prefix next.
+ * runner's whole garment prefix owed in R2, in one batch, then cleared at
+ * once — one listing of `items/<runner>/`, as their kit photos are one
+ * listing of theirs — with the owed row as its retry (the daily drain).
+ * The uploads' files are not owed here: `deleteStoredFiles` lists the
+ * runner's whole `imports/` prefix next.
  */
-async function deleteCloset(db: Db, userId: string): Promise<void> {
-  const garments = await columnWhere(
-    db,
-    wardrobeItems,
-    wardrobeItems.id,
-    eq(wardrobeItems.userId, userId),
-  );
-  const debts = garments.map((itemId) =>
-    oweOutbox({ kind: "photo_delete", payload: { userId, itemId } }),
-  );
+async function deleteCloset(
+  db: Db,
+  userId: string,
+  report: Report,
+): Promise<void> {
+  const debt = oweOutbox({ kind: "photo_delete", payload: { userId } });
   await db.batch([
     db.delete(wardrobeItems).where(eq(wardrobeItems.userId, userId)),
     db.delete(imports).where(eq(imports.userId, userId)),
-    ...debts.map((debt) => outboxInsert(db, debt)),
+    outboxInsert(db, debt),
   ]);
+  await settleOutbox(db, debt, storageHandlers, report);
 }
 
 /**
