@@ -152,6 +152,19 @@ async function pairedAt(runId: string): Promise<number | null | undefined> {
   return row?.at;
 }
 
+/**
+ * Our own clock when the job runs, in unix seconds: later than the time
+ * Strava stamped on the event, as a notice that arrives after the upload is.
+ */
+function receivedAt(seconds: number): void {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(seconds * 1000);
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 async function landReminder(athleteId: string, landedAt: number) {
   await deliver({
     type: "strava_reminder",
@@ -252,12 +265,13 @@ describe("pairWithReminder: one upload clears one reminder", () => {
 });
 
 describe("a reminder for a run already uploaded is not written", () => {
-  it("claims the event, writes no row, and pairs the upload", async () => {
+  it("claims the event, writes no row, and pairs the upload at our own time, not Strava's", async () => {
     const userId = newUlid();
     const athleteId = await connect(userId);
     const landedAt = 1_800_200_000;
     const runId = await seedFileRun(userId, landedAt - HOUR, 3000);
     const objectId = newUlid();
+    receivedAt(landedAt + 300);
 
     await deliver({
       type: "strava_reminder",
@@ -268,7 +282,7 @@ describe("a reminder for a run already uploaded is not written", () => {
     });
 
     expect(await reminders(userId)).toStrictEqual([]);
-    expect(await pairedAt(runId)).toBe(landedAt);
+    expect(await pairedAt(runId)).toBe(landedAt + 300);
     const claimed = await coreDb()
       .select()
       .from(processedWebhookEvents)
@@ -356,10 +370,11 @@ describe("two reminders racing for one upload (design 278)", () => {
     const taken = await seedFileRun(userId, landedAt - 2 * HOUR, 3000);
     const next = await seedFileRun(userId, landedAt - HOUR, 3000);
     beforeNextWriteBatch(() => pairRunWith(coreDb(), taken, landedAt - 60));
+    receivedAt(landedAt + 300);
 
     await landReminder(athleteId, landedAt);
 
-    expect(await pairedAt(next)).toBe(landedAt);
+    expect(await pairedAt(next)).toBe(landedAt + 300);
     expect(await reminders(userId)).toStrictEqual([]);
   });
 });
