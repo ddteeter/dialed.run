@@ -48,8 +48,9 @@ to stop replicas serving.
 
 All three `database_id` values in `wrangler.jsonc` are placeholder zeros
 (`00000000-…-0001`/`-0002`/`-0003`). Replace them with the real ids from
-the output.
-A deploy against the placeholders fails at bind time.
+the output, in a PR that changes `wrangler.jsonc` and nothing else:
+`test/bindings-conformance.test.ts` holds no id by its value (`dialed-ops`'
+only by its UUID shape), so the ids need no test change. A deploy against the placeholders fails at bind time.
 
 Then apply migrations, core first. **`--remote` is not optional**: Wrangler 4
 applies D1 migrations to the _local_ database unless told otherwise
