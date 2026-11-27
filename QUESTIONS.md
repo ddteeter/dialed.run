@@ -4,6 +4,12 @@ Each is something the sources do not settle. The scorer builds the stated
 default as one named constant or function, with a test named for it, so an
 answer changes one place. Design: `docs/designs/sprint-a1-call-scorer.md`.
 
+**The owner answered Q1 to Q18 on 2026-11-26** (issue #1103, "Owner's
+call"). Changed and now built: Q3, Q5, Q13, Q14. Settled: Q6, Q11, Q18.
+Stands as built, as `scorer-1`: Q1, Q2, Q4, Q7, Q10, Q12, Q15, Q17, and Q16
+as a contract change after the sprint. Parked with the cohort cells table's
+design: Q8, Q9. Q19 and Q20 are new, raised by building the answers.
+
 ## Q1: Is the Call's "condition class" the precipitation class?
 
 - What: design 194 keys the cohort by "feels-like band × condition class".
@@ -24,12 +30,13 @@ answer changes one place. Design: `docs/designs/sprint-a1-call-scorer.md`.
 
 ## Q3: Are runs with typed weather left out of the runner's own counts?
 
-- What: CLAUDE.md keeps manual weather out of consensus, published totals
-  and "(later) training". The scorer's counting is read as that training.
-- Cost: a runner who types their weather gets a thinner Call.
-- Recommend: keep them out; a typed band is too coarse to count beside
-  measured ones.
-- Meanwhile: `countedRuns` drops `source: "manual"`. One function, one test.
+- Answered (owner, 2026-11-26): no. Typed-weather runs count toward the
+  runner's own Call. They stay out of the cohort, consensus and published
+  totals.
+- Built: the scorer counts every run in the history, whatever its source.
+  The cohort side is the rollup's to enforce: the scorer only reads cells,
+  and a test pins that nothing of a runner's history reaches a cohort
+  figure.
 
 ## Q4: Does the thermal offset shift only the estimate fit?
 
@@ -43,19 +50,21 @@ answer changes one place. Design: `docs/designs/sprint-a1-call-scorer.md`.
 
 ## Q5: What does effort do to a Call?
 
-- What: board B1 says "you run 8° warmer in a workout". That is design
-  copy; nobody has ruled on a number per effort.
-- Cost: an offset per effort is a product call, and a column the cohort
-  cells may want.
-- Recommend: the owner picks the offsets, or the replay harness fits them
-  once the call log has verdicts.
-- Meanwhile: `effort` is accepted and not read; a test pins that.
+- Answered (owner, 2026-11-26): a starting table. The hour feels warmer by
+  easy 0 °C, steady +2 °C, workout +5 °C, race +7 °C; no effort counts as
+  easy. The Call's effort shifts the feel used for its band and for
+  estimate fit, and each past run's judged feel is shifted by its own
+  effort, so runs and the Call are compared on the same footing.
+- Built: `EFFORT_WARMTH_C` and `feelAtEffortC` in `scorer/effort.ts`. See
+  Q19 for what this does to the band a fact names.
 
 ## Q6: What decides confidence, and where is the probable/confident cut?
 
+- Answered (owner, 2026-11-26): as built, the cut at 6 runs in band.
 - What: the ladder is `below-threshold` under `CALL_VERDICT_THRESHOLD`
-  verdicts, `best-guess` with no counted run at all, `borrowed` with none
-  in this band and class, then `probable`, then `confident`.
+  verdicts, `borrowed` with no run in this band and class, then
+  `probable`, then `confident`. Since Q3's answer `best-guess` is never
+  answered: a runner over the threshold always has runs of their own.
 - Cost: the words sit on the screen (O5, C1b, C0a).
 - Recommend: the cut at 6 runs in band: twice the personal prior strength.
   The board's "11 RUNS IN BAND" is an example.
@@ -107,13 +116,9 @@ answer changes one place. Design: `docs/designs/sprint-a1-call-scorer.md`.
 
 ## Q11: Does the verdict threshold count typed-weather verdicts?
 
-- What: the teaser's ladder counts every verdict toward 15, typed weather
-  included. The scorer's evidence leaves those runs out (Q3).
-- Cost: if the two counted differently, the teaser could say "0 more
-  verdicts" while the Call still said below threshold.
-- Recommend: count every verdict toward the threshold, as the teaser does.
-- Meanwhile: the threshold reads `history.length`. A runner whose verdicts
-  are all on typed weather is over it with nothing counted: `best-guess`.
+- Answered (owner, 2026-11-26): settled by Q3. The threshold and the
+  evidence count the same runs, and both agree with the teaser's ladder.
+- Built: the threshold reads `history.length`, and so does everything else.
 
 ## Q12: What is a Call with no forecast?
 
@@ -127,26 +132,21 @@ answer changes one place. Design: `docs/designs/sprint-a1-call-scorer.md`.
 
 ## Q13: Should a verdict's direction count?
 
-- What: the scorer reads "dialed or not". A runner who was cold four times
-  in a tee is no likelier to be offered something warmer than something
-  lighter, until they have worn it.
-- Cost: a learned shift needs a number for what one cold verdict is worth
-  in °C, which nobody has ruled on (the same gap as Q5).
-- Recommend: shift the feel used against estimates by the band's lean,
-  (warm − cold) / (runs + a strength), times a step; tune it in replay.
-- Meanwhile: direction is unread in the score. The band's cold, dialed and
-  warm counts are still in every piece's evidence.
+- Answered (owner, 2026-11-26): yes, as the band's lean. The feel used
+  against estimates shifts by (warm − cold) / (runs in band + 3) ×
+  `THERMAL_LEVEL_C`; positive means the runner ran warm, so the Call
+  dresses lighter.
+- Built: `bandLeanC`, `LEAN_PRIOR_STRENGTH` and `LEAN_STEP_C` in
+  `scorer/shrinkage.ts`. A piece's own score still reads "dialed or not".
 
 ## Q14: Does the 5-runner floor apply to a cell's group runners too?
 
-- What: the scorer drops a cell whose `bandRunners` is under 5. A cell can
-  pass with `groupRunners` of 1 or 2, and its verdicts are then those few
-  runners' runs. D-108 says 5+ distinct runners per figure.
-- Cost: if yes, the rollup or the scorer withholds a group's verdicts, and
-  perhaps its share, under 5 group runners.
-- Recommend: the rollup zeroes a group's verdicts under 5 group runners, and
-  the scorer repeats the check.
-- Meanwhile: the floor is on `bandRunners` only, as the lane was briefed.
+- Answered (owner, 2026-11-26): yes. No cohort figure, verdict share or
+  `cohort-share` fact comes from fewer than 5 distinct runners who wore the
+  group, as well as fewer than 5 in the band and class (D-108). The rollup
+  withholds it and the scorer re-checks.
+- Built: `cellsAboveFloor` needs both. A rung whose cell is thin on either
+  count is backed off, like a rung with no cell.
 
 ## Q15: What does a per-item flag count for?
 
@@ -178,16 +178,31 @@ answer changes one place. Design: `docs/designs/sprint-a1-call-scorer.md`.
 
 ## Q18: The shared skeleton needs one more registration, in `eslint/table-owners.ts`
 
-- What: `test/eslint/table-owners.node.test.ts` ("names every module folder
-  and `src/db` as an area, and nothing else") fails as soon as
-  `src/modules/call/` exists, because `AREAS` in `eslint/table-owners.ts`
-  does not name `call`. It is the only failure in `npm test` on this branch,
-  and the pre-push preflight runs `npm test`, so no A lane can push until
-  the line is there. The file's own comment says a new module is named
-  there. It is not on the protected-paths list.
-- Cost: one line, `"call",` after `"auth",` in `AREAS`, identical in all
-  three A lanes like the Stryker entry.
-- Recommend: add it to the skeleton every lane carries.
-- Meanwhile: the owner approved the line for this lane (2026-11-26). It is
-  a commit of its own on this branch, so it can be dropped if the skeleton
-  takes it another way.
+- Answered (owner, 2026-11-26): `"call"` in `AREAS` is part of the shared
+  skeleton, identical in all three Call lanes.
+- Built: one line after `"auth",`, in a commit of its own on this branch.
+
+## Q19: Which band does a fact name once effort shifts it?
+
+- What: with Q5's answer, a run is counted in the band of its feel at its
+  effort, and the Call's band is the band of the hour at the Call's effort.
+  So a fact's `bandFloorC`, and `CallResult.bandFloorC`, name that shifted
+  band: a workout on a 41 °F morning is counted, and reported, one band
+  warmer than the weather the runner saw. The cohort's cells are looked up
+  in the shifted band too, so the rollup has to count each run on the same
+  footing or the lookup reads the wrong cell.
+- Cost: wording for the evidence lines (A2), and a rule for the rollup.
+- Recommend: the rollup shifts each run with the scorer's own
+  `feelAtEffortC`, and the evidence lines say the band is the feel at this
+  effort; if the screen should show the weather's band instead, the
+  contract carries both.
+- Meanwhile: every band the scorer reads or reports is the band at effort.
+
+## Q20: Does the works-at range (#386) follow these answers?
+
+- What: `workedRange` is a range to show beside the weather, not an input
+  to the Call.
+- Cost: none; it is not wired into the closet.
+- Recommend: as built.
+- Meanwhile: it counts typed-weather runs (Q3), and uses each run's own
+  judged feel, not shifted for effort (Q5).
