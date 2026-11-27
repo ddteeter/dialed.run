@@ -132,6 +132,11 @@
       // building beside it; every column here only reads a field of a row
       // `export-files.ts` built (PR #132 review), and must stay that way.
       "src/modules/account/export-build/export-sheets.ts", // column table: every value is a plain field read
+      // Sprint lane A2's B2 strings table: `{ origin, text }` rows only,
+      // split from `words.ts` (`fill`) so the ignore covers the table and
+      // not the code beside it -- same shape as `tap-list-data.ts` (R-34).
+      // Owner-approved 2026-11-26.
+      "src/modules/call/evidence/words-data.ts", // B2 strings table: { origin, text } rows only, no behaviour
     ],
   },
 }
