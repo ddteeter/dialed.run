@@ -16,7 +16,10 @@ This file is the repo's, not guardrails'. `init` does not write it.
   not the merge would write anything.
 - A warning that `core.hooksPath` is already set. The hooks are active.
 
-Checked on 0.14.0, 0.14.1, 0.14.2, 0.15.0, 0.16.0, 0.17.0 and 0.18.2.
+Checked on 0.14.0, 0.14.1, 0.14.2, 0.15.0, 0.16.0, 0.17.0, 0.18.2 and
+0.19.1. At 0.19.1 `init --apply` also rewrites `.codex/hooks.json` (the
+same hooks, reordered) and drops `reports/guardrails-run.json` from
+`.gitignore`: discard both.
 At 0.18.2 the plan also showed `update` on the two crushing-mutants
 files, which no one here edits: their templates gained 0.18.0's timeout
 re-test and `guardrails lock`. A different
@@ -26,18 +29,19 @@ list is not expected: stop and ask the owner.
 
 - **`.githooks/pre-push`** runs `sanctions-check` after the gate. The
   template does not, and without it a copied Stryker directive passes every
-  local gate and fails CI an hour later. It also runs `npm run build`,
-  `npm test` and `npm run diagrams:check` before the gate, skipping a push
-  that only deletes refs (owner, 2026-11-23): they are what CI's first job
-  runs and the gate does not, so a branch that skipped one spent a CI lap.
-  It runs them without git's hook variables (`GIT_DIR`, `GIT_INDEX_FILE`
-  and the rest), so a test's git call in a temp repo cannot write to this
-  one (owner, 2026-11-23). It runs them under the machine-wide gate lock,
-  re-entering itself with `GUARDRAILS_PREFLIGHT=1`, and releases the lock
-  before the gate takes it, so two full test suites never run side by side
-  (owner, 2026-11-24). It takes that lock through `guardrails lock --`
-  rather than a raw `lockf`, so a gate queued behind it names it and the
-  hold is logged (owner, 2026-11-26, #1054).
+  local gate and fails CI an hour later. Before the gate it runs
+  `guardrails preflight --mode=hook`, as the template does since 0.19.0.
+  The list lives in `guardrails.config.json`'s `ship.preflight`:
+  `npm run build`, `npm test` and `npm run diagrams:check`, which CI's
+  first job runs and the gate does not (owner, 2026-11-23). It is one
+  entry under `guardrails lock --`, because guardrails-core's preflight
+  takes no lock and two full test suites side by side time out DOM tests
+  (owner, 2026-11-24; `guardrails lock` rather than a raw `lockf`, owner,
+  2026-11-26, #1054). The preflight drops git's hook variables from the
+  commands' environment itself, so a test's git call in a temp repo cannot
+  write to this one. Since 0.19 a push that only deletes refs runs the
+  preflight too, unless its record matches the tree; branches are
+  deleted with `gh api`, so no push only deletes.
 - **`.github/workflows/guardrails.yml`** names a full version tag on every
   action, locked in `actions.lock` (D-182), and has a concurrency group, a
   Chromium install and a MediaPipe staging step. The template has floating

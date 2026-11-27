@@ -6,6 +6,11 @@
     "seedFrom": "sh scripts/fetch-mutation-seed.sh",
     "seedTimeoutSeconds": 120
   },
+  "ship": {
+    "preflight": [
+      "node ./node_modules/guardrails-core/dist/cli.mjs lock -- sh -c 'npm run build && npm test && npm run diagrams:check'"
+    ]
+  },
   "analyzers": {
     "eslint": "required",
     "tsc": "required",
