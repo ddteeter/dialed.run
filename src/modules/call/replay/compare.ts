@@ -31,7 +31,7 @@ export interface Comparison {
    * fraction (0.01 is one percentage point).
    */
   tolerance: number;
-  metrics: MetricComparison[];
+  metrics: Readonly<Record<ReleaseMetric, MetricComparison>>;
   pass: boolean;
 }
 
@@ -71,7 +71,7 @@ export function noWorse(
       `replayed over different cases: ${String(baseline.cases)} against ${String(candidate.cases)}`,
     );
   }
-  const metrics = RELEASE_METRICS.map((metric) => {
+  const judge = (metric: ReleaseMetric): MetricComparison => {
     const before = rate(baseline[metric]);
     const after = rate(candidate[metric]);
     return {
@@ -80,10 +80,14 @@ export function noWorse(
       candidate: after,
       verdict: verdictOf(before, after, tolerance),
     };
-  });
+  };
+  const metrics = {
+    dialedAgreement: judge("dialedAgreement"),
+    direction: judge("direction"),
+  };
   return {
     tolerance,
     metrics,
-    pass: metrics.every((m) => PASSING.has(m.verdict)),
+    pass: RELEASE_METRICS.every((m) => PASSING.has(metrics[m].verdict)),
   };
 }

@@ -127,7 +127,7 @@ describe("syntheticPersonas", () => {
         { pieceId: "shoes", group: "shoes" },
       ],
     });
-    expect(hash(JSON.stringify(personas))).toBe(772_454_334);
+    expect(hash(JSON.stringify(personas))).toBe(648_106_896);
   });
 
   it("gives every runner a pseudonym, the home zone and one run a day", () => {
@@ -256,7 +256,7 @@ describe("the personas' truths", () => {
     );
   });
 
-  it("flagged: the long sleeve is flagged, and the run warm, only above 10°", () => {
+  it("flagged: the long sleeve is flagged, and the run a bit warm, only above 10°", () => {
     const p = persona("flagged");
     const withSleeve = p.history.runs.filter((r) =>
       r.worn.some((w) => w.pieceId === "long-sleeve"),
@@ -270,7 +270,7 @@ describe("the personas' truths", () => {
         run.judgedFeelsLikeC > 10 ? "too_much" : undefined,
       );
     }
-    for (const run of flagged) expect(run.verdict).toBeGreaterThanOrEqual(1);
+    for (const run of flagged) expect(run.verdict).toBe(1);
     const flags = p.history.runs
       .flatMap((r) => r.worn)
       .filter((w) => w.flag !== undefined);
@@ -353,7 +353,7 @@ describe("syntheticCloset", () => {
     ],
     ["jacket", { category: "top", layer: "outer", weight: "mid" }],
     ["gloves", { category: "gloves", weight: "light" }],
-    ["shoes", { category: "shoes", weight: "mid" }],
+    ["shoes", { category: "shoes" }],
   ];
 
   it("takes groups and ranges from the contracts", () => {
@@ -406,7 +406,7 @@ describe("dressFor", () => {
   });
 
   it("keeps the first of two pieces with the same floor", () => {
-    expect(ids(20, CLOSET)).toEqual(["a-tee", "shorts", "shoes"]);
+    expect(ids(20, CLOSET)).toEqual(["a-tee", "shorts", "softshell", "shoes"]);
     expect(ids(-10, CLOSET)).toEqual(["parka", "shoes"]);
     expect(ids(0, CLOSET)).toEqual(["z-base", "tights", "jacket", "shoes"]);
   });

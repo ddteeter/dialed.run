@@ -79,9 +79,6 @@ export function formatReport(
 ): string {
   const before = baseline.metrics;
   const after = candidate.metrics;
-  const verdicts = new Map(
-    comparison.metrics.map((m) => [m.metric, m.verdict] as const),
-  );
   const lines = [
     row("measure", [
       baseline.engineVersion,
@@ -93,12 +90,12 @@ export function formatReport(
     row("dialed agreement", [
       shareText(before.dialedAgreement),
       shareText(after.dialedAgreement),
-      verdicts.get("dialedAgreement") ?? "",
+      comparison.metrics.dialedAgreement.verdict,
     ]),
     row("direction on misses", [
       directionText(before.direction),
       directionText(after.direction),
-      verdicts.get("direction") ?? "",
+      comparison.metrics.direction.verdict,
     ]),
     ...confidenceRows(before, after),
     `release check (tolerance ${String(comparison.tolerance)}): ${comparison.pass ? "PASS" : "FAIL"}`,

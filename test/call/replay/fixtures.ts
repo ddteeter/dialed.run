@@ -46,6 +46,7 @@ export const CLOSET: readonly ClosetPiece[] = [
   { pieceId: "vest", group: "outer", estimate: { lowC: -4, highC: 6 } },
   { pieceId: "shell", group: "outer", estimate: { lowC: 3, highC: 16 } },
   { pieceId: "anorak", group: "outer", estimate: { lowC: 3, highC: 16 } },
+  { pieceId: "softshell", group: "outer", estimate: { lowC: -4, highC: 20 } },
   { pieceId: "tights", group: "bottoms", estimate: { lowC: -2, highC: 12 } },
   { pieceId: "shorts", group: "bottoms", estimate: { lowC: 10 } },
   { pieceId: "shoes", group: "shoes" },
