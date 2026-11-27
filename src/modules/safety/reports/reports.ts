@@ -597,7 +597,7 @@ async function hidePendingReview(
       // one that only queued, 0.
       hid: hidAs(opening),
     },
-    heldTo,
+    { reopenOnlyIf: heldTo },
   );
   // Queued only, it still owes its alerts (design 232): a person must
   // still look within the 48 hours, and the alert is what says so.
