@@ -5,6 +5,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { profileCacheTags } from "../../src/lib/cache-tags";
 import { newUlid } from "../../src/lib/ids";
 import {
   PURGES_PER_RUNNER_PER_MINUTE,
@@ -139,6 +140,54 @@ describe("purgeTags", () => {
     await settled();
 
     expect(report.mock.calls).toStrictEqual([[failure, { tags: "runner:u1" }]]);
+  });
+});
+
+describe("what a failed purge reports", () => {
+  it("names a refused profile purge by the runner's id, never the handle", async () => {
+    const { deps, report, settled } = harness({
+      purge: () =>
+        Promise.resolve({
+          success: false,
+          errors: [{ code: 1134, message: "rate limited" }],
+        }),
+    });
+
+    purgeTags(deps, profileCacheTags("u1", "maya"));
+    await settled();
+
+    expect(report.mock.calls).toStrictEqual([
+      [
+        new Error("edge purge refused"),
+        { tags: "runner:u1,handle:", errors: "1134 rate limited" },
+      ],
+    ]);
+  });
+
+  it("names a profile purge that rejects by the runner's id, never the handle", async () => {
+    const failure = new Error("network");
+    const { deps, report, settled } = harness({
+      purge: () => Promise.reject(failure),
+    });
+
+    purgeTags(deps, [...profileCacheTags("u1", "maya"), "entry:e1"]);
+    await settled();
+
+    expect(report.mock.calls).toStrictEqual([
+      [failure, { tags: "runner:u1,handle:,entry:e1" }],
+    ]);
+  });
+
+  it("still purges the handle's page itself", async () => {
+    const purge = vi.fn(() => Promise.resolve(purged()));
+    const { deps, settled } = harness({ purge });
+
+    purgeTags(deps, profileCacheTags("u1", "maya"));
+    await settled();
+
+    expect(purge.mock.calls).toStrictEqual([
+      [{ tags: ["runner:u1", "handle:maya"] }],
+    ]);
   });
 });
 
