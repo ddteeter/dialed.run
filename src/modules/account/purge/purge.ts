@@ -29,6 +29,7 @@ import {
   and,
   asc,
   eq,
+  exists,
   inArray,
   isNotNull,
   isNull,
@@ -79,6 +80,7 @@ import { coreDb, env } from "../../../env";
 import { importFilePrefix } from "../../../lib/import-file-key";
 import { columnWhere, firstRowWhere } from "../../../lib/sql/keyed-read";
 import { listedPages } from "../../../lib/sql/r2-pages";
+import { rowWhere } from "../../../lib/sql/row-where";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { nowSeconds } from "../../../lib/now";
 import type { RateLimitKind } from "../../../lib/contracts/rate-limits";
@@ -652,25 +654,29 @@ const RUNNER_COUNTS = [
 
 /**
  * One closed address's fingerprint, written only while the runner's
- * profile carries a ban: `INSERT … SELECT … FROM user_profiles WHERE
- * banned_at IS NOT NULL`, so the ban is the one in place when the
- * statement runs, not when the profile was read.
+ * profile carries a ban: `INSERT … SELECT … WHERE EXISTS (the profile
+ * with banned_at set)`, so the ban is the one in place when the statement
+ * runs, not when the profile was read.
  */
 function keptIfClosed(
   db: Db,
   userId: string,
   row: { hash: string; closedAt: number },
 ) {
-  const fingerprint = {
-    hash: sql<string>`${row.hash}`.as("hash"),
-    closedAt: sql<number>`${row.closedAt}`.as("closed_at"),
-  };
   const ifClosed = and(
     eq(userProfiles.userId, userId),
     isNotNull(userProfiles.bannedAt),
   );
-  const whileClosed = db.select(fingerprint).from(userProfiles).where(ifClosed);
-  return db.insert(closedAddresses).select(whileClosed).onConflictDoNothing();
+  const whileBanned = exists(
+    db
+      .select({ one: sql`1` })
+      .from(userProfiles)
+      .where(ifClosed),
+  );
+  return db
+    .insert(closedAddresses)
+    .select(rowWhere(closedAddresses, row, whileBanned))
+    .onConflictDoNothing();
 }
 
 /**
