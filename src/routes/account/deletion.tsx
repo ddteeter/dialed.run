@@ -14,11 +14,11 @@ import { tokenSearch } from "../../modules/account/client";
  * it.
  */
 export const Route = createFileRoute("/account/deletion")({
+  validateSearch: tokenSearch,
+  // A page's GET: it reads, and spends nothing (the button's POST does).
+  loader: ({ location }) =>
+    readDeletionLinkFn({ data: tokenSearch.parse(location.search) }),
   component: DeletionPage,
-  validateSearch: (search) => tokenSearch.parse(search),
-  loaderDeps: ({ search }) => ({ token: search.token }),
-  loader: ({ deps }) =>
-    readDeletionLinkFn({ data: { token: deps.token ?? "" } }),
 });
 
 function DeletionPage() {
