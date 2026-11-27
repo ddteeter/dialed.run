@@ -84,7 +84,7 @@ views {
         An error that is not the parser\'s own gets a generic sentence, and is reported. A terminal failure is never silent.
       '''
     }
-    // source: src/modules/runs/consumer.ts parseAndSave, fileGoes; src/modules/runs/service.ts findDuplicateRun, DUPLICATE_WINDOW_S; src/modules/runs/strava/reminder-match.ts pairWithReminder, REMINDER_MATCH_WINDOW_S; src/modules/notifications/service.ts notificationInsert
+    // source: src/modules/runs/consumer.ts parseAndSave, saveDraft, fileGoes; src/modules/runs/service.ts findDuplicateRun, duplicateRunWhere, DUPLICATE_WINDOW_S; src/modules/runs/strava/reminder-match.ts pairWithReminder, REMINDER_MATCH_WINDOW_S; src/modules/notifications/service.ts notificationInsert
     cf.app.runs.consumer -> cf.coreDb 'writes the run and concludes the import, in one batch' {
       notes '''
         **Guard: the duplicate check.** A run by this runner that starts within two minutes either side is already in the log? The import becomes `duplicate` and points at that run, and its file\'s deletion is owed now.
@@ -92,6 +92,8 @@ views {
         **Guard: one batch.** Otherwise the run\'s insert lands together with everything that follows from it: the import is `done` with its run id, the runner is sent a kit reminder, the file\'s deletion is owed now, and the run is paired with the runner\'s oldest unread Strava reminder from the 12 hours after it ended, which is marked read.
 
         All of it lands or none does, so a redelivery never finds half of it.
+
+        **Guard: the insert holds to the window.** The run is inserted only while no run of this runner starts in the window, and the batch is guarded on it. Another import of the same activity that saved its run first makes this batch write nothing, and the import is decided again, as that run\'s duplicate.
       '''
     }
     // source: src/modules/runs/consumer.ts parseAndSave, fileGoes; src/modules/ops/outbox/owe-in-core.ts oweImportFileDeleteInCore; src/modules/ops/outbox/storage-handlers.ts importFileDeleteHandler; src/modules/dispatch/scheduled.ts runDailyDigest
