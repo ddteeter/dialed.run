@@ -50,6 +50,14 @@ describe("the cohort's backoff ladder", () => {
     ).toBe(zone);
   });
 
+  it("backs off a rung whose group is one runner short of the floor", () => {
+    const thinGroup = { ...zoneAndThermal, groupRunners: 4 };
+
+    expect(
+      cohortCellFor([thinGroup, zone, everyone], DENVER_COLD, SCOPE, "tops"),
+    ).toBe(zone);
+  });
+
   it("reads a rung whose cell is exactly at the floor", () => {
     const atFloor = { ...zoneAndThermal, bandRunners: 5 };
 

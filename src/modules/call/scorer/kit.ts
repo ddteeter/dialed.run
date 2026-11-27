@@ -4,7 +4,7 @@ import type { GroupRecord } from "./personal";
 
 /**
  * The groups a kit always fills when the closet has a piece for them. The
- * rest are worn only on evidence (design sprint-a1, open question 7).
+ * rest are worn only on evidence (design sprint-a1, Q7).
  */
 const STAPLE_GROUPS: ReadonlySet<UiGroup> = new Set<UiGroup>([
   "tops",

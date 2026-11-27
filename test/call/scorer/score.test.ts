@@ -11,6 +11,7 @@ import type {
 import { ENGINE_VERSION, score } from "../../../src/modules/call/scorer";
 import {
   COHORT_STRENGTH_CAP,
+  LEAN_STEP_C,
   PERSONAL_PRIOR_STRENGTH,
   PRIOR_DROP_PER_C,
   PRIOR_IN_RANGE,
@@ -363,41 +364,263 @@ describe("a piece's score (reading 10)", () => {
     );
   });
 
-  it("does not count a run whose weather a human typed (reading 3)", () => {
-    const measured = runs(2, { verdict: 0, worn: [wore("zip", "tops")] });
-    const typed = runs(3, {
-      source: "manual",
-      verdict: -2,
-      worn: [wore("zip", "tops", "not_enough")],
+  it("counts a run whose weather a human typed as the runner's own (owner, 2026-11-26)", () => {
+    const history = [
+      ...runs(2, { verdict: 0, worn: [wore("zip", "tops")] }),
+      ...runs(3, {
+        source: "manual",
+        verdict: -2,
+        worn: [wore("zip", "tops", "not_enough")],
+      }),
+    ];
+    const result = callFor({ history, closet: [aPiece("zip", "tops")] });
+
+    expect(result.personalRunsInBand).toBe(5);
+    expect(result.ranking[0]?.score).toBeCloseTo(
+      (2 + PRIOR_NO_ESTIMATE * PERSONAL_PRIOR_STRENGTH) /
+        (5 + 3 + PERSONAL_PRIOR_STRENGTH),
+      10,
+    );
+    expect(result.ranking[0]?.evidence).toStrictEqual([
+      { kind: "personal-band", bandFloorC: 5, cold: 3, dialed: 2, warm: 0 },
+      {
+        kind: "personal-piece",
+        pieceId: "zip",
+        bandFloorC: 5,
+        dialed: 2,
+        of: 5,
+      },
+      {
+        kind: "personal-flag",
+        pieceId: "zip",
+        bandFloorC: 5,
+        flag: "not_enough",
+        times: 3,
+      },
+    ]);
+  });
+
+  it("reads nothing of the runner's history into a cohort figure, typed weather or not", () => {
+    const cell = aCell({
+      group: "tops",
+      bandRunners: 12,
+      groupRunners: 7,
+      verdicts: verdictCounts({ 0: 3, 1: 1 }),
     });
-    const closet = [aPiece("zip", "tops")];
-
-    expect(
-      callFor({ history: [...typed, ...measured], closet }).ranking,
-    ).toStrictEqual(callFor({ history: measured, closet }).ranking);
-  });
-
-  it("does not read effort (reading 5)", () => {
-    const request = aFullRequest();
-    const hard: CallRequest = {
-      ...request,
-      effort: "race",
-      history: request.history.map((run) => ({ ...run, effort: "workout" })),
+    const closet = [aPiece("tee", "tops")];
+    const typed = runs(4, { source: "manual", worn: [wore("zip", "tops")] });
+    const cohortFact = {
+      kind: "cohort-share",
+      group: "tops",
+      rung: "everyone",
+      climateZone: undefined,
+      bandFloorC: 5,
+      groupRunners: 7,
+      bandRunners: 12,
     };
+    const withTyped = callFor({ history: typed, closet, cohort: [cell] });
+    const withNone = callFor({ closet, cohort: [cell] });
 
-    expect(score(hard)).toStrictEqual(score(request));
+    expect(withTyped.ranking[0]?.evidence).toContainEqual(cohortFact);
+    expect(withNone.ranking[0]?.evidence).toContainEqual(cohortFact);
+    expect(withTyped.ranking[0]?.score).toBe(withNone.ranking[0]?.score);
   });
 
-  it("does not read a cohort cell below the privacy floor", () => {
-    const thin = aCell({
+  it("does not read a cohort cell below the privacy floor, by band or by group", () => {
+    const thinBand = aCell({
       group: "tops",
       bandRunners: 4,
+      groupRunners: 4,
+      verdicts: verdictCounts({ 0: 40 }),
+    });
+    const thinGroup = aCell({
+      group: "tops",
+      bandRunners: 30,
+      groupRunners: 4,
       verdicts: verdictCounts({ 0: 40 }),
     });
     const closet = [aPiece("tee", "tops")];
+    const withoutCohort = callFor({ closet });
 
-    expect(callFor({ closet, cohort: [thin] })).toStrictEqual(
-      callFor({ closet }),
+    expect(callFor({ closet, cohort: [thinBand] })).toStrictEqual(
+      withoutCohort,
+    );
+    expect(callFor({ closet, cohort: [thinGroup] })).toStrictEqual(
+      withoutCohort,
+    );
+  });
+
+  it("takes no layer on the say of a cell whose group too few runners wore", () => {
+    const closet = [aPiece("tee", "tops"), aPiece("shell", "outer")];
+    const fourOfSix = aCell({
+      group: "outer",
+      bandRunners: 6,
+      groupRunners: 4,
+    });
+    const fiveOfSix = aCell({
+      group: "outer",
+      bandRunners: 6,
+      groupRunners: 5,
+    });
+
+    expect(ids(callFor({ closet, cohort: [fourOfSix] }).kit)).toStrictEqual([
+      "tee",
+    ]);
+    expect(ids(callFor({ closet, cohort: [fiveOfSix] }).kit)).toStrictEqual([
+      "tee",
+      "shell",
+    ]);
+  });
+});
+
+describe("effort (owner, 2026-11-26)", () => {
+  const closet = [aPiece("tee", "tops", { highC: 10 })];
+
+  it("reads the Call's hour at its effort, for its band and for estimates", () => {
+    const easy = callFor({ conditions: aForecast(7), effort: "easy", closet });
+    const workout = callFor({
+      conditions: aForecast(7),
+      effort: "workout",
+      closet,
+    });
+
+    expect(easy.bandFloorC).toBe(5);
+    expect(easy.ranking[0]?.score).toBeCloseTo(PRIOR_IN_RANGE, 10);
+    expect(workout.bandFloorC).toBe(10);
+    expect(workout.ranking[0]?.score).toBeCloseTo(
+      PRIOR_IN_RANGE - 2 * PRIOR_DROP_PER_C,
+      10,
+    );
+  });
+
+  it("reads a Call with no effort as an easy one", () => {
+    expect(callFor({ conditions: aForecast(7), closet })).toStrictEqual(
+      callFor({ conditions: aForecast(7), effort: "easy", closet }),
+    );
+  });
+
+  it("counts each past run in the band of its own effort", () => {
+    const history = [
+      aRun({ judgedFeelsLikeC: 7 }),
+      aRun({ judgedFeelsLikeC: 2, effort: "workout" }),
+      aRun({ judgedFeelsLikeC: 3, effort: "steady" }),
+      aRun({ judgedFeelsLikeC: 2.9, effort: "steady" }),
+      aRun({ judgedFeelsLikeC: 7, effort: "race" }),
+    ];
+
+    expect(callFor({ history }).personalRunsInBand).toBe(3);
+  });
+
+  it("puts a hard Call and an easy run on the same footing", () => {
+    const history = [
+      aRun({ judgedFeelsLikeC: 7, effort: "easy" }),
+      aRun({ judgedFeelsLikeC: 0, effort: "race" }),
+      aRun({ judgedFeelsLikeC: 0, effort: "easy" }),
+    ];
+    const result = callFor({
+      conditions: aForecast(0),
+      effort: "race",
+      history,
+    });
+
+    expect(result.bandFloorC).toBe(5);
+    expect(result.personalRunsInBand).toBe(2);
+  });
+
+  it("looks the cohort up in the band of the hour at its effort", () => {
+    const cell = aCell({ group: "tops", bandFloorC: 10 });
+    const result = callFor({
+      conditions: aForecast(7),
+      effort: "workout",
+      closet,
+      cohort: [cell],
+    });
+
+    expect(result.ranking[0]?.evidence).toContainEqual({
+      kind: "cohort-share",
+      group: "tops",
+      rung: "everyone",
+      climateZone: undefined,
+      bandFloorC: 10,
+      groupRunners: 10,
+      bandRunners: 10,
+    });
+  });
+});
+
+describe("the band's lean (owner, 2026-11-26)", () => {
+  const other = [wore("other", "tops")];
+
+  it("reads the hour as warmer for a runner who ran warm here, so lighter wins", () => {
+    const history = [
+      ...runs(4, { verdict: 1, worn: other }),
+      ...runs(2, { verdict: 0, worn: other }),
+      aRun({ verdict: -1, worn: other }),
+    ];
+    const result = callFor({
+      history,
+      closet: [
+        aPiece("warm-top", "tops", { lowC: 3, highC: 7 }),
+        aPiece("light-top", "tops", { lowC: 7 }),
+      ],
+    });
+    const leanC = (3 / 10) * LEAN_STEP_C;
+
+    expect(ids(result.ranking)).toStrictEqual(["light-top", "warm-top"]);
+    expect(result.ranking[0]?.score).toBeCloseTo(PRIOR_IN_RANGE, 10);
+    expect(result.ranking[1]?.score).toBeCloseTo(
+      PRIOR_IN_RANGE - leanC * PRIOR_DROP_PER_C,
+      10,
+    );
+  });
+
+  it("reads the hour as colder for a runner who ran cold here, so warmer wins", () => {
+    const history = [
+      ...runs(4, { verdict: -2, worn: other }),
+      ...runs(2, { verdict: 0, worn: other }),
+      aRun({ verdict: 2, worn: other }),
+    ];
+    const result = callFor({
+      history,
+      closet: [
+        aPiece("a-light-top", "tops", { lowC: 7 }),
+        aPiece("warm-top", "tops", { lowC: 3, highC: 7 }),
+      ],
+    });
+    const leanC = (3 / 10) * LEAN_STEP_C;
+
+    expect(ids(result.ranking)).toStrictEqual(["warm-top", "a-light-top"]);
+    expect(result.ranking[1]?.score).toBeCloseTo(
+      PRIOR_IN_RANGE - leanC * PRIOR_DROP_PER_C,
+      10,
+    );
+  });
+
+  it("leans on runs in this band and class only", () => {
+    const history = [
+      ...runs(6, { judgedFeelsLikeC: 21, verdict: 2, worn: other }),
+      ...runs(6, { precip: "wet", verdict: 2, worn: other }),
+    ];
+    const [piece] = callFor({
+      history,
+      closet: [aPiece("warm-top", "tops", { lowC: 3, highC: 7 })],
+    }).ranking;
+
+    expect(piece?.score).toBeCloseTo(PRIOR_IN_RANGE, 10);
+  });
+
+  it("adds to the runner's thermal offset, each in its own direction", () => {
+    const history = runs(7, { verdict: 1, worn: other });
+    const [piece] = callFor({
+      runner: { thermalLevel: 1 },
+      history,
+      closet: [aPiece("top", "tops", { lowC: 7 })],
+    }).ranking;
+    const feelC = 7 - THERMAL_LEVEL_C + (7 / 10) * LEAN_STEP_C;
+
+    expect(piece?.score).toBeCloseTo(
+      PRIOR_IN_RANGE - (7 - feelC) * PRIOR_DROP_PER_C,
+      10,
     );
   });
 });
@@ -486,7 +709,7 @@ describe("confidence (reading 6)", () => {
     expect(ids(result.kit)).toStrictEqual(["zip"]);
   });
 
-  it("counts typed-weather verdicts toward the threshold, as the teaser's ladder does", () => {
+  it("counts typed-weather runs toward the threshold and in the band alike", () => {
     const history = [
       ...runs(9, { worn }),
       ...runs(CALL_VERDICT_THRESHOLD - 9, { source: "manual", worn }),
@@ -494,13 +717,13 @@ describe("confidence (reading 6)", () => {
     const result = callFor({ history, closet });
 
     expect(result.confidence).toBe("confident");
-    expect(result.personalRunsInBand).toBe(9);
+    expect(result.personalRunsInBand).toBe(CALL_VERDICT_THRESHOLD);
   });
 
-  it("is a best guess when every verdict was on typed weather", () => {
+  it("knows a runner whose every verdict was on typed weather", () => {
     const history = runs(CALL_VERDICT_THRESHOLD, { source: "manual", worn });
 
-    expect(callFor({ history, closet }).confidence).toBe("best-guess");
+    expect(callFor({ history, closet }).confidence).toBe("confident");
   });
 
   it("is borrowed when none of the runner's runs are in this band and class", () => {
@@ -576,17 +799,18 @@ describe("a Call with no forecast", () => {
     expect(score(request).confidence).toBe("probable");
   });
 
-  it("answers from every counted run, band by band, with no cohort and no estimate", () => {
+  it("answers from every run, band by band, with no cohort and no estimate", () => {
     const result = score(request);
-    const scoreOf = (dialed: number, of: number, flagged: number): number =>
-      (dialed + PRIOR_NO_ESTIMATE * PERSONAL_PRIOR_STRENGTH) /
-      (of + flagged + PERSONAL_PRIOR_STRENGTH);
+    // Each of the three worn pieces was dialed eight times here.
+    const eightDialedOver = (wearsAndFlags: number): number =>
+      (8 + PRIOR_NO_ESTIMATE * PERSONAL_PRIOR_STRENGTH) /
+      (wearsAndFlags + PERSONAL_PRIOR_STRENGTH);
 
     expect(result.ranking).toStrictEqual([
       {
         pieceId: "zip",
         group: "tops",
-        score: scoreOf(8, 8, 0),
+        score: eightDialedOver(8),
         evidence: [
           {
             kind: "personal-piece",
@@ -600,7 +824,7 @@ describe("a Call with no forecast", () => {
       {
         pieceId: "shell",
         group: "outer",
-        score: scoreOf(8, 10, 0),
+        score: eightDialedOver(10),
         evidence: [
           {
             kind: "personal-piece",
@@ -621,8 +845,15 @@ describe("a Call with no forecast", () => {
       {
         pieceId: "tee",
         group: "tops",
-        score: scoreOf(6, 8, 2),
+        score: eightDialedOver(12),
         evidence: [
+          {
+            kind: "personal-piece",
+            pieceId: "tee",
+            bandFloorC: 5,
+            dialed: 2,
+            of: 2,
+          },
           {
             kind: "personal-piece",
             pieceId: "tee",
@@ -655,7 +886,7 @@ describe("a Call with no forecast", () => {
     ]);
   });
 
-  it("fills the kit from every counted run, and never from the cohort", () => {
+  it("fills the kit from every run, and never from the cohort", () => {
     expect(ids(score(request).kit)).toStrictEqual(["zip"]);
   });
 });

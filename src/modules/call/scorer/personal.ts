@@ -1,28 +1,25 @@
-import type {
-  ConditionsSource,
-  UiGroup,
-  VerdictValue,
-} from "../../../lib/contracts";
+import type { UiGroup, VerdictValue } from "../../../lib/contracts";
 import {
   bandFloorC,
   type PrecipClass,
 } from "../../../lib/contracts/temperature";
 import type { ItemFlag, PersonalRun } from "../contract";
+import { feelAtEffortC } from "./effort";
 
 /**
  * The band and condition class a Call is for: the key the cohort's cells
  * carry, and the one the runner's own runs are counted under.
  *
- * The band is the 5 °C `bandFloorC` band and the class is `PrecipClass`.
- * Both are readings of design 194's "feels-like band × condition class"
- * (design sprint-a1, open questions 1 and 2).
+ * The band is the 5 °C `bandFloorC` band of the feel at the run's effort
+ * (`feelAtEffortC`), and the class is `PrecipClass`. Both are readings of
+ * design 194's "feels-like band × condition class" (design sprint-a1,
+ * Q1 and Q2).
  */
 export interface CallScope {
   bandFloorC: number;
   precip: PrecipClass;
 }
 
-const MANUAL: ConditionsSource = "manual";
 /**
 The verdict that says the kit was right (`verdictScale`).
 */
@@ -30,32 +27,30 @@ export const DIALED: VerdictValue = 0;
 const TOO_MUCH: ItemFlag = "too_much";
 
 /**
- * The runs the scorer counts: every run but the ones whose conditions a
- * human typed.
- *
- * CLAUDE.md keeps manual weather out of consensus aggregates, published
- * totals and "(later) training". The scorer's counting is read as that
- * training (design sprint-a1, open question 3), and this function is the
- * one place the reading lives.
+ * The band a past run is counted in: the band of its judged feel at the
+ * effort it was run at.
  */
-export function countedRuns(history: readonly PersonalRun[]): PersonalRun[] {
-  return history.filter((run) => run.source !== MANUAL);
+export function runBandFloorC(run: PersonalRun): number {
+  return bandFloorC(feelAtEffortC(run.judgedFeelsLikeC, run.effort));
 }
 
 /**
- * The counted runs a Call is answered from: the ones in its band and
- * class, or, with no forecast and so no band, all of them.
+ * The runs a Call is answered from: the ones in its band and class, or,
+ * with no forecast and so no band, all of them.
+ *
+ * Every run with a verdict counts here, typed weather included (owner,
+ * 2026-11-26, #1103): this is the runner's own layer. Typed weather stays
+ * out of the cohort, which is counted elsewhere and arrives as cells.
  */
 export function scopedRuns(
   history: readonly PersonalRun[],
   scope: CallScope | undefined,
-): PersonalRun[] {
-  const counted = countedRuns(history);
+): readonly PersonalRun[] {
   return scope === undefined
-    ? counted
-    : counted.filter(
+    ? history
+    : history.filter(
         (run) =>
-          bandFloorC(run.judgedFeelsLikeC) === scope.bandFloorC &&
+          runBandFloorC(run) === scope.bandFloorC &&
           run.precip === scope.precip,
       );
 }
@@ -114,7 +109,7 @@ export function pieceCounts(
 ): ReadonlyMap<string, readonly PieceCount[]> {
   const byPiece = new Map<string, PieceCount[]>();
   for (const run of runs) {
-    const floor = bandFloorC(run.judgedFeelsLikeC);
+    const floor = runBandFloorC(run);
     for (const piece of run.worn) {
       const counts = byPiece.get(piece.pieceId) ?? [];
       let count = counts.find((held) => held.bandFloorC === floor);
