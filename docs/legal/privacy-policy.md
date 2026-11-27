@@ -557,8 +557,12 @@ it.
   report. This applies to garment photos as well as kits.
 - **We can close an account.** We record the reason, sign it out
   everywhere, refuse it sign-in, hide its kits, photos and profile from
-  everyone else, and email the reason and the rule it broke. Reopening it
-  brings them back.
+  everyone else, and email the reason and the rule it broke (an account closed because its runner is under 18 is told that, and no rule). Reopening it
+  brings them back. A closed account can be deleted: we may email its
+  address a link that works once, for 7 days, and the account is deleted
+  7 days after the link is used. An account we close because its runner
+  is under 18 is deleted 7 days after we close it, unless we reopen it
+  first.
 
 ## Who else handles your data
 

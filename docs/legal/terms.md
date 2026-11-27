@@ -273,7 +273,9 @@ owing you anything.
   on something you reported, we tell you in the app whether we removed it
   or left it up, except for suspected child sexual abuse material.
 - **A closed account** cannot sign in, and its kits, photos and profile are
-  hidden from everyone else. We may close an account without warning when
+  hidden from everyone else. It can still be deleted: we may email its
+  address a link that deletes it, and an account we close because its
+  runner is under 18 is deleted 7 days after we close it. We may close an account without warning when
   the breach is serious, or when the law or someone's safety requires it.
 
 ### Appeals
