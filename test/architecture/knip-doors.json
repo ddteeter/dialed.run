@@ -1,13 +1,3 @@
 {
-  "src/modules/email/index.ts": [
-    "emailPreferencesOf",
-    "isEmailWanted",
-    "setEmailPreference"
-  ],
-  "src/modules/ops/edge/index.ts": ["SERVER_FN_PREFIX", "TurnstileRefusal"],
-  "src/modules/ops/owed-email/index.ts": ["emailHandler"],
-  "src/modules/ops/public-web/index.ts": ["KitCardAnswer"],
-  "src/modules/safety/functions.ts": ["denyDomainAction"],
-  "src/modules/safety/reports/index.ts": ["OweEmail"],
-  "src/modules/safety/review/index.ts": ["ReviewSource"]
+  "src/modules/safety/functions.ts": ["denyDomainAction"]
 }

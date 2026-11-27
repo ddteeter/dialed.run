@@ -1,1 +1,1 @@
-export { emailHandler, owedEmailHandlers, settleOwedEmail } from "./owed-email";
+export { owedEmailHandlers, settleOwedEmail } from "./owed-email";

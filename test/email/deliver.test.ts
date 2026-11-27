@@ -21,10 +21,12 @@ import {
   deliverEmail,
   emailDebt,
   emailDepsFromEnv,
-  emailPreferencesOf,
-  setEmailPreference,
-  isEmailWanted,
 } from "../../src/modules/email";
+import {
+  emailPreferencesOf,
+  isEmailWanted,
+  setEmailPreference,
+} from "../../src/modules/email/preferences";
 import { claimEmailSend, forgetSendLimits } from "../../src/modules/ops/limits";
 import { deliverOwedEmail, EMAIL_FROM } from "../../src/modules/email/deliver";
 import {

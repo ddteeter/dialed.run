@@ -10,11 +10,6 @@ export { emailDebt } from "./debt";
 export { maskedAddress } from "./landing";
 export { deliverEmail, deliverOwedEmail, emailDepsFromEnv } from "./deliver";
 export type { EmailDeps } from "./deliver";
-export {
-  emailPreferencesOf,
-  setEmailPreference,
-  isEmailWanted,
-} from "./preferences";
 export { notificationSettings } from "./settings";
 export type { NotificationSettings } from "./settings";
 export { oneClickUnsubscribeResponse } from "./one-click";
