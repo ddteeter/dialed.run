@@ -24,7 +24,7 @@ import {
   type HoldCause,
 } from "../../../lib/contracts/hold-causes";
 import { nowSeconds } from "../../../lib/now";
-import { noReportHidingAtOnce } from "../limits";
+import { noReportHidingAtOnce } from "./at-once";
 import { claimForReview, ownerNotClosed, releaseReview } from "./review";
 
 /**

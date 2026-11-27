@@ -24,4 +24,5 @@ export {
   stuckSources,
   wasFlaggedAutomatically,
 } from "./review";
+export { requestHolds } from "./request-holds";
 export { withdrawnGarmentUnderReview, withdrawnUnderReview } from "./withdrawn";

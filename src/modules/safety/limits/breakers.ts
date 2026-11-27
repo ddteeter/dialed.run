@@ -10,7 +10,7 @@
  * number an hour rather than everything. That fallback is the caller's.
  *
  * **No state.** Each reading counts the last hour from the rows the holds
- * already write, as `/takedown`'s valve does (`takedown-limits.ts`): the
+ * already write, as `/takedown`'s valve does (`takedowns/takedown-limits.ts`): the
  * breaker resets itself when the hour drains, and nothing needs switching
  * back on. The reads are not a lock, so two holds landing together can
  * both pass at the edge — one past the ceiling, which a person reviews.
@@ -55,7 +55,6 @@ import {
 import { hasRowWhere } from "../../../lib/sql/keyed-read";
 import { qualified } from "../../../lib/sql/qualified";
 import { reportSubjectsThatHide } from "../rules";
-import { counted } from "./takedown-limits";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -578,4 +577,14 @@ export async function hasFingerprintHoldThisHour(
     reviewQueue.id,
     and(heldBy("fingerprint"), thisHour, theirs),
   );
+}
+
+/**
+ * What a `count()` answered. It always answers with one row; summing the
+ * rows says that without indexing `[0]`, whose fallback no input reaches.
+ * A grouped count with no groups answers none, which sums to zero (the
+ * hold breakers' baseline, design 164).
+ */
+export function counted(rows: readonly { n: number }[]): number {
+  return rows.reduce((total, row) => total + row.n, 0);
 }

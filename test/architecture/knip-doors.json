@@ -133,7 +133,6 @@
     "importExtensionOf"
   ],
   "src/modules/safety/functions.ts": ["denyDomainAction"],
-  "src/modules/safety/limits/index.ts": ["requesterMatches"],
   "src/modules/safety/reports/index.ts": ["OweEmail"],
   "src/modules/safety/review/index.ts": ["ReviewSource"],
   "src/modules/safety/rules/index.ts": ["runnerNotLeaving"],

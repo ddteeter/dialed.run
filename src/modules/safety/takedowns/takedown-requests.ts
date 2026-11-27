@@ -70,19 +70,19 @@ import {
   subjectPhotoKeysOf,
 } from "./request-subject";
 import { ipKey, requesterKey } from "./requester-key";
-import type { HoldState } from "../limits";
+import { counted } from "../limits";
+import { requestHolds } from "../review";
 import {
   alertRoomSql,
   blockedSql,
   confirmTokenHash,
-  counted,
+  type HoldState,
   holdStateSql,
   newConfirmToken,
-  requestHolds,
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
   valveShutSql,
-} from "../limits";
+} from "./takedown-limits";
 
 type Db = ReturnType<typeof drizzle<Record<string, never>>>;
 

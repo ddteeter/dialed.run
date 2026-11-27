@@ -65,7 +65,8 @@ import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import { removedMatchesOf, type RemovedImage } from "./removed-fingerprints";
 import { heldPhotoStatus, publicPhotoStatus } from "../rules";
-import { reportHidingAtOnce, requestHolds } from "../limits";
+import { reportHidingAtOnce } from "./at-once";
+import { requestHolds } from "./request-holds";
 
 function db() {
   return coreDb();
