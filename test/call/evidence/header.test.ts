@@ -13,37 +13,43 @@ const zoneShare = {
   bandRunners: 10,
 } as const;
 
+/**
+A result below the threshold, for a runner with this many verdicts.
+*/
+function below(verdictsSoFar: number) {
+  return result({ confidence: "below-threshold", verdictsSoFar });
+}
+
 describe("callHeader", () => {
   it("counts the verdicts still to log below the threshold", () => {
-    const below = result({ confidence: "below-threshold" });
     expect(CALL_VERDICT_THRESHOLD).toBe(15);
-    expect(callHeader(below, "f", 0)).toEqual({
+    expect(callHeader(below(0), "f")).toEqual({
       kind: "count",
       title: "UNTIL YOUR FIRST CALL",
       remaining: 15,
       noun: "more verdicts",
     });
-    expect(callHeader(below, "f", 8)).toMatchObject({
+    expect(callHeader(below(8), "f")).toMatchObject({
       remaining: 7,
       noun: "more verdicts",
     });
-    expect(callHeader(below, "f", 13)).toMatchObject({
+    expect(callHeader(below(13), "f")).toMatchObject({
       remaining: 2,
       noun: "more verdicts",
     });
-    expect(callHeader(below, "f", 14)).toMatchObject({
+    expect(callHeader(below(14), "f")).toMatchObject({
       remaining: 1,
       noun: "more verdict",
     });
-    expect(callHeader(below, "f", 15)).toMatchObject({
+    expect(callHeader(below(15), "f")).toMatchObject({
       remaining: 0,
       noun: "more verdicts",
     });
-    expect(callHeader(below, "f", 16)).toMatchObject({ remaining: 0 });
+    expect(callHeader(below(16), "f")).toMatchObject({ remaining: 0 });
   });
 
   it("is sure when confident", () => {
-    expect(callHeader(result({ personalRunsInBand: 11 }), "f", 31)).toEqual({
+    expect(callHeader(result({ personalRunsInBand: 11 }), "f")).toEqual({
       kind: "call",
       title: {
         shown: "CONFIDENT · [11 RUNS] IN BAND",
@@ -51,9 +57,9 @@ describe("callHeader", () => {
       },
       verb: "WEAR THIS",
     });
-    expect(
-      callHeader(result({ personalRunsInBand: 1 }), "f", 31),
-    ).toMatchObject({ title: { shown: "CONFIDENT · [1 RUN] IN BAND" } });
+    expect(callHeader(result({ personalRunsInBand: 1 }), "f")).toMatchObject({
+      title: { shown: "CONFIDENT · [1 RUN] IN BAND" },
+    });
   });
 
   it("hedges when probable", () => {
@@ -61,7 +67,6 @@ describe("callHeader", () => {
       callHeader(
         result({ confidence: "probable", personalRunsInBand: 3 }),
         "c",
-        20,
       ),
     ).toEqual({
       kind: "call",
@@ -74,7 +79,7 @@ describe("callHeader", () => {
   });
 
   it("says a best guess leans on the closet and the climate", () => {
-    expect(callHeader(result({ confidence: "best-guess" }), "f", 16)).toEqual({
+    expect(callHeader(result({ confidence: "best-guess" }), "f")).toEqual({
       kind: "call",
       title: { shown: "BEST GUESS", said: "BEST GUESS" },
       body: {
@@ -93,7 +98,7 @@ describe("callHeader", () => {
       personalRunsInBand: 0,
       kit: [piece("singlet", "tops", [zoneShare])],
     });
-    expect(callHeader(borrowed, "f", 31)).toEqual({
+    expect(callHeader(borrowed, "f")).toEqual({
       kind: "call",
       title: { shown: "BORROWED CALL", said: "BORROWED CALL" },
       body: {
@@ -103,7 +108,7 @@ describe("callHeader", () => {
       },
       verb: "PROBABLY WEAR",
     });
-    expect(callHeader(borrowed, "c", 31)).toMatchObject({
+    expect(callHeader(borrowed, "c")).toMatchObject({
       body: {
         shown:
           "You've logged 0 runs in 25–30°. This comes from runners in your climate, not from you.",
@@ -123,7 +128,7 @@ describe("callHeader", () => {
       personalRunsInBand: 0,
       kit: [piece("singlet", "tops", [estimate, zoneShare])],
     });
-    expect(callHeader(borrowed, "c", 31)).toMatchObject({
+    expect(callHeader(borrowed, "c")).toMatchObject({
       body: {
         shown:
           "You've logged 0 runs in 25–30°. This comes from runners in your climate, not from you.",
@@ -148,7 +153,7 @@ describe("callHeader", () => {
         piece("singlet", "tops", [{ ...zoneShare, rung: "everyone" }]),
       ],
     });
-    expect(callHeader(borrowed, "c", 31)).toMatchObject({
+    expect(callHeader(borrowed, "c")).toMatchObject({
       body: {
         shown:
           "You've logged 0 runs in 25–30°. This comes from other runners, not from you.",
@@ -158,7 +163,6 @@ describe("callHeader", () => {
       callHeader(
         { ...borrowed, kit: [piece("singlet", "tops", [zoneShare])] },
         "c",
-        31,
       ),
     ).toMatchObject({
       body: {
@@ -174,7 +178,7 @@ describe("callHeader", () => {
       bandFloorC: undefined,
       personalRunsInBand: 0,
     });
-    expect(callHeader(borrowed, "f", 31)).toMatchObject({
+    expect(callHeader(borrowed, "f")).toMatchObject({
       body: {
         shown: "This comes from other runners, not from you.",
         said: "This comes from other runners, not from you.",

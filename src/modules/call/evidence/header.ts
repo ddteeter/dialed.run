@@ -81,18 +81,13 @@ function runsTitle(
 }
 
 /**
- * The header for a result. `verdictsSoFar` is the runner's count of
- * verdicts, which only the below-threshold header reads (`CallResult`
- * does not carry it).
+ * The header for a result. Only the below-threshold header reads the
+ * result's `verdictsSoFar`, the runner's count of verdicts.
  */
-export function callHeader(
-  result: CallResult,
-  unit: TempUnit,
-  verdictsSoFar: number,
-): B2Header {
+export function callHeader(result: CallResult, unit: TempUnit): B2Header {
   switch (result.confidence) {
     case "below-threshold": {
-      return untilFirstCall(verdictsSoFar);
+      return untilFirstCall(result.verdictsSoFar);
     }
     case "best-guess": {
       return {

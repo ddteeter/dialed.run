@@ -42,9 +42,7 @@ describe("b2View", () => {
         gloves,
       ],
     });
-    expect(
-      b2View(call, { unit: "f", names: runner, verdictsSoFar: 31 }),
-    ).toEqual({
+    expect(b2View(call, { unit: "f", names: runner })).toEqual({
       header: {
         kind: "call",
         title: {
@@ -82,25 +80,21 @@ describe("b2View", () => {
       { kind: "personal-band", bandFloorC: 5, cold: 0, dialed: 4, warm: 2 },
       { kind: "estimate", pieceId: "tee", range: { lowC: 15 } },
     ]);
-    const view = b2View(result({ kit: [tee], ranking: [tee] }), {
-      unit: "c",
-      names: runner,
-      verdictsSoFar: 31,
-      warmRuns: {
-        bandFloorC: 5,
-        worn: [
-          { pieceId: "ls", group: "tops" },
-          { pieceId: "vest", group: "outer" },
-        ],
-      },
-    });
+    const warmRuns = {
+      bandFloorC: 5,
+      worn: [
+        { pieceId: "ls", group: "tops" },
+        { pieceId: "vest", group: "outer" },
+      ],
+    } as const;
+    const options = { unit: "c", names: runner } as const;
+    const view = b2View(
+      result({ kit: [tee], ranking: [tee], warmRuns }),
+      options,
+    );
     expect(view.paragraph).toBe("You've been too warm twice in this band.");
     expect(
-      b2View(result({ kit: [tee], ranking: [tee] }), {
-        unit: "c",
-        names: runner,
-        verdictsSoFar: 31,
-      }).paragraph,
+      b2View(result({ kit: [tee], ranking: [tee] }), options).paragraph,
     ).toBeUndefined();
   });
 
@@ -109,16 +103,12 @@ describe("b2View", () => {
       kit: [zip],
       ranking: [zip, piece("anon", "tops"), piece("ls", "tops")],
     });
-    expect(
-      b2View(call, { unit: "c", names: runner, verdictsSoFar: 31 }).whyNot,
-    ).toEqual([]);
+    expect(b2View(call, { unit: "c", names: runner }).whyNot).toEqual([]);
   });
 
   it("leaves a piece's name out when the lookup lacks it", () => {
     const call = result({ kit: [piece("anon", "tops")] });
-    expect(
-      b2View(call, { unit: "c", names: runner, verdictsSoFar: 31 }).pieces,
-    ).toEqual([
+    expect(b2View(call, { unit: "c", names: runner }).pieces).toEqual([
       {
         pieceId: "anon",
         name: undefined,
@@ -128,11 +118,10 @@ describe("b2View", () => {
   });
 
   it("counts down below the threshold, in the reader's unit", () => {
-    const view = b2View(result({ confidence: "below-threshold" }), {
-      unit: "c",
-      names: runner,
-      verdictsSoFar: 8,
-    });
+    const view = b2View(
+      result({ confidence: "below-threshold", verdictsSoFar: 8 }),
+      { unit: "c", names: runner },
+    );
     expect(view).toEqual({
       header: {
         kind: "count",

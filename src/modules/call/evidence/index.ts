@@ -6,7 +6,6 @@
 export type { B2Header } from "./header";
 export type { Line } from "./lines";
 export type { B2Options, B2Piece, B2View } from "./view-model";
-export type { WarmRunsWorn } from "./warm-runs";
 export { b2View } from "./view-model";
 export type { WhyNot } from "./why-not";
 export { whyNot } from "./why-not";

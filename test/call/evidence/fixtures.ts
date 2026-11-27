@@ -25,6 +25,7 @@ export function result(overrides: Partial<CallResult> = {}): CallResult {
     bandFloorC: 5,
     precip: "damp",
     confidence: "confident",
+    verdictsSoFar: 31,
     personalRunsInBand: 11,
     kit: [],
     ranking: [],

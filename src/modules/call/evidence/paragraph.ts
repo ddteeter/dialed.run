@@ -7,7 +7,6 @@
 import type { CallResult } from "../contract";
 import { bandRecord, loudestTooMuch } from "./facts";
 import { timesWord } from "./lines";
-import type { WarmRunsWorn } from "./warm-runs";
 import { isLighterThanWarmRuns } from "./warm-runs";
 import { fill } from "./words";
 
@@ -18,10 +17,7 @@ import { fill } from "./words";
  * too warm in a kit with nothing to shed says nothing of warmth. Otherwise
  * the cold line, when any run was cold.
  */
-function bandSentence(
-  result: CallResult,
-  warmRuns: WarmRunsWorn | undefined,
-): string | undefined {
+function bandSentence(result: CallResult): string | undefined {
   const record = bandRecord(
     result.kit.flatMap((piece) => piece.evidence),
     result.bandFloorC,
@@ -29,7 +25,7 @@ function bandSentence(
   if (record === undefined) return undefined;
   if (
     record.warm > record.cold &&
-    isLighterThanWarmRuns(result.kit, warmRuns, result.bandFloorC)
+    isLighterThanWarmRuns(result.kit, result.warmRuns, result.bandFloorC)
   ) {
     return fill("warmRuns", { times: timesWord(record.warm) });
   }
@@ -61,11 +57,9 @@ The paragraph, or nothing when no fact in this band says anything.
 export function kitParagraph(
   result: CallResult,
   names: ReadonlyMap<string, string>,
-  warmRuns?: WarmRunsWorn,
 ): string | undefined {
-  const sentences = [
-    bandSentence(result, warmRuns),
-    skipSentence(result, names),
-  ].filter((sentence) => sentence !== undefined);
+  const sentences = [bandSentence(result), skipSentence(result, names)].filter(
+    (sentence) => sentence !== undefined,
+  );
   return sentences.length === 0 ? undefined : sentences.join(" ");
 }

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import type {
+  ScoredPiece,
+  WarmRunsWorn,
+} from "../../../src/modules/call/contract";
 import { kitParagraph } from "../../../src/modules/call/evidence/paragraph";
-import type { WarmRunsWorn } from "../../../src/modules/call/evidence/warm-runs";
 import { names, piece, result } from "./fixtures";
 
 const band = {
@@ -134,6 +137,16 @@ const worn = (...pieces: WarmRunsWorn["worn"]): WarmRunsWorn => ({
   worn: pieces,
 });
 
+/**
+The paragraph for this kit, after these too-warm runs.
+*/
+function paragraphAfter(
+  kit: readonly ScoredPiece[],
+  warmRuns: WarmRunsWorn,
+): string | undefined {
+  return kitParagraph(result({ kit, warmRuns }), runner);
+}
+
 describe("the warm line", () => {
   const warmBand = { ...band, cold: 0, warm: 2 };
   const longSleeve = {
@@ -146,30 +159,22 @@ describe("the warm line", () => {
 
   it("shows when the kit drops a group worn on the warm runs", () => {
     const kit = [piece("ls", "tops", [warmBand, own("ls", 5)])];
-    expect(kitParagraph(result({ kit }), runner, worn(longSleeve, vest))).toBe(
-      warmLine,
-    );
+    expect(paragraphAfter(kit, worn(longSleeve, vest))).toBe(warmLine);
   });
 
   it("shows when a piece is swapped for a lighter one", () => {
     const kit = [piece("tee", "tops", [warmBand, own("tee", 15)])];
-    expect(kitParagraph(result({ kit }), runner, worn(longSleeve))).toBe(
-      warmLine,
-    );
+    expect(paragraphAfter(kit, worn(longSleeve))).toBe(warmLine);
   });
 
   it("says nothing of warmth in the same kit", () => {
     const kit = [piece("ls", "tops", [warmBand, own("ls", 5)])];
-    expect(
-      kitParagraph(result({ kit }), runner, worn(longSleeve)),
-    ).toBeUndefined();
+    expect(paragraphAfter(kit, worn(longSleeve))).toBeUndefined();
   });
 
   it("says nothing of warmth for the same piece, whatever its estimate now", () => {
     const kit = [piece("ls", "tops", [warmBand, own("ls", 9)])];
-    expect(
-      kitParagraph(result({ kit }), runner, worn(longSleeve)),
-    ).toBeUndefined();
+    expect(paragraphAfter(kit, worn(longSleeve))).toBeUndefined();
   });
 
   it("says nothing of warmth in a heavier kit", () => {
@@ -179,36 +184,25 @@ describe("the warm line", () => {
       group: "tops",
       estimate: { lowC: 15 },
     } as const;
-    expect(kitParagraph(result({ kit }), runner, worn(tee))).toBeUndefined();
+    expect(paragraphAfter(kit, worn(tee))).toBeUndefined();
     const even = [piece("tee", "tops", [warmBand, own("tee", 5)])];
-    expect(
-      kitParagraph(result({ kit: even }), runner, worn(longSleeve)),
-    ).toBeUndefined();
+    expect(paragraphAfter(even, worn(longSleeve))).toBeUndefined();
   });
 
   it("says nothing of warmth without the fact, or with another band's", () => {
     const kit = [piece("tee", "tops", [warmBand, own("tee", 15)])];
     expect(kitParagraph(result({ kit }), runner)).toBeUndefined();
     expect(
-      kitParagraph(result({ kit }), runner, {
-        bandFloorC: 10,
-        worn: [longSleeve],
-      }),
+      paragraphAfter(kit, { bandFloorC: 10, worn: [longSleeve] }),
     ).toBeUndefined();
   });
 
   it("does not call a swap lighter when either range has no low end", () => {
     const bare = [piece("tee", "tops", [warmBand])];
-    expect(
-      kitParagraph(result({ kit: bare }), runner, worn(longSleeve)),
-    ).toBeUndefined();
+    expect(paragraphAfter(bare, worn(longSleeve))).toBeUndefined();
     const kit = [piece("tee", "tops", [warmBand, own("tee", 15)])];
     expect(
-      kitParagraph(
-        result({ kit }),
-        runner,
-        worn({ pieceId: "ls", group: "tops" }),
-      ),
+      paragraphAfter(kit, worn({ pieceId: "ls", group: "tops" })),
     ).toBeUndefined();
     const highOnly = [
       piece("tee", "tops", [
@@ -216,9 +210,7 @@ describe("the warm line", () => {
         { kind: "estimate", pieceId: "tee", range: { highC: 30 } },
       ]),
     ];
-    expect(
-      kitParagraph(result({ kit: highOnly }), runner, worn(longSleeve)),
-    ).toBeUndefined();
+    expect(paragraphAfter(highOnly, worn(longSleeve))).toBeUndefined();
   });
 
   it("finds the estimate behind the piece's other facts", () => {
@@ -230,29 +222,23 @@ describe("the warm line", () => {
       of: 3,
     } as const;
     const kit = [piece("tee", "tops", [warmBand, record, own("tee", 15)])];
-    expect(kitParagraph(result({ kit }), runner, worn(longSleeve))).toBe(
-      warmLine,
-    );
+    expect(paragraphAfter(kit, worn(longSleeve))).toBe(warmLine);
   });
 
   it("reads the kit piece's own estimate, not another's", () => {
     const kit = [piece("tee", "tops", [warmBand, own("other", 15)])];
-    expect(
-      kitParagraph(result({ kit }), runner, worn(longSleeve)),
-    ).toBeUndefined();
+    expect(paragraphAfter(kit, worn(longSleeve))).toBeUndefined();
     const both = [
       piece("tee", "tops", [warmBand, own("other", 1), own("tee", 15)]),
     ];
-    expect(kitParagraph(result({ kit: both }), runner, worn(longSleeve))).toBe(
-      warmLine,
-    );
+    expect(paragraphAfter(both, worn(longSleeve))).toBe(warmLine);
   });
 
   it("wins over cold when warm runs outnumber cold ones", () => {
     const kit = [
       piece("tee", "tops", [{ ...band, cold: 1, warm: 3 }, own("tee", 15)]),
     ];
-    expect(kitParagraph(result({ kit }), runner, worn(longSleeve))).toBe(
+    expect(paragraphAfter(kit, worn(longSleeve))).toBe(
       "You've been too warm 3 times in this band.",
     );
   });
@@ -261,7 +247,7 @@ describe("the warm line", () => {
     const kit = [
       piece("ls", "tops", [{ ...band, cold: 1, warm: 3 }, own("ls", 5)]),
     ];
-    expect(kitParagraph(result({ kit }), runner, worn(longSleeve))).toBe(
+    expect(paragraphAfter(kit, worn(longSleeve))).toBe(
       "You've been too cold once in this band.",
     );
   });
@@ -270,7 +256,7 @@ describe("the warm line", () => {
     const kit = [
       piece("tee", "tops", [{ ...band, cold: 2, warm: 2 }, own("tee", 15)]),
     ];
-    expect(kitParagraph(result({ kit }), runner, worn(longSleeve))).toBe(
+    expect(paragraphAfter(kit, worn(longSleeve))).toBe(
       "You've been too cold twice in this band.",
     );
   });
@@ -281,7 +267,7 @@ describe("the warm line", () => {
       kit: [tee],
       ranking: [tee, piece("gloves", "hands_head", [tooMuch("gloves", 1)])],
     });
-    expect(kitParagraph(call, runner, worn(longSleeve))).toBe(
+    expect(kitParagraph({ ...call, warmRuns: worn(longSleeve) }, runner)).toBe(
       "You've been too warm twice in this band. Skip the gloves — too much once in this band.",
     );
   });

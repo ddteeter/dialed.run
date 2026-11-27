@@ -10,7 +10,6 @@ import { callHeader } from "./header";
 import type { Line } from "./lines";
 import { pieceEvidenceLine } from "./lines";
 import { kitParagraph } from "./paragraph";
-import type { WarmRunsWorn } from "./warm-runs";
 import { whyNot } from "./why-not";
 
 export interface B2Piece {
@@ -39,15 +38,6 @@ export interface B2Options {
    * never kept here).
    */
   names: ReadonlyMap<string, string>;
-  /**
-   * The runner's verdicts so far, for the below-threshold count.
-   */
-  verdictsSoFar: number;
-  /**
-   * What was worn on the band's too-warm runs; until the contract carries
-   * it (QUESTIONS.md Q10), absent, and the warm line never shows.
-   */
-  warmRuns?: WarmRunsWorn | undefined;
 }
 
 /**
@@ -74,15 +64,15 @@ function whyNotIds(
 }
 
 export function b2View(result: CallResult, options: B2Options): B2View {
-  const { unit, names, verdictsSoFar, warmRuns } = options;
+  const { unit, names } = options;
   return {
-    header: callHeader(result, unit, verdictsSoFar),
+    header: callHeader(result, unit),
     pieces: result.kit.map((piece) => ({
       pieceId: piece.pieceId,
       name: names.get(piece.pieceId),
       line: pieceEvidenceLine(piece, unit),
     })),
-    paragraph: kitParagraph(result, names, warmRuns),
+    paragraph: kitParagraph(result, names),
     whyNot: whyNotIds(result, names),
   };
 }
