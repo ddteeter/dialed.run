@@ -1,6 +1,14 @@
 import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
 import { countRow, countedKeys } from "../rate-limit-rows";
 
 import { account, session, user, verification } from "../../src/db/schema-auth";
@@ -1527,6 +1535,57 @@ describe("purgeDueAccounts — a live copyright hold", () => {
     },
   );
 
+  it("keeps the runs of an account a hold lands on after the purge claimed it", async () => {
+    const runner = await seedAccount();
+    await claim(runner.userId, NOW - 1);
+    const { deps, reported } = depsAt(NOW);
+    const forgetBands = deps.forgetBands;
+    // Just before the first page of runs goes: after the claim.
+    const held: PurgeDeps = {
+      ...deps,
+      forgetBands: async (runIds) => {
+        await holdOn(runner.userId, "hidden");
+        await forgetBands(runIds);
+      },
+    };
+
+    await purge([], held);
+
+    const left = await footprint(runner);
+    expect(left.runs).not.toStrictEqual([]);
+    expect(left.entries).not.toStrictEqual([]);
+    expect(await hasProfile(runner.userId)).toBe(true);
+    const [claimRow] = await claimOf(runner.userId);
+    expect(claimRow?.purgeStartedAt).toBe(NOW);
+    expect(reported.map(({ error }) => String(error))).toStrictEqual([
+      expect.stringMatching(/held while a copyright claim is settled/u),
+    ]);
+  });
+
+  it("keeps an account without runs that a hold lands on after the purge claimed it", async () => {
+    const owner = await claimedProfile(NOW - 60);
+    const { deps, reported } = depsAt(NOW);
+    const revokeStrava = deps.revokeStrava;
+    // The purge's first step after its claim; with no runs, the next
+    // delete is every kit of theirs at once.
+    const held: PurgeDeps = {
+      ...deps,
+      revokeStrava: async (userId) => {
+        await holdOn(owner, "hidden");
+        await revokeStrava(userId);
+      },
+    };
+
+    await purge([], held);
+
+    expect(await hasProfile(owner)).toBe(true);
+    const [claimRow] = await claimOf(owner);
+    expect(claimRow?.purgeStartedAt).toBe(NOW);
+    expect(reported.map(({ error }) => String(error))).toStrictEqual([
+      expect.stringMatching(/held while a copyright claim is settled/u),
+    ]);
+  });
+
   it("says nothing of a held account that is not yet due", async () => {
     const held = await claimedProfile(NOW + 60);
     await holdOn(held, "hidden");
@@ -2042,6 +2101,56 @@ async function dueRunner(isClosed: boolean): Promise<Seeded> {
   return runner;
 }
 
+/**
+ * Sets the runner's ban to `bannedAt` (lifted when undefined) just before the batch that deletes
+ * their profile runs, after the purge has read the profile: a Desk ban,
+ * or lifting one, landing in between. Statements are told apart by the
+ * SQL each was prepared from, carried onto the statement `bind` answers.
+ */
+function setBanBeforeProfileDelete(
+  userId: string,
+  bannedAt: number | undefined,
+) {
+  const binding = env.DIALED_CORE;
+  const sqlOf = new WeakMap<D1PreparedStatement, string>();
+  const prepare = binding.prepare.bind(binding);
+  const batch: D1Database["batch"] = binding.batch.bind(binding);
+  const prepared = vi
+    .spyOn(binding, "prepare")
+    .mockImplementation((query: string) => {
+      const statement = prepare(query);
+      const bind = statement.bind.bind(statement);
+      // `bind` answers a new statement, which is the one a batch is given.
+      statement.bind = (...values: unknown[]) => {
+        const bound = bind(...values);
+        sqlOf.set(bound, query);
+        return bound;
+      };
+      sqlOf.set(statement, query);
+      return statement;
+    });
+  const batched = vi
+    .spyOn(binding, "batch")
+    .mockImplementation(async <T>(statements: D1PreparedStatement[]) => {
+      const doesDeleteProfile = statements.some((statement) =>
+        sqlOf.get(statement)?.startsWith('delete from "user_profiles"'),
+      );
+      if (doesDeleteProfile) {
+        batched.mockRestore();
+        prepared.mockRestore();
+        await core
+          .update(userProfiles)
+          .set({ bannedAt: orSqlNull(bannedAt) })
+          .where(eq(userProfiles.userId, userId));
+      }
+      return batch<T>(statements);
+    });
+  onTestFinished(() => {
+    batched.mockRestore();
+    prepared.mockRestore();
+  });
+}
+
 async function closedKept() {
   return core
     .select({
@@ -2081,6 +2190,33 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
       hashes.toSorted(byText).map((hash) => ({ hash, closedAt: NOW })),
     );
     expect(anomalies).toStrictEqual([]);
+  });
+
+  it("keeps the fingerprints of an account banned after the purge read its profile", async () => {
+    const runner = await dueRunner(false);
+    setBanBeforeProfileDelete(runner.userId, NOW - 60);
+
+    await purge([], { ...depsAt(NOW).deps, closedAddressSecret: CLOSED_KEY });
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    const hashes = await Promise.all(
+      provedOf(runner.email).map((address) =>
+        closedAddressHash(CLOSED_KEY, address),
+      ),
+    );
+    expect(await closedKept()).toStrictEqual(
+      hashes.toSorted(byText).map((hash) => ({ hash, closedAt: NOW })),
+    );
+  });
+
+  it("keeps none for an account whose ban was lifted after the purge read its profile", async () => {
+    const runner = await dueRunner(true);
+    setBanBeforeProfileDelete(runner.userId, undefined);
+
+    await purge([], { ...depsAt(NOW).deps, closedAddressSecret: CLOSED_KEY });
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    expect(await closedKept()).toStrictEqual([]);
   });
 
   it("keeps and forgets nothing by address for a closed account that never confirmed its address", async () => {

@@ -170,6 +170,17 @@ const EXEMPT: Readonly<Record<string, string>> = {
 };
 
 /**
+ * Columns whose filler would stop the purge rather than test it. A live
+ * hold keeps the runner's runs, and the purge never claims an account
+ * under one (purge.test.ts's "a live copyright hold" tests), so the hold
+ * seeded here is a settled one: the record `copyright_holds.owner_id`'s
+ * exemption describes.
+ */
+const FILLED_OTHERWISE: Record<string, unknown> = {
+  "copyright_holds.status": "restored",
+};
+
+/**
  * The value a column takes when it names nobody: its enum's first value,
  * or a fresh one of its type. No table carries a CHECK, so any value of
  * the right type is accepted.
@@ -259,7 +270,10 @@ function rowNaming(
   for (const [own, column] of Object.entries(table.columns)) {
     if (own === key) row[own] = runner;
     else if (others.has(own)) row[own] = newUlid();
-    else if (column.notNull && !column.hasDefault) row[own] = filler(column);
+    else if (column.notNull && !column.hasDefault) {
+      row[own] =
+        FILLED_OTHERWISE[`${table.name}.${column.name}`] ?? filler(column);
+    }
   }
   if (table.columns[key]?.name === "subject_id" && "subjectType" in row) {
     row.subjectType = "profile";

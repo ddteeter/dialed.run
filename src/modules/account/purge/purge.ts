@@ -29,6 +29,7 @@ import {
   and,
   asc,
   eq,
+  exists,
   inArray,
   isNotNull,
   isNull,
@@ -79,6 +80,7 @@ import { coreDb, env } from "../../../env";
 import { importFilePrefix } from "../../../lib/import-file-key";
 import { columnWhere, firstRowWhere } from "../../../lib/sql/keyed-read";
 import { listedPages } from "../../../lib/sql/r2-pages";
+import { rowWhere } from "../../../lib/sql/row-where";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { nowSeconds } from "../../../lib/now";
 import type { RateLimitKind } from "../../../lib/contracts/rate-limits";
@@ -300,6 +302,16 @@ function due(now: number) {
  * the hold's material is evidence until the Desk settles it, and the purge
  * would delete it with the rest. The hold's own end lets the next firing in.
  */
+/**
+ * The runner's live holds, checked by the run deletes' own batches as
+ * they run: the claim only waited for the holds there were when it was
+ * taken. A hold placed since fails the batch, the claim is kept, and the
+ * next firing waits (`claimable`).
+ */
+function heldBy(userId: string) {
+  return { entries: eq(copyrightHolds.ownerId, userId), noun: "run" } as const;
+}
+
 function liveHold() {
   const live = and(
     eq(copyrightHolds.ownerId, accountDeletions.userId),
@@ -379,7 +391,7 @@ export async function purgeAccount(
   if (!(await didDeleteEveryRun(deps, userId, budget))) return undefined;
   // 128's SAF-3 primitive (seam 4): every entry left — with their items,
   // tags, reactions, photos and notifications — and the media prefix owed.
-  await deleteRuns(core, userId, "all", report);
+  await deleteRuns(core, userId, "all", report, undefined, heldBy(userId));
   await deleteCloset(core, userId);
   await deleteStoredFiles(deps.importsBucket, userId);
   return deleteAccountRows(core, userId, deps);
@@ -436,7 +448,14 @@ async function didDeleteEveryRun(
     if (last === undefined) return true;
     budget.left -= page.length;
     await deps.forgetBands(page.map((run) => run.id));
-    await deleteRunsThrough(deps.core, userId, last.id, deps.report);
+    await deleteRunsThrough(
+      deps.core,
+      userId,
+      last.id,
+      deps.report,
+      undefined,
+      heldBy(userId),
+    );
   }
   return false;
 }
@@ -634,6 +653,33 @@ const RUNNER_COUNTS = [
 ] as const satisfies readonly RateLimitKind[];
 
 /**
+ * One closed address's fingerprint, written only while the runner's
+ * profile carries a ban: `INSERT … SELECT … WHERE EXISTS (the profile
+ * with banned_at set)`, so the ban is the one in place when the statement
+ * runs, not when the profile was read.
+ */
+function keptIfClosed(
+  db: Db,
+  userId: string,
+  row: { hash: string; closedAt: number },
+) {
+  const ifClosed = and(
+    eq(userProfiles.userId, userId),
+    isNotNull(userProfiles.bannedAt),
+  );
+  const whileBanned = exists(
+    db
+      .select({ one: sql`1` })
+      .from(userProfiles)
+      .where(ifClosed),
+  );
+  return db
+    .insert(closedAddresses)
+    .select(rowWhere(closedAddresses, row, whileBanned))
+    .onConflictDoNothing();
+}
+
+/**
  * Everything else, and the account itself — one batch, so the claim goes
  * only with the `user` row, and a purge that reaches here finishes whole.
  */
@@ -651,9 +697,14 @@ async function deleteAccountRows(
   );
   const handle = profile?.username ?? undefined;
   const isClosed = profile !== undefined && profile.bannedAt !== null;
-  const fingerprints = isClosed
-    ? await closedAddressRows(deps.closedAddressSecret, addresses, now)
-    : [];
+  // Hashed whatever the profile said when read: whether they are kept is
+  // decided by the batch itself, from the ban as it stands then
+  // (`keptIfClosed`).
+  const fingerprints = await closedAddressRows(
+    deps.closedAddressSecret,
+    addresses,
+    now,
+  );
   // Both directions. `follows` has no index led by the followee, so the
   // second clause scans it — once, for a deletion.
   const eitherFollow = involvingEither(
@@ -722,10 +773,10 @@ async function deleteAccountRows(
     // kept. No index leads with the owner, so this scans once.
     db.delete(heldTakeDowns).where(eq(heldTakeDowns.ownerId, userId)),
     ...addresses.flatMap((address) => forgetAddress(db, address)),
-    // What sign-up refuses for 3 years, in place of the addresses.
-    ...fingerprints.map((row) =>
-      db.insert(closedAddresses).values(row).onConflictDoNothing(),
-    ),
+    // What sign-up refuses for 3 years, in place of the addresses: kept
+    // only if the account is closed as this batch runs. Before the
+    // profile's delete, below, which is what the condition reads.
+    ...fingerprints.map((row) => keptIfClosed(db, userId, row)),
     ...RUNNER_COUNTS.map((kind) => forgetRateLimit(db, kind, userId)),
     ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post

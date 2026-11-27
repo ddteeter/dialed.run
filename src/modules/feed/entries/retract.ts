@@ -641,6 +641,7 @@ export async function deleteRunsThrough(
   lastRunId: string,
   report: Report = captureException,
   purge: PurgeTags = purgePublicPages,
+  held?: HeldCheck,
 ): Promise<void> {
   const ownedRuns = owned(db, runs, userId, "all", lte(runs.id, lastRunId));
   const theirEntries = owned(
@@ -651,7 +652,7 @@ export async function deleteRunsThrough(
     inArray(outfitEntries.runId, ownedRuns),
   );
   const statements = runStatements(db, userId, ownedRuns, theirEntries);
-  await commit(db, statements, [], report);
+  await commit(db, statements, [], report, held);
   purge(deletionCacheTags(userId, "all"));
 }
 
