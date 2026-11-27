@@ -32,6 +32,11 @@ export {
   type Share,
 } from "./metrics";
 export { CONDITION_READS, observedReads } from "./probe";
+export {
+  releaseCheck,
+  type DeclaredScorer,
+  type ReleaseCheck,
+} from "./release";
 export { formatReport, type ReplayReport, type VersionMetrics } from "./report";
 export { replay, type ReplayOutcome } from "./run";
 export {
