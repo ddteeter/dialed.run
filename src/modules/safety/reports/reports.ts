@@ -226,8 +226,9 @@ export async function fileReport(
   // (`./thresholds`), one person when it is missing: the lowest bar of
   // the reasons filed, whatever order they came in (design 232), which is
   // the sweep's rule too.
+  const [filedRow] = added;
   if (
-    added.length === 0 ||
+    filedRow === undefined ||
     reporterCount < fewestReportersToHide(filed, moderationThresholds())
   ) {
     return { status: "filed", reporterCount, hiddenPendingReview: false };
@@ -243,7 +244,7 @@ export async function fileReport(
   await hidePendingReview(input.subjectType, input.subjectId, alerts, purge, {
     canHide,
     isAtOnce,
-    heldTo: stillOverTheBar(input.subjectType, input.subjectId),
+    heldTo: stillOverTheBar(input.subjectType, input.subjectId, filedRow.id),
   });
   return { status: "filed", reporterCount, hiddenPendingReview: canHide };
 }
@@ -419,14 +420,17 @@ function sinceLastApproved(): SQL {
 
 /**
  * `fileReport`'s bar, asked again as its batch runs: the reports filed
- * since the subject was last approved still number at least the lowest
- * bar among their reasons. An Approve that lands after the count answers
- * the reports before it, so a report it leaves under the bar re-opens and
- * hides nothing, as if it had been filed a moment later.
+ * since the subject was last approved, and the one being filed, still
+ * number at least the lowest bar among their reasons. An Approve that
+ * lands after the count answers the reports before it, and the one being
+ * filed counts as if it had been filed a moment later, whichever second
+ * its time fell in. So a report the Approve leaves under the bar re-opens
+ * and hides nothing, and one over its bar alone still hides.
  */
 function stillOverTheBar(
   subjectType: ReportSubjectType,
   subjectId: string,
+  filedId: string,
 ): SQL {
   const onSubject = subjectMatches(
     reports.subjectType,
@@ -434,7 +438,10 @@ function stillOverTheBar(
     subjectType,
     subjectId,
   );
-  const since = and(onSubject, sinceLastApproved());
+  const since = and(
+    onSubject,
+    or(sinceLastApproved(), eq(reports.id, filedId)),
+  );
   // One aggregate row however many reports: no report since leaves the
   // bar NULL, which `coalesce` reads as under it.
   const overTheBar = sql`${countDistinct(reports.reporterId)} >= ${lowestFiledBar(moderationThresholds())}`;

@@ -628,6 +628,13 @@ describe("after a person approved it", () => {
       .mockImplementation(async <T>(statements: D1PreparedStatement[]) => {
         spy.mockRestore();
         await resolveReview(row.id, await makeUser(), "approve");
+        // The Approve's second falls after the report's own time, as it
+        // does when the clock ticks between the report's write and its
+        // batch: the report still counts, as if filed a moment later.
+        await core()
+          .update(reviewQueue)
+          .set({ approvedAt: nowSeconds() + 60 })
+          .where(eq(reviewQueue.id, row.id));
         return batch<T>(statements);
       });
     onTestFinished(() => {
