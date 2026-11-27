@@ -27,7 +27,6 @@
  * event instead (./deauthorize.ts).
  */
 import { eq, sql } from "drizzle-orm";
-import type { SQL } from "drizzle-orm";
 
 import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
@@ -38,7 +37,7 @@ import { gaveUpClearPrefix } from "../../../db/gave-up";
 import { firstRowWhere, hasRowWhere } from "../../../lib/sql/keyed-read";
 import { StravaApiError } from "./api";
 import type { StravaApi, StravaConfig } from "./api";
-import { disconnectedEmail, type Owe } from "./deauthorize";
+import { disconnectedEmail, revocationOf, type Owe } from "./deauthorize";
 import { reminderSubjectPrefix, type RevokeJob } from "../queue-messages";
 import { nowSeconds } from "../../../lib/now";
 import { isWithinRateLimit } from "../../email";
@@ -294,26 +293,6 @@ export async function completeStravaConnect(
       .delete(stravaRevocations)
       .where(eq(stravaRevocations.refreshToken, tokens.refreshToken)),
   ]);
-}
-
-/**
- * A revocation of the grant in each connection row `which` picks, when
- * the statement runs: `INSERT … SELECT` from the row itself, placed ahead
- * of the write that deletes or replaces it in the same batch, so what is
- * revoked is exactly what that write removes. Nothing, when no row
- * matches.
- */
-function revocationOf(db: CoreDb, id: string, createdAt: number, which: SQL) {
-  // In the table's column order, which is the order drizzle names them in.
-  const revoked = db
-    .select({
-      id: sql<string>`${id}`.as(stravaRevocations.id.name),
-      createdAt: sql<number>`${createdAt}`.as(stravaRevocations.createdAt.name),
-      refreshToken: stravaConnections.refreshToken,
-    })
-    .from(stravaConnections)
-    .where(which);
-  return db.insert(stravaRevocations).select(revoked);
 }
 
 /**

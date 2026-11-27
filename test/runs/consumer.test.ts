@@ -32,6 +32,7 @@ import { MAX_START_AHEAD_SECONDS } from "../../src/modules/runs/inputs";
 import { unreadNotificationCount } from "../../src/modules/notifications";
 import { attachObservation } from "../../src/modules/weather";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
+import { beforeNextWriteBatch } from "../before-write-batch";
 import { fitFile } from "./fit-file";
 import validTcx from "./fixtures/valid.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
@@ -337,6 +338,49 @@ describe("handleImportsBatch (102 §4, §8)", () => {
       .where(eq(imports.id, importId));
     expect(importRow?.status).toBe("duplicate");
     expect(importRow?.runId).toBe(existing.id);
+  });
+
+  it("ends as the duplicate of a run another import saved just before its batch (#1090)", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const importId = await seedImport(deps.db, userId, validTcx, "tcx");
+    let other: string | undefined;
+    // The same activity's other import lands first. valid.tcx starts at
+    // 2026-08-15T12:00:00Z.
+    const raced = beforeNextWriteBatch(async () => {
+      const run = await createManualRun(deps.db, userId, {
+        startedAt: Math.floor(
+          new Date("2026-08-15T12:00:30Z").getTime() / 1000,
+        ),
+        durationS: 1800,
+        distanceM: 5000,
+        indoor: false,
+        title: "The other import",
+      });
+      other = run.id;
+    });
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    expect(raced.fired()).toBe(true);
+    const [importRow] = await deps.db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
+    expect(importRow?.status).toBe("duplicate");
+    expect(importRow?.runId).toBe(other);
+    const theirs = await deps.db
+      .select({ id: runs.id })
+      .from(runs)
+      .where(eq(runs.userId, userId));
+    expect(theirs).toStrictEqual([{ id: other }]);
+    expect(await unreadNotificationCount(deps.db, userId)).toBe(0);
   });
 
   it("degrades when attachObservation throws — the run still saves as pending", async () => {
@@ -1713,6 +1757,42 @@ describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
       .where(eq(stravaConnections.athleteId, athleteId));
     expect(kept).toHaveLength(1);
     expect(await revokedRows(userId)).toStrictEqual([]);
+    expect(
+      await coreDb()
+        .select()
+        .from(stravaRevocations)
+        .where(eq(stravaRevocations.refreshToken, refreshToken)),
+    ).toStrictEqual([]);
+  });
+
+  it("tells nobody and revokes nothing when the runner reconnected just before its batch (#1094)", async () => {
+    const { userId, athleteId, refreshToken } = await seedConnection(1000);
+    // A reconnect: Strava may hand back the same refresh token.
+    const reconnect = beforeNextWriteBatch(() =>
+      coreDb()
+        .update(stravaConnections)
+        .set({ connectedAt: 4000 })
+        .where(eq(stravaConnections.athleteId, athleteId)),
+    );
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
+
+    await handleImportsBatch(
+      fakeBatch([
+        { body: { type: "strava_deauthorize", athleteId, eventTime: 3000 } },
+      ]).batch,
+      makeDeps(),
+    );
+
+    expect(reconnect.fired()).toBe(true);
+    const kept = await coreDb()
+      .select({ connectedAt: stravaConnections.connectedAt })
+      .from(stravaConnections)
+      .where(eq(stravaConnections.athleteId, athleteId));
+    expect(kept).toStrictEqual([{ connectedAt: 4000 }]);
+    expect(await revokedRows(userId)).toStrictEqual([]);
+    expect(await owedEmailsTo(userId)).toStrictEqual([]);
     expect(
       await coreDb()
         .select()

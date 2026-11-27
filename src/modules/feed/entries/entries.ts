@@ -10,7 +10,16 @@
  * the authz *logic* (who may attach to which run, using which items)
  * stays in this module regardless.
  */
-import { and, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  exists,
+  inArray,
+  isNotNull,
+  ne,
+  sql,
+} from "drizzle-orm";
 import type { z } from "zod";
 
 import {
@@ -25,6 +34,8 @@ import {
   wardrobeItems,
 } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
+import { guarded, runGuarded } from "../../../lib/sql/batch-guard";
+import { rowWhere } from "../../../lib/sql/row-where";
 import type {
   Audience,
   Effort,
@@ -34,7 +45,7 @@ import type {
 } from "../../../lib/contracts";
 import { kitCacheTags, type PurgeTags } from "../../../lib/cache-tags";
 import { WORLD_AUDIENCE } from "../../../lib/contracts";
-import { ForbiddenError } from "../../../lib/errors";
+import { ForbiddenError, NotFoundError } from "../../../lib/errors";
 import { readInChunks } from "../../../lib/chunked";
 import { forIds } from "../../../lib/for-ids";
 import {
@@ -192,40 +203,80 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
   // than writing a literal null) inserts SQL NULL either way. `verdict`
   // is the same, and is now written explicitly because a caller may have
   // it — see `AttachKitInput`.
-  const insertEntry = database.insert(outfitEntries).values({
-    id: entryId,
-    runId: input.runId,
-    userId: input.userId,
-    // **The runner's default, seeding this entry's own column.** Asked on
-    // review, and the distinction is the product rule: sharing is
-    // per-entry (`outfit_entries.audience`, which A3's toggle writes and
-    // `submitVerdict` carries on every save) *with* a per-user default
-    // that decides where a new one starts. This line is only that start.
-    // Changing the preference later republishes nothing, and an entry
-    // made private stays private. The run itself has no public flag —
-    // see `./share-default`.
-    audience,
-    // Present only for a caller that has both at once. `undefined` is
-    // what the phone flow passes and inserts SQL NULL, which is the
-    // unjudged state `shouldPromptForVerdict` looks for.
-    verdict: input.verdict,
-    createdAt: nowSeconds(),
-  });
+  // Held to the run still being there as the batch runs (#1091), and
+  // guarded: a run its runner deleted since the read stops the batch, so
+  // no entry, copy or kit row is left naming it.
+  const runIsThere = runStillThere(database, input.runId);
+  const insertEntry = database.insert(outfitEntries).select(
+    rowWhere(
+      outfitEntries,
+      {
+        id: entryId,
+        runId: input.runId,
+        userId: input.userId,
+        // **The runner's default, seeding this entry's own column.** Asked on
+        // review, and the distinction is the product rule: sharing is
+        // per-entry (`outfit_entries.audience`, which A3's toggle writes and
+        // `submitVerdict` carries on every save) *with* a per-user default
+        // that decides where a new one starts. This line is only that start.
+        // Changing the preference later republishes nothing, and an entry
+        // made private stays private. The run itself has no public flag —
+        // see `./share-default`.
+        audience,
+        // Present only for a caller that has both at once. `undefined` is
+        // what the phone flow passes and inserts SQL NULL, which is the
+        // unjudged state `shouldPromptForVerdict` looks for.
+        verdict: input.verdict,
+        createdAt: nowSeconds(),
+      },
+      runIsThere,
+    ),
+  );
   // The entry's half of its run's copy (D-175) reads the row back, so it
   // follows the insert in the same batch.
   const copy = entryHalfStatement(database, entryId);
-  if (input.itemIds.length === 0) {
-    await database.batch([insertEntry, copy]);
-    return entryId;
-  }
-  await database.batch([
-    insertEntry,
+  const attached = await runGuarded(database, [
+    ...guarded(database, insertEntry, "kit-run"),
     copy,
-    database
-      .insert(outfitEntryItems)
-      .values(input.itemIds.map((itemId) => ({ entryId, itemId }))),
+    // A bare kit selects no garments, so writes no row.
+    kitRowsOf(database, entryId, [...input.itemIds]),
   ]);
+  if (!attached.ok) throw new NotFoundError("run not found");
   return entryId;
+}
+
+/**
+ * Whether the run is there when the statement runs.
+ */
+function runStillThere(database: ReturnType<typeof db>, runId: string) {
+  return exists(
+    database
+      .select({ one: sql`1` })
+      .from(runs)
+      .where(eq(runs.id, runId)),
+  );
+}
+
+/**
+ * A kit row for each of `itemIds` still in the closet when the batch runs
+ * (#1091): a garment its runner deleted since the read is left off the
+ * kit rather than named by a row nothing can show. In the table's column
+ * order, which is the order drizzle names them in.
+ */
+function kitRowsOf(
+  database: ReturnType<typeof db>,
+  entryId: string,
+  itemIds: string[],
+) {
+  const rows = database
+    .select({
+      entryId: sql<string>`${entryId}`.as(outfitEntryItems.entryId.name),
+      itemId: wardrobeItems.id,
+      flag: sql<null>`null`.as(outfitEntryItems.flag.name),
+    })
+    .from(wardrobeItems)
+    .where(inArray(wardrobeItems.id, itemIds));
+  return database.insert(outfitEntryItems).select(rows);
 }
 
 interface ItemFlagInput {

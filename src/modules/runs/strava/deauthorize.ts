@@ -16,11 +16,13 @@
  * for a genuine deauthorization the revoke is a harmless no-op, and for a
  * forged one it closes the grant. The daily digest drains it.
  */
-import { and, eq, isNull, lte, or } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import { gaveUpClearPrefix } from "../../../db/gave-up";
 import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
+import { guarded, runGuarded } from "../../../lib/sql/batch-guard";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
@@ -97,26 +99,26 @@ export async function deauthorizeAthlete(
   eventTime: number,
   owe: Owe,
 ): Promise<void> {
-  const aboutThisGrant = and(
-    eq(stravaConnections.athleteId, athleteId),
-    or(
-      isNull(stravaConnections.connectedAt),
-      lte(stravaConnections.connectedAt, eventTime),
-    ),
-  );
+  const { connectedAt } = stravaConnections;
+  const aboutThisGrant = sql`${eq(stravaConnections.athleteId, athleteId)} and (${connectedAt} is null or ${connectedAt} <= ${eventTime})`;
   const connection = await firstRowWhere(db, stravaConnections, aboutThisGrant);
   if (connection === undefined) return;
 
   // Keyed by the event, as the notification is, so a redelivery owes the
   // same row.
   const told = disconnectedEmail(connection.userId, eventTime);
-  await db.batch([
-    db.delete(stravaConnections).where(aboutThisGrant),
-    db.insert(stravaRevocations).values({
-      id: newUlid(),
-      refreshToken: connection.refreshToken,
-      createdAt: nowSeconds(),
-    }),
+  // The revocation is of the row the delete removes, read as the batch
+  // runs, and the delete is guarded (#1094): a runner who reconnected
+  // since the read has a connection this event is not about, so the
+  // delete misses and nothing else lands, neither the "disconnected"
+  // notice nor a revocation of a token Strava may have handed back again.
+  await runGuarded(db, [
+    revocationOf(db, newUlid(), nowSeconds(), aboutThisGrant),
+    ...guarded(
+      db,
+      db.delete(stravaConnections).where(aboutThisGrant),
+      "deauthorized-grant",
+    ),
     notificationInsert(db, {
       userId: connection.userId,
       kind: "strava_broken",
@@ -128,4 +130,29 @@ export async function deauthorizeAthlete(
     // ids (R-142), and they go with the grant.
     gaveUpClearPrefix(db, "reminder", reminderSubjectPrefix(athleteId)),
   ]);
+}
+
+/**
+ * A revocation of the grant in each connection row `which` picks, when
+ * the statement runs: `INSERT … SELECT` from the row itself, placed ahead
+ * of the write that deletes or replaces it in the same batch, so what is
+ * revoked is exactly what that write removes. Nothing, when no row
+ * matches.
+ */
+export function revocationOf(
+  db: CoreDb,
+  id: string,
+  createdAt: number,
+  which: SQL,
+) {
+  // In the table's column order, which is the order drizzle names them in.
+  const revoked = db
+    .select({
+      id: sql<string>`${id}`.as(stravaRevocations.id.name),
+      createdAt: sql<number>`${createdAt}`.as(stravaRevocations.createdAt.name),
+      refreshToken: stravaConnections.refreshToken,
+    })
+    .from(stravaConnections)
+    .where(which);
+  return db.insert(stravaRevocations).select(revoked);
 }

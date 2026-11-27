@@ -12,6 +12,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { orSqlNull } from "../../src/lib/sql/sql-null";
+import { beforeNextWriteBatch } from "../before-write-batch";
 import {
   RESCREEN_CAP,
   RESCREEN_LEASE_S,
@@ -171,6 +172,44 @@ describe("rescreenHandles", () => {
         subjectId: userId,
         source: "classifier",
         status: "pending",
+      },
+    ]);
+  });
+
+  it("re-opens no profile review a moderator approved when the runner renamed just before the verdict landed (#1093)", async () => {
+    const userId = await claimedDuringOutage("quiet_mile");
+    await db.insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "profile",
+      subjectId: userId,
+      source: "classifier",
+      status: "approved",
+      resolvedBy: "op-a",
+      resolvedAt: 4000,
+      createdAt: 3000,
+    });
+    // The rename lands after the verdict, just before its batch.
+    const rename = beforeNextWriteBatch(() =>
+      db
+        .update(userProfiles)
+        .set({ username: "loud_mile", usernameScreen: "clear" })
+        .where(eq(userProfiles.userId, userId)),
+    );
+
+    await rescreenHandles(db, answering("flagged").rescreen, [], 5000);
+
+    expect(rename.fired()).toBe(true);
+    expect(await screenOf(userId)).toStrictEqual({
+      username: "loud_mile",
+      screen: "clear",
+      at: 5000,
+    });
+    expect(await reviewRows()).toStrictEqual([
+      {
+        subjectType: "profile",
+        subjectId: userId,
+        source: "classifier",
+        status: "approved",
       },
     ]);
   });

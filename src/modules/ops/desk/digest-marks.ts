@@ -4,13 +4,15 @@
  * reminders' one. Apart from the digest itself so the Desk can read one
  * without importing the email, which imports the Desk's counts.
  */
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { cronCheckpoints } from "../../../db/schema-core";
 import { firstColumnWhere } from "../../../lib/sql/keyed-read";
 
 type Db = ReturnType<typeof drizzle>;
+
+const DAY_S = 86_400;
 
 /**
  * The day's digest was owed: written in the same batch as the debts, so a
@@ -65,5 +67,27 @@ export function markStatement(
     .onConflictDoUpdate({
       target: cronCheckpoints.cronName,
       set: { lastRunAt: now },
+    });
+}
+
+/**
+ * The day's digest claimed at `now`: the mark written only when it is
+ * not already today's (UTC), so of two firings that overlap, one claims
+ * the day and the other changes nothing. For `guarded`, which then
+ * stops the losing firing's batch (#1092).
+ */
+export function claimDayStatement(
+  db: Db,
+  name: typeof DIGEST_OWED,
+  now: number,
+) {
+  const dayStart = now - (now % DAY_S);
+  return db
+    .insert(cronCheckpoints)
+    .values({ cronName: name, lastRunAt: now })
+    .onConflictDoUpdate({
+      target: cronCheckpoints.cronName,
+      set: { lastRunAt: now },
+      setWhere: lt(cronCheckpoints.lastRunAt, dayStart),
     });
 }

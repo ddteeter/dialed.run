@@ -18,17 +18,18 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { user } from "../../../db/schema-auth";
-import { calendarDay, dayLabel } from "../../../lib/dates";
+import { dayLabel } from "../../../lib/dates";
 import type { EmailTemplate } from "../../../lib/contracts/email";
+import { guarded, runGuarded } from "../../../lib/sql/batch-guard";
 import { columnWhere } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
 import { operatorEmailMessage } from "../../../lib/sql/outbox";
 import { adminUserIds } from "../../safety";
 import {
+  claimDayStatement,
   DIGEST_OWED,
   DIGEST_UNCONFIRMED,
   markStatement,
-  markedAt,
   todayCounts,
   type TodayCounts,
 } from "../desk";
@@ -85,16 +86,6 @@ const LIVE: DigestMail = {
 };
 
 /**
- * Whether this UTC day's digest was already owed — by a firing that ran
- * before this one today, whose emails may long since have been sent and
- * their outbox rows deleted.
- */
-async function isOwedToday(db: Db, now: number): Promise<boolean> {
-  const last = await markedAt(db, DIGEST_OWED);
-  return last !== undefined && calendarDay(last) === calendarDay(now);
-}
-
-/**
  * Which of `userIds` have a confirmed address, by primary key. The send
  * looks the address up again (`modules/email`), so this decides only who
  * is owed one.
@@ -129,14 +120,15 @@ async function confirmedOf(
  * firing re-run an hour later found no row and mailed every operator
  * again (review of PR #130). The day's mark outlives the row: it is
  * written in the same batch as the debts, so a digest is marked owed
- * exactly when it is, and a later firing that reads it owes nothing.
+ * exactly when it is, and it is a claim on the day, guarded in the
+ * batch: a later firing, or one that overlaps, finds the day claimed and
+ * writes and sends nothing.
  */
 export async function oweDigestEmail(
   db: Db,
   mail: DigestMail = LIVE,
   now = nowSeconds(),
 ): Promise<void> {
-  if (await isOwedToday(db, now)) return;
   const admins = mail.admins();
   // No operator, nothing to mark: one added later that day is still owed.
   if (admins.length === 0) return;
@@ -153,10 +145,16 @@ export async function oweDigestEmail(
       ),
     );
   const hasSkipped = debts.length < admins.length;
-  await db.batch([
-    markStatement(db, DIGEST_OWED, now),
+  // The day is claimed in the batch (#1092): two firings that overlap both
+  // read "not owed today", and one whose sends had settled before the
+  // other's batch landed would mail every operator twice, the outbox's
+  // key having nothing left to collapse. The losing claim writes nothing
+  // and sends nothing.
+  const outcome = await runGuarded(db, [
+    ...guarded(db, claimDayStatement(db, DIGEST_OWED, now), "digest-day"),
     ...(hasSkipped ? [markStatement(db, DIGEST_UNCONFIRMED, now)] : []),
     ...debts.map((debt) => outboxInsert(db, debt, now)),
   ]);
+  if (!outcome.ok) return;
   for (const debt of debts) await mail.settle(db, debt, captureException);
 }
