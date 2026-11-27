@@ -1,28 +1,35 @@
 /**
  * The IANA zone a place is in (design 142), for the profile's cached zone.
  *
- * **Not a second way to call Visual Crossing.** It is `forecast` for this
- * moment, read for its zone: the same adapter, under the same
- * `AbortSignal.timeout`, through the same zod parse and `isTimeZone` check,
- * and through the same observation cache, so a place someone already
- * looked up this hour costs no request at all. The zone is the one at the
- * Timeline response's root (R-96), which a one-record `include=current`
- * read already carries.
+ * **Not a second way to call Visual Crossing.** It is the provider's
+ * reading for this moment, read for its zone: the same adapter, under the
+ * same `AbortSignal.timeout`, through the same zod parse and `isTimeZone`
+ * check. The zone is the one at the Timeline response's root (R-96), which
+ * a one-record `include=current` read already carries.
  *
- * Throws what `forecast` throws: an unavailable provider is the caller's
+ * **Uncached, and deliberately** (D-156). The hour being looked up is in
+ * progress, so the provider can still be blending its reading from a
+ * forecast. The observation cache is shared by every run in the cell that
+ * hour and never refreshed, which is why `attach.ts` asks for an hour only
+ * once it has settled. Writing this reading there would make it that
+ * hour's weather for good. The cost is one request per lookup, counted
+ * against `spend` first like any other (`./budget`).
+ *
+ * Throws what the provider throws: an unavailable provider is the caller's
  * to degrade from. `undefined` when the provider answered without a zone
  * `Intl` accepts.
  */
-import { runnerWeatherBudget } from "./budget";
+import { runnerWeatherBudget, spendNothing } from "./budget";
 import type { SpendWeatherCall } from "./budget";
-import { forecast } from "./forecast";
+import { weatherProvider } from "./provider";
 
 export async function timeZoneAt(
   lat: number,
   lng: number,
-  spend?: SpendWeatherCall,
+  spend: SpendWeatherCall = spendNothing,
 ): Promise<string | undefined> {
-  const now = await forecast(lat, lng, new Date(), spend);
+  await spend();
+  const now = await weatherProvider().forecast(lat, lng, new Date());
   return now.timeZone;
 }
 

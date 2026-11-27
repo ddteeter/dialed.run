@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { rateLimits, runs } from "../../src/db/schema-core";
 import {
@@ -17,6 +17,7 @@ import {
   attachObservation,
   recordManualObservation,
   retryPendingWeather,
+  timeZoneAt,
 } from "../../src/modules/weather";
 import {
   cacheKeyFor,
@@ -832,6 +833,29 @@ describe("only settled hours are fetched (D-156)", () => {
     expect(askedEpochs(fetchSpy)).toStrictEqual([
       OBSERVATION_HOUR_EPOCH + 3600,
     ]);
+  });
+
+  it("still fetches an hour a zone lookup asked about, once it settles", async () => {
+    // A place saved at 07:10, then a run there at 07:00 attached once
+    // that hour settles: the run gets the settled hour, not the reading
+    // the zone lookup was answered with while the hour was in progress.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    vi.setSystemTime(new Date((OBSERVATION_HOUR_EPOCH + 600) * 1000));
+    mockVisualCrossing();
+    await timeZoneAt(43.07, -73.07);
+    vi.restoreAllMocks();
+
+    vi.setSystemTime(new Date(SETTLES.first * 1000));
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertRun({ durationS: 1800, lat: 43.07, lng: -73.07 });
+
+    expect(await attachObservation(runId)).toBe("attached");
+
+    expect(askedEpochs(fetchSpy)).toStrictEqual([OBSERVATION_HOUR_EPOCH]);
+    expect(await cachedBuckets(43.07)).toStrictEqual([START_BUCKET]);
   });
 });
 

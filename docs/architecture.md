@@ -86,8 +86,10 @@ Key decisions embedded here:
   onboarding and both from weather's `timeZoneAt`: the place writer, which
   saves the place with a NULL zone and fills it afterwards via `waitUntil`,
   and the hourly fill's compare-and-set. Each only fills or replaces the zone
-  for the current place. That is `forecast` for now, read for its zone, so
-  there is no second way to call Visual Crossing. A failed lookup saves the
+  for the current place. That is the provider's reading for now, read for
+  its zone, so there is no second way to call Visual Crossing. It is never
+  cached: the hour is still in progress, and the observation cache keeps
+  only hours that have settled (D-156). A failed lookup saves the
   place with a NULL zone, and that NULL beside coordinates is the marker the
   `:00` firing's last step, `fillMissingTimeZones`, re-drives (law 8c,
   reconciliation). `ops` imports onboarding's index for it directly, because
