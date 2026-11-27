@@ -42,6 +42,11 @@ describe("emailTemplateSchema", () => {
       { kind: "invite", code: "DIAL-7K2Q-M9XP" },
       { kind: "strava_disconnected" },
       { kind: "deletion_scheduled", day: "Sat, Oct 4" },
+      { kind: "deletion_scheduled", day: "Sat, Oct 4", closed: true },
+      { kind: "deletion_link", url: link, until: "Fri, Dec 4" },
+      { kind: "deletion_link", url: link, until: "Fri, Dec 4", handle: "ada" },
+      { kind: "account_closed_age", day: "Fri, Dec 4" },
+      { kind: "account_closed_age", day: "Fri, Dec 4", handle: "ada" },
       { kind: "export_ready", token: "0123456789abcdef0123456789abcdef" },
       {
         kind: "digest",
@@ -76,6 +81,27 @@ describe("emailTemplateSchema", () => {
       emailTemplateSchema().safeParse({ kind: "account_closed", reason: "" })
         .success,
     ).toBe(false);
+  });
+
+  it("refuses a deletion link or an age closure with an empty day or handle", () => {
+    const link = "https://dialed.run/account/deletion?token=t";
+    for (const payload of [
+      { kind: "deletion_link", url: link, until: "" },
+      { kind: "deletion_link", url: link, until: "Fri, Dec 4", handle: "" },
+      {
+        kind: "deletion_link",
+        url: "javascript:alert(1)",
+        until: "Fri, Dec 4",
+      },
+      { kind: "account_closed_age", day: "" },
+      { kind: "account_closed_age", day: "Fri, Dec 4", handle: "" },
+      { kind: "deletion_scheduled", day: "Fri, Dec 4", closed: false },
+    ]) {
+      expect(
+        emailTemplateSchema().safeParse(payload).success,
+        JSON.stringify(payload),
+      ).toBe(false);
+    }
   });
 
   it("refuses a reopen notice naming an empty handle", () => {

@@ -38,12 +38,13 @@ import {
 import { type OutboxDebtOf, outboxInsert, oweOutbox } from "../../ops/outbox";
 import { settleOwedEmail } from "../../ops/owed-email";
 import {
+  CONFIRM_PURPOSES,
   didClaimEmailLink,
   emailLinkWrite,
   issueEmailLink,
   readEmailLink,
   releaseEmailLink,
-  type LinkPurpose,
+  type ConfirmPurpose,
   type ReadLink,
 } from "./email-links";
 
@@ -287,12 +288,12 @@ export function authMail(
 export type Landing =
   | {
       readonly state: "ask";
-      readonly purpose: LinkPurpose;
+      readonly purpose: ConfirmPurpose;
       readonly email: string;
     }
   | {
       readonly state: "confirmed";
-      readonly purpose: LinkPurpose;
+      readonly purpose: ConfirmPurpose;
       readonly email: string;
     }
   | { readonly state: "used" }
@@ -345,14 +346,14 @@ export interface ConfirmOptions {
  */
 type Standing =
   | { readonly landing: Landing }
-  | { readonly link: ReadLink; readonly current: string };
+  | { readonly link: ReadLink<ConfirmPurpose>; readonly current: string };
 
 async function linkStanding(
   db: Db,
   token: unknown,
   now: number,
 ): Promise<Standing> {
-  const link = await readEmailLink(db, token);
+  const link = await readEmailLink(db, token, CONFIRM_PURPOSES);
   if (link === undefined) return { landing: EXPIRED };
   if (link.usedAt !== undefined) return { landing: USED };
   if (link.expiresAt <= now) return { landing: EXPIRED };

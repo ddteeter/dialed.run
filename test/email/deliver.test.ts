@@ -363,7 +363,9 @@ describe("preferences", () => {
       "email_changed",
       "content_removed",
       "account_closed",
+      "account_closed_age",
       "account_reopened",
+      "deletion_link",
     ];
     for (const kind of kinds) expect(preferenceFor(kind), kind).toBeUndefined();
     expect(preferenceFor("run_reminder")).toBe("run_reminder");
@@ -815,6 +817,12 @@ describe("who a reply goes to", () => {
     { kind: "content_removed", subject: "photo", reason: "Spam." },
     { kind: "account_closed", reason: "Spam." },
     { kind: "account_reopened", handle: "maya_runs" },
+    {
+      kind: "deletion_link",
+      url: "https://dialed.test/account/deletion?token=t",
+      until: "Fri, Dec 4",
+    },
+    { kind: "account_closed_age", day: "Fri, Dec 4" },
   ] as const)(
     "sends $kind's reply — the appeal — to the appeals inbox, in the API field Cloudflare requires",
     async (template) => {

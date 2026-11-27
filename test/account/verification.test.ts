@@ -13,7 +13,9 @@ import {
   outbox,
 } from "../../src/db/schema-core";
 import { authMail } from "../../src/modules/account/verification";
+import { DELETION_LINK_TTL_S } from "../../src/lib/contracts";
 import {
+  CONFIRM_PURPOSES,
   EMAIL_LINK_TTL_S,
   issueEmailLink,
   readEmailLink,
@@ -84,7 +86,7 @@ describe("email links", () => {
     // Only the hash is stored, and it is what the read carries.
     const [row] = await db.select().from(emailVerifications);
     expect(row?.tokenHash).not.toContain(token.split(".", 3)[2] ?? "");
-    expect(await readEmailLink(db, token)).toStrictEqual({
+    expect(await readEmailLink(db, token, CONFIRM_PURPOSES)).toStrictEqual({
       userId,
       purpose: "verify",
       email,
@@ -102,7 +104,10 @@ describe("email links", () => {
       "",
       42,
     ]) {
-      expect(await readEmailLink(db, bad), String(bad)).toBeUndefined();
+      expect(
+        await readEmailLink(db, bad, CONFIRM_PURPOSES),
+        String(bad),
+      ).toBeUndefined();
     }
   });
 
@@ -149,6 +154,49 @@ describe("email links", () => {
     }
   });
 
+  it("work for a day, an email change's too, and the Desk's deletion link for 7 (design 289)", async () => {
+    const { userId, email } = await seedUser();
+    for (const purpose of ["change", "delete"] as const) {
+      await issueEmailLink(db, { userId, purpose, email }, NOW);
+    }
+    const rows = await db
+      .select({
+        purpose: emailVerifications.purpose,
+        expiresAt: emailVerifications.expiresAt,
+      })
+      .from(emailVerifications)
+      .orderBy(emailVerifications.purpose);
+    expect(rows).toStrictEqual([
+      { purpose: "change", expiresAt: NOW + EMAIL_LINK_TTL_S },
+      { purpose: "delete", expiresAt: NOW + DELETION_LINK_TTL_S },
+    ]);
+    expect(DELETION_LINK_TTL_S).toBe(604_800);
+  });
+
+  it("read back only for the purposes the landing takes", async () => {
+    const { userId, email } = await seedUser();
+    const confirm = await issueEmailLink(db, {
+      userId,
+      purpose: "verify",
+      email,
+    });
+    const deletion = await issueEmailLink(db, {
+      userId,
+      purpose: "delete",
+      email,
+    });
+    expect(await readEmailLink(db, confirm, ["delete"])).toBeUndefined();
+    expect(await readEmailLink(db, deletion, CONFIRM_PURPOSES)).toBeUndefined();
+    expect(await readEmailLink(db, deletion, ["delete"])).toMatchObject({
+      userId,
+      purpose: "delete",
+    });
+    expect(await readEmailLink(db, confirm, CONFIRM_PURPOSES)).toMatchObject({
+      userId,
+      purpose: "verify",
+    });
+  });
+
   it("stop working when a newer one is sent", async () => {
     const { userId, email } = await seedUser({ isVerified: false });
     const first = await issueEmailLink(db, {
@@ -161,8 +209,8 @@ describe("email links", () => {
       purpose: "verify",
       email,
     });
-    expect(await readEmailLink(db, first)).toBeUndefined();
-    expect(await readEmailLink(db, second)).toBeDefined();
+    expect(await readEmailLink(db, first, CONFIRM_PURPOSES)).toBeUndefined();
+    expect(await readEmailLink(db, second, CONFIRM_PURPOSES)).toBeDefined();
   });
 });
 
@@ -382,6 +430,25 @@ async function usedAtOf(userId: string): Promise<(number | undefined)[]> {
   return rows.map((row) => row.usedAt ?? undefined);
 }
 
+describe("the confirm landing and a deletion link (design 289)", () => {
+  it("says it has run out, and spends nothing", async () => {
+    const { userId, email } = await seedUser();
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "delete", email },
+      NOW,
+    );
+    expect(await readEmailLanding(db, token, NOW)).toStrictEqual({
+      state: "expired",
+    });
+    expect(await confirmEmail(db, token, {}, NOW)).toStrictEqual({
+      state: "expired",
+    });
+    const [row] = await db.select().from(emailVerifications);
+    expect(row?.usedAt).toBeNull();
+  });
+});
+
 describe("readEmailLanding (opening a link changes nothing)", () => {
   it("asks about a sign-up link with the address masked, and spends nothing", async () => {
     const { userId } = await seedUser({
@@ -576,7 +643,7 @@ describe("confirmEmail, when two open one link (law 2)", () => {
 
     const unmoved = await emailOf(userId);
     expect(unmoved.email).toBe(email);
-    expect(await readEmailLink(db, token)).toMatchObject({
+    expect(await readEmailLink(db, token, CONFIRM_PURPOSES)).toMatchObject({
       usedAt: undefined,
     });
     // The next tap does what the first could not.
@@ -609,7 +676,7 @@ describe("confirmEmail, when two open one link (law 2)", () => {
     vi.restoreAllMocks();
 
     expect(await emailOf(userId)).toMatchObject({ isVerified: false });
-    expect(await readEmailLink(db, token)).toMatchObject({
+    expect(await readEmailLink(db, token, CONFIRM_PURPOSES)).toMatchObject({
       usedAt: undefined,
     });
     // Nothing confirmed, so nothing owed.
@@ -683,8 +750,10 @@ describe("confirmEmail, moving the account (ACC-8)", () => {
       state: "confirmed",
     });
 
-    expect(await readEmailLink(db, confirmLink)).toBeUndefined();
-    expect(await readEmailLink(db, theirLink)).toBeDefined();
+    expect(
+      await readEmailLink(db, confirmLink, CONFIRM_PURPOSES),
+    ).toBeUndefined();
+    expect(await readEmailLink(db, theirLink, CONFIRM_PURPOSES)).toBeDefined();
     const left = await db
       .select({ value: verification.value })
       .from(verification);
@@ -786,8 +855,10 @@ describe("resendConfirmation", () => {
       subject: "Confirm your email for dialed.run",
     });
     const token = tokenIn(mail.sent[0]);
-    expect(await readEmailLink(db, old)).toBeUndefined();
-    expect(await readEmailLink(db, token)).toMatchObject({ userId });
+    expect(await readEmailLink(db, old, CONFIRM_PURPOSES)).toBeUndefined();
+    expect(await readEmailLink(db, token, CONFIRM_PURPOSES)).toMatchObject({
+      userId,
+    });
     expect(mail.sent[0]?.html).toContain(
       confirmLinkUrl(ORIGIN, token).replaceAll("&", "&amp;"),
     );
@@ -1176,7 +1247,7 @@ describe("requestEmailChange", () => {
     const after = await emailOf(userId);
     expect(after.email).toBe(email);
     const token = tokenIn(mail.sent[0]);
-    expect(await readEmailLink(db, token)).toMatchObject({
+    expect(await readEmailLink(db, token, CONFIRM_PURPOSES)).toMatchObject({
       purpose: "change",
       email: "fresh@example.com",
     });
@@ -1241,7 +1312,9 @@ describe("requestEmailChange", () => {
       "first@example.com",
       "second@example.com",
     ]);
-    expect(await readEmailLink(db, tokenIn(mail.sent[1]))).toMatchObject({
+    expect(
+      await readEmailLink(db, tokenIn(mail.sent[1]), CONFIRM_PURPOSES),
+    ).toMatchObject({
       email: "second@example.com",
     });
   });
