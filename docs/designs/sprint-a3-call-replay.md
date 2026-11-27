@@ -35,6 +35,12 @@ pseudonymised export exist (both hard stops).
   that names `tempC` or `windKph` is blocked when every case was rebuilt,
   since a rebuilt case carries neither. **The wiring PR supplies the
   scorer's declaration**: this lane cannot read A1's scorer.
+- `probe.ts`: `observedReads(scorer, cases)` checks the declaration by
+  asking: each forecast case is replayed once more per field, with that field
+  moved far out of range (constants, not arithmetic), and a field whose move
+  changes any result is read. `noWorse` takes the observed list and blocks a
+  candidate that reads a field it did not declare, before the rebuilt guard
+  (owner, 2026-11-27). The eval wires both.
 - `synthetic.ts`: a seeded PRNG (mulberry32) and six personas whose truth is
   stated: runs cold, runs warm, sparse, one band, a trip, a flagged piece.
   Pieces take their group from `uiGroupFor` and their range from
@@ -85,9 +91,13 @@ All vitest `worker`, `test/call/replay/*.test.ts`; no Playwright (no screen).
   cases.
 - `metrics.test.ts`: each measure on hand-built outcomes at each boundary,
   no-call apart from misses, calibration split.
+- `probe.test.ts`: each field found alone and together, in order; a read on
+  one case of many; no probe without a forecast; a case already at the probe
+  value; cases left unchanged.
 - `compare.test.ts`: equal, better, worse on each measure, worse within
   tolerance (at exactly the tolerance and past it), unmeasured, an empty case
-  list, mismatched sets, the rebuilt-forecast guard, the source.
+  list, mismatched sets, the rebuilt-forecast guard, undeclared reads, the
+  source.
 - `synthetic.test.ts`: same seed deep-equal, two seeds differ, each persona's
   truth visible (a knowing fake scorer beats an ignorant one), cells at 5+.
 - `run.test.ts`: a fixed-kit fake scorer shows the harness measures the kit,

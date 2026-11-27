@@ -31,6 +31,7 @@ export {
   type ReplayMetrics,
   type Share,
 } from "./metrics";
+export { CONDITION_READS, observedReads } from "./probe";
 export { formatReport, type ReplayReport, type VersionMetrics } from "./report";
 export { replay, type ReplayOutcome } from "./run";
 export {

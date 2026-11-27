@@ -9,6 +9,7 @@ import {
   formatReport,
   measure,
   noWorse,
+  observedReads,
   replay,
   syntheticPersonas,
   type ReplayCase,
@@ -67,7 +68,12 @@ async function main(): Promise<void> {
   const after = replay(candidate, cases);
   const beforeMetrics = measure(before);
   const afterMetrics = measure(after);
-  const comparison = noWorse(beforeMetrics, afterMetrics, { tolerance, reads });
+  const observed = observedReads(candidate, cases);
+  const comparison = noWorse(beforeMetrics, afterMetrics, {
+    tolerance,
+    reads,
+    observed,
+  });
   const report = formatReport(
     {
       engineVersion: before[0]?.result.engineVersion ?? baselinePath,

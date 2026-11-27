@@ -35,7 +35,7 @@ function metrics({
   };
 }
 
-const strict = { tolerance: 0, reads: [] };
+const strict = { tolerance: 0, reads: [], observed: [] };
 
 function verdicts(comparison: Comparison): MetricVerdict[] {
   return RELEASE_METRICS.map((m) => comparison.metrics[m].verdict);
@@ -118,7 +118,7 @@ describe("noWorse", () => {
     const at = noWorse(
       metrics({ agreement: [2, 4], direction: [3, 4], coverage: [10, 10] }),
       metrics({ agreement: [1, 4], direction: [2, 4], coverage: [7.5, 10] }),
-      { tolerance: 0.25, reads: [] },
+      { tolerance: 0.25, reads: [], observed: [] },
     );
     expect(verdicts(at)).toEqual([
       "within-tolerance",
@@ -129,12 +129,14 @@ describe("noWorse", () => {
     const past = noWorse(baseline, metrics({ agreement: [1, 4] }), {
       tolerance: 0.125,
       reads: [],
+      observed: [],
     });
     expect(verdicts(past)).toEqual(["worse", "equal", "equal"]);
     expect(past.pass).toBe(false);
     const inside = noWorse(baseline, metrics({ agreement: [3, 8] }), {
       tolerance: 0.125,
       reads: [],
+      observed: [],
     });
     expect(inside.metrics.dialedAgreement.verdict).toBe("within-tolerance");
   });
@@ -176,7 +178,7 @@ describe("noWorse", () => {
   });
 
   it("refuses a negative tolerance and accepts zero", () => {
-    const negative = { tolerance: -0.01, reads: [] };
+    const negative = { tolerance: -0.01, reads: [], observed: [] };
     expect(() => noWorse(baseline, baseline, negative)).toThrow(
       new RangeError("tolerance must not be negative: -0.01"),
     );
@@ -188,7 +190,7 @@ describe("noWorse", () => {
 describe("the rebuilt-forecast guard", () => {
   const baseline = metrics();
   const reading = (reads: ConditionRead[]) =>
-    noWorse(baseline, baseline, { tolerance: 0, reads });
+    noWorse(baseline, baseline, { tolerance: 0, reads, observed: [] });
 
   it("blocks a candidate that reads temperature or wind on rebuilt cases alone", () => {
     expect(reading(["tempC"])).toMatchObject({
@@ -216,6 +218,7 @@ describe("the rebuilt-forecast guard", () => {
       const comparison = noWorse(metrics({ rebuilt }), metrics({ rebuilt }), {
         tolerance: 0,
         reads: ["tempC", "windKph"],
+        observed: [],
       });
       expect(comparison.blocked).toBeUndefined();
       expect(comparison.pass).toBe(true);
@@ -226,9 +229,49 @@ describe("the rebuilt-forecast guard", () => {
     const comparison = noWorse(metrics({ rebuilt: 0 }), baseline, {
       tolerance: 0,
       reads: ["tempC"],
+      observed: [],
     });
     expect(comparison.source).toBe("v1-history");
     expect(comparison.pass).toBe(false);
+  });
+});
+
+describe("the declared-reads check", () => {
+  const baseline = metrics({ rebuilt: 0 });
+  const check = (reads: ConditionRead[], observed: ConditionRead[]) =>
+    noWorse(baseline, baseline, { tolerance: 0, reads, observed });
+
+  it("blocks a candidate seen reading a field it did not declare", () => {
+    expect(check([], ["tempC"])).toMatchObject({
+      blocked: "the candidate reads fields it does not declare: tempC",
+      pass: false,
+    });
+    expect(check(["tempC"], ["tempC", "windKph"]).blocked).toBe(
+      "the candidate reads fields it does not declare: windKph",
+    );
+    expect(check([], ["feelsLikeC", "precipMm"]).blocked).toBe(
+      "the candidate reads fields it does not declare: feelsLikeC, precipMm",
+    );
+  });
+
+  it("passes a candidate that declares all it reads, and more", () => {
+    expect(check(["feelsLikeC"], ["feelsLikeC"])).toMatchObject({
+      blocked: undefined,
+      pass: true,
+    });
+    expect(check(["feelsLikeC", "tempC"], ["feelsLikeC"]).pass).toBe(true);
+    expect(check([], []).pass).toBe(true);
+  });
+
+  it("names an undeclared read before the rebuilt-forecast guard", () => {
+    const rebuilt = metrics();
+    expect(
+      noWorse(rebuilt, rebuilt, {
+        tolerance: 0,
+        reads: ["windKph"],
+        observed: ["tempC"],
+      }).blocked,
+    ).toBe("the candidate reads fields it does not declare: tempC");
   });
 });
 
