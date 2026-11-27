@@ -24,12 +24,11 @@ import {
   publicPhotoUrl,
 } from "../../src/lib/public-photos";
 import { requestAccountDeletion } from "../../src/modules/account/data/deletion";
+import { deleteRun, deleteRuns } from "../../src/modules/feed";
 import {
   deleteEntryPhoto,
-  deleteRun,
-  deleteRuns,
   retractEntry,
-} from "../../src/modules/feed";
+} from "../../src/modules/feed/entries/retract";
 import { submitVerdict } from "../../src/modules/feed/entries/entries";
 import { moderateContent } from "../../src/modules/feed/moderation/moderation";
 import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";

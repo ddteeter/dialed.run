@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { forecast } from "../../src/modules/weather";
+import { forecast } from "../../src/modules/weather/forecast";
 import { mockVisualCrossing } from "./fixtures/visual-crossing-observation";
 
 afterEach(() => {

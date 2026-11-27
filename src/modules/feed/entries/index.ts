@@ -28,10 +28,8 @@ export {
   owned,
   photoDeletion,
   photoIdInput,
-  retractEntries,
   retractEntry,
   type Report,
-  type Scope,
   type Statements,
 } from "./retract";
 export { photoResponse, reviewerPhotoResponse } from "./photos";

@@ -12,16 +12,10 @@
  */
 export {
   bellState,
-  createNotification,
   notificationInsert,
   notificationInsertWhere,
   notificationRaise,
   notificationRaiseWhere,
-  listNotifications,
-  markAllNotificationsRead,
-  unreadNotificationCount,
-  type AwaitingVerdict,
-  type NotificationKind,
 } from "./service";
 export type { BellState } from "./bell-state";
 // The follow rows naming a runner, for the writes that take a handle away.

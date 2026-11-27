@@ -22,12 +22,4 @@
 
 // Task 128 · SAF-3: the delete primitives account deletion (126 · ACC-9)
 // and run deletion call, rather than writing a second delete.
-export {
-  deleteEntryPhoto,
-  deleteRun,
-  deleteRuns,
-  deleteRunsThrough,
-  retractEntries,
-  retractEntry,
-  type Scope,
-} from "./entries";
+export { deleteRun, deleteRuns, deleteRunsThrough } from "./entries";

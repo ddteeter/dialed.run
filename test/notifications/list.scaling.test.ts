@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { newUlid } from "../../src/lib/ids";
+import { bellState } from "../../src/modules/notifications";
 import {
-  bellState,
   createNotification,
   listNotifications,
-} from "../../src/modules/notifications";
+} from "../../src/modules/notifications/service";
 import { runnerVisibleToViewer } from "../../src/modules/safety/rules";
 import { notificationsDb } from "../../src/modules/notifications/db";
 import { runsAwaitingVerdict } from "../../src/modules/runs";

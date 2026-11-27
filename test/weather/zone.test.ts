@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { weatherObservations } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
-import { timeZoneAt } from "../../src/modules/weather";
+import { timeZoneAt } from "../../src/modules/weather/zone";
 import {
   mockVisualCrossing,
   visualCrossingCurrentBody,

@@ -10,14 +10,13 @@ import { blockRunner } from "../src/modules/safety/reports/blocks";
 import { newUlid } from "../src/lib/ids";
 import { coreDb } from "../src/modules/runs/core-db";
 import { notificationsDb } from "../src/modules/notifications/db";
+import { bellState, notificationRaise } from "../src/modules/notifications";
 import {
-  bellState,
   createNotification,
   listNotifications,
   markAllNotificationsRead,
-  notificationRaise,
   unreadNotificationCount,
-} from "../src/modules/notifications";
+} from "../src/modules/notifications/service";
 import { runsAwaitingVerdict } from "../src/modules/runs";
 import {
   makeEntry,
@@ -26,7 +25,7 @@ import {
   makeVerifiedUser,
   NOW,
 } from "./feed/helpers";
-import type { NotificationKind } from "../src/modules/notifications";
+import type { NotificationKind } from "../src/modules/notifications/service";
 import { nowSeconds } from "../src/lib/now";
 
 const NOTHING = z.null().parse(JSON.parse("null"));

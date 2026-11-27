@@ -4,39 +4,10 @@
     "isEmailWanted",
     "setEmailPreference"
   ],
-  "src/modules/feed/entries/index.ts": ["Scope", "retractEntries"],
-  "src/modules/feed/index.ts": [
-    "Scope",
-    "deleteEntryPhoto",
-    "retractEntries",
-    "retractEntry"
-  ],
-  "src/modules/notifications/index.ts": [
-    "AwaitingVerdict",
-    "NotificationKind",
-    "createNotification",
-    "listNotifications",
-    "markAllNotificationsRead",
-    "unreadNotificationCount"
-  ],
   "src/modules/ops/edge/index.ts": ["SERVER_FN_PREFIX", "TurnstileRefusal"],
   "src/modules/ops/owed-email/index.ts": ["emailHandler"],
   "src/modules/ops/public-web/index.ts": ["KitCardAnswer"],
-  "src/modules/runs/parsers/index.ts": [
-    "IMPORT_EXTENSIONS",
-    "NO_TRACK_MESSAGE",
-    "importExtensionOf"
-  ],
   "src/modules/safety/functions.ts": ["denyDomainAction"],
   "src/modules/safety/reports/index.ts": ["OweEmail"],
-  "src/modules/safety/review/index.ts": ["ReviewSource"],
-  "src/modules/weather/index.ts": [
-    "CacheKey",
-    "ObservationRow",
-    "forecast",
-    "matchesKey",
-    "observationsAtCells",
-    "runHourKeys",
-    "timeZoneAt"
-  ]
+  "src/modules/safety/review/index.ts": ["ReviewSource"]
 }

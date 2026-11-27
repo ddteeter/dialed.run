@@ -7,13 +7,12 @@ import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { forceRename } from "../../src/modules/account";
 import { claimUsername } from "../../src/modules/account/handles/username";
+import { deleteRun, deleteRuns } from "../../src/modules/feed";
 import {
   deleteEntryPhoto,
-  deleteRun,
-  deleteRuns,
   retractEntries,
   retractEntry,
-} from "../../src/modules/feed";
+} from "../../src/modules/feed/entries/retract";
 import { submitVerdict } from "../../src/modules/feed/entries/entries";
 import { moderateContent } from "../../src/modules/feed/moderation/moderation";
 import { setPublicProfile } from "../../src/modules/onboarding/public-profile";

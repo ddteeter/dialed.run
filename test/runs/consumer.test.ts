@@ -22,14 +22,14 @@ import {
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
 import { heldToTheClock } from "../../src/modules/runs/consumer";
 import type { StravaApi } from "../../src/modules/runs/strava/api";
+import { PARSE_FAILURE_MESSAGE } from "../../src/modules/runs/parsers";
 import {
   NO_TRACK_MESSAGE,
-  PARSE_FAILURE_MESSAGE,
-} from "../../src/modules/runs/parsers";
-import { RunParseError } from "../../src/modules/runs/parsers/shared";
+  RunParseError,
+} from "../../src/modules/runs/parsers/shared";
 import { createManualRun } from "../../src/modules/runs/service";
 import { MAX_START_AHEAD_SECONDS } from "../../src/modules/runs/inputs";
-import { unreadNotificationCount } from "../../src/modules/notifications";
+import { unreadNotificationCount } from "../../src/modules/notifications/service";
 import { attachObservation } from "../../src/modules/weather";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
 import { beforeNextWriteBatch } from "../before-write-batch";

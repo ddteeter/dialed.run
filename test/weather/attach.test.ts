@@ -17,8 +17,8 @@ import {
   attachObservation,
   recordManualObservation,
   retryPendingWeather,
-  timeZoneAt,
 } from "../../src/modules/weather";
+import { timeZoneAt } from "../../src/modules/weather/zone";
 import {
   cacheKeyFor,
   upsertManualBand,
