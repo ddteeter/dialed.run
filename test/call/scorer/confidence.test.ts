@@ -6,7 +6,7 @@ import {
   confidenceOf,
 } from "../../../src/modules/call/scorer/confidence";
 
-const KNOWN = { verdicts: CALL_VERDICT_THRESHOLD, counted: 12 };
+const KNOWN = { verdicts: CALL_VERDICT_THRESHOLD };
 
 describe("how much the Call knows (reading 6)", () => {
   it("puts the probable/confident cut at six runs in band", () => {
@@ -17,7 +17,6 @@ describe("how much the Call knows (reading 6)", () => {
     expect(
       confidenceOf({
         verdicts: CALL_VERDICT_THRESHOLD - 1,
-        counted: 14,
         runsInBand: 14,
       }),
     ).toBe("below-threshold");
@@ -27,16 +26,7 @@ describe("how much the Call knows (reading 6)", () => {
     expect(confidenceOf({ ...KNOWN, runsInBand: 12 })).toBe("confident");
   });
 
-  it("is a best guess when no verdict is counted, band or no band", () => {
-    expect(confidenceOf({ verdicts: 20, counted: 0, runsInBand: 0 })).toBe(
-      "best-guess",
-    );
-    expect(
-      confidenceOf({ verdicts: 20, counted: 0, runsInBand: undefined }),
-    ).toBe("best-guess");
-  });
-
-  it("is borrowed with counted runs and none of them in this band", () => {
+  it("is borrowed over the threshold with no runs in this band", () => {
     expect(confidenceOf({ ...KNOWN, runsInBand: 0 })).toBe("borrowed");
   });
 

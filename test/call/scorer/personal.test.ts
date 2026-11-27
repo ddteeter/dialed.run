@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   bandCount,
-  countedRuns,
   groupRecord,
   pieceCounts,
   pieceRecord,
+  runBandFloorC,
   scopedRuns,
 } from "../../../src/modules/call/scorer/personal";
 import { aRun, wore } from "./builders";
@@ -13,11 +13,14 @@ import { aRun, wore } from "./builders";
 const BAND_5_DRY = { bandFloorC: 5, precip: "dry" } as const;
 
 describe("which runs are counted", () => {
-  it("leaves out a run whose weather a human typed (reading 3)", () => {
+  it("counts a run whose weather a human typed (owner, 2026-11-26)", () => {
     const measured = aRun();
     const typed = aRun({ source: "manual" });
 
-    expect(countedRuns([typed, measured])).toStrictEqual([measured]);
+    expect(scopedRuns([typed, measured], BAND_5_DRY)).toStrictEqual([
+      typed,
+      measured,
+    ]);
   });
 
   it("takes the band's runs from its floor up to the next floor", () => {
@@ -50,19 +53,54 @@ describe("which runs are counted", () => {
     ).toStrictEqual([]);
   });
 
-  it("leaves a typed-weather run out of its band too", () => {
-    expect(scopedRuns([aRun({ source: "manual" })], BAND_5_DRY)).toStrictEqual(
-      [],
+  it("reads a past run at the effort it was run at", () => {
+    const easyAtSeven = aRun({ judgedFeelsLikeC: 7, effort: "easy" });
+    const workoutAtTwo = aRun({ judgedFeelsLikeC: 2, effort: "workout" });
+    const steadyAtThree = aRun({ judgedFeelsLikeC: 3, effort: "steady" });
+    const steadyJustShort = aRun({ judgedFeelsLikeC: 2.9, effort: "steady" });
+    const raceAtSeven = aRun({ judgedFeelsLikeC: 7, effort: "race" });
+
+    expect(
+      scopedRuns(
+        [
+          raceAtSeven,
+          easyAtSeven,
+          steadyJustShort,
+          workoutAtTwo,
+          steadyAtThree,
+        ],
+        BAND_5_DRY,
+      ),
+    ).toStrictEqual([easyAtSeven, workoutAtTwo, steadyAtThree]);
+  });
+
+  it("bands a run by its judged feel at its effort, and as easy with none", () => {
+    expect(runBandFloorC(aRun({ judgedFeelsLikeC: 7 }))).toBe(5);
+    expect(runBandFloorC(aRun({ judgedFeelsLikeC: 7, effort: "easy" }))).toBe(
+      5,
+    );
+    expect(runBandFloorC(aRun({ judgedFeelsLikeC: 7, effort: "steady" }))).toBe(
+      5,
+    );
+    expect(
+      runBandFloorC(aRun({ judgedFeelsLikeC: 7, effort: "workout" })),
+    ).toBe(10);
+    expect(runBandFloorC(aRun({ judgedFeelsLikeC: 7, effort: "race" }))).toBe(
+      10,
+    );
+    expect(runBandFloorC(aRun({ judgedFeelsLikeC: 8, effort: "race" }))).toBe(
+      15,
     );
   });
 
-  it("takes every counted run when there is no band", () => {
+  it("takes every run when there is no band, typed weather included", () => {
     const cold = aRun({ judgedFeelsLikeC: -12, precip: "wet" });
     const warm = aRun({ judgedFeelsLikeC: 24 });
     const typed = aRun({ source: "manual" });
 
     expect(scopedRuns([cold, typed, warm], undefined)).toStrictEqual([
       cold,
+      typed,
       warm,
     ]);
   });
@@ -161,6 +199,25 @@ describe("a piece's record", () => {
       { bandFloorC: 10, worn: 2, dialed: 1, flags: none },
       { bandFloorC: 15, worn: 1, dialed: 1, flags: none },
       { bandFloorC: 20, worn: 1, dialed: 0, flags: none },
+    ]);
+  });
+
+  it("files a piece's run under the band of its feel at its effort", () => {
+    const history = [
+      aRun({
+        judgedFeelsLikeC: 12,
+        effort: "workout",
+        worn: [wore("zip", "tops")],
+      }),
+    ];
+
+    expect(pieceCounts(history).get("zip")).toStrictEqual([
+      {
+        bandFloorC: 15,
+        worn: 1,
+        dialed: 1,
+        flags: { too_much: 0, not_enough: 0 },
+      },
     ]);
   });
 

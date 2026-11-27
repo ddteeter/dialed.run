@@ -22,11 +22,20 @@ describe("the cohort's privacy floor", () => {
     expect(cellsAboveFloor([four, five, six])).toStrictEqual([five, six]);
   });
 
-  it("counts the band's runners, not the group's", () => {
-    const thinGroup = aCell({ bandRunners: 5, groupRunners: 1 });
-    const thinBand = aCell({ bandRunners: 4, groupRunners: 4 });
+  it("drops a cell whose group four runners wore and keeps one of five or six (owner, 2026-11-26)", () => {
+    const four = aCell({ bandRunners: 40, groupRunners: 4 });
+    const five = aCell({ bandRunners: 40, groupRunners: 5 });
+    const six = aCell({ bandRunners: 40, groupRunners: 6 });
 
-    expect(cellsAboveFloor([thinBand, thinGroup])).toStrictEqual([thinGroup]);
+    expect(cellsAboveFloor([four, five, six])).toStrictEqual([five, six]);
+  });
+
+  it("needs both: enough runners in the band and enough who wore the group", () => {
+    const thinGroup = aCell({ bandRunners: 5, groupRunners: 4 });
+    const thinBand = aCell({ bandRunners: 4, groupRunners: 5 });
+    const both = aCell({ bandRunners: 5, groupRunners: 5 });
+
+    expect(cellsAboveFloor([thinBand, thinGroup, both])).toStrictEqual([both]);
   });
 
   it("keeps nothing of no cells", () => {

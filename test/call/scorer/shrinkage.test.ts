@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 import { THERMAL_LEVEL_C } from "../../../src/lib/contracts";
 import {
   COHORT_STRENGTH_CAP,
+  LEAN_PRIOR_STRENGTH,
+  LEAN_STEP_C,
   PERSONAL_PRIOR_STRENGTH,
   PRIOR_DROP_PER_C,
   PRIOR_FLOOR,
   PRIOR_IN_RANGE,
   PRIOR_NO_ESTIMATE,
   PRIOR_STRENGTH,
+  bandLeanC,
   cohortBase,
   effectiveFeelC,
   heuristicPrior,
@@ -27,6 +30,8 @@ describe("the blend's constants (reading 10: a first proposal)", () => {
       PRIOR_STRENGTH,
       COHORT_STRENGTH_CAP,
       PERSONAL_PRIOR_STRENGTH,
+      LEAN_PRIOR_STRENGTH,
+      LEAN_STEP_C,
     }).toStrictEqual({
       PRIOR_IN_RANGE: 0.7,
       PRIOR_NO_ESTIMATE: 0.5,
@@ -35,6 +40,8 @@ describe("the blend's constants (reading 10: a first proposal)", () => {
       PRIOR_STRENGTH: 4,
       COHORT_STRENGTH_CAP: 8,
       PERSONAL_PRIOR_STRENGTH: 3,
+      LEAN_PRIOR_STRENGTH: 3,
+      LEAN_STEP_C: THERMAL_LEVEL_C,
     });
   });
 });
@@ -51,6 +58,27 @@ describe("the feel a runner reads the hour as (reading 4)", () => {
   it("is the forecast's feel at level zero or with no level", () => {
     expect(effectiveFeelC(10, 0)).toBe(10);
     expect(effectiveFeelC(10)).toBe(10);
+  });
+});
+
+describe("how a band's verdicts lean (owner, 2026-11-26)", () => {
+  it("is nothing with no runs, or as many warm as cold", () => {
+    expect(bandLeanC({ cold: 0, dialed: 0, warm: 0 })).toBe(0);
+    expect(bandLeanC({ cold: 2, dialed: 5, warm: 2 })).toBe(0);
+  });
+
+  it("is warm minus cold over the runs plus three, in thermal steps", () => {
+    expect(bandLeanC({ cold: 1, dialed: 2, warm: 4 })).toBeCloseTo(
+      ((4 - 1) / (7 + 3)) * 2.2,
+      10,
+    );
+  });
+
+  it("is negative for a runner who ran cold more often than warm", () => {
+    expect(bandLeanC({ cold: 5, dialed: 1, warm: 1 })).toBeCloseTo(
+      ((1 - 5) / (7 + 3)) * 2.2,
+      10,
+    );
   });
 });
 

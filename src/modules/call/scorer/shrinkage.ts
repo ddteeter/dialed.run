@@ -1,7 +1,7 @@
 import type { VerdictValue } from "../../../lib/contracts";
 import { THERMAL_LEVEL_C, verdictScale } from "../../../lib/contracts";
 import type { TempRange } from "../../../lib/contracts/thermal";
-import { DIALED, type PieceRecord } from "./personal";
+import { DIALED, type BandCount, type PieceRecord } from "./personal";
 
 /**
  * The blend (design 194, "Engine": counting and shrinkage). A piece's
@@ -9,7 +9,8 @@ import { DIALED, type PieceRecord } from "./personal";
  * in three layers, each pulled toward the one before it:
  *
  * 1. the heuristic prior: the piece's estimate range against the hour's
- *    feel, shifted by the runner's thermal offset;
+ *    feel, shifted by the runner's thermal offset and by how their own
+ *    verdicts in this band lean;
  * 2. the cohort: the dialed share of the cohort's runs in the piece's
  *    garment group, in this band and class;
  * 3. the runner's own runs in the piece, in this band and class.
@@ -17,7 +18,7 @@ import { DIALED, type PieceRecord } from "./personal";
  * Each pull is the same shape: `(successes + anchor × strength) /
  * (trials + strength)`, a strength being how many runs of evidence the
  * anchor is worth. Every number below is a first proposal for the replay
- * harness to tune (design sprint-a1, open question 10).
+ * harness to tune (design sprint-a1, Q10).
  */
 
 /**
@@ -58,15 +59,38 @@ The strength of everything borrowed against the runner's own runs.
 export const PERSONAL_PRIOR_STRENGTH = 3;
 
 /**
+What the band's lean is pulled toward zero by, in runs.
+*/
+export const LEAN_PRIOR_STRENGTH = 3;
+
+/**
+What a band leaning all one way is worth, in °C: one thermal step.
+*/
+export const LEAN_STEP_C = THERMAL_LEVEL_C;
+
+/**
  * The feel a runner's body reads the hour as. Positive thermal levels run
  * cold (`thermalScale`), so a level above zero makes the hour colder.
  *
  * Used against estimate ranges only. The runner's own runs already carry
- * how the hour felt to them and are never shifted (design sprint-a1, open
- * question 4).
+ * how the hour felt to them, so this offset never moves the band a run or
+ * a Call is counted in (design sprint-a1, Q4).
  */
 export function effectiveFeelC(feelsLikeC: number, thermalLevel = 0): number {
   return feelsLikeC - thermalLevel * THERMAL_LEVEL_C;
+}
+
+/**
+ * How the runner's own verdicts in the Call's band and class lean, as a
+ * shift in °C to the feel used against estimates (owner, 2026-11-26,
+ * #1103). Positive when they ran warm more often than cold, so the hour
+ * is read as warmer and the Call dresses lighter; pulled toward zero
+ * while the band has few runs.
+ */
+export function bandLeanC(band: BandCount): number {
+  const runs = band.cold + band.dialed + band.warm;
+  const lean = (band.warm - band.cold) / (runs + LEAN_PRIOR_STRENGTH);
+  return lean * LEAN_STEP_C;
 }
 
 /**

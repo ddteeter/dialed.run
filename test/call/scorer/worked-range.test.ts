@@ -62,16 +62,25 @@ describe("the range a piece has worked at (#386)", () => {
     expect(workedRange("zip", history)).toStrictEqual({ lowC: 8, highC: 8 });
   });
 
-  it("leaves out runs whose weather a human typed", () => {
+  it("counts a run whose weather a human typed", () => {
     const history = [
       aRun({ judgedFeelsLikeC: 8, worn: kit }),
       aRun({ judgedFeelsLikeC: 30, source: "manual", worn: kit }),
     ];
 
-    expect(workedRange("zip", history)).toStrictEqual({ lowC: 8, highC: 8 });
+    expect(workedRange("zip", history)).toStrictEqual({ lowC: 8, highC: 30 });
   });
 
-  it("is nothing for a piece with no dialed, unflagged, counted run", () => {
+  it("is the feel of the day, not shifted for the run's effort", () => {
+    const history = [
+      aRun({ judgedFeelsLikeC: 8, effort: "race", worn: kit }),
+      aRun({ judgedFeelsLikeC: 3, effort: "workout", worn: kit }),
+    ];
+
+    expect(workedRange("zip", history)).toStrictEqual({ lowC: 3, highC: 8 });
+  });
+
+  it("is nothing for a piece with no dialed, unflagged run", () => {
     const history = [
       aRun({ verdict: 1, worn: kit }),
       aRun({ worn: [wore("zip", "tops", "too_much")] }),

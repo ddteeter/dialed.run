@@ -8,12 +8,12 @@ import type {
   Scorer,
 } from "../contract";
 import { confidenceOf } from "./confidence";
+import { feelAtEffortC } from "./effort";
 import { evidenceFor } from "./facts";
 import { shouldWearGroup } from "./kit";
 import { cohortCellFor } from "./ladder";
 import {
   bandCount,
-  countedRuns,
   groupRecord,
   pieceCounts,
   pieceRecord,
@@ -23,6 +23,7 @@ import {
   type PieceCount,
 } from "./personal";
 import {
+  bandLeanC,
   cohortBase,
   effectiveFeelC,
   heuristicPrior,
@@ -33,25 +34,28 @@ import { ENGINE_VERSION } from "./version";
 
 /**
  * What a forecast makes of the hour: the band and class it falls in, and
- * the feel this runner reads it as.
+ * its feel at the Call's effort.
  *
- * The band is the forecast's own feel, unshifted: it is the key the
- * cohort's cells and the runner's past verdicts were counted under.
+ * The band is of the feel at effort and nothing else: it is the key the
+ * cohort's cells and the runner's past verdicts are counted under. The
+ * runner's thermal offset and their lean in the band shift the feel only
+ * where it is held against an estimate (`estimateFeelC`).
  */
 interface Reading {
   scope: CallScope;
-  feelC: number;
+  hourFeelC: number;
 }
 
 function readingOf(request: CallRequest): Reading | undefined {
-  const { conditions, runner } = request;
+  const { conditions, effort } = request;
   if (conditions.kind !== "forecast") return undefined;
+  const hourFeelC = feelAtEffortC(conditions.feelsLikeC, effort);
   return {
     scope: {
-      bandFloorC: bandFloorC(conditions.feelsLikeC),
+      bandFloorC: bandFloorC(hourFeelC),
       precip: precipClassOf(conditions.precipMm),
     },
-    feelC: effectiveFeelC(conditions.feelsLikeC, runner.thermalLevel),
+    hourFeelC,
   };
 }
 
@@ -62,20 +66,33 @@ interface Counted {
   request: CallRequest;
   reading: Reading | undefined;
   /**
-  The counted runs the Call is answered from (`scopedRuns`).
+  The runs the Call is answered from (`scopedRuns`).
   */
   runs: readonly PersonalRun[];
   band: BandCount;
   worn: ReadonlyMap<string, readonly PieceCount[]>;
 }
 
+/**
+ * The feel a piece's estimate is held against: the hour at the Call's
+ * effort, as this runner reads it (their thermal offset), shifted by how
+ * their verdicts in this band lean. Absent with no forecast.
+ */
+function estimateFeelC(counted: Counted): number | undefined {
+  const { reading, request, band } = counted;
+  return reading === undefined
+    ? undefined
+    : effectiveFeelC(reading.hourFeelC, request.runner.thermalLevel) +
+        bandLeanC(band);
+}
+
 function estimateAt(
   piece: ClosetPiece,
-  reading: Reading | undefined,
+  feelC: number | undefined,
 ): EstimateAtFeel | undefined {
-  return reading === undefined || piece.estimate === undefined
+  return feelC === undefined || piece.estimate === undefined
     ? undefined
-    : { range: piece.estimate, feelC: reading.feelC };
+    : { range: piece.estimate, feelC };
 }
 
 function scorePiece(piece: ClosetPiece, counted: Counted): ScoredPiece {
@@ -88,7 +105,7 @@ function scorePiece(piece: ClosetPiece, counted: Counted): ScoredPiece {
     reading?.scope,
     group,
   );
-  const estimate = estimateAt(piece, reading);
+  const estimate = estimateAt(piece, estimateFeelC(counted));
   const base = cohortBase(heuristicPrior(estimate), cell?.verdicts);
   return {
     pieceId,
@@ -147,9 +164,8 @@ function kitFrom(
  * same request always gets the same result, in whatever order its
  * history and closet arrive: the replay harness runs this exact function.
  *
- * `request.effort` is accepted and not read: no effort offset has been
- * ruled on (design sprint-a1, open question 5). A runner below the
- * verdict threshold is still ranked, so the teaser can show a line.
+ * A runner below the verdict threshold is still ranked, so the teaser can
+ * show a line.
  */
 export const score: Scorer = (request) => {
   const reading = readingOf(request);
@@ -172,7 +188,6 @@ export const score: Scorer = (request) => {
     precip: reading?.scope.precip,
     confidence: confidenceOf({
       verdicts: request.history.length,
-      counted: countedRuns(request.history).length,
       runsInBand,
     }),
     personalRunsInBand: runsInBand ?? 0,
