@@ -25,8 +25,8 @@ importing only `call/contract` and `lib/contracts`:
   that renders. No fact → `NO VERDICTS YET`. A cohort share under 5 band
   runners renders nothing (pinned to `feed`'s `MIN_RUNNERS` in a test).
 - `paragraph.ts`: ≤2 sentences, only from facts in the result's own band:
-  "too cold N times" or "too warm N times" from `personal-band` (the
-  side with more runs, cold on a tie), "skip the X" from the strongest
+  "too cold N times" from `personal-band`, or "too warm N times" when the
+  kit is lighter than the warm runs' (`warm-runs.ts`, Q10), "skip the X" from the strongest
   `too_much` flag on a ranked piece the kit left out.
 - `header.ts`: one header per `Confidence`; the kit verb (`WEAR THIS` /
   `PROBABLY WEAR`); below threshold, `CALL_VERDICT_THRESHOLD` − verdicts.
@@ -67,17 +67,36 @@ All vitest `worker`, under `test/call/evidence/`:
 
 Answered by the owner on 2026-11-26 (QUESTIONS.md, issue #1104):
 
-1. Guessed wording: approved as v1, still marked `guess` in `words-data.ts`.
-2. "Why not" answers and their order stand; 3. one in every group.
-3. `CLIMATE COHORT` / `ALL RUNNERS` with the band stand.
-4. The followed-runners block comes from `feed` later; 6. #401's receipt
-   sentence is dropped; 7. no kicker words in v1; 9. strength order stands.
-5. `verdictsSoFar` moves onto `CallResult` in the scorer's PR (the contract
-   stays byte-identical here); `b2View`'s option switches to it at rebase.
-6. The paragraph has a warm mirror, "You've been too warm {times} in this
-   band." (a guess). When both apply, the side with more runs shows, and
-   cold on a tie, the board's own sentence. The paragraph holds no
-   measure, so its said form is its shown form.
+- Q1: guessed wording approved as v1, still marked `guess` in `words-data.ts`.
+- Q2, Q3: the "why not" answers, their order, and one in every group stand.
+- Q4: `CLIMATE COHORT` / `ALL RUNNERS` with the band stand.
+- Q5: the followed-runners block comes from `feed` later. Q6: #401's
+  receipt sentence is dropped. Q7: no kicker words in v1. Q9: the strength
+  order stands.
+- Q8: `verdictsSoFar` moves onto `CallResult` in the scorer's PR (the
+  contract stays byte-identical here); `b2View`'s option switches to it at
+  rebase.
+- Q10: the warm line, "You've been too warm {times} in this band." (a
+  guess), explains a change the Call made, so it shows only when warm runs
+  outnumber cold ones in the band and the kit is lighter than what was worn
+  on them: a group worn then is absent now, or a piece then is replaced in
+  its group by one whose estimate starts at a warmer temperature (its
+  `lowC` is higher; an unknown low end is not lighter). Too warm in a kit
+  with nothing to shed says nothing of warmth. Otherwise the cold line
+  shows as built, when any run was cold; a tie stays cold. The paragraph
+  holds no measure, so its said form is its shown form.
+
+**Proposed contract addition** (with `verdictsSoFar`, in the scorer's PR):
+what was worn on the band's too-warm runs, which `personal-band` does not
+carry. Until it lands it is `WarmRunsWorn` in `evidence/warm-runs.ts`, an
+optional `b2View` input nothing passes, so the warm line never shows:
+
+```ts
+interface WarmRunsWorn {
+  bandFloorC: number;
+  worn: readonly { pieceId: string; group: UiGroup; estimate?: TempRange }[];
+}
+```
 
 The scorer no longer returns `best-guess` (#1103); its header stays while
 the contract lists the level.

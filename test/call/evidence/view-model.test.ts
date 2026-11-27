@@ -77,6 +77,33 @@ describe("b2View", () => {
     });
   });
 
+  it("hands the warm runs' kit to the paragraph", () => {
+    const tee = piece("tee", "tops", [
+      { kind: "personal-band", bandFloorC: 5, cold: 0, dialed: 4, warm: 2 },
+      { kind: "estimate", pieceId: "tee", range: { lowC: 15 } },
+    ]);
+    const view = b2View(result({ kit: [tee], ranking: [tee] }), {
+      unit: "c",
+      names: runner,
+      verdictsSoFar: 31,
+      warmRuns: {
+        bandFloorC: 5,
+        worn: [
+          { pieceId: "ls", group: "tops" },
+          { pieceId: "vest", group: "outer" },
+        ],
+      },
+    });
+    expect(view.paragraph).toBe("You've been too warm twice in this band.");
+    expect(
+      b2View(result({ kit: [tee], ranking: [tee] }), {
+        unit: "c",
+        names: runner,
+        verdictsSoFar: 31,
+      }).paragraph,
+    ).toBeUndefined();
+  });
+
   it("offers no why-not for a piece with no answer", () => {
     const call = result({
       kit: [zip],
