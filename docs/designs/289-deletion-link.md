@@ -1,7 +1,9 @@
 # Design: 289 the deletion link for closed accounts
 
-> #1179, Design Round 64 items 372–374 (`docs/design-deltas/round-64.md`,
-> board `design/Round 64 Rulings.dc.html`). The words below are the
+> #1179, Design Round 64 items 372–374
+> ([`docs/design-deltas/round-64.md`](../design-deltas/round-64.md), board
+> [`design/Round 64 Rulings.dc.html`](../../design/Round%2064%20Rulings.dc.html),
+> both on `main` since #1181). The words below are the
 > owner-approved ones (2026-11-27), quoted as written; `{…}` marks what the
 > build computes (a date, a handle, a masked address). Over the template's
 > page: the schema and the file list are the deliverable. The coordinator
