@@ -400,10 +400,21 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
     // migrations from `migrations_dir`; the test pool applies the same
     // directory (`vitest.config.ts`), so the two cannot disagree on it.
     const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
-    expect(opsBinding(config)).toStrictEqual({
+    // The id is the account's, so only its shape is pinned: the owner's PR
+    // that swaps the placeholders for real ids (deployment.md §1) touches
+    // wrangler.jsonc alone.
+    const ops = opsBinding(config);
+    const id =
+      typeof ops === "object" && ops !== null && "database_id" in ops
+        ? ops.database_id
+        : undefined;
+    expect(String(id)).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
+    );
+    expect(ops).toStrictEqual({
       binding: "DIALED_OPS",
       database_name: "dialed-ops",
-      database_id: "00000000-0000-0000-0000-000000000003",
+      database_id: id,
       migrations_dir: "src/db/migrations/ops",
     });
     expect(opsBinding(testConfig)).toStrictEqual({

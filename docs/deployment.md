@@ -48,8 +48,9 @@ to stop replicas serving.
 
 All three `database_id` values in `wrangler.jsonc` are placeholder zeros
 (`00000000-…-0001`/`-0002`/`-0003`). Replace them with the real ids from
-the output.
-A deploy against the placeholders fails at bind time.
+the output, in a PR that changes `wrangler.jsonc` and nothing else:
+`test/bindings-conformance.test.ts` holds no id by its value (`dialed-ops`'
+only by its UUID shape), so the ids need no test change. A deploy against the placeholders fails at bind time.
 
 Then apply migrations, core first. **`--remote` is not optional**: Wrangler 4
 applies D1 migrations to the _local_ database unless told otherwise
@@ -175,9 +176,19 @@ in it. Before the deploy that binds `PUBLIC_PHOTOS`:
    public, and the deletion paths remove them; the `:15` hourly firing
    sweeps what a deletion missed, and any object no `public_photos` row
    names, and says so in the digest.
-6. No Cache Rule is needed: each object is written with its own
-   `Cache-Control`, short enough that a retracted photo leaves the edge
-   within the time the privacy policy promises.
+6. Make every photo cacheable: Caching → Cache Rules → **Create rule**
+   on hostname `photos.dialed.run`, cache eligibility **Eligible for
+   cache**, Edge TTL and Browser TTL both **Use cache-control header if
+   present**. Cloudflare caches by file extension only ("Cloudflare only
+   caches based on file extension and not by MIME type",
+   [default cache behavior](https://developers.cloudflare.com/cache/concepts/default-cache-behavior/)),
+   and a photo's key has none, so without the rule no photo is cached and
+   the scanning tool sees none of them. The TTLs come from each object's
+   own `Cache-Control` (`PUBLIC_PHOTO_CACHE_CONTROL`), short enough that a
+   retracted photo leaves the edge within the time the privacy policy
+   promises; never set a TTL in the rule that overrides it. Check it after
+   the first public kit: deployment plan §11, "Platform checks at the first
+   deploy".
 
 ### The evidence bucket (to create; no binding)
 
@@ -287,6 +298,7 @@ its first firing.
 | `STRAVA_CLIENT_SECRET`        | for Strava | As above                                                                                                                                                                                                                                                                                          |
 | `STRAVA_WEBHOOK_VERIFY_TOKEN` | for Strava | The subscription handshake rejects; pick any long random string and reuse it in step 6                                                                                                                                                                                                            |
 | `STRAVA_WEBHOOK_PATH_SECRET`  | for Strava | The webhook answers 404 to everything, Strava's handshake included; pick a different long random string (URL-safe: `openssl rand -hex 32`) and use it as the callback URL's last segment in step 6                                                                                                |
+| `STRAVA_SUBSCRIPTION_ID`      | for Strava | Every webhook event is dropped (fail closed). It exists only once step 6's subscription call returns it, so it is set then, not now (D-208)                                                                                                                                                       |
 | `GARMIN_API_KEY`              | optional   | "Import from Garmin" is not drawn (plan 160). The owner's Garmin Connect Personal API key, which is personal to them; it expires on a date they pick when they make it, so put a renewal in the calendar a week before                                                                            |
 | `GARMIN_OWNER_USER_ID`        | optional   | As above. The owner's dialed.run user id: the only account the import is for, because the key may be used only for its holder's own data                                                                                                                                                          |
 | `SENTRY_DSN`                  | strongly   | Errors go nowhere. This is the only place terminal failures surface for a solo operator                                                                                                                                                                                                           |
@@ -365,6 +377,12 @@ echoes it only when mode and token match, so the `verify_token` here must be
 byte-identical to the secret in step 5. The callback URL's last segment must
 be `STRAVA_WEBHOOK_PATH_SECRET` from step 5, byte for byte: every other path
 answers 404, the handshake included.
+
+Strava answers the call with the subscription, `{"id": <number>}`. Set it
+as a secret, `wrangler secret put STRAVA_SUBSCRIPTION_ID`, with that
+number (D-208): until then the webhook drops every event, ours included.
+It is a secret rather than a var because it is known only now, after the
+deploy, and a var lives in the committed `wrangler.jsonc`.
 
 Strava allows **one subscription per application**. A staging environment
 needs its own Strava app, not a second subscription.
@@ -499,6 +517,10 @@ needs its own Strava app, not a second subscription.
     `vitals-refused` line; the next day's digest should carry no `speed`
     line about configuration, and `perf_daily` in `dialed-ops` should have
     yesterday's rows.
+- **Which queries cost the most** (design 182):
+  `npx wrangler d1 insights dialed-core --sort-by reads --time-period 7d --limit 10`
+  ranks the week's queries by rows read on real data (`--sort-type avg`
+  for the dearest per call; `dialed-weather` and `dialed-ops` alike).
 - **Asking the speed data a question by hand.** The SQL API takes the
   query as the body (`curl -H "Authorization: Bearer $TOKEN" --data
 "<sql>" https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/analytics_engine/sql`).

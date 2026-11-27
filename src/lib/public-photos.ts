@@ -18,8 +18,11 @@ export const PUBLIC_PHOTOS_ORIGIN = "https://photos.dialed.run";
 /**
  * Each copy's own `Cache-Control`: at most a minute at the edge or in a
  * browser once it is deleted, the minute the privacy policy promises
- * ("up to a minute after they stop being public"). The bucket's domain
- * has no Cache Rule; this header is the whole of it (deployment.md §2).
+ * ("up to a minute after they stop being public"). Cloudflare caches by
+ * file extension and a key has none, so the bucket's domain has one Cache
+ * Rule: everything on it is eligible for cache, for as long as this header
+ * says (deployment.md §2). The rule makes a copy cacheable, and with it
+ * scannable; this header bounds how long it stays.
  */
 export const PUBLIC_PHOTO_CACHE_CONTROL = "public, max-age=60";
 
