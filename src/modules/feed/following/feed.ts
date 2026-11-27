@@ -37,7 +37,7 @@ import {
 } from "../conditions";
 import { type EntryRunFields, countedUsefulOf } from "../entries";
 import { followingCount } from "./follows";
-import { captureException } from "../../ops";
+import { captureException } from "../../ops/sentry";
 import {
   isUnderReviewForAuthor,
   publicPhotoStatus,

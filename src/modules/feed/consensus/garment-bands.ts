@@ -24,7 +24,7 @@ import { z } from "zod";
 import { outfitEntries, outfitEntryItems } from "../../../db/schema-core";
 import { ulidSchema } from "../../../lib/ids";
 import { bandFloorC } from "../../../lib/contracts/temperature";
-import { captureException } from "../../ops";
+import { captureException } from "../../ops/sentry";
 import { observationsForEntries } from "../conditions";
 import { judgedFeelsLikeC } from "../judged-conditions";
 

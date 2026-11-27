@@ -26,7 +26,7 @@ import {
   limitAllowed,
   limitClaimOf,
 } from "../../ops/limits";
-import type { TurnstileAttempt, TurnstileVerdict } from "../../ops";
+import type { TurnstileAttempt, TurnstileVerdict } from "../../ops/edge";
 import { turnstileAttempt } from "../../ops/edge";
 import { isClosedAddress } from "./closed-addresses";
 import { confirmRedemption, inviteStanding, redeemInvite } from "./invites";

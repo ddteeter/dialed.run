@@ -38,7 +38,8 @@ import { hasRowWhere } from "../../../lib/sql/keyed-read";
 import { clearedPhoto } from "../../closet";
 import { emailDebt } from "../../email";
 import { notificationRaise } from "../../notifications";
-import { captureException, oweOutbox } from "../../ops";
+import { oweOutbox } from "../../ops/outbox";
+import { captureException } from "../../ops/sentry";
 import {
   garmentPhotoForgotten,
   garmentRemovalNotice,

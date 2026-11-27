@@ -28,7 +28,7 @@ import { distanceNumber } from "../../../lib/contracts/measures";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { lookUpHandle } from "../../account";
 import { publicRotation } from "../../closet";
-import { firstPublishedPhotos, publicPageHeaders } from "../../ops";
+import { firstPublishedPhotos, publicPageHeaders } from "../../ops/public-web";
 import { worldVisibleEntry } from "../../safety";
 import { runnerInStanding } from "../../safety/rules";
 

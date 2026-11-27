@@ -17,7 +17,7 @@ import * as authSchema from "../../db/schema-auth";
 import { newUlid } from "../../lib/ids";
 import { changeLinkWithdrawal, type AuthMail } from "../account";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "../../lib/contracts";
-import { outboxInsertWhere, oweOutbox } from "../ops";
+import { outboxInsertWhere, oweOutbox } from "../ops/outbox";
 import {
   admitSignUp,
   claimInvite,

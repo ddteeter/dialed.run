@@ -51,14 +51,14 @@ import {
 } from "../../../lib/cache-tags";
 import { columnWhere } from "../../../lib/sql/keyed-read";
 import {
-  captureException,
+  type OutboxDebtOf,
   outboxInsert,
   oweOutbox,
-  purgePublicPages,
   settleOutbox,
   storageHandlers,
-  type OutboxDebtOf,
-} from "../../ops";
+} from "../../ops/outbox";
+import { purgePublicPages } from "../../ops/public-web";
+import { captureException } from "../../ops/sentry";
 import { owedEmailHandlers } from "../../ops/owed-email";
 import {
   screeningDeletes,

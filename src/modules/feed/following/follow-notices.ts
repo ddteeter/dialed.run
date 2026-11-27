@@ -18,7 +18,7 @@ import { primaryCoreDb } from "../../../env";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { notificationInsert } from "../../notifications";
-import { captureException } from "../../ops";
+import { captureException } from "../../ops/sentry";
 
 /**
  * How long after a ring a follower stays quiet on the same runner's bell.

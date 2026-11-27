@@ -94,6 +94,12 @@ src/
   `src/server.ts` because a barrel cannot export it. A new top-level
   module is for code that belongs to no area: ask the owner. A pin is
   never raised to pass the test.
+- **Import the narrowest door** (design 261, ruling 2). From another
+  module, take a name from the door of the sub-module it lives on
+  (`../ops/outbox`, `../safety/takedowns`), not from the parent's
+  `index.ts`. A parent door keeps only the names of files outside its
+  sub-modules, so a new import through it of a sub-module's name does not
+  compile.
 - **The modules have a direction** (D-207): no module reaches itself
   through what it imports, components and type imports included. The
   module ratchet counts the fewest imports to cut, and the count only

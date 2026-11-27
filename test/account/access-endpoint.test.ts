@@ -6,7 +6,10 @@ import { env } from "../../src/env";
 import { ACCESS_NOTE_MAX } from "../../src/lib/contracts/access";
 import { receiveAccessRequest } from "../../src/modules/account";
 import type { AccessEndpointDeps } from "../../src/modules/account/access/access-endpoint";
-import type { TurnstileAttempt, TurnstileVerdict } from "../../src/modules/ops";
+import type {
+  TurnstileAttempt,
+  TurnstileVerdict,
+} from "../../src/modules/ops/edge";
 import { fakeMail } from "../email/helpers";
 
 /**

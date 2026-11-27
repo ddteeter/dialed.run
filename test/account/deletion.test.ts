@@ -23,7 +23,8 @@ import {
   requestAccountDeletion,
   type DeletionEffects,
 } from "../../src/modules/account/data/deletion";
-import { captureException, purgePublicPagesFor } from "../../src/modules/ops";
+import { purgePublicPagesFor } from "../../src/modules/ops/public-web";
+import { captureException } from "../../src/modules/ops/sentry";
 import { settleOwedEmail } from "../../src/modules/ops/owed-email";
 import { purgeSpy } from "../purge-spy";
 import { core, fakeMail, owedTo, seedUser } from "../email/helpers";

@@ -33,12 +33,12 @@ import { doesConditionHold } from "../../lib/sql/condition";
 import { claimLimit } from "../ops/limits";
 import { getOwnedItem } from "./service";
 import {
-  captureException,
-  oweOutbox,
   outboxInsert,
+  oweOutbox,
   settleOutbox,
   storageHandlers,
-} from "../ops";
+} from "../ops/outbox";
+import { captureException } from "../ops/sentry";
 import {
   classifierFromEnv,
   enqueueForReview,

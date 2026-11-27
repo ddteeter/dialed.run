@@ -14,7 +14,8 @@ import { getRequest } from "@tanstack/react-start/server";
 
 import { deploymentPosture, requireUserId, verifiedUserId } from "../auth";
 
-import { oweInCore, oweInCoreWhere, verifyTurnstileToken } from "../ops";
+import { verifyTurnstileToken } from "../ops/edge";
+import { oweInCore, oweInCoreWhere } from "../ops/outbox";
 import { turnstileAttempt } from "../ops/edge";
 import { requireAdmin } from "./rules/admin";
 import {
@@ -32,14 +33,9 @@ import {
 
 import { coreDb, env, primaryCoreDb } from "../../env";
 import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
-import {
-  captureException,
-  outboxInsert,
-  outboxInsertWhere,
-  oweOutbox,
-  purgePublicPages,
-  purgePublicPagesFor,
-} from "../ops";
+import { outboxInsert, outboxInsertWhere, oweOutbox } from "../ops/outbox";
+import { purgePublicPages, purgePublicPagesFor } from "../ops/public-web";
+import { captureException } from "../ops/sentry";
 import { settleOwedEmail } from "../ops/owed-email";
 
 import { keepAccount } from "./runners/account-flags";

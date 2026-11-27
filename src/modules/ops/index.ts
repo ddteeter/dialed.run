@@ -1,29 +1,8 @@
-export {
-  oweInCore,
-  oweInCoreWhere,
-  oweOutbox,
-  outboxInsert,
-  outboxInsertWhere,
-  settleOutbox,
-  storageHandlers,
-  type OutboxDebt,
-  type OutboxDebtOf,
-} from "./outbox";
-export {
-  firstPublishedPhotos,
-  kitCardResponse,
-  publicPageHeaders,
-  publicPageTags,
-  publishedPhotoUrls,
-  purgePublicPages,
-  purgePublicPagesFor,
-  syncPublicPhotosLater,
-  type EntryCardData,
-} from "./public-web";
-export { captureException, captureRequestException } from "./sentry";
-export {
-  turnstileSiteKey,
-  verifyTurnstileToken,
-  type TurnstileAttempt,
-  type TurnstileVerdict,
-} from "./edge";
+/**
+ * `ops` has no names of its own on this door (design 261, C7): every one
+ * lives on a sub-module, and other modules import the narrowest door the
+ * name is on (`ops/outbox`, `ops/sentry`, `ops/edge`, `ops/public-web`,
+ * `ops/limits`, `ops/gave-up`, …). Route files reach the Desk through
+ * `./functions` and `./client`.
+ */
+export {};

@@ -26,7 +26,8 @@ import { ulidSeconds } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { notificationRaise } from "../../notifications";
 import { clearedPhoto } from "../../closet";
-import { captureException, oweOutbox } from "../../ops";
+import { oweOutbox } from "../../ops/outbox";
+import { captureException } from "../../ops/sentry";
 import {
   garmentPhotoForgotten,
   isStuck,

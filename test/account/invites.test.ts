@@ -41,7 +41,7 @@ import {
   revokeInviteCode,
 } from "../../src/modules/account/access/invites";
 import type { InviteAnswer } from "../../src/modules/account/access/invites";
-import type { TurnstileAttempt } from "../../src/modules/ops";
+import type { TurnstileAttempt } from "../../src/modules/ops/edge";
 import { fakeMail, ORIGIN, owedTo } from "../email/helpers";
 
 /**

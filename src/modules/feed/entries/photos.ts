@@ -39,7 +39,7 @@ import { GARMENT_PHOTO_ROOT } from "../../../lib/garment-photo-key";
 import { requireOwned } from "../../../lib/sql/owned";
 import type { TaggedScope } from "../../../lib/cache-tags";
 import { claimLimit } from "../../ops/limits";
-import { syncPublicPhotosLater } from "../../ops";
+import { syncPublicPhotosLater } from "../../ops/public-web";
 import { filePartFrom } from "../../../lib/file-part";
 import type { FilePartProblem } from "../../../lib/file-part";
 import {

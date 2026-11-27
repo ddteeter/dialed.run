@@ -59,7 +59,9 @@ import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { emailDebt } from "../../email";
 import { notificationInsert } from "../../notifications";
-import { captureException, oweOutbox, purgePublicPages } from "../../ops";
+import { oweOutbox } from "../../ops/outbox";
+import { purgePublicPages } from "../../ops/public-web";
+import { captureException } from "../../ops/sentry";
 import {
   moderationActionInsert,
   claimPurgeAfterCase,

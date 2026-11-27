@@ -86,7 +86,8 @@ import {
 import { unitsFor } from "./conditions";
 import { publicKitForPage, publicProfileForPage } from "./public-web";
 import { nowSeconds } from "../../lib/now";
-import { captureException, purgePublicPagesFor } from "../ops";
+import { purgePublicPagesFor } from "../ops/public-web";
+import { captureException } from "../ops/sentry";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))

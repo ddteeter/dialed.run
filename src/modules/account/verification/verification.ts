@@ -35,7 +35,7 @@ import {
   claimRunnerChange,
   claimLimit,
 } from "../../ops/limits";
-import { outboxInsert, oweOutbox, type OutboxDebtOf } from "../../ops";
+import { type OutboxDebtOf, outboxInsert, oweOutbox } from "../../ops/outbox";
 import { settleOwedEmail } from "../../ops/owed-email";
 import {
   didClaimEmailLink,

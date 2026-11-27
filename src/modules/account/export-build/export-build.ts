@@ -28,11 +28,11 @@ import { nowSeconds } from "../../../lib/now";
 import { listedPages } from "../../../lib/sql/r2-pages";
 import { emailDebt } from "../../email";
 import {
-  captureException,
+  type OutboxDebtOf,
   outboxInsertWhere,
   oweOutbox,
-  type OutboxDebtOf,
-} from "../../ops";
+} from "../../ops/outbox";
+import { captureException } from "../../ops/sentry";
 import { settleOwedEmail } from "../../ops/owed-email";
 import { exportKeyFor, failExport, IN_FLIGHT } from "../data";
 import { exportData } from "./export";

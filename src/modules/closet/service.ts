@@ -51,12 +51,12 @@ import { estimateTempRange } from "../../lib/contracts/thermal";
 import { isUnconfirmed } from "../account";
 import { enqueueEnrichment } from "../enrichment";
 import {
-  captureException,
-  oweOutbox,
   outboxInsert,
+  oweOutbox,
   settleOutbox,
   storageHandlers,
-} from "../ops";
+} from "../ops/outbox";
+import { captureException } from "../ops/sentry";
 import {
   getProductAttributeDefaultsBulk,
   getProductForDetail,

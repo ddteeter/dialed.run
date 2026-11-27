@@ -28,7 +28,7 @@ import {
 import { nowSeconds } from "../../../lib/now";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { emailDebt } from "../../email";
-import { outboxInsertWhere, oweOutbox } from "../../ops";
+import { outboxInsertWhere, oweOutbox } from "../../ops/outbox";
 import { releaseHoldWrites, requestSubjectOf } from "../../safety";
 import { requestDecidedWrite, stillPendingHold } from "../../safety/takedowns";
 import { moderateContent } from "./moderation";

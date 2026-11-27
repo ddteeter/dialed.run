@@ -45,7 +45,7 @@ import {
 } from "../../../lib/contracts/profanity";
 import { followRowsNaming, followRowsOpeningWith } from "../../notifications";
 import { claimLimit } from "../../ops/limits";
-import { purgePublicPages } from "../../ops";
+import { purgePublicPages } from "../../ops/public-web";
 import { isPlaceholderHandle } from "../../safety";
 import type { ScreenHandle } from "./handle-screen";
 import { currentTermsVersion, termsStanding } from "../terms";

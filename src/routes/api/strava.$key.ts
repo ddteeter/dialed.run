@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { env } from "../../env";
-import { captureException } from "../../modules/ops";
+import { captureException } from "../../modules/ops/sentry";
 import {
   stravaDeliveryResponse,
   stravaHandshakeResponse,

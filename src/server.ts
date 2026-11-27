@@ -10,7 +10,10 @@ import {
 } from "@tanstack/react-start/server";
 
 import { handleQueueBatch, handleScheduled } from "./modules/dispatch";
-import { captureException, captureRequestException } from "./modules/ops";
+import {
+  captureException,
+  captureRequestException,
+} from "./modules/ops/sentry";
 import {
   boundedRequest,
   isServerFnWithoutId,

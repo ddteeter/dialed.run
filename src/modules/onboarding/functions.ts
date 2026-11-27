@@ -13,7 +13,8 @@ import { nowSeconds } from "../../lib/now";
 import { noInput } from "../../lib/no-input";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import { nameItem } from "../closet";
-import { captureException, purgePublicPagesFor } from "../ops";
+import { purgePublicPagesFor } from "../ops/public-web";
+import { captureException } from "../ops/sentry";
 import { climateNormalsFor, resolvePlaceFor, timeZoneAtFor } from "../weather";
 import { countsInTotals, setCountInTotals } from "./aggregate-prefs";
 import {

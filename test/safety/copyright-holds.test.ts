@@ -36,7 +36,7 @@ import {
   retractEntry,
 } from "../../src/modules/feed/entries/retract";
 import { ControlRefusal } from "../../src/lib/control-refusal";
-import { oweInCore } from "../../src/modules/ops";
+import { oweInCore } from "../../src/modules/ops/outbox";
 import { resolveReview } from "../../src/modules/safety";
 import { releaseReview } from "../../src/modules/safety/review/review";
 import { fileTakedownRequest } from "../../src/modules/safety/takedowns/takedown-requests";
