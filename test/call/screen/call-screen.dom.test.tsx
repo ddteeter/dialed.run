@@ -216,12 +216,26 @@ describe("B2 with nothing in the slots", () => {
     expect(drawnText(partOrThrow("heading"))).toBe(
       "PROBABLY WEARPROBABLE · 4 RUNS IN BAND",
     );
+    // No empty line stands where the hour line would: the verb, then the chip.
+    expect(
+      [...partOrThrow("heading").children].map((child) => child.tagName),
+    ).toStrictEqual(["H1", "SPAN"]);
     expect(part("same-conditions")).toBeNull();
     expect(
       [...partOrThrow("call").querySelectorAll<HTMLElement>(":scope > *")].map(
         (child) => child.dataset.part,
       ),
     ).toStrictEqual(["heading", "kit", "paragraph", "why-nots"]);
+  });
+
+  it("draws the no-forecast card without an hour line, not with an empty one", () => {
+    const { view, facts } = drawnFrom(noForecastCall());
+    render(<CallScreen view={view} facts={facts} />);
+
+    expect(partOrThrow("no-forecast").textContent).toBe(
+      "No forecast for this hourThis Call comes from all your runs, not this hour's weather.",
+    );
+    expect(partOrThrow("no-forecast").children).toHaveLength(2);
   });
 });
 
@@ -377,15 +391,26 @@ describe("C0a, a Call with no forecast", () => {
 
 describe("C0b, below the verdict threshold", () => {
   it("draws the count alone, whatever kit the view lists", () => {
-    const { view, container } = draw(belowThresholdCall());
+    // The count's header over a view that still holds a kit and why-nots,
+    // so this holds whether or not the engine lists one below the threshold.
+    const { header } = drawnFrom(belowThresholdCall()).view;
+    const above = drawnFrom(probableCall());
+    const { container } = render(
+      <CallScreen
+        view={{ ...above.view, header }}
+        facts={above.facts}
+        slots={{ when: WHEN, sameConditions: <aside>the feed</aside> }}
+      />,
+    );
 
-    expect(view.pieces).not.toHaveLength(0);
+    expect(above.view.pieces).not.toHaveLength(0);
+    expect(above.facts.whyNots).not.toHaveLength(0);
     expect(part("count")).not.toBeNull();
     expect(container.children).toHaveLength(1);
     expect(part("call")).toBeNull();
     expect(part("kit")).toBeNull();
     expect(part("why-nots")).toBeNull();
-    expect(part("same-conditions")).toBeNull();
+    expect(screen.queryByText("the feed")).toBeNull();
     expect(screen.queryByText(WHEN)).toBeNull();
   });
 

@@ -186,8 +186,9 @@ export function noForecastCall(): CallResult {
 }
 
 /**
- * C0b: eight verdicts, seven short of a Call. The scorer still fills a kit
- * below the threshold today (QUESTIONS.md, A4 Q2), so this one has one.
+ * C0b: eight verdicts, seven short of a Call. Only its count header is
+ * read: whether the view lists a kit below the threshold is the engine's
+ * (QUESTIONS.md, A4 Q2), and the screen draws none either way.
  */
 export function belowThresholdCall(verdictsSoFar = 8): CallResult {
   return probableCall({ confidence: "below-threshold", verdictsSoFar });
