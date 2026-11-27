@@ -69,7 +69,10 @@ causes.
 
 If your kit or photo was removed because of a copyright notice and you
 believe that was a mistake, or that the material was misidentified, you can
-send a counter-notice to the same agent. It must contain, in writing:
+send a counter-notice to the same agent, at copyright@dialed.run. The email
+that told you about the removal does not describe counter-notices, and a
+reply to it reaches desk@dialed.run rather than the agent. It must contain,
+in writing:
 
 1. **Your signature**, physical or electronic.
 2. **What was removed**, and where it appeared before it was removed (a

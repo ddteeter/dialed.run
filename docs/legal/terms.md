@@ -263,8 +263,8 @@ owing you anything.
   kit or photo, we tell you in the app and by email what was removed and
   which rule it broke, and the email says whether our automatic screening
   flagged it before a person decided. When we close your account, we email
-  you the reason and the rule it broke, and the app shows it when you try
-  to sign in. The one exception is suspected child sexual abuse material,
+  you the reason and the rule it broke, and the app tells you the account
+  is closed when you try to sign in. The one exception is suspected child sexual abuse material,
   below.
 - **We tell you what we decided about your report.** When a person decides
   on something you reported, we tell you in the app whether we removed it

@@ -89,8 +89,8 @@ Questions about this policy or your data: hello@dialed.run.
   password's SHA-1 hash leave our servers; the password and the full hash
   never do. If that check cannot answer, your password is accepted.
 - **If you sign in with Google:** Google gives us your name, email address,
-  profile picture link and Google account id. We keep the email address,
-  the picture link and the account id; we do not keep your name. We ask
+  profile picture link and Google account id. We keep the email address
+  and the account id; we do not keep your name or the picture link. We ask
   for the `openid`, `email` and `profile` permissions only. We do not keep
   the tokens Google issues at sign-in.
 - **Sessions.** When you sign in we record a session token, when it expires
@@ -99,7 +99,10 @@ Questions about this policy or your data: hello@dialed.run.
   except as kept with
   [suspected child sexual abuse material](#moderation).
 - **Counts that stop abuse.** We count sign-in and sign-up attempts per IP
-  address; those counts are deleted within a day. We count how many
+  address; those counts are deleted within a day. We also count email
+  sign-in attempts per email address typed, whether or not an account
+  uses it; a sign-in that works clears the count, and it is deleted
+  within two hours. We count how many
   confirmation links, password resets and email changes each address asked
   for in the last hour, how many removal-request receipts each address was
   sent, and how many wrong passwords you typed when changing your email or
@@ -134,13 +137,15 @@ Questions about this policy or your data: hello@dialed.run.
   service. Nothing else about you goes with it.
 - **Usernames you have used.** When you change your username, or delete
   your account, the old one is kept for good so nobody else can take it.
-- **Coordinates for that place**, if you let your browser share your
-  location, rounded to two decimal places (about a kilometre) before they
+- **Coordinates for that place**, from your browser if you let it share
+  your location, or from the place we find for a city you type, rounded
+  to two decimal places (about a kilometre) before they
   are stored, and the time zone that place is in, which we use to time
   your emails and to tell when your day starts. The coordinates are never
   shown to other runners or the public (see [Our access to your content](#our-access-to-your-content)). They stand in
   for a run's location when a manual run has none.
-- **How warm or cold you run** (your thermal level), your units, who sees
+- **How warm or cold you run** (your thermal level), your units, your
+  theme (light, dark or your device's), who sees
   your new kits by default, whether your profile and your closet are
   public, and which emails you have switched off.
   Your thermal level is never shown to other runners.
@@ -158,13 +163,20 @@ visibility), a product link if you paste one, and a photo if you take one.
 - **Manual runs:** start time, duration, distance, title, effort, and whether
   it was indoors.
 - **Imported files (GPX, FIT, TCX, up to 25 MB):** we store the file, read
-  the start time, duration, distance and **the first GPS point** from it, and
-  save those to the run, with the point rounded to about a kilometre. The
+  the start time, duration, distance, moving time, elevation gain, the
+  effort rating your watch asked you for if it did, and **the first GPS
+  point** from it, and save those to the run, with the point rounded to
+  about a kilometre. The
   run keeps only that rounded start point, not the route. **Once the file
   has been read, we delete it**, usually within a day; we do not keep your
   route. If we could not read a file, there is no run, so we keep the file
   for 30 days after the import failed, in case you ask about it, and then
   delete it.
+- **Import from Garmin** is offered only to the account of the person who
+  runs [dialed.run], with their own Garmin key; no other runner can use
+  it. A run imported this way is read like a file, its import keeps the
+  Garmin activity's id so it is not imported twice, and its kits show a
+  Garmin credit.
 - **Conditions:** the weather for each hour of the run, looked up from its
   start point and time (see [Weather and location](#weather-and-location)).
   If the weather cannot be found, you can set a temperature yourself; that
@@ -173,7 +185,7 @@ visibility), a product link if you paste one, and a photo if you take one.
 ### Your kits
 
 For each run you log a kit on: the garments you wore, your verdict (way cold
-to way warm), an optional caption, tags, up to four photos, and optional
+to way warm), tags, up to four photos, and optional
 flags on individual garments. Flags on garments are never shown to other
 runners.
 
@@ -182,13 +194,19 @@ runners.
 - **Follows**, and **"useful"** marks you give kits.
 - **Reports** you file: what you reported, the reason, and any note you add.
 - **Blocks** you set.
+- **Corrections** you send to a shared product's details: the detail, the
+  value you suggest, the note you add if you add one, and the garment you
+  sent it from. The people who run [dialed.run] see each one, with your
+  username and note, to decide it, and may give you a reason if they
+  decline it.
 - **Notifications** we create for you, such as a reminder to log a kit.
 
 ## Weather and location
 
 - **Run weather.** To find the conditions for a run, our servers send the
-  run's start point, rounded to about a kilometre, and its date to
-  **Visual Crossing**, our weather provider. Your name, email and account
+  run's start point, rounded to about a kilometre, and its start time,
+  and the time of each later hour of the run, to **Visual Crossing**, our
+  weather provider. Your name, email and account
   id are not sent. The answer is kept in a shared weather cache keyed by
   that rounded location and the hour; it is not linked to you or to your
   run. A temperature you set yourself for a run is kept with that run and
@@ -196,6 +214,10 @@ runners.
 - **Setup.** To suggest a starter closet, the place you typed or your
   rounded coordinates are sent to Visual Crossing to look up typical
   winter and summer temperatures there.
+- **Finding a city.** When you type a city, in setup or in "Your
+  conditions" on the feed, and press Find, what you typed is sent to
+  Visual Crossing to find the place. Nothing is saved unless you choose to
+  use the place it finds, which saves it as the place you run.
 - **The place you run.** When you save it, its rounded coordinates are sent
   to Visual Crossing once, to find its time zone. If that fails, we try
   again each hour until a time zone is found.
@@ -248,7 +270,7 @@ runners.
   fingerprint for 3 years, so that if the same image is uploaded again it
   is hidden until a person reviews it. If you delete a photo while we are
   reviewing it, we keep a short fingerprint of it, never the image itself,
-  so that a copy uploaded again is held for a person to check.
+  for 3 years, so that a copy uploaded again is held for a person to check.
 
 ## What other people can see
 
@@ -259,22 +281,24 @@ shared kit posted elsewhere previews as a generic [dialed.run] card, with
 nothing from the kit on it. Only what you make public, below, reaches the
 open web.
 
-**A shared kit** shows your username, the run's title, date and start time, distance,
+**A shared kit** shows your username, the run's date and start time, distance,
 duration, whether it was indoors, its conditions, the garments you wore
-(name, brand, category, layer), your verdict, caption, tags, screened photos,
+(name, brand, category, layer), your verdict, tags, screened photos,
 and how many people marked it useful.
 
 **Your profile** shows other signed-in runners your username, the place you
 run, and your recent shared and public kits.
 
+**Following someone** tells them: their notifications show your username.
+
 **A public kit** can be opened by anyone who has its link, signed in or
 not. It shows your username, the day of the run (never its start time or
 place), distance, time, pace, elevation gain, the feels-like temperature
-and sky, your verdict, caption, the garments you wore (name and type, with
+and sky, your verdict, the garments you wore (name and type, with
 a link to the product where there is one) and its screened photos. A link
 to it posted elsewhere previews as a picture card with your username, the
 day, the conditions, your verdict, the distance, time, pace and elevation gain, and the models
-you wore, beside the first 120 characters of your caption. The card never
+you wore. The card never
 has a photo. Signed-in runners see a
 public kit as they see a shared one, and it counts in feeds and conditions
 numbers the same way.
@@ -536,24 +560,30 @@ you choose to sign in with Google or connect Strava, each is also a separate
 controller of what it holds about you, under its own privacy policy. We do
 not sell or rent your data to anyone.
 
-| Service                           | Company                         | Role                      | What it does for us                                                                                                                     | What it receives                                                                                                                                                                                                    | Where                    | Safeguard for EU and UK data                                                                                            |
-| --------------------------------- | ------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare                        | Cloudflare, Inc.                | Processor                 | Hosts the app: servers, databases, photo and file storage, queues, logs, speed measurements; serves and scans the photos on public kits | Everything above, stored on its platform                                                                                                                                                                            | North America            | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
-| Cloudflare Email Service          | Cloudflare, Inc.                | Processor                 | Sends our email                                                                                                                         | Each email's address, subject and body                                                                                                                                                                              | North America            | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
-| Cloudflare Turnstile              | Cloudflare, Inc.                | Processor                 | Tells people from bots on sign-up, request access and removal requests                                                                  | The check your browser runs, and your IP address from our server                                                                                                                                                    | Worldwide                | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
-| Google                            | Google LLC                      | Separate controller       | "Sign in with Google", if you use it                                                                                                    | The sign-in request; Google returns your name, email, picture and account id                                                                                                                                        | US                       | Google's own Data Privacy Framework certification                                                                       |
-| Strava                            | Strava, Inc.                    | Separate controller       | Run reminders, if you connect                                                                                                           | The connect and revoke requests                                                                                                                                                                                     | US                       | Standard contractual clauses under Strava's API terms                                                                   |
-| Visual Crossing                   | Visual Crossing Corporation     | Service provider          | Weather, and time zones for places                                                                                                      | Rounded run start points and dates; the place you set. Nothing that names you                                                                                                                                       | US                       | None needed: nothing that names you is sent                                                                             |
-| OpenAI                            | OpenAI OpCo, LLC                | Processor                 | Photo screening; username screening; reading product pages                                                                              | Your photos; the username you pick; the text and address of product pages                                                                                                                                           | US                       | Standard contractual clauses with the UK addendum, in OpenAI's data processing addendum                                 |
-| Firecrawl                         | SideGuide Technologies, Inc.    | Service provider          | Fetching product pages that block us                                                                                                    | The product link. Nothing that names you                                                                                                                                                                            | US                       | None needed: nothing that names you is sent                                                                             |
-| Sentry                            | Functional Software, Inc.       | Processor                 | Error reports                                                                                                                           | The error and internal ids (account, run, import, product), and reports of page content a browser blocked, with the page's path but not its query or your IP address; never tokens, request bodies or file contents | US                       | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses as the fallback            |
-| Have I Been Pwned                 | Superlative Enterprises Pty Ltd | Receives no personal data | Leaked-password check                                                                                                                   | The first five characters of your password's SHA-1 hash, from our server, with nothing that identifies you                                                                                                          | Australia                | None needed: what it receives is not personal data                                                                      |
-| GoatCounter (marketing site only) | Martin Tournoij (Ireland)       | Processor                 | Counts page views on dialed.run                                                                                                         | Your IP address and browser, held in memory for up to 8 hours and not stored                                                                                                                                        | Finland and Germany (EU) | None needed: no transfer out of the EU                                                                                  |
+| Service                           | Company                                                                              | Role                      | What it does for us                                                                                                                     | What it receives                                                                                                                                                                                                    | Where                        | Safeguard for EU and UK data                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare                        | Cloudflare, Inc.                                                                     | Processor                 | Hosts the app: servers, databases, photo and file storage, queues, logs, speed measurements; serves and scans the photos on public kits | Everything above, stored on its platform                                                                                                                                                                            | North America                | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
+| Cloudflare Email Service          | Cloudflare, Inc.                                                                     | Processor                 | Sends our email                                                                                                                         | Each email's address, subject and body                                                                                                                                                                              | North America                | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
+| Cloudflare Turnstile              | Cloudflare, Inc.                                                                     | Processor                 | Tells people from bots on sign-up, request access and removal requests                                                                  | The check your browser runs, and your IP address from our server                                                                                                                                                    | Worldwide                    | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
+| Google                            | Google LLC                                                                           | Separate controller       | "Sign in with Google", if you use it                                                                                                    | The sign-in request; Google returns your name, email, picture and account id                                                                                                                                        | US                           | Google's own Data Privacy Framework certification                                                                       |
+| Strava                            | Strava, Inc.                                                                         | Separate controller       | Run reminders, if you connect                                                                                                           | The connect and revoke requests                                                                                                                                                                                     | US                           | Standard contractual clauses under Strava's API terms                                                                   |
+| Visual Crossing                   | Visual Crossing Corporation                                                          | Service provider          | Weather, and time zones for places                                                                                                      | Rounded run start points and times; the place you set or type. Nothing that names you                                                                                                                               | US                           | None needed: nothing that names you is sent                                                                             |
+| OpenAI                            | OpenAI OpCo, LLC                                                                     | Processor                 | Photo screening; username screening; reading product pages                                                                              | Your photos; the username you pick; the text and address of product pages                                                                                                                                           | US                           | Standard contractual clauses with the UK addendum, in OpenAI's data processing addendum                                 |
+| Firecrawl                         | SideGuide Technologies, Inc.                                                         | Service provider          | Fetching product pages that block us                                                                                                    | The product link. Nothing that names you                                                                                                                                                                            | US                           | None needed: nothing that names you is sent                                                                             |
+| Sentry                            | Functional Software, Inc.                                                            | Processor                 | Error reports                                                                                                                           | The error and internal ids (account, run, import, product), and reports of page content a browser blocked, with the page's path but not its query or your IP address; never tokens, request bodies or file contents | US                           | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses as the fallback            |
+| Our mailbox                       | [OWNER: the mailbox provider every @dialed.run address forwards to, and its company] | Processor                 | Holds the email you send to any @dialed.run address                                                                                     | Each email you send us: your address and anything you write or attach                                                                                                                                               | [OWNER: where it holds mail] | [OWNER: its safeguard for EU and UK data]                                                                               |
+| Garmin                            | [OWNER: the Garmin company that provides its Personal API]                           | Separate controller       | Import from Garmin, for the account of the person who runs [dialed.run] only                                                            | Requests for that account's own recent runs and their files; nothing about any other runner                                                                                                                         | [OWNER: where]               | None needed: no other runner's data is sent                                                                             |
+| Have I Been Pwned                 | Superlative Enterprises Pty Ltd                                                      | Receives no personal data | Leaked-password check                                                                                                                   | The first five characters of your password's SHA-1 hash, from our server, with nothing that identifies you                                                                                                          | Australia                    | None needed: what it receives is not personal data                                                                      |
+| GoatCounter (marketing site only) | Martin Tournoij (Ireland)                                                            | Processor                 | Counts page views on dialed.run                                                                                                         | Your IP address and browser, held in memory for up to 8 hours and not stored                                                                                                                                        | Finland and Germany (EU)     | None needed: no transfer out of the EU                                                                                  |
 
 We are in the United States, and your data is stored in North America. To
 keep the app fast wherever you open it, Cloudflare also keeps read-only
 copies of our databases in its data centres in Europe, Asia-Pacific and
-Oceania. Your photos and files are not copied; they stay in North America.
+Oceania. Your photos and files are stored only in North America. When
+someone opens a public kit or its preview card, Cloudflare may keep a copy
+of the page, its photos and the card in the data centre that served it,
+wherever that is: the page and photos for up to a minute, the card for up
+to a day. A card is not shown again once its kit stops being public.
 The app itself runs on Cloudflare's network, so a request may be handled in
 the Cloudflare data centre nearest you before it reaches our storage.
 
@@ -566,7 +596,7 @@ clauses, with the UK addendum, included in that service's data processing
 terms. Cloudflare's terms apply wherever it holds the data. Google and
 Strava act for themselves when you sign in with Google or connect Strava,
 under their own privacy policies. Visual Crossing, Firecrawl and Have I
-Been Pwned receive nothing that names you: rounded places and dates,
+Been Pwned receive nothing that names you: rounded places and times,
 product links, and five characters of a password hash. You can ask us for a
 copy of the safeguards at hello@dialed.run.
 
@@ -582,7 +612,8 @@ copy of the safeguards at hello@dialed.run.
   shows at least what you last saw or saved. It holds a position in our
   database's history, not anything about you.
 - **In your browser's storage:** whether you turned face blur off, so we
-  do not load the face detector again; your account id, so a tab knows
+  do not load the face detector again; your theme, if you chose light or
+  dark, so the next page opens in it; your account id, so a tab knows
   when you have signed in as someone else; and, for one tab and only
   until you close it, your email address if you were signed out mid-form,
   so the sign-in form can fill it in.
@@ -605,36 +636,37 @@ any differently.
 
 ## How long we keep it
 
-| What                                                                          | How long                                                                                                                          |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Imported run files                                                            | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                           |
-| Anonymous totals                                                              | A published report stays as published; it names no one. A guide is remade from current data each time we update it                |
-| Your data export                                                              | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
-| Removal requests (`/takedown`)                                                | 3 years after we decide them                                                                                                      |
-| Requests for access                                                           | 90 days after we answer them. An unconfirmed request: within 3 days                                                               |
-| Session records                                                               | Expire after 7 days, and are deleted 30 days after they expire. A copy kept with suspected child sexual abuse material: as below  |
-| Strava refresh token                                                          | Until you disconnect, then until Strava confirms revocation                                                                       |
-| Strava activity ids                                                           | 7 days                                                                                                                            |
-| Garments you delete                                                           | Deleted with their photo files. A garment you wore leaves those kits                                                              |
-| Runs, kits and kit photos you delete                                          | Deleted with their files                                                                                                          |
-| Photo fingerprints                                                            | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                 |
-| Photo screening scores                                                        | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                 |
-| Fingerprints of photos we removed as intimate images shared without consent   | 3 years after the removal, then deleted                                                                                           |
-| Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
-| Backups: the database's history, and copies of photos                         | 30 days. Something you delete leaves our backups within 30 days of leaving the app                                                |
-| Suspected child sexual abuse material we removed, and its uploader's details  | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
-| Usernames you have used                                                       | For good, so nobody else can take them                                                                                            |
-| Email addresses of accounts we closed                                         | A keyed fingerprint, 3 years after the account is deleted, used only to refuse a new sign-up                                      |
-| Kits and photos held for a copyright claim                                    | Until the claim is settled; an account deleted meanwhile is deleted after that                                                    |
-| Copies of photos on public kits, in the public store                          | While the kit is public; deleted when it stops being public, is hidden or removed, or you are banned or leave                     |
-| Copies of public pages and photos at Cloudflare's edge                        | Up to a minute after they stop being public                                                                                       |
-| Weather                                                                       | Kept in the shared cache, linked to no one                                                                                        |
-| Reports you filed                                                             | 3 years after the decision on what you reported, or after filing if none was needed. Kept without your name if you leave          |
-| Records of moderation decisions                                               | 3 years after the decision, even after the account it concerns is deleted, and while the material is still hidden or quarantined  |
-| Everything else: account, profile, runs, kits, photos, follows, notifications | Until you delete it or your account                                                                                               |
-| Server logs                                                                   | 7 days                                                                                                                            |
-| Error reports                                                                 | 30 days                                                                                                                           |
-| Product pages we fetched                                                      | Kept, to re-read later. They hold the retailer's page, not information about you                                                  |
+| What                                                                          | How long                                                                                                                               |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Imported run files                                                            | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                                |
+| Anonymous totals                                                              | A published report stays as published; it names no one. A guide is remade from current data each time we update it                     |
+| Your data export                                                              | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export      |
+| Removal requests (`/takedown`)                                                | 3 years after we decide them                                                                                                           |
+| Requests for access                                                           | 90 days after we answer them. An unconfirmed request: within 3 days                                                                    |
+| Session records                                                               | Expire after 7 days, and are deleted 30 days after they expire. A copy kept with suspected child sexual abuse material: as below       |
+| Strava refresh token                                                          | Until you disconnect, then until Strava confirms revocation                                                                            |
+| Strava activity ids                                                           | 7 days                                                                                                                                 |
+| Garments you delete                                                           | Deleted with their photo files. A garment you wore leaves those kits                                                                   |
+| Runs, kits and kit photos you delete                                          | Deleted with their files                                                                                                               |
+| Photo fingerprints                                                            | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                      |
+| Photo screening scores                                                        | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                      |
+| Fingerprints of photos we removed as intimate images shared without consent   | 3 years after the removal, then deleted                                                                                                |
+| Fingerprints of photos you deleted while we were reviewing them               | 3 years after the delete, then deleted                                                                                                 |
+| Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                              |
+| Backups: the database's history, and copies of photos                         | 30 days. Something you delete leaves our backups within 30 days of leaving the app                                                     |
+| Suspected child sexual abuse material we removed, and its uploader's details  | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                                  |
+| Usernames you have used                                                       | For good, so nobody else can take them                                                                                                 |
+| Email addresses of accounts we closed                                         | A keyed fingerprint, 3 years after the account is deleted, used only to refuse a new sign-up                                           |
+| Kits and photos held for a copyright claim                                    | Until the claim is settled; an account deleted meanwhile is deleted after that                                                         |
+| Copies of photos on public kits, in the public store                          | While the kit is public; deleted when it stops being public, is hidden or removed, or you are banned or leave                          |
+| Copies of public pages and photos at Cloudflare's edge                        | Up to a minute after they stop being public. A public kit's preview card: up to a day, and never shown once the kit stops being public |
+| Weather                                                                       | Kept in the shared cache, linked to no one                                                                                             |
+| Reports you filed                                                             | 3 years after the decision on what you reported, or after filing if none was needed. Kept without your name if you leave               |
+| Records of moderation decisions                                               | 3 years after the decision, even after the account it concerns is deleted, and while the material is still hidden or quarantined       |
+| Everything else: account, profile, runs, kits, photos, follows, notifications | Until you delete it or your account                                                                                                    |
+| Server logs                                                                   | 7 days                                                                                                                                 |
+| Error reports                                                                 | 30 days                                                                                                                                |
+| Product pages we fetched                                                      | Kept, to re-read later. They hold the retailer's page, not information about you                                                       |
 
 ## Your choices
 
