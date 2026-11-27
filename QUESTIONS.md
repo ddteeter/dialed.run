@@ -1,9 +1,11 @@
 # Questions from sprint lane A3 (the replay harness)
 
-The guesses this branch proceeds on, for the owner. Each says what the
-branch does meanwhile. Design doc: `docs/designs/sprint-a3-call-replay.md`.
+The guesses this branch proceeded on. All eight are answered (issue #1105);
+each entry keeps the question as asked. Design doc: `docs/designs/sprint-a3-call-replay.md`.
 
 ## Q1: Which measures are the release bar, and at what tolerance?
+
+- **Answered** (owner, 2026-11-26: all three measures gate, coverage included, each at tolerance 0; built.)
 
 - What: design 194 says a new scorer "must not do worse". `noWorse` holds a
   candidate to dialed agreement and direction on misses together, each on
@@ -18,6 +20,8 @@ branch does meanwhile. Design doc: `docs/designs/sprint-a3-call-replay.md`.
   side could not judge (no cases) is `unmeasured` and fails.
 
 ## Q2: The pseudonymised export's shape (needs the call-log tables)
+
+- **Answered** (owner, 2026-11-26: a requirement on the call-log design (inputs by reference with a version stamp per row read; edited cases reported apart, deleted cases dropped); in the design doc, no code.)
 
 - What: the export follows the call log, a hard stop (schema and a new D1
   binding). `ReplayCase` is a `CallRequest` plus `worn` and `verdict`, so an
@@ -36,6 +40,8 @@ branch does meanwhile. Design doc: `docs/designs/sprint-a3-call-replay.md`.
 
 ## Q3: Replaying v1's history is not replaying logged Calls
 
+- **Answered** (owner, 2026-11-26: v1 history is the gate until logged Calls have verdicts; the report's `source` field says which ran; built.)
+
 - What: the seeded cases (and any replay over v1's real verdicts) are runs
   from before a Call was served. They ask "would the scorer have picked
   what a dialed runner wore", not "did the served Call do better than the
@@ -49,6 +55,8 @@ branch does meanwhile. Design doc: `docs/designs/sprint-a3-call-replay.md`.
 
 ## Q4: Manual-weather runs are left out of replay entirely
 
+- **Answered** (owner, 2026-11-26 (reversing A1's reading, #1103): manual-weather runs stay in history but are never cases; built as `isCaseRun`.)
+
 - What: `isReplayable` drops a run with `source: 'manual'` both as a case
   and from every case's history, following A1's reading (manual weather is
   excluded from counted aggregates).
@@ -57,6 +65,8 @@ branch does meanwhile. Design doc: `docs/designs/sprint-a3-call-replay.md`.
 - Meanwhile: one named filter, so the ruling is a one-line change.
 
 ## Q5: The forecast rebuilt for a historic run
+
+- **Answered** (owner, 2026-11-26: keep the rebuilt forecast; a candidate declaring `tempC` or `windKph` reads is blocked on rebuilt cases alone; built, the wiring PR supplies the declaration.)
 
 - What: a stored run keeps its judged feel and precipitation class only.
   The rebuilt forecast uses the judged feel as both `tempC` and
@@ -70,6 +80,8 @@ branch does meanwhile. Design doc: `docs/designs/sprint-a3-call-replay.md`.
 
 ## Q6: Climate zone names
 
+- **Answered** (owner, 2026-11-26: parked with the cohort cells table; `Cfb` stays synthetic only.)
+
 - What: `CohortCell.climateZone` is a string and nothing in the repo names
   zones yet. The personas use Köppen codes, `Cfb` (home).
 - Cost: owner time; the rollup (a hard stop) will fix the vocabulary.
@@ -77,6 +89,8 @@ branch does meanwhile. Design doc: `docs/designs/sprint-a3-call-replay.md`.
 - Meanwhile: `Cfb` in the synthetic data only.
 
 ## Q7: The contract has no runtime list of `Confidence`
+
+- **Answered** (owner, 2026-11-26: approved; lands once in the scorer's PR (#1103), replay switches at rebase and keeps its record until then.)
 
 - What: `call/contract` is types only, so replay keeps its own ranking of
   the five confidences (a `Record<Confidence, number>`, so the compiler
@@ -87,6 +101,8 @@ branch does meanwhile. Design doc: `docs/designs/sprint-a3-call-replay.md`.
 - Meanwhile: the record in `replay/metrics.ts`.
 
 ## Q8: The cohort snapshot and leakage
+
+- **Answered** (owner, 2026-11-26: a requirement on the rollup and call-log designs (keep each generation, log which one a Call read); in the design doc, no code.)
 
 - What: a case's cohort is one snapshot for every case, so v1-history
   replay lets the cohort layer see later runs (its own runner's included).

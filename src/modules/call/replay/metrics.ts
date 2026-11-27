@@ -34,6 +34,10 @@ export interface ConfidenceRow extends ConfidenceSplit {
 export interface ReplayMetrics extends ConfidenceSplit {
   cases: number;
   /**
+   * Cases rebuilt from history rather than logged as served.
+   */
+  rebuilt: number;
+  /**
    * Cases whose confidence is not `below-threshold`.
    */
   coverage: Share;
@@ -219,6 +223,7 @@ export function measure(outcomes: readonly ReplayOutcome[]): ReplayMetrics {
   }));
   return {
     cases: outcomes.length,
+    rebuilt: outcomes.filter((o) => o.replayCase.origin === "rebuilt").length,
     ...splitOf(outcomes),
     coverage: {
       hits: outcomes.filter((o) => hasKit(o)).length,

@@ -230,9 +230,21 @@ describe("measure", () => {
     expect(metrics.coverage).toEqual({ hits: 2, of: 3 });
   });
 
+  it("counts the cases rebuilt from history apart from logged ones", () => {
+    const served = outcome(["a-tee"], 0, ["a-tee"]);
+    const metrics = measure([
+      outcome(["a-tee"], 0, ["a-tee"]),
+      { ...served, replayCase: { ...served.replayCase, origin: "logged" } },
+      outcome(["a-tee"], 1, ["a-tee"]),
+    ]);
+    expect(metrics.cases).toBe(3);
+    expect(metrics.rebuilt).toBe(2);
+  });
+
   it("is empty over no cases", () => {
     expect(measure([])).toEqual({
       cases: 0,
+      rebuilt: 0,
       dialedAgreement: { hits: 0, of: 0 },
       direction: { hits: 0, of: 0, noCall: 0 },
       coverage: { hits: 0, of: 0 },

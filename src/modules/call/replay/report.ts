@@ -3,7 +3,7 @@
  * the text; writing it anywhere is the caller's business.
  */
 import type { Confidence } from "../contract";
-import type { Comparison } from "./compare";
+import type { Comparison, ReplaySource } from "./compare";
 import {
   byRank,
   rate,
@@ -72,21 +72,45 @@ function confidenceRows(
   });
 }
 
+/**
+ * The source as the report names it.
+ */
+const SOURCE_LABELS: Readonly<Record<ReplaySource, string>> = {
+  "v1-history": "v1 history (rebuilt)",
+  "logged-calls": "logged Calls",
+  mixed: "mixed (rebuilt and logged)",
+};
+
+export interface ReplayReport {
+  /**
+   * Which cases the check ran over (owner, 2026-11-26: the report says).
+   */
+  source: ReplaySource;
+  text: string;
+}
+
 export function formatReport(
   baseline: VersionMetrics,
   candidate: VersionMetrics,
   comparison: Comparison,
-): string {
+): ReplayReport {
   const before = baseline.metrics;
   const after = candidate.metrics;
+  const blocked =
+    comparison.blocked === undefined ? [] : [`blocked: ${comparison.blocked}`];
   const lines = [
+    `source: ${SOURCE_LABELS[comparison.source]}`,
     row("measure", [
       baseline.engineVersion,
       candidate.engineVersion,
       "verdict",
     ]),
     row("cases", [String(before.cases), String(after.cases)]),
-    row("coverage", [shareText(before.coverage), shareText(after.coverage)]),
+    row("coverage", [
+      shareText(before.coverage),
+      shareText(after.coverage),
+      comparison.metrics.coverage.verdict,
+    ]),
     row("dialed agreement", [
       shareText(before.dialedAgreement),
       shareText(after.dialedAgreement),
@@ -98,7 +122,8 @@ export function formatReport(
       comparison.metrics.direction.verdict,
     ]),
     ...confidenceRows(before, after),
+    ...blocked,
     `release check (tolerance ${String(comparison.tolerance)}): ${comparison.pass ? "PASS" : "FAIL"}`,
   ];
-  return lines.join("\n");
+  return { source: comparison.source, text: lines.join("\n") };
 }

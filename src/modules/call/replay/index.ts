@@ -5,14 +5,19 @@
  */
 export {
   casesFrom,
-  isReplayable,
+  isCaseRun,
+  type CaseOrigin,
+  type ConditionRead,
   type ReplayCase,
   type ReplayHistory,
 } from "./case";
 export {
   noWorse,
   RELEASE_METRICS,
+  sourceOf,
   type Comparison,
+  type ReleaseOptions,
+  type ReplaySource,
   type MetricComparison,
   type MetricVerdict,
   type ReleaseMetric,
@@ -26,7 +31,7 @@ export {
   type ReplayMetrics,
   type Share,
 } from "./metrics";
-export { formatReport, type VersionMetrics } from "./report";
+export { formatReport, type ReplayReport, type VersionMetrics } from "./report";
 export { replay, type ReplayOutcome } from "./run";
 export {
   dressFor,

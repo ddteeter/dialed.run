@@ -2,43 +2,60 @@ import { describe, expect, it } from "vitest";
 
 import {
   type Comparison,
+  type ConditionRead,
   type MetricVerdict,
   noWorse,
   RELEASE_METRICS,
   type ReplayMetrics,
+  sourceOf,
 } from "../../../src/modules/call/replay";
 
-function metrics(
-  agreement: [number, number],
-  direction: [number, number],
+interface Shape {
+  agreement?: [number, number];
+  direction?: [number, number];
+  coverage?: [number, number];
+  cases?: number;
+  rebuilt?: number;
+}
+
+function metrics({
+  agreement = [2, 4],
+  direction = [3, 4],
+  coverage = [8, 10],
   cases = 10,
-): ReplayMetrics {
+  rebuilt = cases,
+}: Shape = {}): ReplayMetrics {
   return {
     cases,
+    rebuilt,
     dialedAgreement: { hits: agreement[0], of: agreement[1] },
     direction: { hits: direction[0], of: direction[1], noCall: 0 },
-    coverage: { hits: cases, of: cases },
+    coverage: { hits: coverage[0], of: coverage[1] },
     byConfidence: [],
   };
 }
 
-function verdicts(comparison: Comparison): [MetricVerdict, MetricVerdict] {
-  return [
-    comparison.metrics.dialedAgreement.verdict,
-    comparison.metrics.direction.verdict,
-  ];
+const strict = { tolerance: 0, reads: [] };
+
+function verdicts(comparison: Comparison): MetricVerdict[] {
+  return RELEASE_METRICS.map((m) => comparison.metrics[m].verdict);
 }
 
 describe("noWorse", () => {
-  const baseline = metrics([2, 4], [3, 4]);
+  const baseline = metrics();
 
-  it("holds a release to dialed agreement and direction", () => {
-    expect(RELEASE_METRICS).toEqual(["dialedAgreement", "direction"]);
+  it("holds a release to all three measures", () => {
+    expect(RELEASE_METRICS).toEqual([
+      "dialedAgreement",
+      "direction",
+      "coverage",
+    ]);
   });
 
   it("passes an equal candidate", () => {
-    expect(noWorse(baseline, metrics([1, 2], [3, 4]), 0)).toEqual({
+    expect(noWorse(baseline, metrics({ agreement: [1, 2] }), strict)).toEqual({
       tolerance: 0,
+      source: "v1-history",
       metrics: {
         dialedAgreement: {
           metric: "dialedAgreement",
@@ -52,81 +69,174 @@ describe("noWorse", () => {
           candidate: 0.75,
           verdict: "equal",
         },
+        coverage: {
+          metric: "coverage",
+          baseline: 0.8,
+          candidate: 0.8,
+          verdict: "equal",
+        },
       },
+      blocked: undefined,
       pass: true,
     });
   });
 
   it("passes a better candidate", () => {
-    const comparison = noWorse(baseline, metrics([3, 4], [4, 4]), 0);
-    expect(verdicts(comparison)).toEqual(["better", "better"]);
+    const better = metrics({
+      agreement: [3, 4],
+      direction: [4, 4],
+      coverage: [9, 10],
+    });
+    const comparison = noWorse(baseline, better, strict);
+    expect(verdicts(comparison)).toEqual(["better", "better", "better"]);
     expect(comparison.pass).toBe(true);
   });
 
-  it("fails a candidate worse on one measure, even if better on the other", () => {
-    const comparison = noWorse(baseline, metrics([4, 4], [2, 4]), 0);
-    expect(verdicts(comparison)).toEqual(["better", "worse"]);
-    expect(comparison.pass).toBe(false);
-    const other = noWorse(baseline, metrics([1, 4], [4, 4]), 0);
-    expect(verdicts(other)).toEqual(["worse", "better"]);
-    expect(other.pass).toBe(false);
+  it("fails a candidate worse on any one measure, even if better on the others", () => {
+    const cases: [Shape, MetricVerdict[]][] = [
+      [
+        { agreement: [4, 4], direction: [2, 4], coverage: [9, 10] },
+        ["better", "worse", "better"],
+      ],
+      [
+        { agreement: [1, 4], direction: [4, 4], coverage: [9, 10] },
+        ["worse", "better", "better"],
+      ],
+      [
+        { agreement: [4, 4], direction: [4, 4], coverage: [7, 10] },
+        ["better", "better", "worse"],
+      ],
+    ];
+    for (const [shape, expected] of cases) {
+      const comparison = noWorse(baseline, metrics(shape), strict);
+      expect(verdicts(comparison)).toEqual(expected);
+      expect(comparison.pass).toBe(false);
+    }
   });
 
   it("passes a drop of exactly the tolerance and fails one just past it", () => {
-    const atTolerance = noWorse(baseline, metrics([1, 4], [2, 4]), 0.25);
-    expect(verdicts(atTolerance)).toEqual([
+    const at = noWorse(
+      metrics({ agreement: [2, 4], direction: [3, 4], coverage: [10, 10] }),
+      metrics({ agreement: [1, 4], direction: [2, 4], coverage: [7.5, 10] }),
+      { tolerance: 0.25, reads: [] },
+    );
+    expect(verdicts(at)).toEqual([
+      "within-tolerance",
       "within-tolerance",
       "within-tolerance",
     ]);
-    expect(atTolerance.pass).toBe(true);
-    const past = noWorse(baseline, metrics([1, 4], [3, 4]), 0.125);
-    expect(verdicts(past)).toEqual(["worse", "equal"]);
+    expect(at.pass).toBe(true);
+    const past = noWorse(baseline, metrics({ agreement: [1, 4] }), {
+      tolerance: 0.125,
+      reads: [],
+    });
+    expect(verdicts(past)).toEqual(["worse", "equal", "equal"]);
     expect(past.pass).toBe(false);
-    expect(
-      noWorse(baseline, metrics([3, 8], [3, 4]), 0.125).metrics.dialedAgreement
-        .verdict,
-    ).toBe("within-tolerance");
+    const inside = noWorse(baseline, metrics({ agreement: [3, 8] }), {
+      tolerance: 0.125,
+      reads: [],
+    });
+    expect(inside.metrics.dialedAgreement.verdict).toBe("within-tolerance");
   });
 
   it("fails when either side judged nothing", () => {
-    const empty = metrics([0, 0], [0, 0], 0);
-    const comparison = noWorse(empty, empty, 0);
-    expect(comparison.metrics).toEqual({
-      dialedAgreement: {
-        metric: "dialedAgreement",
-        baseline: undefined,
-        candidate: undefined,
-        verdict: "unmeasured",
-      },
-      direction: {
-        metric: "direction",
-        baseline: undefined,
-        candidate: undefined,
-        verdict: "unmeasured",
-      },
+    const empty = metrics({
+      agreement: [0, 0],
+      direction: [0, 0],
+      coverage: [0, 0],
+      cases: 0,
+    });
+    const comparison = noWorse(empty, empty, strict);
+    expect(verdicts(comparison)).toEqual([
+      "unmeasured",
+      "unmeasured",
+      "unmeasured",
+    ]);
+    expect(comparison.metrics.coverage).toEqual({
+      metric: "coverage",
+      baseline: undefined,
+      candidate: undefined,
+      verdict: "unmeasured",
     });
     expect(comparison.pass).toBe(false);
+    const unmeasured = metrics({ agreement: [0, 0] });
     expect(
-      noWorse(baseline, metrics([0, 0], [3, 4]), 0).metrics.dialedAgreement
-        .verdict,
+      noWorse(baseline, unmeasured, strict).metrics.dialedAgreement.verdict,
     ).toBe("unmeasured");
     expect(
-      noWorse(metrics([0, 0], [3, 4]), baseline, 0).metrics.dialedAgreement
-        .verdict,
+      noWorse(unmeasured, baseline, strict).metrics.dialedAgreement.verdict,
     ).toBe("unmeasured");
+    expect(noWorse(unmeasured, baseline, strict).pass).toBe(false);
   });
 
   it("refuses to compare replays over different cases", () => {
-    expect(() => noWorse(baseline, metrics([2, 4], [3, 4], 11), 0)).toThrow(
+    expect(() => noWorse(baseline, metrics({ cases: 11 }), strict)).toThrow(
       new Error("replayed over different cases: 10 against 11"),
     );
   });
 
   it("refuses a negative tolerance and accepts zero", () => {
-    expect(() => noWorse(baseline, baseline, -0.01)).toThrow(
+    const negative = { tolerance: -0.01, reads: [] };
+    expect(() => noWorse(baseline, baseline, negative)).toThrow(
       new RangeError("tolerance must not be negative: -0.01"),
     );
-    expect(() => noWorse(baseline, baseline, -0.01)).toThrow(RangeError);
-    expect(noWorse(baseline, baseline, 0).pass).toBe(true);
+    expect(() => noWorse(baseline, baseline, negative)).toThrow(RangeError);
+    expect(noWorse(baseline, baseline, strict).pass).toBe(true);
+  });
+});
+
+describe("the rebuilt-forecast guard", () => {
+  const baseline = metrics();
+  const reading = (reads: ConditionRead[]) =>
+    noWorse(baseline, baseline, { tolerance: 0, reads });
+
+  it("blocks a candidate that reads temperature or wind on rebuilt cases alone", () => {
+    expect(reading(["tempC"])).toMatchObject({
+      blocked:
+        "the candidate reads tempC, which cases rebuilt from v1 history do not carry; replay it over logged Calls",
+      pass: false,
+    });
+    expect(reading(["feelsLikeC", "windKph"]).blocked).toBe(
+      "the candidate reads windKph, which cases rebuilt from v1 history do not carry; replay it over logged Calls",
+    );
+    expect(reading(["windKph", "tempC"]).blocked).toBe(
+      "the candidate reads tempC and windKph, which cases rebuilt from v1 history do not carry; replay it over logged Calls",
+    );
+  });
+
+  it("lets through a candidate that reads only the feel and precipitation", () => {
+    expect(reading(["feelsLikeC", "precipMm"])).toMatchObject({
+      blocked: undefined,
+      pass: true,
+    });
+  });
+
+  it("does not block when any case was logged as served", () => {
+    for (const rebuilt of [0, 9]) {
+      const comparison = noWorse(metrics({ rebuilt }), metrics({ rebuilt }), {
+        tolerance: 0,
+        reads: ["tempC", "windKph"],
+      });
+      expect(comparison.blocked).toBeUndefined();
+      expect(comparison.pass).toBe(true);
+    }
+  });
+
+  it("judges the candidate's cases, not the baseline's", () => {
+    const comparison = noWorse(metrics({ rebuilt: 0 }), baseline, {
+      tolerance: 0,
+      reads: ["tempC"],
+    });
+    expect(comparison.source).toBe("v1-history");
+    expect(comparison.pass).toBe(false);
+  });
+});
+
+describe("sourceOf", () => {
+  it("names v1 history, logged Calls, or a mix", () => {
+    expect(sourceOf(metrics({ cases: 10, rebuilt: 10 }))).toBe("v1-history");
+    expect(sourceOf(metrics({ cases: 10, rebuilt: 0 }))).toBe("logged-calls");
+    expect(sourceOf(metrics({ cases: 10, rebuilt: 1 }))).toBe("mixed");
+    expect(sourceOf(metrics({ cases: 10, rebuilt: 9 }))).toBe("mixed");
   });
 });
