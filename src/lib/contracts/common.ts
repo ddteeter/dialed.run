@@ -108,7 +108,9 @@ export const httpsUrlSchema = z.string().superRefine((value, context) => {
  * **An explicit `http://` is accepted and stored as `https://`** (owner,
  * 2026-11-06, D-166; round 43 #93 as round 48 re-read it: "only a non-URL
  * errors"). The parsed value is still https only, so every reader of it —
- * an `href`, the enrichment fetch — sees nothing else.
+ * an `href`, the enrichment fetch — sees nothing else. **The known
+ * tracking parameters in `TRACKING_PARAMETERS` are removed on save**;
+ * the rest of the query stays, including any the table does not name.
  *
  * `productLinkProblem` is the check itself, as the one sentence a runner
  * reads or `undefined` for a good link: F's blur and Edit's opening error
@@ -134,7 +136,7 @@ export const PRODUCT_LINK_TOO_LONG =
 
 /**
  * The same link on https. Only the scheme moves: the rest is the runner's
- * own text, so a link that was already https comes back exactly as typed
+ * own text, so a link that was already https comes back as typed
  * rather than as `URL`'s normalised spelling of it.
  */
 function upgraded(value: string): string {
@@ -145,10 +147,100 @@ function upgraded(value: string): string {
 
 const HTTP_SCHEME = /^http:/iu;
 
+/**
+ * The known tracking and identifying parameters removed from a product
+ * link on save: a name in `names`, or one starting with `prefix`, in any
+ * case. Only these: a parameter the table does not name stays.
+ * Every other parameter stays, `ref` and `tag` among them, since a shop
+ * may need it to find the page.
+ */
+export const TRACKING_PARAMETERS = {
+  prefix: "utm_",
+  names: new Set([
+    // Ad and search click ids.
+    "gclid",
+    "gclsrc",
+    "gbraid",
+    "wbraid",
+    "dclid",
+    "gad_source",
+    "srsltid",
+    "fbclid",
+    "msclkid",
+    "ttclid",
+    "twclid",
+    "li_fat_id",
+    "yclid",
+    "ysclid",
+    "igshid",
+    "epik",
+    "rdt_cid",
+    "_gl",
+    "_ga",
+    // Mail and subscriber ids.
+    "mc_cid",
+    "mc_eid",
+    "_hsenc",
+    "_hsmi",
+    "mkt_tok",
+    "_kx",
+    "ck_subscriber_id",
+    "ml_subscriber",
+    "ml_subscriber_hash",
+    "oly_enc_id",
+    "oly_anon_id",
+    "vero_id",
+    "vero_conv",
+    "_bta_tid",
+    "_bta_c",
+    // Affiliate network ids.
+    "irclickid",
+    "irgwc",
+    "cjevent",
+    "cjdata",
+    "awc",
+    "sscid",
+    "ranmid",
+    "raneaid",
+    "ransiteid",
+    "ranlinkid",
+    "clickref",
+  ]),
+} as const;
+
+/**
+ * The link with the parameters `TRACKING_PARAMETERS` names gone. Each kept piece of the
+ * query, and the fragment, stay exactly as typed and in order; a query
+ * left with nothing loses its `?`.
+ */
+function withoutTracking(value: string): string {
+  const hash = value.indexOf("#");
+  const beforeHash = hash === -1 ? value : value.slice(0, hash);
+  const fragment = value.slice(beforeHash.length);
+  const question = beforeHash.indexOf("?");
+  if (question === -1) return value;
+  const kept = beforeHash
+    .slice(question + 1)
+    .split("&")
+    .filter((piece) => !isTrackingParameter(piece));
+  const query = kept.length === 0 ? "" : `?${kept.join("&")}`;
+  return `${beforeHash.slice(0, question)}${query}${fragment}`;
+}
+
+function isTrackingParameter(piece: string): boolean {
+  const equals = piece.indexOf("=");
+  const name = equals === -1 ? piece : piece.slice(0, equals);
+  const lower = name.toLowerCase();
+  return (
+    TRACKING_PARAMETERS.names.has(lower) ||
+    lower.startsWith(TRACKING_PARAMETERS.prefix)
+  );
+}
+
 export const productLinkSchema = z
   .string()
   .superRefine((value, context) => {
     const problem = productLinkProblem(value);
     if (problem !== undefined) context.addIssue(problem);
   })
-  .transform(upgraded);
+  .transform((value) => upgraded(withoutTracking(value)));
