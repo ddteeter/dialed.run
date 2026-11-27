@@ -201,7 +201,6 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Q3: a follower count others see; unfollow only removes.
   "feed/functions.ts followAction": "verified",
   "feed/functions.ts unfollowAction": "unconfirmed",
-  "feed/functions.ts isFollowingQuery": "unconfirmed",
   "feed/functions.ts followingFeedQuery": "unconfirmed",
   "feed/functions.ts yourConditionsQuery": "unconfirmed",
   // The runner's own saved place, and E1's compact line from it (FEED-9):

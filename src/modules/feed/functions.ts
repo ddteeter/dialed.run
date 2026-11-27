@@ -62,7 +62,6 @@ import {
 import {
   followingFeed,
   follow,
-  isFollowing,
   unfollow,
   ownProfile,
   profileAtHandle,
@@ -248,13 +247,6 @@ export const unfollowAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     await unfollow(userId, data.userId);
-  });
-
-export const isFollowingQuery = createServerFn({ method: "GET" })
-  .validator((input: unknown) => userIdInput.parse(input))
-  .handler(async ({ data }) => {
-    const userId = await requireUserId();
-    return isFollowing(userId, data.userId);
   });
 
 // ---- Following feed (E1) -----------------------------------------------------

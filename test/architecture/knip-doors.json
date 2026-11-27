@@ -90,7 +90,6 @@
     "requestEnrichment"
   ],
   "src/modules/feed/entries/index.ts": ["Scope", "retractEntries"],
-  "src/modules/feed/functions.ts": ["isFollowingQuery"],
   "src/modules/feed/index.ts": [
     "Scope",
     "deleteEntryPhoto",

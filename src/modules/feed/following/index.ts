@@ -3,7 +3,7 @@
  * `feed` and `src/server.ts` import from it.
  */
 export { followingFeed } from "./feed";
-export { follow, isFollowing, unfollow } from "./follows";
+export { follow, unfollow } from "./follows";
 export {
   ownProfile,
   profileAtHandle,
