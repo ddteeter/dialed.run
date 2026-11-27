@@ -6,7 +6,7 @@ import {
   listAbandonedEnrichments,
   redispatchStalledEnrichments,
 } from "../enrichment";
-import { forgetAnsweredRequests } from "../account/access";
+import { forgetAnsweredRequests, forgetDeadClaims } from "../account/access";
 import { checkTooLargeExports, sweepExports } from "../account/export-build";
 import { rescreenHandlesFromEnv } from "../account/handles";
 import { livePurgeDeps, purgeDueAccounts } from "../account/purge";
@@ -881,14 +881,16 @@ async function runDailyDigest(
     () => oweDigestEmail(db, upkeep.digestMail),
   ]);
   // Rows kept past any use: password-try counts whose window ended a day
-  // ago, sessions expired a month ago, access requests answered 90 days ago, moderation
-  // records whose 3 years are up (D-131). After the
+  // ago, sessions expired a month ago, access requests answered 90 days ago,
+  // invite claims no account came from, moderation records whose 3 years
+  // are up (D-131). After the
   // email, so a sweep that throws costs only itself, and each runs whether
   // the others fail (law 5). A check that threw above is thrown with
   // them.
   const sweeps = await failuresOf([
     () => upkeep.sweepAuthRows(),
     () => upkeep.forgetAnsweredRequests(),
+    () => forgetDeadClaims(db),
     () => upkeep.sweepCopyrightHolds(),
     // After the holds' own sweep, so a hold it settles today is not
     // judged on yesterday's status.

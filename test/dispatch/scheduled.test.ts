@@ -10,6 +10,7 @@ import {
   entryPhotos,
   photoScreenings,
   imports,
+  inviteRedemptions,
   moderationActions,
   outbox,
   outfitEntries,
@@ -2521,6 +2522,31 @@ async function expiredReport(): Promise<string> {
   return id;
 }
 
+/**
+An invite claim no account came from, its hold long over.
+*/
+async function deadClaim(): Promise<string> {
+  const userId = newUlid();
+  await coreDb()
+    .insert(inviteRedemptions)
+    .values({
+      userId,
+      codeId: newUlid(),
+      email: `${userId.toLowerCase()}@dead.test`,
+      heldUntil: nowSeconds() - HOUR,
+      redeemedAt: nowSeconds() - 2 * HOUR,
+    });
+  return userId;
+}
+
+async function isClaimKept(userId: string): Promise<boolean> {
+  const rows = await coreDb()
+    .select({ userId: inviteRedemptions.userId })
+    .from(inviteRedemptions)
+    .where(eq(inviteRedemptions.userId, userId));
+  return rows.length === 1;
+}
+
 async function isReportKept(id: string): Promise<boolean> {
   const rows = await coreDb()
     .select({ id: reports.id })
@@ -2533,6 +2559,7 @@ describe("the daily firing sweeps rows kept past any use", () => {
   it("runs each sweep it is handed, once, and leaves the counts to the hourly firing", async () => {
     const key = await staleCount();
     const report = await expiredReport();
+    const claim = await deadClaim();
     const swept: string[] = [];
 
     await handleScheduled(DIGEST, recordingReporter().reporter, {
@@ -2551,8 +2578,10 @@ describe("the daily firing sweeps rows kept past any use", () => {
     });
 
     expect(await isCountKept(key)).toBe(true);
-    // The 3-year sweep is safety's own, imported rather than handed in.
+    // The 3-year sweep is safety's own, imported rather than handed in,
+    // and the dead claims' sweep is account's.
     expect(await isReportKept(report)).toBe(false);
+    expect(await isClaimKept(claim)).toBe(false);
     expect(swept).toStrictEqual(["auth", "requests", "copyright holds"]);
   });
 
@@ -2570,6 +2599,7 @@ describe("the daily firing sweeps rows kept past any use", () => {
         lastRequest: (nowSeconds() - 72 * HOUR) * 1000,
       });
     const report = await expiredReport();
+    const claim = await deadClaim();
     let swept = 0;
     const sweep = () => {
       swept += 1;
@@ -2591,6 +2621,7 @@ describe("the daily firing sweeps rows kept past any use", () => {
       .where(eq(rateLimit.id, libraryCount));
     expect(library).toStrictEqual([]);
     expect(await isReportKept(report)).toBe(true);
+    expect(await isClaimKept(claim)).toBe(true);
     expect(swept).toBe(0);
   });
 
@@ -2598,6 +2629,7 @@ describe("the daily firing sweeps rows kept past any use", () => {
     vi.spyOn(console, "error").mockImplementation(nothing);
     const key = await staleCount();
     const report = await expiredReport();
+    const claim = await deadClaim();
     const boom = new Error("auth sweep fell over");
     const { reporter, checkIns } = recordingReporter();
     let forgot = 0;
@@ -2614,6 +2646,7 @@ describe("the daily firing sweeps rows kept past any use", () => {
 
     expect(await isCountKept(key)).toBe(true);
     expect(await isReportKept(report)).toBe(false);
+    expect(await isClaimKept(claim)).toBe(false);
     expect(forgot).toBe(1);
     expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
       "in_progress",

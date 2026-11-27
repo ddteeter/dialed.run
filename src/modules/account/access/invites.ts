@@ -6,7 +6,7 @@
  * The code's shape and its words are `lib/contracts/access.ts`'s; the gate that
  * calls these at sign-up is `modules/auth/access-hook.ts`.
  */
-import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -183,6 +183,29 @@ export function confirmRedemption(db: Db, userId: string, now = nowSeconds()) {
     .update(inviteRedemptions)
     .set({ confirmedAt: now })
     .where(unconfirmed);
+}
+
+/**
+ * The claims no account came from, once their hold is over: a sign-up
+ * whose account was never written. Such a claim no longer counts as a use
+ * (`stillCounts`): an account that holds its address came in on a claim
+ * of its own. A confirmed claim is a use for good and stays, as does one
+ * whose account exists. Run on the daily firing.
+ */
+export async function forgetDeadClaims(
+  db: Db,
+  now = nowSeconds(),
+): Promise<void> {
+  const noAccount = sql`NOT EXISTS (SELECT 1 FROM ${user} WHERE ${user.id} = ${inviteRedemptions.userId})`;
+  await db
+    .delete(inviteRedemptions)
+    .where(
+      and(
+        isNull(inviteRedemptions.confirmedAt),
+        lte(inviteRedemptions.heldUntil, now),
+        noAccount,
+      ),
+    );
 }
 
 /**
