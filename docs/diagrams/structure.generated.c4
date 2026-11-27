@@ -63,6 +63,10 @@ model {
     auth = module 'auth' {
       expiredRows = module 'auth/expired-rows'
     }
+    call = module 'call' {
+      contract = module 'call/contract'
+      replay = module 'call/replay'
+    }
     closet = module 'closet'
     dispatch = module 'dispatch'
     email = module 'email'
@@ -178,6 +182,7 @@ model {
   cf.app.auth -[imports]-> cf.app.email
   cf.app.auth -[imports]-> cf.app.ops
   cf.app.auth -[imports]-> cf.app.safety
+  cf.app.call.replay -[imports]-> cf.app.call.contract
   cf.app.closet -[imports]-> cf.app.account
   cf.app.closet -[wiring]-> cf.app.auth
   cf.app.closet -[imports]-> cf.app.email
