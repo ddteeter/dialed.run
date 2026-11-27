@@ -20,6 +20,7 @@ export {
   reminderHistory,
 } from "./reminder-email";
 export {
+  runPairedAt,
   pairRunWith,
   pairWithReminder,
   unpairedUploadFor,

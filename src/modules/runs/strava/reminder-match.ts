@@ -21,7 +21,18 @@
  * - a reminder landing after its file was uploaded is not written, and the
  *   oldest unpaired file run in its window is paired with it.
  */
-import { and, asc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  exists,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  sql,
+} from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 
 import { notifications, runs } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
@@ -142,4 +153,23 @@ export function pairRunWith(db: CoreDb, runId: string, landedAt: number) {
     .update(runs)
     .set({ reminderMatchedAt: landedAt })
     .where(and(eq(runs.id, runId), isNull(runs.reminderMatchedAt)));
+}
+
+/**
+ * That the run is paired with the reminder that landed at `landedAt`,
+ * read when the statement runs: for a write that must land only when
+ * `pairRunWith` did, after it in the same batch (design 278). Two
+ * reminders racing for one run both try the pairing, and only one lands.
+ */
+export function runPairedAt(db: CoreDb, runId: string, landedAt: number): SQL {
+  const thisPairing = and(
+    eq(runs.id, runId),
+    eq(runs.reminderMatchedAt, landedAt),
+  );
+  return exists(
+    db
+      .select({ one: sql`1` })
+      .from(runs)
+      .where(thisPairing),
+  );
 }

@@ -250,12 +250,14 @@ views {
     }
     // source: src/modules/weather/attach.ts sampleRunHours; src/modules/weather/store.ts upsertRealObservation
     cf.app.weather -> cf.weatherDb 'caches the observation'
-    // source: src/modules/weather/attach.ts resolveAndAttach, setStatus; src/modules/weather/run-conditions-copy.ts weatherHalfStatements
+    // source: src/modules/weather/attach.ts resolveAndAttach, setStatus, stillAt; src/modules/weather/run-conditions-copy.ts weatherHalfStatements
     cf.app.weather -> cf.coreDb 'writes weather_status and run_conditions' {
       notes '''
         **Not atomic with the previous step.** They are two databases, written in order: this write comes after the cache write and is derived from it. `pending` is the marker between them, so a run whose status was lost is asked for again and finds its hours cached.
 
         A write that settles the run is one batch: the status, the run\'s copy of its conditions, and the removal of its Gave up row. A `pending` write is the status alone.
+
+        **Guard: held to the hours fetched.** The status is written only while the run still starts and lasts as it did when its hours were fetched, so a run retimed meanwhile stays `pending` for the cron.
       '''
     }
     opt 'some hours had not settled, the provider failed, or the runner\'s day of calls was spent' {

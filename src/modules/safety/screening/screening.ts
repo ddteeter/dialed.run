@@ -21,8 +21,8 @@
  * demand, which is the path least likely to be exercised in real life and
  * most important to get right.
  */
-import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
-import type { SQLWrapper } from "drizzle-orm";
+import { and, eq, exists, inArray, isNotNull, sql } from "drizzle-orm";
+import type { SQL, SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 import type {
@@ -52,11 +52,7 @@ import {
 } from "./classifier/moderation";
 import { ceilingReading } from "../limits";
 import { screeningNotice } from "../notices";
-import {
-  enqueueForReview,
-  settleOpenReviews,
-  stuckSources,
-} from "../review";
+import { enqueueForReview, settleOpenReviews, stuckSources } from "../review";
 import { moderationThresholds, photoThresholds } from "./thresholds";
 
 function db() {
@@ -176,6 +172,10 @@ export async function screenPhoto(
   // hidden with nobody told.
   // A flag that hides a kit photo tells its author (D-162), read before
   // the batch that hides it.
+  // The Review row and the notice are held to the photo still being
+  // there, as the screening row is (design 278): a runner can delete the
+  // photo while the classifier answers, and nobody is asked about, or
+  // told of, a photo that has gone.
   const told = await holdNoticeFor(photo, decision);
   await db().batch([
     screeningInsert(photo, result.scores, decision, now),
@@ -200,7 +200,7 @@ function holdNoticeFor(
   decision: ScreenDecision,
 ): Promise<BatchItem<"sqlite">[]> | BatchItem<"sqlite">[] {
   return decision === "flag"
-    ? screeningNotice(db(), photo.photoId, "hidden")
+    ? screeningNotice(db(), photo.photoId, "hidden", photoStillThere(photo))
     : [];
 }
 
@@ -234,22 +234,63 @@ function screeningInsert(
     ),
     createdAt: sql<number>`${now}`.as(into.createdAt.name),
   };
-  const stillThere =
-    photo.scope === "entry"
-      ? db()
-          .select(row)
-          .from(entryPhotos)
-          .where(eq(entryPhotos.id, photo.photoId))
-      : db()
-          .select(row)
-          .from(wardrobeItems)
-          .where(
-            and(
-              eq(wardrobeItems.id, photo.photoId),
-              isNotNull(wardrobeItems.photoKey),
-            ),
-          );
-  return db().insert(photoScreenings).select(stillThere);
+  const { table, where } = photoRow(photo.scope, photo.photoId);
+  return db()
+    .insert(photoScreenings)
+    .select(db().select(row).from(table).where(where));
+}
+
+/**
+ * A photo's own row, as the table that holds it and the condition that
+ * picks it out: an entry photo's row, or a garment that still has a photo.
+ * With `whilePending`, only while that row still waits on its screening.
+ * The one place both conditions are written, for every statement held to
+ * the photo still being there (designs 157, 278).
+ */
+function photoRow(
+  scope: PhotoScope,
+  photoId: string,
+  { whilePending = false } = {},
+): {
+  table: typeof entryPhotos | typeof wardrobeItems;
+  where: SQL | undefined;
+} {
+  if (scope === "entry") {
+    return {
+      table: entryPhotos,
+      where: and(
+        eq(entryPhotos.id, photoId),
+        whilePending ? eq(entryPhotos.screenStatus, "pending") : undefined,
+      ),
+    };
+  }
+  return {
+    table: wardrobeItems,
+    where: and(
+      eq(wardrobeItems.id, photoId),
+      isNotNull(wardrobeItems.photoKey),
+      whilePending ? eq(wardrobeItems.visibility, "pending") : undefined,
+    ),
+  };
+}
+
+/**
+ * Whether the photo is still there when the statement runs (design 278),
+ * and, with `whilePending`, still waiting on its screening: a condition
+ * for a write in a batch decided before it, so a photo deleted meanwhile
+ * gets no Review row and no notice.
+ */
+export function photoStillThere(
+  photo: Readonly<{ scope: PhotoScope; photoId: string }>,
+  options?: { whilePending?: boolean },
+): SQL {
+  const { table, where } = photoRow(photo.scope, photo.photoId, options);
+  return exists(
+    db()
+      .select({ one: sql`1` })
+      .from(table)
+      .where(where),
+  );
 }
 
 /**
@@ -327,11 +368,15 @@ function queueWritesFor(photo: PhotoToScreen, decision: ScreenDecision) {
     ];
   }
   return [
-    enqueueForReview(db(), {
-      subjectType: queueSubjectOf[photo.scope],
-      subjectId: photo.photoId,
-      source: "classifier",
-    }),
+    enqueueForReview(
+      db(),
+      {
+        subjectType: queueSubjectOf[photo.scope],
+        subjectId: photo.photoId,
+        source: "classifier",
+      },
+      { onlyIf: photoStillThere(photo) },
+    ),
   ];
 }
 

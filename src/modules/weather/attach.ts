@@ -6,6 +6,7 @@
  * no-op (CLAUDE.md resilience law 1).
  */
 import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 
 import { gaveUpClear, gaveUpUpsert } from "../../db/gave-up";
 import { gaveUp, imports, runs } from "../../db/schema-core";
@@ -117,18 +118,44 @@ function isResolved(status: WeatherStatus): boolean {
  * Both callers pinned the weather primary first, so the derivation reads
  * the observation they just wrote.
  */
-async function setStatus(runId: Ulid, status: WeatherStatus): Promise<void> {
+async function setStatus(
+  runId: Ulid,
+  status: WeatherStatus,
+  sampled?: SampledTimes,
+): Promise<void> {
   const db = coreDb();
   const update = db
     .update(runs)
     .set({ weatherStatus: status })
-    .where(eq(runs.id, runId));
+    .where(and(eq(runs.id, runId), stillAt(sampled)));
   if (!isResolved(status)) {
     await update;
     return;
   }
   const copy = await weatherHalfStatements(db, runId);
   await db.batch([update, gaveUpClear(db, "weather", runId), ...copy]);
+}
+
+/**
+The start and length of a run that an attach fetched hours for.
+*/
+type SampledTimes = Readonly<{ startedAt: number; durationS: number }>;
+
+/**
+ * Whether the run is still at the times its hours were fetched for, read
+ * when the status write runs (design 278). A retime while the provider
+ * answered sets the run back to `pending` for its new hours, and the
+ * attempt that fetched the old ones must not settle it over that: its
+ * write misses, and the hourly cron settles the run for the hours it now
+ * has. Nothing to hold to when nothing was fetched.
+ */
+function stillAt(sampled: SampledTimes | undefined): SQL | undefined {
+  return sampled === undefined
+    ? undefined
+    : and(
+        eq(runs.startedAt, sampled.startedAt),
+        eq(runs.durationS, sampled.durationS),
+      );
 }
 
 /**
@@ -230,7 +257,7 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     });
     outcome = isWeatherBudgetSpent(error) ? "budget-spent" : "pending";
   }
-  await setStatus(runId, outcome === "attached" ? "attached" : "pending");
+  await setStatus(runId, outcome === "attached" ? "attached" : "pending", run);
   return outcome;
 }
 
@@ -399,8 +426,9 @@ async function attachEach(
  * claim-then-work UPDATE here; overlap safety instead comes from
  * `resolveAndAttach`'s idempotency plus the cache's UNIQUE key (worst case
  * on a genuinely overlapping run is a duplicate provider call, never a
- * duplicate row or a lost update) — documented deviation from law 2's
- * literal shape, flagged in the design doc.
+ * duplicate row or a lost update: the closing status write is held to the
+ * times its hours were fetched for, `stillAt`, design 278) — documented
+ * deviation from law 2's literal shape, flagged in the design doc.
  *
  * The packet's "5 attempts" cap is approximated with a 5-hour window
  * instead of a persisted per-run counter — no schema change needed, at the

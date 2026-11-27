@@ -1,11 +1,13 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
   entryPhotos,
+  notifications,
   photoScreenings,
+  reviewQueue,
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -49,6 +51,7 @@ import {
   screened,
 } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
+import { beforeNextWriteBatch } from "../before-write-batch";
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -564,5 +567,110 @@ describe("what the classifier puts in front of a person (R-65)", () => {
     );
 
     expect(await isQueuedForReview("photo", itemId)).toBe(false);
+  });
+});
+
+async function reviewRowsFor(subjectId: string) {
+  return core()
+    .select({ id: reviewQueue.id })
+    .from(reviewQueue)
+    .where(eq(reviewQueue.subjectId, subjectId));
+}
+
+async function noticesFor(subjectId: string) {
+  return core()
+    .select({ kind: notifications.kind })
+    .from(notifications)
+    .where(eq(notifications.subjectId, subjectId));
+}
+
+function entryPhoto(photoId: string) {
+  return {
+    scope: "entry" as const,
+    photoId,
+    bytes: new Uint8Array([1]),
+    contentType: "image/webp",
+  };
+}
+
+describe("a verdict on a photo deleted while it was classified (design 278)", () => {
+  beforeEach(resetSafetyTables);
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("asks nobody about, and tells nobody of, a flagged kit photo that has gone", async () => {
+    const photoId = await entryPhotoRow();
+    const gap = beforeNextWriteBatch(() =>
+      core().delete(entryPhotos).where(eq(entryPhotos.id, photoId)),
+    );
+
+    await screenPhoto(entryPhoto(photoId), flagging({ sexual: 1 }));
+
+    expect(gap.fired()).toBe(true);
+    expect(await reviewRowsFor(photoId)).toStrictEqual([]);
+    expect(await noticesFor(photoId)).toStrictEqual([]);
+  });
+
+  it("asks nobody about a borderline kit photo that has gone", async () => {
+    const photoId = await entryPhotoRow();
+    beforeNextWriteBatch(() =>
+      core().delete(entryPhotos).where(eq(entryPhotos.id, photoId)),
+    );
+
+    await screenPhoto(
+      entryPhoto(photoId),
+      borderline({ sexual: reviewFloors.sexual }),
+    );
+
+    expect(await reviewRowsFor(photoId)).toStrictEqual([]);
+  });
+
+  it("still asks about, and tells of, a flagged kit photo that stayed", async () => {
+    const photoId = await entryPhotoRow();
+    const gap = beforeNextWriteBatch(() => Promise.resolve());
+
+    await screenPhoto(entryPhoto(photoId), flagging({ sexual: 1 }));
+
+    expect(gap.fired()).toBe(true);
+    expect(await reviewRowsFor(photoId)).toHaveLength(1);
+    expect(await noticesFor(photoId)).toStrictEqual([
+      { kind: "content_hidden" },
+    ]);
+  });
+
+  it("asks nobody about a garment photo its owner removed", async () => {
+    const userId = await makeUser();
+    const itemId = newUlid();
+    await core()
+      .insert(wardrobeItems)
+      .values({
+        id: itemId,
+        userId,
+        category: "top",
+        type: "tee",
+        name: "Tee",
+        photoKey: `items/${userId}/${itemId}/original`,
+        origin: "manual",
+        createdAt: 1,
+      });
+    beforeNextWriteBatch(() =>
+      core()
+        .update(wardrobeItems)
+        .set({ photoKey: sql`null` })
+        .where(eq(wardrobeItems.id, itemId)),
+    );
+
+    await screenPhoto(
+      {
+        scope: "garment",
+        photoId: itemId,
+        bytes: new Uint8Array([1]),
+        contentType: "image/webp",
+      },
+      flagging({ sexual: 1 }),
+    );
+
+    expect(await reviewRowsFor(itemId)).toStrictEqual([]);
   });
 });
