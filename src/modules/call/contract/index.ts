@@ -16,5 +16,6 @@ export type {
   PersonalRun,
   ScoredPiece,
   Scorer,
+  WarmRunsWorn,
   WornPiece,
 } from "./types";

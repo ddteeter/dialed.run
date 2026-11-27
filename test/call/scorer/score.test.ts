@@ -133,7 +133,9 @@ describe("the scorer's answer", () => {
       bandFloorC: 5,
       precip: "dry",
       confidence: "below-threshold",
+      verdictsSoFar: 0,
       personalRunsInBand: 0,
+      warmRuns: { bandFloorC: 5, worn: [] },
       kit: [],
       ranking: [],
     });
@@ -748,6 +750,124 @@ describe("confidence (reading 6)", () => {
       callFor({ history: [...elsewhere, ...runs(6, { worn })], closet })
         .confidence,
     ).toBe("confident");
+  });
+});
+
+describe("the runner's verdicts so far (owner, 2026-11-26, #1104)", () => {
+  const worn = [wore("zip", "tops")];
+
+  it("counts every verdict, in this band or not, typed weather included", () => {
+    const history = [
+      ...runs(3, { worn }),
+      ...runs(4, { judgedFeelsLikeC: 21, worn }),
+      ...runs(2, { precip: "wet", verdict: -1, worn }),
+      ...runs(2, { source: "manual", verdict: 2, worn }),
+    ];
+    const result = callFor({ history });
+
+    expect(result.verdictsSoFar).toBe(11);
+    expect(result.personalRunsInBand).toBe(5);
+  });
+
+  it("is the count the threshold reads: one short of it, then at it", () => {
+    const short = callFor({ history: runs(CALL_VERDICT_THRESHOLD - 1) });
+    const at = callFor({ history: runs(CALL_VERDICT_THRESHOLD) });
+
+    expect(short.verdictsSoFar).toBe(CALL_VERDICT_THRESHOLD - 1);
+    expect(short.confidence).toBe("below-threshold");
+    expect(at.verdictsSoFar).toBe(CALL_VERDICT_THRESHOLD);
+    expect(at.confidence).toBe("confident");
+  });
+
+  it("is counted with no forecast too", () => {
+    const result = callFor({
+      conditions: { kind: "none" },
+      history: runs(7, { worn }),
+    });
+
+    expect(result.verdictsSoFar).toBe(7);
+  });
+});
+
+describe("what was worn on the band's too-warm runs (owner, 2026-11-26, #1104)", () => {
+  const closet = [
+    aPiece("zip", "tops", { lowC: 3, highC: 12 }),
+    aPiece("tee", "tops", { lowC: 13 }),
+    aPiece("vest", "outer", { lowC: -4, highC: 6 }),
+  ];
+
+  it("names the pieces of the warm runs in the Call's band and class, by id", () => {
+    const result = callFor({
+      history: [
+        aRun({
+          verdict: 1,
+          worn: [wore("zip", "tops"), wore("vest", "outer")],
+        }),
+        aRun({ verdict: 2, worn: [wore("zip", "tops")] }),
+        aRun({ verdict: 0, worn: [wore("tee", "tops")] }),
+      ],
+      closet,
+    });
+
+    expect(result.warmRuns).toStrictEqual({
+      bandFloorC: 5,
+      worn: [
+        { pieceId: "vest", group: "outer", estimate: { lowC: -4, highC: 6 } },
+        { pieceId: "zip", group: "tops", estimate: { lowC: 3, highC: 12 } },
+      ],
+    });
+  });
+
+  it("reads the same runs the band's warm count does: none from another band or class", () => {
+    const result = callFor({
+      history: [
+        aRun({ verdict: 1, worn: [wore("zip", "tops")] }),
+        aRun({
+          judgedFeelsLikeC: 21,
+          verdict: 2,
+          worn: [wore("tee", "tops")],
+        }),
+        aRun({ precip: "wet", verdict: 1, worn: [wore("vest", "outer")] }),
+      ],
+      closet,
+    });
+
+    expect(result.personalRunsInBand).toBe(1);
+    expect(result.warmRuns?.worn.map((piece) => piece.pieceId)).toStrictEqual([
+      "zip",
+    ]);
+  });
+
+  it("is in the band of the hour at its effort, with the runs counted there", () => {
+    const result = callFor({
+      effort: "workout",
+      history: [
+        aRun({ verdict: 1, worn: [wore("zip", "tops")] }),
+        aRun({
+          effort: "workout",
+          verdict: 1,
+          worn: [wore("tee", "tops")],
+        }),
+      ],
+      closet,
+    });
+
+    expect(result.bandFloorC).toBe(10);
+    expect(result.warmRuns).toStrictEqual({
+      bandFloorC: 10,
+      worn: [{ pieceId: "tee", group: "tops", estimate: { lowC: 13 } }],
+    });
+  });
+
+  it("is absent with no forecast, where there is no band", () => {
+    const result = callFor({
+      conditions: { kind: "none" },
+      history: [aRun({ verdict: 1, worn: [wore("zip", "tops")] })],
+      closet,
+    });
+
+    expect(result.bandFloorC).toBeUndefined();
+    expect(result.warmRuns).toBeUndefined();
   });
 });
 

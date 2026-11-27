@@ -199,6 +199,28 @@ export interface ScoredPiece {
   evidence: readonly EvidenceFact[];
 }
 
+/**
+ * What the runner wore on their too-warm runs in the Call's band and
+ * class. The paragraph's warm line reads it: "too warm" is only worth
+ * saying when the kit is lighter than what was worn then (owner,
+ * 2026-11-26, #1104).
+ */
+export interface WarmRunsWorn {
+  /**
+   * `bandFloorC` of the band the runs were in.
+   */
+  bandFloorC: number;
+  /**
+   * Each piece worn on those runs, once, with the closet's estimate for
+   * it when the closet still holds the piece and has one.
+   */
+  worn: readonly {
+    pieceId: string;
+    group: UiGroup;
+    estimate?: TempRange | undefined;
+  }[];
+}
+
 export interface CallResult {
   engineVersion: string;
   hourStart: number;
@@ -209,9 +231,18 @@ export interface CallResult {
   precip?: PrecipClass | undefined;
   confidence: Confidence;
   /**
+   * Every verdict the runner has given: the count `CALL_VERDICT_THRESHOLD`
+   * is held against.
+   */
+  verdictsSoFar: number;
+  /**
    * The runner's own counted runs in this band and class.
    */
   personalRunsInBand: number;
+  /**
+   * Absent when there is no forecast, and so no band.
+   */
+  warmRuns?: WarmRunsWorn | undefined;
   /**
    * At most one piece per group.
    */

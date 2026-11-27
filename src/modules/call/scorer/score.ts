@@ -31,6 +31,7 @@ import {
   type EstimateAtFeel,
 } from "./shrinkage";
 import { ENGINE_VERSION } from "./version";
+import { warmRunsWorn } from "./warm-runs";
 
 /**
  * What a forecast makes of the hour: the band and class it falls in, and
@@ -181,16 +182,19 @@ export const score: Scorer = (request) => {
     .map((piece) => scorePiece(piece, counted))
     .toSorted(bestFirst);
   const runsInBand = reading === undefined ? undefined : runs.length;
+  const verdictsSoFar = request.history.length;
   return {
     engineVersion: ENGINE_VERSION,
     hourStart: request.hourStart,
     bandFloorC: reading?.scope.bandFloorC,
     precip: reading?.scope.precip,
-    confidence: confidenceOf({
-      verdicts: request.history.length,
-      runsInBand,
-    }),
+    confidence: confidenceOf({ verdicts: verdictsSoFar, runsInBand }),
+    verdictsSoFar,
     personalRunsInBand: runsInBand ?? 0,
+    warmRuns:
+      reading === undefined
+        ? undefined
+        : warmRunsWorn(runs, request.closet, reading.scope.bandFloorC),
     kit: kitFrom(ranking, counted),
     ranking,
   };
