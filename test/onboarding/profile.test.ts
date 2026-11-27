@@ -11,13 +11,13 @@ import {
   sharingInput,
 } from "../../src/modules/onboarding/inputs";
 import { placeInput } from "../../src/lib/contracts/city-lookup";
-import { savePlace } from "../../src/modules/onboarding";
 import {
   completeOnboarding,
   currentSettings,
   hasOnboarded,
   requiresOnboarding,
   saveCalibration,
+  savePlace,
   savePreferences,
 } from "../../src/modules/onboarding/profile";
 import { makeUser, resetTables } from "../feed/helpers";

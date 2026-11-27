@@ -49,12 +49,14 @@ import {
 } from "../../src/modules/feed/entries/photos";
 import {
   accountCount,
-  ACCOUNTS_PAGE,
-  claimUsername,
   forceRename,
   listAccounts,
-  prefixPattern,
 } from "../../src/modules/account";
+import {
+  ACCOUNTS_PAGE,
+  prefixPattern,
+} from "../../src/modules/account/access/accounts";
+import { claimUsername } from "../../src/modules/account/handles/username";
 import type { ScreenHandle } from "../../src/modules/account/handles/handle-screen";
 import {
   openSubject,

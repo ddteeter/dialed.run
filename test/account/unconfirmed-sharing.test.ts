@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { user } from "../../src/db/schema-auth";
 import { outfitEntries } from "../../src/db/schema-core";
-import { isUnconfirmed, isVerified } from "../../src/modules/account";
+import { isUnconfirmed } from "../../src/modules/account";
 import { emailConfirmationOf } from "../../src/modules/account/verification/email-links";
 import {
   attachKit,
@@ -79,12 +79,6 @@ describe("the confirmation gates", () => {
     expect(await emailConfirmationOf(db, confirmed)).toBe(true);
     expect(await emailConfirmationOf(db, unconfirmed)).toBe(false);
     expect(await emailConfirmationOf(db, "no-account")).toBeUndefined();
-
-    // Useful, report, change and reset want a confirmed address; an
-    // account that is not there has none.
-    expect(await isVerified(db, confirmed)).toBe(true);
-    expect(await isVerified(db, unconfirmed)).toBe(false);
-    expect(await isVerified(db, "no-account")).toBe(false);
 
     // Sharing holds back only an account that exists and is unconfirmed.
     expect(await isUnconfirmed(db, confirmed)).toBe(false);

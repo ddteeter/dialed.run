@@ -8,10 +8,12 @@ import { newUlid } from "../../src/lib/ids";
 import {
   fillMissingTimeZones,
   runnerTimeZone,
-  savePlace,
-  type ZoneDeps,
 } from "../../src/modules/onboarding";
-import { saveCalibration } from "../../src/modules/onboarding/profile";
+import {
+  saveCalibration,
+  savePlace,
+} from "../../src/modules/onboarding/profile";
+import type { ZoneDeps } from "../../src/modules/onboarding/time-zone";
 import {
   NOW,
   makeObservation,

@@ -5,31 +5,13 @@
  * Server-fn glue lives in ./functions, imported directly by route files,
  * so this barrel stays importable in the vitest workers pool.
  */
-export {
-  claimUsername,
-  forceRename,
-  lookUpHandle,
-  usernameOf,
-} from "./handles";
+export { forceRename, lookUpHandle } from "./handles";
 export { reviewFlaggedHandle } from "./handles";
-export type {
-  ForcedRename,
-  ForceRenameRequest,
-  HandleClaim,
-  HandleLookup,
-} from "./handles";
-export {
-  accountCount,
-  ACCOUNTS_PAGE,
-  listAccounts,
-  prefixPattern,
-} from "./access";
-export type { AccountRow, AccountsQuery } from "./access";
+export { accountCount, listAccounts } from "./access";
 export {
   changeLinkWithdrawal,
   emailConfirmationRead,
   isUnconfirmed,
-  isVerified,
 } from "./verification";
 export { accessGate } from "./access";
 export { receiveAccessRequest } from "./access";
@@ -38,16 +20,5 @@ export {
   latestAcceptanceOf,
   termsStandingOf,
 } from "./terms";
-export {
-  authMail,
-  confirmEmail,
-  readEmailLanding,
-  requestEmailChange,
-  resendConfirmation,
-} from "./verification";
-export type {
-  AuthMail,
-  ChangeResult,
-  Landing,
-  ResendAnswer,
-} from "./verification";
+export { authMail } from "./verification";
+export type { AuthMail } from "./verification";

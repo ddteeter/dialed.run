@@ -32,7 +32,7 @@ export function runnerNotLeaving(runnerId: SQLiteColumn): SQL {
  * Whether the runner a column names has a confirmed address (design 133,
  * decision D-113 Q2), as a `WHERE` clause over that column. A primary-key
  * probe on `user` per candidate, so it never scans. An absent account is
- * not confirmed, as account's `isVerified` reads it. For a surface that
+ * not confirmed, as auth's verification gate reads it. For a surface that
  * shows one runner to another, where an unconfirmed runner must not be
  * found.
  */

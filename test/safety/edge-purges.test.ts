@@ -5,7 +5,8 @@ import { entryPhotos, userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
-import { claimUsername, forceRename } from "../../src/modules/account";
+import { forceRename } from "../../src/modules/account";
+import { claimUsername } from "../../src/modules/account/handles/username";
 import {
   deleteEntryPhoto,
   deleteRun,

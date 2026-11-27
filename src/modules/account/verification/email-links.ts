@@ -242,7 +242,7 @@ export function emailConfirmationRead(
 /**
  * Whether this runner's address is confirmed: `true` or `false`, or
  * `undefined` when there is no such account. The one read of the fact;
- * the two gates below decide what an absent account means.
+ * the gate below decides what an absent account means.
  */
 export async function emailConfirmationOf(
   db: DrizzleD1Database<Record<string, unknown>>,
@@ -250,19 +250,6 @@ export async function emailConfirmationOf(
 ): Promise<boolean | undefined> {
   const [row] = await emailConfirmationRead(db, userId);
   return row?.isConfirmed;
-}
-
-/**
- * Whether this runner's address is confirmed (seam 7): the gate on
- * anything that trusts the address or that another runner acts on —
- * Useful, report, an email change. (Not a reset: spending one confirms the
- * address, D-63.) A runner who is gone is not.
- */
-export async function isVerified(
-  db: DrizzleD1Database<Record<string, unknown>>,
-  userId: string,
-): Promise<boolean> {
-  return (await emailConfirmationOf(db, userId)) === true;
 }
 
 /**

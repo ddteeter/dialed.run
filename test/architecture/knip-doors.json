@@ -1,54 +1,4 @@
 {
-  "src/modules/account/access/index.ts": [
-    "ACCOUNTS_PAGE",
-    "AccountRow",
-    "AccountsQuery",
-    "prefixPattern"
-  ],
-  "src/modules/account/handles/index.ts": [
-    "ForceRenameRequest",
-    "ForcedRename",
-    "HandleClaim",
-    "HandleLookup",
-    "claimUsername"
-  ],
-  "src/modules/account/index.ts": [
-    "ACCOUNTS_PAGE",
-    "AccountRow",
-    "AccountsQuery",
-    "ChangeResult",
-    "ForceRenameRequest",
-    "ForcedRename",
-    "HandleClaim",
-    "HandleLookup",
-    "Landing",
-    "ResendAnswer",
-    "claimUsername",
-    "confirmEmail",
-    "isVerified",
-    "prefixPattern",
-    "readEmailLanding",
-    "requestEmailChange",
-    "resendConfirmation",
-    "usernameOf"
-  ],
-  "src/modules/account/verification/index.ts": [
-    "ChangeResult",
-    "Landing",
-    "ResendAnswer",
-    "confirmEmail",
-    "isVerified",
-    "readEmailLanding",
-    "requestEmailChange",
-    "resendConfirmation"
-  ],
-  "src/modules/auth/index.ts": [
-    "AuthRequiredError",
-    "NotFoundState",
-    "NotFoundSubject",
-    "auth",
-    "isAuthRequired"
-  ],
   "src/modules/email/index.ts": [
     "emailPreferencesOf",
     "isEmailWanted",
@@ -69,7 +19,6 @@
     "markAllNotificationsRead",
     "unreadNotificationCount"
   ],
-  "src/modules/onboarding/index.ts": ["SaveZoneDeps", "ZoneDeps", "savePlace"],
   "src/modules/ops/edge/index.ts": ["SERVER_FN_PREFIX", "TurnstileRefusal"],
   "src/modules/ops/owed-email/index.ts": ["emailHandler"],
   "src/modules/ops/public-web/index.ts": ["KitCardAnswer"],
