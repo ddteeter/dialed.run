@@ -287,6 +287,7 @@ its first firing.
 | `STRAVA_CLIENT_SECRET`        | for Strava | As above                                                                                                                                                                                                                                                                                          |
 | `STRAVA_WEBHOOK_VERIFY_TOKEN` | for Strava | The subscription handshake rejects; pick any long random string and reuse it in step 6                                                                                                                                                                                                            |
 | `STRAVA_WEBHOOK_PATH_SECRET`  | for Strava | The webhook answers 404 to everything, Strava's handshake included; pick a different long random string (URL-safe: `openssl rand -hex 32`) and use it as the callback URL's last segment in step 6                                                                                                |
+| `STRAVA_SUBSCRIPTION_ID`      | for Strava | Every webhook event is dropped (fail closed). It exists only once step 6's subscription call returns it, so it is set then, not now (D-208)                                                                                                                                                       |
 | `GARMIN_API_KEY`              | optional   | "Import from Garmin" is not drawn (plan 160). The owner's Garmin Connect Personal API key, which is personal to them; it expires on a date they pick when they make it, so put a renewal in the calendar a week before                                                                            |
 | `GARMIN_OWNER_USER_ID`        | optional   | As above. The owner's dialed.run user id: the only account the import is for, because the key may be used only for its holder's own data                                                                                                                                                          |
 | `SENTRY_DSN`                  | strongly   | Errors go nowhere. This is the only place terminal failures surface for a solo operator                                                                                                                                                                                                           |
@@ -365,6 +366,12 @@ echoes it only when mode and token match, so the `verify_token` here must be
 byte-identical to the secret in step 5. The callback URL's last segment must
 be `STRAVA_WEBHOOK_PATH_SECRET` from step 5, byte for byte: every other path
 answers 404, the handshake included.
+
+Strava answers the call with the subscription, `{"id": <number>}`. Set it
+as a secret, `wrangler secret put STRAVA_SUBSCRIPTION_ID`, with that
+number (D-208): until then the webhook drops every event, ours included.
+It is a secret rather than a var because it is known only now, after the
+deploy, and a var lives in the committed `wrangler.jsonc`.
 
 Strava allows **one subscription per application**. A staging environment
 needs its own Strava app, not a second subscription.

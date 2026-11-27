@@ -76,12 +76,13 @@ const BY_NEED: Readonly<
   },
   "before public": { secret: ["TAKEDOWN_SECRET"] },
   "for Strava": {
-    var: ["STRAVA_SUBSCRIPTION_ID"],
     secret: [
       "STRAVA_CLIENT_ID",
       "STRAVA_CLIENT_SECRET",
       "STRAVA_WEBHOOK_VERIFY_TOKEN",
       "STRAVA_WEBHOOK_PATH_SECRET",
+      // A secret, not a var (D-208): known only after the deploy.
+      "STRAVA_SUBSCRIPTION_ID",
     ],
   },
   "owner only": { secret: ["GARMIN_API_KEY", "GARMIN_OWNER_USER_ID"] },
