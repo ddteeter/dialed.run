@@ -1,16 +1,17 @@
 /**
  * The floor under every surface that shows one runner to someone else, as
  * `WHERE` clauses over `user_profiles`: not banned, not a system account,
- * not leaving, address confirmed. Here, beside the tables and below the modules, because feed's
- * search, H and open web and safety's reports all ask it, and safety may
- * not import feed.
+ * not leaving, address confirmed. In `safety/rules` because feed's search,
+ * H and open web and safety's reports all ask it: `safety/rules` imports
+ * no module, and feed already imports safety, so every asker reads it
+ * through a door (design 258 proposal 4).
  */
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
-import { accountDeletions, userProfiles } from "./schema-core";
-import { runnerConfirmed } from "./runner-confirmed";
+import { user } from "../../../db/schema-auth";
+import { accountDeletions, userProfiles } from "../../../db/schema-core";
 
 /**
  * A runner who asked to delete their account is gone from everyone else
@@ -28,9 +29,21 @@ export function runnerNotLeaving(runnerId: SQLiteColumn): SQL {
 }
 
 /**
+ * Whether the runner a column names has a confirmed address (design 133,
+ * decision D-113 Q2), as a `WHERE` clause over that column. A primary-key
+ * probe on `user` per candidate, so it never scans. An absent account is
+ * not confirmed, as account's `isVerified` reads it. For a surface that
+ * shows one runner to another, where an unconfirmed runner must not be
+ * found.
+ */
+function runnerConfirmed(runnerId: SQLiteColumn): SQL {
+  return sql`exists (select 1 from ${user} where ${user.id} = ${runnerId} and ${user.emailVerified} = 1)`;
+}
+
+/**
  * With no viewer in it, this is the open web's profile's (`/@handle`,
- * D-151) whole runner rule; feed's signed-in rule adds the viewer's own
- * blocks and reports.
+ * D-151) whole runner rule; the signed-in rule, `runnerVisibleToViewer`,
+ * adds the viewer's own blocks and reports.
  */
 export function runnerInStanding() {
   return and(

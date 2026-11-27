@@ -17,10 +17,6 @@ export {
   deleteRunCopies,
   entryHalfStatement,
 } from "./run-conditions-entry";
-export {
-  runnerInStanding,
-  runnerVisibleToViewer,
-  runnersVisibleTo,
-} from "./runner-visibility";
+export { runnersVisibleTo } from "./runner-visibility";
 export { isProvidersReading } from "./strip";
 export { unitsFor } from "./units";

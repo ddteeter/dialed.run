@@ -136,12 +136,14 @@ model {
   cf.app.account -[wiring]-> cf.app.auth
   cf.app.account -[wiring]-> cf.app.email
   cf.app.account -[wiring]-> cf.app.ops
+  cf.app.account -[wiring]-> cf.app.ops.edge
   cf.app.account -[wiring]-> cf.app.ops.owedEmail
   cf.app.account -[wiring]-> cf.app.safety
   cf.app.account.access -[imports]-> cf.app.account.terms
   cf.app.account.access -[imports]-> cf.app.account.verification
   cf.app.account.access -[imports]-> cf.app.email
   cf.app.account.access -[imports]-> cf.app.ops
+  cf.app.account.access -[imports]-> cf.app.ops.edge
   cf.app.account.data -[imports]-> cf.app.account.handles
   cf.app.account.data -[imports]-> cf.app.account.terms
   cf.app.account.data -[imports]-> cf.app.account.verification
@@ -220,7 +222,7 @@ model {
   cf.app.feed.attach -[imports]-> cf.app.feed.conditions
   cf.app.feed.attach -[imports]-> cf.app.feed.entries
   cf.app.feed.attach -[imports]-> cf.app.runs
-  cf.app.feed.conditions -[imports]-> cf.app.safety
+  cf.app.feed.conditions -[imports]-> cf.app.safety.rules
   cf.app.feed.conditions -[imports]-> cf.app.weather
   cf.app.feed.consensus -[imports]-> cf.app.feed.conditions
   cf.app.feed.consensus -[imports]-> cf.app.ops
@@ -236,6 +238,7 @@ model {
   cf.app.feed.entries -[imports]-> cf.app.ops.owedEmail
   cf.app.feed.entries -[imports]-> cf.app.runs.writes
   cf.app.feed.entries -[imports]-> cf.app.safety
+  cf.app.feed.entries -[imports]-> cf.app.safety.rules
   cf.app.feed.entries -[imports]-> cf.app.safety.takedowns
   cf.app.feed.entries -[imports]-> cf.app.weather
   cf.app.feed.following -[imports]-> cf.app.account
@@ -245,6 +248,7 @@ model {
   cf.app.feed.following -[imports]-> cf.app.notifications
   cf.app.feed.following -[imports]-> cf.app.ops
   cf.app.feed.following -[imports]-> cf.app.safety
+  cf.app.feed.following -[imports]-> cf.app.safety.rules
   cf.app.feed.moderation -[imports]-> cf.app.email
   cf.app.feed.moderation -[imports]-> cf.app.feed.conditions
   cf.app.feed.moderation -[imports]-> cf.app.feed.entries
@@ -257,9 +261,10 @@ model {
   cf.app.feed.publicWeb -[wiring]-> cf.app.feed.entries
   cf.app.feed.publicWeb -[imports]-> cf.app.ops
   cf.app.feed.publicWeb -[imports]-> cf.app.safety
+  cf.app.feed.publicWeb -[imports]-> cf.app.safety.rules
   cf.app.notifications -[wiring]-> cf.app.auth
-  cf.app.notifications -[wiring]-> cf.app.feed
   cf.app.notifications -[wiring]-> cf.app.runs
+  cf.app.notifications -[wiring]-> cf.app.safety.rules
   cf.app.onboarding -[wiring]-> cf.app.auth
   cf.app.onboarding -[imports]-> cf.app.closet
   cf.app.onboarding -[wiring]-> cf.app.ops
@@ -314,6 +319,7 @@ model {
   cf.app.safety -[wiring]-> cf.app.account
   cf.app.safety -[wiring]-> cf.app.auth
   cf.app.safety -[wiring]-> cf.app.ops
+  cf.app.safety -[wiring]-> cf.app.ops.edge
   cf.app.safety -[wiring]-> cf.app.ops.owedEmail
   cf.app.safety.limits -[imports]-> cf.app.safety.rules
   cf.app.safety.notices -[imports]-> cf.app.notifications

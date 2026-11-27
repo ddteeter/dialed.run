@@ -123,6 +123,7 @@ const READERS: Readonly<Record<string, Reason>> = {
   "src/modules/safety/review/review.ts": "operator",
   "src/modules/safety/runners/runners.ts": "operator",
   "src/modules/safety/takedowns/takedown-requests.ts": "operator",
+  "src/modules/safety/rules/runner-standing.ts": "floor",
   "src/modules/safety/rules/visibility.ts": "floor",
 };
 
@@ -173,9 +174,9 @@ const SCHEMA = "src/db/schema-core.ts";
 Where the mark may be named: its column, the two floors and the write gate.
 */
 const MARK_READERS = [
-  "src/db/runner-standing.ts",
   "src/db/schema-core.ts",
   "src/modules/auth/system-account.ts",
+  "src/modules/safety/rules/runner-standing.ts",
   "src/modules/safety/rules/visibility.ts",
 ];
 

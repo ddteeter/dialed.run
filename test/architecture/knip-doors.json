@@ -30,7 +30,6 @@
     "readEmailLanding",
     "requestEmailChange",
     "resendConfirmation",
-    "runnerConfirmed",
     "usernameOf"
   ],
   "src/modules/account/verification/index.ts": [
@@ -41,8 +40,7 @@
     "isVerified",
     "readEmailLanding",
     "requestEmailChange",
-    "resendConfirmation",
-    "runnerConfirmed"
+    "resendConfirmation"
   ],
   "src/modules/auth/index.ts": [
     "AuthRequiredError",
@@ -135,7 +133,6 @@
   "src/modules/safety/functions.ts": ["denyDomainAction"],
   "src/modules/safety/reports/index.ts": ["OweEmail"],
   "src/modules/safety/review/index.ts": ["ReviewSource"],
-  "src/modules/safety/rules/index.ts": ["runnerNotLeaving"],
   "src/modules/weather/index.ts": [
     "CacheKey",
     "ObservationRow",

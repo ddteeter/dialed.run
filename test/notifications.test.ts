@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { userProfiles } from "../src/db/schema-core";
-import { runnerVisibleToViewer } from "../src/modules/feed";
+import { runnerVisibleToViewer } from "../src/modules/safety/rules";
 import { follow } from "../src/modules/feed/following/follows";
 import { blockRunner } from "../src/modules/safety/reports/blocks";
 

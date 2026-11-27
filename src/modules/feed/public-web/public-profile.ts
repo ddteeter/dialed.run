@@ -30,12 +30,12 @@ import { lookUpHandle } from "../../account";
 import { publicRotation } from "../../closet";
 import { firstPublishedPhotos, publicPageHeaders } from "../../ops";
 import { worldVisibleEntry } from "../../safety";
+import { runnerInStanding } from "../../safety/rules";
 
 import {
   observationsForRuns,
   type Conditions,
   countWhere,
-  runnerInStanding,
   unitsFor,
 } from "../conditions";
 import { runDayOf } from "../../../lib/dates";

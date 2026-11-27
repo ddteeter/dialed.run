@@ -4,7 +4,7 @@
     "feed": 9
   },
   "doorWidth": {
-    "safety": 95
+    "safety": 93
   },
   "pastDoor": {},
   "files": {},
@@ -14,7 +14,7 @@
     "feed": 9,
     "ops": 24,
     "runs": 16,
-    "safety": 95,
+    "safety": 93,
     "weather": 23
   },
   "direction": {},

@@ -9,7 +9,8 @@ import { follows, userProfiles } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { hasRowWhere } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
-import { countWhere, runnerVisibleToViewer } from "../conditions";
+import { runnerVisibleToViewer } from "../../safety/rules";
+import { countWhere } from "../conditions";
 import { ringFollowQuietly } from "./follow-notices";
 
 function db() {

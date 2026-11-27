@@ -253,12 +253,6 @@ export async function emailConfirmationOf(
 }
 
 /**
- * The same fact as a `WHERE` clause over another table's runner column, in
- * `db/runner-confirmed`, so modules that may not import account read it too.
- */
-export { runnerConfirmed } from "../../../db/runner-confirmed";
-
-/**
  * Whether this runner's address is confirmed (seam 7): the gate on
  * anything that trusts the address or that another runner acts on —
  * Useful, report, an email change. (Not a reset: spending one confirms the

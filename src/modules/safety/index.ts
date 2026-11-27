@@ -74,8 +74,6 @@ export {
   isUnderReviewForAuthor,
   kitPiecesSelect,
   moderationActionInsert,
-  notBlockedEitherWay,
-  profileNotReportedBy,
   publicPhotoStatus,
   publiclyVisibleEntry,
   removalNotice,

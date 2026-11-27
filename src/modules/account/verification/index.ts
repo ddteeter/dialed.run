@@ -5,7 +5,6 @@
 export {
   changeLinkWithdrawal,
   emailConfirmationRead,
-  runnerConfirmed,
   isUnconfirmed,
   isVerified,
 } from "./email-links";

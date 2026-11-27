@@ -28,7 +28,6 @@ export type { AccountRow, AccountsQuery } from "./access";
 export {
   changeLinkWithdrawal,
   emailConfirmationRead,
-  runnerConfirmed,
   isUnconfirmed,
   isVerified,
 } from "./verification";

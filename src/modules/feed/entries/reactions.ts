@@ -12,8 +12,9 @@ import {
 } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { hasRowWhere } from "../../../lib/sql/keyed-read";
-import { countOf, countWhere, runnerInStanding } from "../conditions";
+import { countOf, countWhere } from "../conditions";
 import { entryVisibleTo } from "../../safety";
+import { runnerInStanding } from "../../safety/rules";
 import { nowSeconds } from "../../../lib/now";
 
 function db() {

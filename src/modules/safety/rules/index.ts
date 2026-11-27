@@ -37,9 +37,9 @@ export {
   heldPhotoStatus,
   isUnderReviewForAuthor,
   notBlockedEitherWay,
-  profileNotReportedBy,
   publiclyVisibleEntry,
   publicPhotoStatus,
-  runnerNotLeaving,
+  runnerVisibleToViewer,
   worldVisibleEntry,
 } from "./visibility";
+export { runnerInStanding } from "./runner-standing";
