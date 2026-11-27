@@ -308,13 +308,13 @@ Since C16 (D-142, design 146):
 
 ### Step 3: the record
 
-| Record                            | Kept                                                                                                                                                                           |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `takedown_requests` row           | Requester email, signature, location, statement, `dueAt`, decision, reason, `resolvedAt`                                                                                       |
-| `moderation_actions` row          | Who removed what, when, and the request id                                                                                                                                     |
-| `takedown_blocks`                 | A blocked requester's keys (D-118)                                                                                                                                             |
-| How long                          | The request and its `moderation_actions` row: 3 years after the decision (D-131; `safety/reports/retention.ts` `sweepModerationRecords`). A block: until the operator lifts it |
-| The copies search, and its limits | A note in the evidence store under `takedown/<request id>/` (D-148); the app has no field for it                                                                               |
+| Record                            | Kept                                                                                                                                                                                                        |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `takedown_requests` row           | Requester email, signature, location, statement, `dueAt`, decision, reason, `resolvedAt`                                                                                                                    |
+| `moderation_actions` row          | Who removed what, when, and the request id                                                                                                                                                                  |
+| `takedown_blocks`                 | A blocked requester's keys (D-118)                                                                                                                                                                          |
+| How long                          | The request and its `moderation_actions` row: 3 years after the decision (D-131; `safety/reports/retention.ts` `sweepModerationRecords`). A block: until the operator lifts it, or 3 years after it was set |
+| The copies search, and its limits | A note in the evidence store under `takedown/<request id>/` (D-148); the app has no field for it                                                                                                            |
 
 ## When the owner is away
 
