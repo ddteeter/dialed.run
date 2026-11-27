@@ -91,6 +91,22 @@ describe("whyNot", () => {
     });
   });
 
+  it("reads the chosen piece's record, not its flags", () => {
+    const flagged = {
+      kind: "personal-flag",
+      pieceId: "zip",
+      bandFloorC: 5,
+      flag: "not_enough",
+      times: 2,
+    } as const;
+    const top = piece("zip", "tops", [flagged], 3);
+    const tee = piece("tee", "tops", [], 1);
+    expect(
+      whyNot(result({ kit: [top], ranking: [top, tee] }), "tee", runner)
+        ?.answer,
+    ).toBe("The half-zip ranked higher for this hour.");
+  });
+
   it("answers a left-out group's piece (the vest)", () => {
     const vest = piece("vest", "outer", [record("vest", 3, 3)], 1);
     expect(whyNot(call(vest), "vest", runner)).toEqual({

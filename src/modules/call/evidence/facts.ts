@@ -35,9 +35,11 @@ function isTooMuch(
   fact: EvidenceFact,
   band: number | undefined,
 ): fact is Fact<"personal-flag"> {
+  // A flag is one of two, so "not `not_enough`" is "too much"; written
+  // this way, a fact of another kind let through would be read as a flag.
   return (
     fact.kind === "personal-flag" &&
-    fact.flag === "too_much" &&
+    fact.flag !== "not_enough" &&
     fact.bandFloorC === band
   );
 }

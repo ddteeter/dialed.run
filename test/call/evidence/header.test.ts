@@ -111,6 +111,26 @@ describe("callHeader", () => {
     });
   });
 
+  it("finds a zone share among a piece's other facts", () => {
+    const estimate = {
+      kind: "estimate",
+      pieceId: "singlet",
+      range: { lowC: 20 },
+    } as const;
+    const borrowed = result({
+      confidence: "borrowed",
+      bandFloorC: 25,
+      personalRunsInBand: 0,
+      kit: [piece("singlet", "tops", [estimate, zoneShare])],
+    });
+    expect(callHeader(borrowed, "c", 31)).toMatchObject({
+      body: {
+        shown:
+          "You've logged 0 runs in 25–30°. This comes from runners in your climate, not from you.",
+      },
+    });
+  });
+
   it("borrows from other runners when no share is from a zone", () => {
     const own = {
       kind: "personal-piece",

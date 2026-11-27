@@ -153,13 +153,13 @@ export function factLine(fact: EvidenceFact, unit: TempUnit): Line | undefined {
  * in it, then their flags on it, then their runs in the band, then the
  * cohort, then the estimate.
  */
-const STRENGTH: readonly EvidenceFact["kind"][] = [
-  "personal-piece",
-  "personal-flag",
-  "personal-band",
-  "cohort-share",
-  "estimate",
-];
+const STRENGTH: Readonly<Record<EvidenceFact["kind"], number>> = {
+  "personal-piece": 0,
+  "personal-flag": 1,
+  "personal-band": 2,
+  "cohort-share": 3,
+  estimate: 4,
+};
 
 /**
  * Whether a fact is about this piece: one naming a piece names this one,
@@ -178,7 +178,7 @@ function isAbout(fact: EvidenceFact, piece: ScoredPiece): boolean {
 export function pieceEvidenceLine(piece: ScoredPiece, unit: TempUnit): Line {
   const facts = piece.evidence
     .filter((fact) => isAbout(fact, piece))
-    .toSorted((a, b) => STRENGTH.indexOf(a.kind) - STRENGTH.indexOf(b.kind));
+    .toSorted((a, b) => STRENGTH[a.kind] - STRENGTH[b.kind]);
   for (const fact of facts) {
     const line = factLine(fact, unit);
     if (line !== undefined) return line;
