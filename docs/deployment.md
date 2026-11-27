@@ -176,9 +176,19 @@ in it. Before the deploy that binds `PUBLIC_PHOTOS`:
    public, and the deletion paths remove them; the `:15` hourly firing
    sweeps what a deletion missed, and any object no `public_photos` row
    names, and says so in the digest.
-6. No Cache Rule is needed: each object is written with its own
-   `Cache-Control`, short enough that a retracted photo leaves the edge
-   within the time the privacy policy promises.
+6. Make every photo cacheable: Caching → Cache Rules → **Create rule**
+   on hostname `photos.dialed.run`, cache eligibility **Eligible for
+   cache**, Edge TTL and Browser TTL both **Use cache-control header if
+   present**. Cloudflare caches by file extension only ("Cloudflare only
+   caches based on file extension and not by MIME type",
+   [default cache behavior](https://developers.cloudflare.com/cache/concepts/default-cache-behavior/)),
+   and a photo's key has none, so without the rule no photo is cached and
+   the scanning tool sees none of them. The TTLs come from each object's
+   own `Cache-Control` (`PUBLIC_PHOTO_CACHE_CONTROL`), short enough that a
+   retracted photo leaves the edge within the time the privacy policy
+   promises; never set a TTL in the rule that overrides it. Check it after
+   the first public kit: deployment plan §11, "Platform checks at the first
+   deploy".
 
 ### The evidence bucket (to create; no binding)
 
