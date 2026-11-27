@@ -94,7 +94,7 @@ Questions about this policy or your data: hello@dialed.run.
   for the `openid`, `email` and `profile` permissions only. We do not keep
   the tokens Google issues at sign-in.
 - **Sessions.** When you sign in we record a session token, when it expires
-  (7 days), the browser that signed in, and its IP address (as Cloudflare
+  (7 days after you last used it), the browser that signed in, and its IP address (as Cloudflare
   reports it). The record is deleted 30 days after the session expires,
   except as kept with
   [suspected child sexual abuse material](#moderation).
@@ -271,6 +271,9 @@ runners.
   is hidden until a person reviews it. If you delete a photo while we are
   reviewing it, we keep a short fingerprint of it, never the image itself,
   for 3 years, so that a copy uploaded again is held for a person to check.
+  The exception to both: while uploads by five different runners have been
+  held this way in the past hour, a matching upload from anyone else is
+  screened automatically like any other photo instead of being held.
 
 ## What other people can see
 
@@ -495,14 +498,19 @@ it.
   people report the same kit or photo, it is hidden from everyone but its
   owner and a person reviews it, and we tell its owner in the app that it
   is hidden. A profile or product name reported three times goes to a
-  person for review.
+  person for review. If an unusual number of reports have already hidden
+  things in the past hour, a kit or photo reported three times is not
+  hidden; it goes to a person for review instead.
 - **When a person decides on a report,** we tell each runner who filed it,
   in the app, whether we removed what they reported or left it up. If
   reports hid a kit or photo and we leave it up, we tell its owner. The
   notice does not name who reported it.
-- One report that a kit or photo is an intimate image shared without
-  consent hides it from everyone but its owner at once, tells its owner in
-  the app, and emails each reviewer that it is waiting and when its 48 hours run out. The email
+- A report that a kit or photo is an intimate image shared without
+  consent emails each reviewer that it is waiting and when its 48 hours
+  run out. The first three such reports a runner files in a day each hide
+  what they report from everyone but its owner at once, and tell its
+  owner in the app; a later report that day hides nothing, and waits for
+  a person to review it within the 48 hours. The email
   says what kind of thing was reported and when; it does not name you or
   the runner who posted it.
 - **A removal request** made at [/takedown](/takedown), with or without an
@@ -602,7 +610,8 @@ copy of the safeguards at hello@dialed.run.
 
 ## Cookies and browser storage
 
-- **A session cookie** keeps you signed in, for up to 7 days.
+- **A session cookie** keeps you signed in, until 7 days after you last
+  used it.
 - **Short-lived cookies during sign-in**, including one that lasts 10
   minutes while you connect Strava, stop the sign-in or connection being
   hijacked.
@@ -636,37 +645,37 @@ any differently.
 
 ## How long we keep it
 
-| What                                                                          | How long                                                                                                                               |
-| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Imported run files                                                            | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                                |
-| Anonymous totals                                                              | A published report stays as published; it names no one. A guide is remade from current data each time we update it                     |
-| Your data export                                                              | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export      |
-| Removal requests (`/takedown`)                                                | 3 years after we decide them                                                                                                           |
-| Requests for access                                                           | 90 days after we answer them. An unconfirmed request: within 3 days                                                                    |
-| Session records                                                               | Expire after 7 days, and are deleted 30 days after they expire. A copy kept with suspected child sexual abuse material: as below       |
-| Strava refresh token                                                          | Until you disconnect, then until Strava confirms revocation                                                                            |
-| Strava activity ids                                                           | 7 days                                                                                                                                 |
-| Garments you delete                                                           | Deleted with their photo files. A garment you wore leaves those kits                                                                   |
-| Runs, kits and kit photos you delete                                          | Deleted with their files                                                                                                               |
-| Photo fingerprints                                                            | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                      |
-| Photo screening scores                                                        | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                      |
-| Fingerprints of photos we removed as intimate images shared without consent   | 3 years after the removal, then deleted                                                                                                |
-| Fingerprints of photos you deleted while we were reviewing them               | 3 years after the delete, then deleted                                                                                                 |
-| Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                              |
-| Backups: the database's history, and copies of photos                         | 30 days. Something you delete leaves our backups within 30 days of leaving the app                                                     |
-| Suspected child sexual abuse material we removed, and its uploader's details  | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                                  |
-| Usernames you have used                                                       | For good, so nobody else can take them                                                                                                 |
-| Email addresses of accounts we closed                                         | A keyed fingerprint, 3 years after the account is deleted, used only to refuse a new sign-up                                           |
-| Kits and photos held for a copyright claim                                    | Until the claim is settled; an account deleted meanwhile is deleted after that                                                         |
-| Copies of photos on public kits, in the public store                          | While the kit is public; deleted when it stops being public, is hidden or removed, or you are banned or leave                          |
-| Copies of public pages and photos at Cloudflare's edge                        | Up to a minute after they stop being public. A public kit's preview card: up to a day, and never shown once the kit stops being public |
-| Weather                                                                       | Kept in the shared cache, linked to no one                                                                                             |
-| Reports you filed                                                             | 3 years after the decision on what you reported, or after filing if none was needed. Kept without your name if you leave               |
-| Records of moderation decisions                                               | 3 years after the decision, even after the account it concerns is deleted, and while the material is still hidden or quarantined       |
-| Everything else: account, profile, runs, kits, photos, follows, notifications | Until you delete it or your account                                                                                                    |
-| Server logs                                                                   | 7 days                                                                                                                                 |
-| Error reports                                                                 | 30 days                                                                                                                                |
-| Product pages we fetched                                                      | Kept, to re-read later. They hold the retailer's page, not information about you                                                       |
+| What                                                                          | How long                                                                                                                                            |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Imported run files                                                            | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                                             |
+| Anonymous totals                                                              | A published report stays as published; it names no one. A guide is remade from current data each time we update it                                  |
+| Your data export                                                              | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export                   |
+| Removal requests (`/takedown`)                                                | 3 years after we decide them                                                                                                                        |
+| Requests for access                                                           | 90 days after we answer them. An unconfirmed request: within 3 days                                                                                 |
+| Session records                                                               | Expire 7 days after you last used them, and are deleted 30 days after they expire. A copy kept with suspected child sexual abuse material: as below |
+| Strava refresh token                                                          | Until you disconnect, then until Strava confirms revocation                                                                                         |
+| Strava activity ids                                                           | 7 days                                                                                                                                              |
+| Garments you delete                                                           | Deleted with their photo files. A garment you wore leaves those kits                                                                                |
+| Runs, kits and kit photos you delete                                          | Deleted with their files                                                                                                                            |
+| Photo fingerprints                                                            | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                                   |
+| Photo screening scores                                                        | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                                   |
+| Fingerprints of photos we removed as intimate images shared without consent   | 3 years after the removal, then deleted                                                                                                             |
+| Fingerprints of photos you deleted while we were reviewing them               | 3 years after the delete, then deleted                                                                                                              |
+| Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                                           |
+| Backups: the database's history, and copies of photos                         | 30 days. Something you delete leaves our backups within 30 days of leaving the app                                                                  |
+| Suspected child sexual abuse material we removed, and its uploader's details  | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                                               |
+| Usernames you have used                                                       | For good, so nobody else can take them                                                                                                              |
+| Email addresses of accounts we closed                                         | A keyed fingerprint, 3 years after the account is deleted, used only to refuse a new sign-up                                                        |
+| Kits and photos held for a copyright claim                                    | Until the claim is settled; an account deleted meanwhile is deleted after that                                                                      |
+| Copies of photos on public kits, in the public store                          | While the kit is public; deleted when it stops being public, is hidden or removed, or you are banned or leave                                       |
+| Copies of public pages and photos at Cloudflare's edge                        | Up to a minute after they stop being public. A public kit's preview card: up to a day, and never shown once the kit stops being public              |
+| Weather                                                                       | Kept in the shared cache, linked to no one                                                                                                          |
+| Reports you filed                                                             | 3 years after the decision on what you reported, or after filing if none was needed. Kept without your name if you leave                            |
+| Records of moderation decisions                                               | 3 years after the decision, even after the account it concerns is deleted, and while the material is still hidden or quarantined                    |
+| Everything else: account, profile, runs, kits, photos, follows, notifications | Until you delete it or your account                                                                                                                 |
+| Server logs                                                                   | 7 days                                                                                                                                              |
+| Error reports                                                                 | 30 days                                                                                                                                             |
+| Product pages we fetched                                                      | Kept, to re-read later. They hold the retailer's page, not information about you                                                                    |
 
 ## Your choices
 
