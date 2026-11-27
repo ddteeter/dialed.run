@@ -226,6 +226,9 @@ export async function fileReport(
   // (`./thresholds`), one person when it is missing: the lowest bar of
   // the reasons filed, whatever order they came in (design 232), which is
   // the sweep's rule too.
+  // One filing is one row, one reason: a single `values` object, and the
+  // UNIQUE index drops a repeat. So `added` holds this report or nothing,
+  // and its id is all `stillOverTheBar` needs to count it.
   const [filedRow] = added;
   if (
     filedRow === undefined ||
