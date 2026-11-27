@@ -22,6 +22,7 @@ import {
   type CallScope,
   type PieceCount,
 } from "./personal";
+import type { ForecastRead } from "./reads";
 import {
   bandLeanC,
   cohortBase,
@@ -50,11 +51,14 @@ interface Reading {
 function readingOf(request: CallRequest): Reading | undefined {
   const { conditions, effort } = request;
   if (conditions.kind !== "forecast") return undefined;
-  const hourFeelC = feelAtEffortC(conditions.feelsLikeC, effort);
+  // Everything the scorer takes from a forecast goes through `ForecastRead`:
+  // a field not in `SCORER_READS` is not on it.
+  const forecast: ForecastRead = conditions;
+  const hourFeelC = feelAtEffortC(forecast.feelsLikeC, effort);
   return {
     scope: {
       bandFloorC: bandFloorC(hourFeelC),
-      precip: precipClassOf(conditions.precipMm),
+      precip: precipClassOf(forecast.precipMm),
     },
     hourFeelC,
   };

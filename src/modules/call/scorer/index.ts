@@ -4,6 +4,7 @@
  * the scorer through these names and no others.
  */
 export { COHORT_MIN_RUNNERS } from "./floor";
+export { SCORER_READS } from "./reads";
 export { score } from "./score";
 export { ENGINE_VERSION } from "./version";
 export { workedRange } from "./worked-range";
