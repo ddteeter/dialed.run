@@ -1314,6 +1314,22 @@ async function expectNothingParked(productId: string): Promise<void> {
 }
 
 describe("listAbandonedEnrichments: the hour the day runs out", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("does not list a product a late retry finished after the sweep read it", async () => {
+    const productId = await parked(DAY + 60, { extractionTries: 4 });
+    const gap = beforeNextWriteBatch(() => finish(productId));
+
+    await listAbandonedEnrichments(db());
+
+    expect(gap.fired()).toBe(true);
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+    const row = await rowOf(productId);
+    expect(row.extractionTries).toBe(4);
+  });
+
   it("lists a parked refusal once the day is past, in words, and clears what it kept", async () => {
     const productId = await parked(DAY + 60, {
       extractionError: "Page returned 403 through the proxy",
