@@ -32,13 +32,10 @@ import {
   turnstileSiteKey,
   verifyTurnstileToken,
 } from "../ops";
+import { turnstileAttempt } from "../ops/edge";
 import { settleOwedEmail } from "../ops/owed-email";
 import { requireAdmin } from "../safety";
-import {
-  confirmAccessAsk,
-  requestAccess,
-  turnstileAttempt,
-} from "./access/access";
+import { confirmAccessAsk, requestAccess } from "./access/access";
 import { accountPage, accountView, ownAddressView } from "./data/account-view";
 import { requestExport } from "./data/data-exports";
 import {

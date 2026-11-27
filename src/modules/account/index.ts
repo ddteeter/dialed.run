@@ -32,7 +32,7 @@ export {
   isUnconfirmed,
   isVerified,
 } from "./verification";
-export { accessGate, turnstileAttempt } from "./access";
+export { accessGate } from "./access";
 export { receiveAccessRequest } from "./access";
 export {
   currentTermsVersion,

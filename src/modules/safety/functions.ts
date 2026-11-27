@@ -12,10 +12,10 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { getRequest } from "@tanstack/react-start/server";
 
-import { turnstileAttempt } from "../account";
 import { deploymentPosture, requireUserId, verifiedUserId } from "../auth";
 
 import { oweInCore, oweInCoreWhere, verifyTurnstileToken } from "../ops";
+import { turnstileAttempt } from "../ops/edge";
 import { requireAdmin } from "./rules/admin";
 import {
   blockAndDeclineAll,

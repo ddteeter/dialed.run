@@ -19,7 +19,6 @@ import { nowSeconds } from "../../../lib/now";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { TURNSTILE_ACTIONS } from "../../../lib/turnstile-actions";
-import type { TurnstileAction } from "../../../lib/turnstile-actions";
 import {
   claimEmailSend,
   countLimit,
@@ -29,31 +28,13 @@ import {
   type EmailDeps,
 } from "../../email";
 import type { TurnstileAttempt, TurnstileVerdict } from "../../ops";
+import { turnstileAttempt } from "../../ops/edge";
 import { isClosedAddress } from "./closed-addresses";
 import { confirmRedemption, inviteStanding, redeemInvite } from "./invites";
 import { currentTermsVersion, signUpAcceptances } from "../terms";
 import type { Background } from "../verification";
 
 type Db = ReturnType<typeof drizzle>;
-
-/**
- * What Turnstile needs from a request: the address Cloudflare's edge saw
- * (a client cannot write `cf-connecting-ip`) and the host it came in on,
- * which the challenge must have been solved on. No request — Better
- * Auth's API called from the server — is no address and no host.
- */
-export function turnstileAttempt(
-  token: string | undefined,
-  request: Request | undefined,
-  action: TurnstileAction | undefined,
-): TurnstileAttempt {
-  return {
-    token,
-    remoteIp: request?.headers.get("cf-connecting-ip") ?? undefined,
-    hostname: request === undefined ? "" : new URL(request.url).hostname,
-    action,
-  };
-}
 
 /**
  * The gate `createAuth` takes (`modules/auth/access-hook.ts`), against one

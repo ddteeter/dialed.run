@@ -105,6 +105,25 @@ export interface TurnstileAttempt {
 }
 
 /**
+ * What Turnstile needs from a request: the address Cloudflare's edge saw
+ * (a client cannot write `cf-connecting-ip`) and the host it came in on,
+ * which the challenge must have been solved on. No request — Better
+ * Auth's API called from the server — is no address and no host.
+ */
+export function turnstileAttempt(
+  token: string | undefined,
+  request: Request | undefined,
+  action: TurnstileAction | undefined,
+): TurnstileAttempt {
+  return {
+    token,
+    remoteIp: request?.headers.get("cf-connecting-ip") ?? undefined,
+    hostname: request === undefined ? "" : new URL(request.url).hostname,
+    action,
+  };
+}
+
+/**
  * The decision, with the secret and the fetch handed in, so a test can
  * reach every branch without a binding or the network.
  */

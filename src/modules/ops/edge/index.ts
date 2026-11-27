@@ -7,6 +7,7 @@ export {
   serverFnIdOf,
 } from "./server-fn-path";
 export {
+  turnstileAttempt,
   turnstileSiteKey,
   verifyTurnstileToken,
   type TurnstileAttempt,

@@ -25,8 +25,8 @@ import {
   accessGate,
   confirmAccessAsk,
   requestAccess,
-  turnstileAttempt,
 } from "../../src/modules/account/access/access";
+import { turnstileAttempt } from "../../src/modules/ops/edge/turnstile";
 import {
   CLAIM_HOLD_S,
   DESK_LIST_LIMIT,
