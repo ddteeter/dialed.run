@@ -3,7 +3,7 @@
  * count of hits over a count of cases it could judge, so two versions are
  * compared on the same footing and an empty measure is visibly empty.
  */
-import type { UiGroup } from "../../../lib/contracts";
+import type { UiGroup, VerdictValue } from "../../../lib/contracts";
 import type { TempRange } from "../../../lib/contracts/thermal";
 import type { Confidence, ScoredPiece, WornPiece } from "../contract";
 import type { ReplayOutcome } from "./run";
@@ -171,6 +171,17 @@ function directionOf(outcome: ReplayOutcome): Direction | undefined {
 type Judgement = "hit" | "miss" | "no-call";
 
 /**
+ * What a miss asks of the kit: warmer after a cold verdict, cooler after a
+ * warm one. A table rather than a sign test, so every verdict is named.
+ */
+const WANTED: Readonly<Record<Exclude<VerdictValue, 0>, Step>> = {
+  [-2]: "warmer",
+  [-1]: "warmer",
+  1: "cooler",
+  2: "cooler",
+};
+
+/**
  * On a cold verdict the kit should be warmer than what was worn; on a warm
  * one, cooler. Undefined on a dialed run, which this measure does not judge.
  */
@@ -179,8 +190,7 @@ function judgeMiss(outcome: ReplayOutcome): Judgement | undefined {
   if (verdict === 0) return undefined;
   const direction = hasKit(outcome) ? directionOf(outcome) : undefined;
   if (direction === undefined) return "no-call";
-  const wanted: Step = verdict < 0 ? "warmer" : "cooler";
-  return direction === wanted ? "hit" : "miss";
+  return direction === WANTED[verdict] ? "hit" : "miss";
 }
 
 function splitOf(outcomes: readonly ReplayOutcome[]): ConfidenceSplit {
