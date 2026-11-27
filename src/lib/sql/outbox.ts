@@ -138,9 +138,9 @@ const emailFields = {
     // static. It accepts and returns what `emailPayloadSchema()` does.
     const parsed = emailPayloadSchema().safeParse(value);
     if (!parsed.success) {
-      for (const issue of parsed.error.issues) {
-        context.addIssue({ ...issue, code: "custom" });
-      }
+      // One issue that carries the payload schema's own message: any issue
+      // fails the row, and `readOutboxRow` reports none of them.
+      context.addIssue(parsed.error.message);
       return z.NEVER;
     }
     return parsed.data;
