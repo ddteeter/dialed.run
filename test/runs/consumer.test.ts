@@ -340,6 +340,49 @@ describe("handleImportsBatch (102 §4, §8)", () => {
     expect(importRow?.runId).toBe(existing.id);
   });
 
+  it("ends as the duplicate of a run another import saved just before its batch (#1090)", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const importId = await seedImport(deps.db, userId, validTcx, "tcx");
+    let other: string | undefined;
+    // The same activity's other import lands first. valid.tcx starts at
+    // 2026-08-15T12:00:00Z.
+    const raced = beforeNextWriteBatch(async () => {
+      const run = await createManualRun(deps.db, userId, {
+        startedAt: Math.floor(
+          new Date("2026-08-15T12:00:30Z").getTime() / 1000,
+        ),
+        durationS: 1800,
+        distanceM: 5000,
+        indoor: false,
+        title: "The other import",
+      });
+      other = run.id;
+    });
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    expect(raced.fired()).toBe(true);
+    const [importRow] = await deps.db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
+    expect(importRow?.status).toBe("duplicate");
+    expect(importRow?.runId).toBe(other);
+    const theirs = await deps.db
+      .select({ id: runs.id })
+      .from(runs)
+      .where(eq(runs.userId, userId));
+    expect(theirs).toStrictEqual([{ id: other }]);
+    expect(await unreadNotificationCount(deps.db, userId)).toBe(0);
+  });
+
   it("degrades when attachObservation throws — the run still saves as pending", async () => {
     const deps = makeDeps({
       attachObservation: () => Promise.reject(new Error("weather is down")),

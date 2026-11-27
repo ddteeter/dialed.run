@@ -10,7 +10,7 @@
  * (`attachObservation`, `modules/weather`'s own, handed in by the queue
  * entry) so a test can make it fail.
  */
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNull, notExists, or, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import { dlqBatchHandler } from "../../db/gave-up";
@@ -25,6 +25,7 @@ import { effortFromWatch, type RunDraft } from "../../lib/contracts";
 import { GARMIN_DEVICE_NAME } from "./garmin";
 import { didClaim } from "../../lib/sql/claim";
 import { guarded, runGuarded } from "../../lib/sql/batch-guard";
+import { rowWhere } from "../../lib/sql/row-where";
 import { newUlid, type Ulid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
@@ -49,7 +50,12 @@ import type { StravaApi } from "./strava";
 import { deauthorizeAthlete, type Owe } from "./strava";
 import { owedReminderEmail, reminderHistory } from "./strava";
 import { pairRunWith, pairWithReminder, unpairedUploadFor } from "./strava";
-import { findDuplicateRun, initialWeatherStatus, storedStart } from "./service";
+import {
+  duplicateRunWhere,
+  findDuplicateRun,
+  initialWeatherStatus,
+  storedStart,
+} from "./service";
 import { MAX_START_AHEAD_SECONDS } from "./inputs";
 
 export interface ConsumerDeps {
@@ -322,6 +328,111 @@ async function processImportJob(
   );
 }
 
+const DUPLICATE = "duplicate";
+const RACED = "raced";
+
+/**
+ * One try at the parsed run: saved, with its id; the import ended as a
+ * duplicate of a run in the log; or `RACED`, when another import of the
+ * same activity saved its run between the read and the batch, and the
+ * caller tries again.
+ */
+async function saveDraft(
+  deps: ConsumerDeps,
+  importRow: typeof imports.$inferSelect,
+  draft: RunDraft,
+): Promise<Ulid | typeof DUPLICATE | typeof RACED> {
+  const duplicate = await findDuplicateRun(
+    deps.db,
+    importRow.userId,
+    draft.startedAt,
+  );
+  if (duplicate !== undefined) {
+    // The run is already in the log, so this copy of its file is not
+    // needed either.
+    const goes = fileGoes(deps, importRow);
+    await deps.db.batch([
+      deps.db
+        .update(imports)
+        .set({ status: "duplicate", runId: duplicate.id })
+        .where(eq(imports.id, importRow.id)),
+      goes.write,
+    ]);
+    await goes.settle();
+    return DUPLICATE;
+  }
+
+  // The run, the import's conclusion, and what follows from the run now
+  // being in the log, in one batch (#842, #843): the Strava reminder this
+  // file answers, if it had one, is answered (round 25; one upload clears
+  // one reminder), the file it was read from is owed its deletion (D-116),
+  // and the runner is asked for the kit. The insert is first because the
+  // pairing updates the row it writes. Were any of these to land without
+  // the others, the redelivery could not put it right: it would find its
+  // own run and end a duplicate of it, or find the import `done` and
+  // claim nothing.
+  const weatherStatus = initialWeatherStatus(draft);
+  const runId = newUlid();
+  const pairing = pairWithReminder(
+    deps.db,
+    importRow.userId,
+    runId,
+    draft.startedAt + draft.durationS,
+  );
+  const row: typeof runs.$inferInsert = {
+    id: runId,
+    userId: importRow.userId,
+    // Fetched through Garmin's API, and so credited to it (G1); a file the
+    // runner uploaded is theirs, whatever wrote it.
+    ...(importRow.garminActivityId === null
+      ? { source: "file" }
+      : { source: "garmin", deviceName: GARMIN_DEVICE_NAME }),
+    startedAt: draft.startedAt,
+    durationS: draft.durationS,
+    distanceM: draft.distanceM,
+    ...storedStart(draft),
+    indoor: draft.indoor,
+    title: draft.title,
+    weatherStatus,
+    // Absent from the draft is NULL in the row (D-111): indoor, or a file
+    // that could not say.
+    movingS: draft.movingS,
+    elevationGainM: draft.elevationGainM,
+    // The watch's rating and the effort it prefills (G5); none when the
+    // watch did not ask.
+    ...effortFromWatch(draft.rpe),
+  };
+  // Held to there still being no run in the window as the batch runs, and
+  // guarded (#1090): two imports of one activity both read "no run", and
+  // the second insert would otherwise log it twice. The losing import
+  // writes nothing and is decided again, as the duplicate it now is.
+  const inWindow = deps.db
+    .select({ one: sql`1` })
+    .from(runs)
+    .where(duplicateRunWhere(importRow.userId, draft.startedAt));
+  const unique = rowWhere(runs, row, notExists(inWindow));
+  const goes = fileGoes(deps, importRow);
+  const saved = await runGuarded(deps.db, [
+    ...guarded(deps.db, deps.db.insert(runs).select(unique), "import-run"),
+    deps.db
+      .update(imports)
+      .set({ status: "done", runId })
+      .where(eq(imports.id, importRow.id)),
+    pairing.pairRun,
+    pairing.markRead,
+    goes.write,
+    notificationInsert(deps.db, {
+      userId: importRow.userId,
+      kind: "kit_reminder",
+      subjectId: runId,
+      body: "Add your kit for the run you just imported.",
+    }),
+  ]);
+  if (!saved.ok) return RACED;
+  await goes.settle();
+  return runId;
+}
+
 /**
  * A claimed import: its file read, parsed and saved as a run, or failed
  * with the sentence the runner reads.
@@ -352,91 +463,16 @@ async function parseAndSave(
     return;
   }
 
-  const duplicate = await findDuplicateRun(
-    deps.db,
-    importRow.userId,
-    draft.startedAt,
-  );
-  if (duplicate !== undefined) {
-    // The run is already in the log, so this copy of its file is not
-    // needed either.
-    const goes = fileGoes(deps, importRow);
-    await deps.db.batch([
-      deps.db
-        .update(imports)
-        .set({ status: "duplicate", runId: duplicate.id })
-        .where(eq(imports.id, importRow.id)),
-      goes.write,
-    ]);
-    await goes.settle();
-    return;
-  }
-
-  // The run, the import's conclusion, and what follows from the run now
-  // being in the log, in one batch (#842, #843): the Strava reminder this
-  // file answers, if it had one, is answered (round 25; one upload clears
-  // one reminder), the file it was read from is owed its deletion (D-116),
-  // and the runner is asked for the kit. The insert is first because the
-  // pairing updates the row it writes. Were any of these to land without
-  // the others, the redelivery could not put it right: it would find its
-  // own run and end a duplicate of it, or find the import `done` and
-  // claim nothing.
-  const weatherStatus = initialWeatherStatus(draft);
-  const runId = newUlid();
-  const pairing = pairWithReminder(
-    deps.db,
-    importRow.userId,
-    runId,
-    draft.startedAt + draft.durationS,
-  );
-  const run = deps.db.insert(runs).values({
-    id: runId,
-    userId: importRow.userId,
-    // Fetched through Garmin's API, and so credited to it (G1); a file the
-    // runner uploaded is theirs, whatever wrote it.
-    ...(importRow.garminActivityId === null
-      ? { source: "file" }
-      : { source: "garmin", deviceName: GARMIN_DEVICE_NAME }),
-    startedAt: draft.startedAt,
-    durationS: draft.durationS,
-    distanceM: draft.distanceM,
-    ...storedStart(draft),
-    indoor: draft.indoor,
-    title: draft.title,
-    weatherStatus,
-    // Absent from the draft is NULL in the row (D-111): indoor, or a file
-    // that could not say.
-    movingS: draft.movingS,
-    elevationGainM: draft.elevationGainM,
-    // The watch's rating and the effort it prefills (G5); none when the
-    // watch did not ask.
-    ...effortFromWatch(draft.rpe),
-  });
-  const goes = fileGoes(deps, importRow);
-  await deps.db.batch([
-    run,
-    deps.db
-      .update(imports)
-      .set({ status: "done", runId })
-      .where(eq(imports.id, importRow.id)),
-    pairing.pairRun,
-    pairing.markRead,
-    goes.write,
-    notificationInsert(deps.db, {
-      userId: importRow.userId,
-      kind: "kit_reminder",
-      subjectId: runId,
-      body: "Add your kit for the run you just imported.",
-    }),
-  ]);
-  await goes.settle();
+  let runId = await saveDraft(deps, importRow, draft);
+  while (runId === RACED) runId = await saveDraft(deps, importRow, draft);
+  if (runId === DUPLICATE) return;
 
   // Last, once the import is done: the conditions are secondary to it, and
   // the upload screen keeps polling while the run's weather is pending. One
   // attempt (law 3); `pending` is the reconciliation marker the hourly
   // retry re-drives if this fails or the Worker dies first (law 8c — the
   // observation lives in the other database).
-  if (weatherStatus === "pending") {
+  if (initialWeatherStatus(draft) === "pending") {
     try {
       await deps.attachObservation(runId);
     } catch (error) {

@@ -72,6 +72,17 @@ export function storedStart(draft: {
 ±120s guard: another run by the same user starting within the window.
 Covered by the runs(user_id, started_at) index.
 */
+export function duplicateRunWhere(userId: string, startedAt: number) {
+  return and(
+    eq(runs.userId, userId),
+    gte(runs.startedAt, startedAt - DUPLICATE_WINDOW_S),
+    lte(runs.startedAt, startedAt + DUPLICATE_WINDOW_S),
+  );
+}
+
+/**
+The first run `duplicateRunWhere` finds, if any.
+*/
 export async function findDuplicateRun(
   db: CoreDb,
   userId: string,
@@ -80,13 +91,7 @@ export async function findDuplicateRun(
   const rows = await db
     .select()
     .from(runs)
-    .where(
-      and(
-        eq(runs.userId, userId),
-        gte(runs.startedAt, startedAt - DUPLICATE_WINDOW_S),
-        lte(runs.startedAt, startedAt + DUPLICATE_WINDOW_S),
-      ),
-    )
+    .where(duplicateRunWhere(userId, startedAt))
     .limit(1);
   return rows[0];
 }
