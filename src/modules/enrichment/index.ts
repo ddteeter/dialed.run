@@ -3,16 +3,11 @@
  * fetch are internal; what other modules need is to ask for enrichment, to
  * consume the queue, and to re-run extraction over a stored page.
  */
-export {
-  ENRICHMENT_SWEEP_TRIES,
-  isSweepOwed,
-  listAbandonedEnrichments,
-} from "./abandon";
+export { isSweepOwed, listAbandonedEnrichments } from "./abandon";
 export {
   handleEnrichmentBatch,
   handleEnrichmentDlqBatch,
   reextract,
-  type EnrichmentDeps,
 } from "./consume";
 export { enqueueEnrichment } from "./enqueue";
 // The hourly sweep and the digest's two checks, which `dispatch` runs
@@ -23,10 +18,4 @@ export {
   redispatchStalledEnrichments,
 } from "./sweep";
 export { extractionModelFromEnv } from "./model/from-env";
-export { type EnrichJob } from "./queue-messages";
-export {
-  requestEnrichment,
-  retryFailedEnrichment,
-  type RequestDeps,
-  type RequestOutcome,
-} from "./request";
+export { retryFailedEnrichment } from "./request";

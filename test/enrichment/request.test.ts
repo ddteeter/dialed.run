@@ -12,10 +12,8 @@ import {
   isClaimable,
   requestEnrichment,
 } from "../../src/modules/enrichment/request";
-import {
-  createOrGetBrand,
-  createOrGetProduct,
-} from "../../src/modules/products";
+import { createOrGetBrand } from "../../src/modules/products";
+import { createOrGetProduct } from "../../src/modules/products/service";
 
 /**
  * The producing half of the reconciliation pattern: the row flips first,

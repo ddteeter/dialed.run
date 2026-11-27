@@ -49,45 +49,10 @@
     "auth",
     "isAuthRequired"
   ],
-  "src/modules/closet/index.ts": [
-    "ClosetFilters",
-    "ClosetListing",
-    "EffectiveAttributes",
-    "ItemDetail",
-    "ItemOrigin",
-    "ItemPerformance",
-    "LINK_BATCH",
-    "PerformanceSummary",
-    "PhotoSize",
-    "PhotoUploadResult",
-    "TapListSelection",
-    "addFromTapList",
-    "climateBands",
-    "computeUserPerformance",
-    "createItem",
-    "deleteItem",
-    "getItemDetail",
-    "getItemsByIds",
-    "getOwnedItem",
-    "photoSizes",
-    "retireItem",
-    "tapList",
-    "tapListSelectionSchema",
-    "unretireItem",
-    "updateItemWithProduct"
-  ],
   "src/modules/email/index.ts": [
     "emailPreferencesOf",
     "isEmailWanted",
     "setEmailPreference"
-  ],
-  "src/modules/enrichment/index.ts": [
-    "ENRICHMENT_SWEEP_TRIES",
-    "EnrichJob",
-    "EnrichmentDeps",
-    "RequestDeps",
-    "RequestOutcome",
-    "requestEnrichment"
   ],
   "src/modules/feed/entries/index.ts": ["Scope", "retractEntries"],
   "src/modules/feed/index.ts": [
@@ -108,21 +73,6 @@
   "src/modules/ops/edge/index.ts": ["SERVER_FN_PREFIX", "TurnstileRefusal"],
   "src/modules/ops/owed-email/index.ts": ["emailHandler"],
   "src/modules/ops/public-web/index.ts": ["KitCardAnswer"],
-  "src/modules/products/index.ts": [
-    "BrandRow",
-    "CURATED_BRANDS",
-    "CorrectionContext",
-    "CorrectionKey",
-    "ExtractionConflictError",
-    "ProductRow",
-    "WaitingCorrection",
-    "correctionContext",
-    "createOrGetProduct",
-    "fileCorrection",
-    "getProductAttributeDefaults",
-    "getProductComposition",
-    "searchProducts"
-  ],
   "src/modules/runs/parsers/index.ts": [
     "IMPORT_EXTENSIONS",
     "NO_TRACK_MESSAGE",

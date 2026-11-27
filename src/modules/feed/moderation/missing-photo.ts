@@ -25,6 +25,7 @@ import { garmentVersionId } from "../../../lib/garment-photo-key";
 import { ulidSeconds } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { notificationRaise } from "../../notifications";
+import { clearedPhoto } from "../../closet";
 import { captureException, oweOutbox } from "../../ops";
 import {
   garmentPhotoForgotten,
@@ -34,7 +35,6 @@ import {
   type ReviewSubjectType,
 } from "../../safety";
 
-import { clearedPhoto } from "./garment-moderation";
 import {
   commit,
   entryPhotoWhere,
@@ -168,7 +168,7 @@ async function wasGarmentPhotoCleared({
   await commit(
     db,
     [
-      clearedPhoto(db, { item: { id: subjectId }, photoKey }),
+      clearedPhoto(db, { itemId: subjectId, photoKey }),
       ...garmentPhotoForgotten(db, reviewerId, subjectId),
       reuploadNotice(db, userId, "garment", subjectId),
     ],

@@ -35,6 +35,7 @@ import { quarantineKeyFor } from "../../../lib/entry-photo-key";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { hasRowWhere } from "../../../lib/sql/keyed-read";
+import { clearedPhoto } from "../../closet";
 import { emailDebt } from "../../email";
 import { notificationRaise } from "../../notifications";
 import { captureException, oweOutbox } from "../../ops";
@@ -206,25 +207,6 @@ async function garmentWithPhoto(db: Db, itemId: string) {
 type Found = NonNullable<Awaited<ReturnType<typeof garmentWithPhoto>>>;
 
 /**
- * The photo off the garment — only the version read, since a photo
- * replaced since is not the one decided on, and this must not clear it.
- * Also the Desk's Clear photo on a garment whose file is missing (D-157).
- */
-export function clearedPhoto(
-  db: Db,
-  { item, photoKey }: { item: { id: string }; photoKey: string },
-) {
-  const sameVersion = and(
-    eq(wardrobeItems.id, item.id),
-    eq(wardrobeItems.photoKey, photoKey),
-  );
-  return db
-    .update(wardrobeItems)
-    .set({ photoKey: sql`NULL`, photoFingerprint: sql`NULL`, visibility: "ok" })
-    .where(sameVersion);
-}
-
-/**
  * A statement that fails the takedown's whole batch unless the garment
  * still has the photo version the decision was made on, read when the
  * batch runs: it would set the garment's visibility, which may not be
@@ -276,7 +258,7 @@ function takedownWrites(
       reason: removalStatements[input.reason],
     }),
     ...garmentPhotoForgotten(db, input.actorId, item.id),
-    clearedPhoto(db, found),
+    clearedPhoto(db, { itemId: item.id, photoKey: found.photoKey }),
   ];
 }
 

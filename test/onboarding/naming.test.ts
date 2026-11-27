@@ -3,11 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import {
-  addFromTapList,
-  getOwnedItem,
-  nameItem,
-} from "../../src/modules/closet";
+import { nameItem } from "../../src/modules/closet";
+import { getOwnedItem } from "../../src/modules/closet/service";
+import { addFromTapList } from "../../src/modules/closet/tap-list";
 import {
   namedResult,
   namingOffer,

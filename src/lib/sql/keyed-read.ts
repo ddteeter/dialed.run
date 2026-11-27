@@ -13,7 +13,7 @@ import { nowSeconds } from "../now";
  * drizzle>`, which is `Record<string, unknown>`. Nothing chose that
  * difference — they are two ways of writing "a handle on dialed-core with
  * no schema attached" — but it made these helpers callable from one and
- * not the other, which is how `getProductComposition` came to hand-roll a
+ * not the other, which is how a products read once came to hand-roll a
  * primary-key lookup the file next door already had.
  *
  * The narrower type is assignable to this, so every existing caller still

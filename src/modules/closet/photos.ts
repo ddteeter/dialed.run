@@ -8,7 +8,7 @@
  * every derived size has landed in R2, so a partial failure never leaves a
  * dangling reference the GET route can't serve.
  */
-import { and, isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql, type SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
@@ -345,13 +345,7 @@ export async function removeItemPhoto(
     ownedBy(wardrobeItems, { id: itemId, userId }),
     isNotNull(wardrobeItems.photoKey),
   );
-  const clearPhoto = db
-    .update(wardrobeItems)
-    // `sql\`NULL\`` rather than the literal — see lib/sql/sql-null.
-    // The fingerprint goes with the key (D-142): it describes the photo,
-    // and the photo is gone.
-    .set({ photoKey: sql`NULL`, photoFingerprint: sql`NULL`, visibility: "ok" })
-    .where(stillNamesAPhoto);
+  const clearPhoto = photoOff(db, stillNamesAPhoto);
   // Kept under review (design 232), asked in the batch.
   const kept = withdrawnGarmentUnderReview(db, userId, itemId);
   // The keep goes ahead of the settle, which closes the review it asks about.
@@ -368,6 +362,42 @@ export async function removeItemPhoto(
     outboxInsert(db, debt),
   ]);
   await settleOutbox(db, debt, storageHandlers, report);
+}
+
+/**
+ * The statement that takes the photo off the garments `where` matches,
+ * and puts back the visibility of a garment with no photo.
+ */
+function photoOff(db: Db, where: SQL | undefined) {
+  return (
+    db
+      .update(wardrobeItems)
+      // `sql\`NULL\`` rather than the literal — see lib/sql/sql-null.
+      // The fingerprint goes with the key (D-142): it describes the photo,
+      // and the photo is gone.
+      .set({
+        photoKey: sql`NULL`,
+        photoFingerprint: sql`NULL`,
+        visibility: "ok",
+      })
+      .where(where)
+  );
+}
+
+/**
+ * The Desk's Remove of a garment's photo, as a statement for its batch:
+ * only the version read, since a photo replaced since is not the one
+ * decided on, and this must not clear it. Also the Desk's Clear photo on
+ * a garment whose file is missing (D-157).
+ */
+export function clearedPhoto(
+  db: Db,
+  { itemId, photoKey }: { itemId: string; photoKey: string },
+) {
+  return photoOff(
+    db,
+    and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.photoKey, photoKey)),
+  );
 }
 
 /**

@@ -359,11 +359,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/products/service.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument",
-      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument.",
-      "count": 1
-    },
-    {
       "key": "src/modules/closet/components/GarmentForm.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- three optional attributes rendered explicitly so the form reads as a form; the shared body is already ChoiceField",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: three optional attributes rendered explicitly so the form reads as a form; the shared body is already ChoiceField.",
       "count": 1

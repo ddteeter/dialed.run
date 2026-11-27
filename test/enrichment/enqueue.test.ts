@@ -8,10 +8,8 @@ import { newUlid } from "../../src/lib/ids";
 import { enqueueEnrichment } from "../../src/modules/enrichment/enqueue";
 import { ENRICHMENT_REQUESTS_PER_RUNNER_PER_DAY } from "../../src/modules/enrichment/spend-limit";
 import { captureException } from "../../src/modules/ops";
-import {
-  createOrGetBrand,
-  createOrGetProduct,
-} from "../../src/modules/products";
+import { createOrGetBrand } from "../../src/modules/products";
+import { createOrGetProduct } from "../../src/modules/products/service";
 
 /**
  * The bindings-facing wrapper: `requestEnrichment` with this Worker's queue,

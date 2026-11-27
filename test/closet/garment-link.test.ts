@@ -8,7 +8,7 @@ import { linkDetailOf } from "../../src/modules/closet/garment-link";
 import { storedLinkErrors } from "../../src/modules/closet/form-mapping";
 import { DENIED_LINK } from "../../src/modules/closet/link-copy";
 import { createItem, DeniedLinkError } from "../../src/modules/closet/service";
-import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment";
+import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment/abandon";
 import { abandonedBefore } from "../../src/modules/enrichment/abandon";
 import { newUlid } from "../../src/lib/ids";
 import { isDeniedOnLanding } from "../../src/modules/safety";

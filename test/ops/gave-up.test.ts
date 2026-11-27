@@ -27,10 +27,8 @@ import {
   type RetryDeps,
 } from "../../src/modules/ops/desk/gave-up";
 import { todayCounts } from "../../src/modules/ops/desk/desk";
-import {
-  createOrGetBrand,
-  createOrGetProduct,
-} from "../../src/modules/products";
+import { createOrGetBrand } from "../../src/modules/products";
+import { createOrGetProduct } from "../../src/modules/products/service";
 import { reminderSubject } from "../../src/modules/runs/queue-messages";
 import { gaveUpRow } from "../gave-up-rows";
 import { importMessageFor } from "../queue-fakes";

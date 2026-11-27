@@ -8,7 +8,6 @@ import {
   createOrGetProduct,
   productsForBrand,
   searchBrands,
-  searchProducts,
 } from "../../src/modules/products/service";
 import { queryCounts } from "../d1-spy";
 
@@ -79,30 +78,6 @@ describe("searchBrands", () => {
   });
 });
 
-describe("searchProducts", () => {
-  it("reads 1 and 25 matching products in the same statements", async () => {
-    const small = await brandWith(1);
-    let found = 0;
-    const one = await queryCounts(async () => {
-      const result = await searchProducts(db(), small.brandId, "racer");
-      found = result.length;
-    });
-    expect(found).toBe(1);
-
-    const large = await brandWith(25);
-    const twentyFive = await queryCounts(async () => {
-      const result = await searchProducts(db(), large.brandId, "racer");
-      found = result.length;
-    });
-    expect(found).toBe(LIMIT);
-
-    expect(one.core).toBe(1);
-    expect(twentyFive.core).toBe(one.core);
-    expect(twentyFive.weather).toBe(one.weather);
-    expect(twentyFive.coreRowsRead).toBeGreaterThan(one.coreRowsRead);
-  });
-});
-
 describe("productsForBrand", () => {
   it("reads a brand of 1 and of 25 products in the same statements", async () => {
     // Two: the brand by its normalized name, then its products.
@@ -153,33 +128,6 @@ describe("the catalogue searches beside rows they must not return (#507)", () =>
     let found = 0;
     const after = await queryCounts(async () => {
       const result = await searchBrands(db(), prefix);
-      found = result.length;
-    });
-    expect(found).toBe(1);
-    expect(after.coreRowsRead).toBe(before.coreRowsRead);
-  });
-
-  it("searchProducts reads no more for 25 products under another brand or name", async () => {
-    const brand = await brandWith(1);
-    await createOrGetProduct(db(), {
-      brandId: brand.brandId,
-      name: "Trail",
-      createdBy: newUlid(),
-    });
-    const before = await queryCounts(() =>
-      searchProducts(db(), brand.brandId, "racer"),
-    );
-    await brandWith(25);
-    for (let index = 0; index < 24; index += 1) {
-      await createOrGetProduct(db(), {
-        brandId: brand.brandId,
-        name: `Trail ${String(index)}`,
-        createdBy: newUlid(),
-      });
-    }
-    let found = 0;
-    const after = await queryCounts(async () => {
-      const result = await searchProducts(db(), brand.brandId, "racer");
       found = result.length;
     });
     expect(found).toBe(1);

@@ -12,10 +12,8 @@ import {
   isSweepOwed,
   sweepOwed,
 } from "../../src/modules/enrichment/abandon";
-import {
-  createOrGetBrand,
-  createOrGetProduct,
-} from "../../src/modules/products";
+import { createOrGetBrand } from "../../src/modules/products";
+import { createOrGetProduct } from "../../src/modules/products/service";
 
 /**
  * #881: the closet's link line says "retrying" by `isSweepOwed`, and the

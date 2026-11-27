@@ -18,10 +18,8 @@ import {
   handleEnrichmentDlqBatch,
   reextract,
 } from "../../src/modules/enrichment/consume";
-import {
-  createOrGetBrand,
-  createOrGetProduct,
-} from "../../src/modules/products";
+import { createOrGetBrand } from "../../src/modules/products";
+import { createOrGetProduct } from "../../src/modules/products/service";
 import {
   DEAD_LETTER_REASON,
   MAX_RAW_ERROR_LENGTH,

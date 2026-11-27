@@ -27,7 +27,7 @@ import {
 import garmentsJson from "../../e2e/audit/data/garments.json";
 import kitTable from "./fixtures/kit-table.json";
 import { garmentSchema } from "../../src/lib/contracts";
-import { photoSizes } from "../../src/modules/closet";
+import { photoSizes } from "../../src/modules/closet/photos";
 
 /**
  * The dense seed's builder (design 205, "Seeded data"). It is pure, so

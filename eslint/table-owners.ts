@@ -181,8 +181,8 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
     others: {
       account: { delete: true, why: purge },
       feed: {
-        update: ["photoKey", "photoFingerprint", "visibility"],
-        why: "a Desk Remove takes a garment's photo off; C1 moves it behind closet's door",
+        update: ["visibility"],
+        why: "a Desk Remove's version hold refuses its batch through the garment's visibility (garment-moderation.ts); closet's clearedPhoto takes the photo off",
       },
       safety: { update: ["visibility"], why: statusColumn },
     },

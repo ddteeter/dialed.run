@@ -258,6 +258,7 @@ model {
   cf.app.feed.following -[imports]-> cf.app.ops
   cf.app.feed.following -[imports]-> cf.app.safety
   cf.app.feed.following -[imports]-> cf.app.safety.rules
+  cf.app.feed.moderation -[imports]-> cf.app.closet
   cf.app.feed.moderation -[imports]-> cf.app.email
   cf.app.feed.moderation -[imports]-> cf.app.feed.conditions
   cf.app.feed.moderation -[imports]-> cf.app.feed.entries

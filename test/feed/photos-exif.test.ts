@@ -7,7 +7,7 @@ import {
   imageDimensions,
   pixelBudgetRefusal,
 } from "../../src/lib/photo-pipeline";
-import { createItem } from "../../src/modules/closet";
+import { createItem } from "../../src/modules/closet/service";
 import {
   PhotoValidationError,
   uploadItemPhoto,
