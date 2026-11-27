@@ -30,7 +30,7 @@ import { nowSeconds } from "../../lib/now";
 import { fingerprintOf } from "../../lib/photo-fingerprint";
 import { ownedBy } from "../../lib/sql/owned";
 import { doesConditionHold } from "../../lib/sql/condition";
-import { claimLimit } from "../email";
+import { claimLimit } from "../ops/limits";
 import { getOwnedItem } from "./service";
 import {
   captureException,

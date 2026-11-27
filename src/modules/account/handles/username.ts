@@ -44,7 +44,7 @@ import {
   readBackDigits,
 } from "../../../lib/contracts/profanity";
 import { followRowsNaming, followRowsOpeningWith } from "../../notifications";
-import { claimLimit } from "../../email";
+import { claimLimit } from "../../ops/limits";
 import { purgePublicPages } from "../../ops";
 import { isPlaceholderHandle } from "../../safety";
 import type { ScreenHandle } from "./handle-screen";

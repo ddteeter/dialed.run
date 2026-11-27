@@ -20,7 +20,7 @@ import {
   updateItemWithProduct,
   withResolvedProduct,
 } from "../../src/modules/closet/service";
-import { NEW_SHARED_ROWS_PER_RUNNER_PER_DAY } from "../../src/modules/email/rate-limit";
+import { NEW_SHARED_ROWS_PER_RUNNER_PER_DAY } from "../../src/modules/ops/limits/rate-limit";
 import { newRowsFor, resolveProduct } from "../../src/modules/products/service";
 import { addAccount } from "../feed/helpers";
 import { uniqueName } from "../unique-name";

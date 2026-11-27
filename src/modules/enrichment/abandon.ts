@@ -5,7 +5,7 @@ import {
   DEAD_LETTER_REASON,
   gaveUpUpsert,
   type GaveUpFact,
-} from "../../db/gave-up";
+} from "../ops/gave-up";
 import { products } from "../../db/schema-core";
 import { nowSeconds } from "../../lib/now";
 import { pageFailureReason } from "./bounds";

@@ -15,24 +15,6 @@ export {
   setEmailPreference,
   isEmailWanted,
 } from "./preferences";
-export {
-  claimEmailSend,
-  claimLimit,
-  claimRateLimit,
-  claimRunnerChange,
-  claimSignInTry,
-  countLimit,
-  countSend,
-  forgetRateLimit,
-  forgetSendLimits,
-  forgetSignInTries,
-  isWithinRateLimit,
-  limitAllowed,
-  limitClaimOf,
-  sendClaimOf,
-  sweepRateLimits,
-} from "./rate-limit";
-export type { SendClaim } from "./rate-limit";
 export { notificationSettings } from "./settings";
 export type { NotificationSettings } from "./settings";
 export { oneClickUnsubscribeResponse } from "./one-click";

@@ -18,20 +18,19 @@ import {
 import { nowSeconds } from "../../src/lib/now";
 import { dedupeKeyFor } from "../../src/lib/sql/outbox";
 import {
-  claimEmailSend,
   deliverEmail,
   emailDebt,
   emailDepsFromEnv,
   emailPreferencesOf,
-  forgetSendLimits,
   setEmailPreference,
   isEmailWanted,
 } from "../../src/modules/email";
+import { claimEmailSend, forgetSendLimits } from "../../src/modules/ops/limits";
 import { deliverOwedEmail, EMAIL_FROM } from "../../src/modules/email/deliver";
 import {
   SEND_WINDOW_S,
   SENDS_PER_WINDOW,
-} from "../../src/modules/email/rate-limit";
+} from "../../src/modules/ops/limits/rate-limit";
 import {
   unsubscribeSignature,
   unsubscribeUrl,

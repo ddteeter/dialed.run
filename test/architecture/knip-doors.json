@@ -77,7 +77,6 @@
     "updateItemWithProduct"
   ],
   "src/modules/email/index.ts": [
-    "claimRateLimit",
     "emailPreferencesOf",
     "isEmailWanted",
     "setEmailPreference"

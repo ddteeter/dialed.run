@@ -12,7 +12,7 @@ import {
   stravaConnections,
   userProfiles,
 } from "../../src/db/schema-core";
-import { gaveUpUpsert } from "../../src/db/gave-up";
+import { gaveUpUpsert } from "../../src/modules/ops/gave-up/gave-up";
 import { env } from "../../src/env";
 import type { GaveUpKind } from "../../src/lib/contracts/gave-up";
 import { newUlid } from "../../src/lib/ids";

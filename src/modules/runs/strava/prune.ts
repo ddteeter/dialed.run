@@ -21,7 +21,7 @@
  */
 import { and, eq, isNotNull, lt } from "drizzle-orm";
 
-import { gaveUpClearBefore } from "../../../db/gave-up";
+import { gaveUpClearBefore } from "../../ops/gave-up";
 import {
   notifications,
   processedWebhookEvents,

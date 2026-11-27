@@ -10,7 +10,7 @@ import {
 } from "../../src/lib/contracts/rate-limits";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { sweepRateLimits } from "../../src/modules/email";
+import { sweepRateLimits } from "../../src/modules/ops/limits";
 import {
   canSpendModelCall,
   canSpendPageFetch,

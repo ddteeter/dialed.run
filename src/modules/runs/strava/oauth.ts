@@ -33,14 +33,14 @@ import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
 import { stravaOriginSchema } from "../../../lib/strava-origin";
 import type { StravaOrigin } from "../../../lib/strava-origin";
-import { gaveUpClearPrefix } from "../../../db/gave-up";
+import { gaveUpClearPrefix } from "../../ops/gave-up";
 import { firstRowWhere, hasRowWhere } from "../../../lib/sql/keyed-read";
 import { StravaApiError } from "./api";
 import type { StravaApi, StravaConfig } from "./api";
 import { disconnectedEmail, revocationOf, type Owe } from "./deauthorize";
 import { reminderSubjectPrefix, type RevokeJob } from "../queue-messages";
 import { nowSeconds } from "../../../lib/now";
-import { isWithinRateLimit } from "../../email";
+import { isWithinRateLimit } from "../../ops/limits";
 
 export interface RevokeQueueProducer {
   send(message: RevokeJob): Promise<unknown>;

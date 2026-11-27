@@ -20,7 +20,7 @@ import { eq, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
-import { gaveUpClearPrefix } from "../../../db/gave-up";
+import { gaveUpClearPrefix } from "../../ops/gave-up";
 import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
 import { guarded, runGuarded } from "../../../lib/sql/batch-guard";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";

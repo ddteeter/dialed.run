@@ -25,14 +25,16 @@ import {
 } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
 import {
-  claimEmailSend,
-  claimRunnerChange,
-  claimLimit,
   deliverEmail,
   emailDebt,
   maskedAddress,
   type EmailDeps,
 } from "../../email";
+import {
+  claimEmailSend,
+  claimRunnerChange,
+  claimLimit,
+} from "../../ops/limits";
 import { outboxInsert, oweOutbox, type OutboxDebtOf } from "../../ops";
 import { settleOwedEmail } from "../../ops/owed-email";
 import {

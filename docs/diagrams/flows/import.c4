@@ -136,7 +136,7 @@ views {
         **Guard: the idempotency key.** A repeat returns the first import here. It is not counted again, and nothing is stored or enqueued.
       '''
     }
-    // source: src/modules/runs/imports/imports.ts startFileUpload, isWithinUploadCap; src/modules/runs/upload-limits.ts UPLOADS_PER_DAY, UPLOAD_REFUSALS; src/modules/email/rate-limit.ts isWithinRateLimit
+    // source: src/modules/runs/imports/imports.ts startFileUpload, isWithinUploadCap; src/modules/runs/upload-limits.ts UPLOADS_PER_DAY, UPLOAD_REFUSALS; src/modules/ops/limits/rate-limit.ts isWithinRateLimit
     cf.app.runs.upload -> cf.coreDb 'counts the upload against the runner\'s day' {
       notes '''
         **Guard: 30 uploads a runner a day.** The count is a write. Past 30, the runner reads that they can upload more tomorrow, and nothing is stored.
@@ -212,7 +212,7 @@ views {
       cf.importsQueue -[recovery]-> cf.importsDlq 'dead-letters the job'
       // source: src/modules/dispatch/queues.ts handleQueueBatch, deliveries (dialed-imports-dlq)
       cf.importsDlq -[async]-> cf.app.runs.deadLetter 'delivers it'
-      // source: src/modules/runs/consumer.ts handleImportsDlqBatch, deadImportWrites, isHolder, failImportWrites; src/db/gave-up.ts giveUpEach, gaveUpUpsert; wrangler.jsonc queues.consumers, max_retries (1 for dialed-imports-dlq, and no dead_letter_queue)
+      // source: src/modules/runs/consumer.ts handleImportsDlqBatch, deadImportWrites, isHolder, failImportWrites; src/modules/ops/gave-up/gave-up.ts giveUpEach, gaveUpUpsert; wrangler.jsonc queues.consumers, max_retries (1 for dialed-imports-dlq, and no dead_letter_queue)
       cf.app.runs.deadLetter -[recovery]-> cf.coreDb 'fails the import, tells the runner, lists it on the Desk' {
         notes '''
           **Guard: only a row that is its own to fail.** An import that already ended is left alone, and so is a `processing` row another message holds: that message finishes it, or is dead-lettered for it.
@@ -277,7 +277,7 @@ views {
       cf.app.weather -> provider 'asks for the hours settled since'
       // source: src/modules/weather/attach.ts resolveAndAttach, setStatus
       cf.app.weather -> cf.coreDb 'the run is settled'
-      // source: src/modules/weather/attach.ts retryPendingWeather, attachEach, windowOpensAt, FAIL_AFTER_SECONDS; src/db/gave-up.ts gaveUpUpsert
+      // source: src/modules/weather/attach.ts retryPendingWeather, attachEach, windowOpensAt, FAIL_AFTER_SECONDS; src/modules/ops/gave-up/gave-up.ts gaveUpUpsert
       cf.app.weather -[recovery]-> cf.coreDb 'gives up on a run after five hours of tries' {
         notes '''
           The five hours count from the later of two moments: when the run entered (its import\'s creation, or else its start), and when its last sampled hour settles. The give-up comes on the first hourly pass after them.

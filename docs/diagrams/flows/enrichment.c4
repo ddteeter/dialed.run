@@ -11,7 +11,7 @@ views {
         description 'The products row is the durable marker'
       }
 
-    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey); src/modules/closet/service.ts withResolvedProduct, updateItemWithProduct, isCatalogueName, isListedName, isUnconfirmed, assertLinkAllowed, productLinkFor (isDeniedLink), claimSharedRows; src/modules/products/service.ts newRowsFor; src/modules/email/rate-limit.ts NEW_SHARED_ROWS_PER_RUNNER_PER_DAY (50); src/modules/closet/product-link.ts linkTypedGarments, productLinkFor, productLinkHandler
+    // source: src/modules/closet/functions.ts createItemFn, updateItemFn, withResolvedProduct (then createItem with data.idempotencyKey); src/modules/closet/service.ts withResolvedProduct, updateItemWithProduct, isCatalogueName, isListedName, isUnconfirmed, assertLinkAllowed, productLinkFor (isDeniedLink), claimSharedRows; src/modules/products/service.ts newRowsFor; src/modules/ops/limits/rate-limit.ts NEW_SHARED_ROWS_PER_RUNNER_PER_DAY (50); src/modules/closet/product-link.ts linkTypedGarments, productLinkFor, productLinkHandler
     runner -> cf.app.closet.saveGarment 'saves a garment with a brand, a model and a product link' {
       notes '''
         **Guard: the garment\'s idempotency key, on a create.** A repeat of the save also asks for enrichment again, which the claim below turns into nothing.

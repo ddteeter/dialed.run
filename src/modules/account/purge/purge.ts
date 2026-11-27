@@ -84,7 +84,7 @@ import { rowWhere } from "../../../lib/sql/row-where";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { nowSeconds } from "../../../lib/now";
 import type { RateLimitKind } from "../../../lib/contracts/rate-limits";
-import { forgetRateLimit, forgetSendLimits } from "../../email";
+import { forgetRateLimit, forgetSendLimits } from "../../ops/limits";
 import { deleteRuns, deleteRunsThrough } from "../../feed";
 import { captureException, outboxInsert, oweOutbox } from "../../ops";
 import { disconnectStrava } from "../../runs";

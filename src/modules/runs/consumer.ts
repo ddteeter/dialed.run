@@ -13,7 +13,7 @@
 import { and, eq, isNull, notExists, or, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
-import { dlqBatchHandler } from "../../db/gave-up";
+import { dlqBatchHandler } from "../ops/gave-up";
 import {
   imports,
   processedWebhookEvents,

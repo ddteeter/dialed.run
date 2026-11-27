@@ -11,7 +11,7 @@ import { and, eq } from "drizzle-orm";
 import { imports, runs } from "../../../db/schema-core";
 import { importFileKeyFor } from "../../../lib/import-file-key";
 import { firstColumnWhere } from "../../../lib/sql/keyed-read";
-import { isWithinRateLimit } from "../../email";
+import { isWithinRateLimit } from "../../ops/limits";
 import {
   ImportUploadError,
   UPLOAD_REFUSALS,

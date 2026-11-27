@@ -17,7 +17,7 @@ import {
   mockVisualCrossing,
   pinNow,
 } from "./fixtures/visual-crossing-observation";
-import { gaveUpUpsert } from "../../src/db/gave-up";
+import { gaveUpUpsert } from "../../src/modules/ops/gave-up/gave-up";
 import { nowSeconds } from "../../src/lib/now";
 import { gaveUpRow } from "../gave-up-rows";
 import { countRow } from "../rate-limit-rows";

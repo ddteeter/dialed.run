@@ -297,10 +297,6 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
     },
   },
   notification_preferences: forgottenBy("email"),
-  rate_limits: {
-    // B12 moves the counters to `ops/limits`.
-    owner: "email",
-  },
 
   // Safety.
   blocks: forgottenBy("safety"),
@@ -339,15 +335,9 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
   },
   gave_up: {
     owner: "ops",
-    others: {
-      "src/db": {
-        insert: true,
-        delete: true,
-        why: "the gave-up writer; B12 moves it to `ops/gave-up`",
-      },
-      weather: { delete: true, why: "a run's weather settled" },
-    },
+    others: { weather: { delete: true, why: "a run's weather settled" } },
   },
+  rate_limits: { owner: "ops" },
   cron_checkpoints: {
     owner: "ops",
     others: { dispatch: { insert: true, why: "the scheduled upkeep's steps" } },

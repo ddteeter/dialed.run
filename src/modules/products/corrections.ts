@@ -26,7 +26,7 @@ import {
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
-import { isWithinRateLimit } from "../email";
+import { isWithinRateLimit } from "../ops/limits";
 import { deniedLinksOf } from "../safety";
 import {
   brandNameColumn,

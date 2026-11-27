@@ -6,7 +6,7 @@ import { session, user, verification } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
 import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
-import { RESENDS_PER_VISITOR_PER_HOUR } from "../../src/modules/email/rate-limit";
+import { RESENDS_PER_VISITOR_PER_HOUR } from "../../src/modules/ops/limits/rate-limit";
 import {
   rateLimits,
   emailVerifications,

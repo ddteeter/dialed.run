@@ -25,7 +25,8 @@ import { homeZoneOf, proseDayLabel } from "../../../lib/dates";
 import type { ViewerZone } from "../../../lib/dates";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
-import { countLimit, emailDebt, limitAllowed, limitClaimOf } from "../../email";
+import { emailDebt } from "../../email";
+import { countLimit, limitAllowed, limitClaimOf } from "../../ops/limits";
 import { viewerZone } from "../../notifications";
 import {
   captureException,

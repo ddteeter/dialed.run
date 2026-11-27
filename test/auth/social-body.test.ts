@@ -20,7 +20,7 @@ import {
 import {
   GOOGLE_STARTS_PER_HOUR,
   SEND_WINDOW_S,
-} from "../../src/modules/email/rate-limit";
+} from "../../src/modules/ops/limits/rate-limit";
 import { countRow } from "../rate-limit-rows";
 import {
   googleReturn,

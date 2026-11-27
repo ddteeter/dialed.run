@@ -10,7 +10,7 @@
  * starter list orders by latitude, a run stays pending for the retry.
  */
 import { coreDb } from "../../env";
-import { isWithinRateLimit } from "../email";
+import { isWithinRateLimit } from "../ops/limits";
 
 /**
 How many provider calls one runner's requests may cause in a day (owner, 2026-11-16).

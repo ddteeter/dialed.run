@@ -6,7 +6,7 @@ import {
   gaveUpClear,
   gaveUpUpsert,
   shortRawError,
-} from "../../db/gave-up";
+} from "../ops/gave-up";
 import { products, productSnapshots } from "../../db/schema-core";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { withoutBoundValues } from "../../lib/statement-error";

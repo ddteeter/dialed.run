@@ -9,7 +9,7 @@ import { env } from "../../src/env";
 import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
-import { TAKEDOWN_RECEIPTS_PER_HOUR } from "../../src/modules/email/rate-limit";
+import { TAKEDOWN_RECEIPTS_PER_HOUR } from "../../src/modules/ops/limits/rate-limit";
 import {
   fileTakedownRequest,
   pendingTakedownRequests,

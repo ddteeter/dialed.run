@@ -17,7 +17,7 @@ views {
         A request that does not prove it is the runner changes nothing and says why.
       '''
     }
-    // source: src/modules/account/data/deletion.ts requestAccountDeletion (db.batch, onConflictDoNothing, outboxInsertWhere), pendingDeletionOf; src/lib/contracts/garments.ts DELETION_GRACE_S; src/modules/email/rate-limit.ts DELETION_NOTICES_PER_DAY (3)
+    // source: src/modules/account/data/deletion.ts requestAccountDeletion (db.batch, onConflictDoNothing, outboxInsertWhere), pendingDeletionOf; src/lib/contracts/garments.ts DELETION_GRACE_S; src/modules/ops/limits/rate-limit.ts DELETION_NOTICES_PER_DAY (3)
     cf.app.account.deletionRequest -> cf.coreDb 'writes the claim, signs out every session, and owes the email, in one batch' {
       notes '''
         **Guard: one claim a runner.** A second request keeps the first one\'s date, a week after it was asked.

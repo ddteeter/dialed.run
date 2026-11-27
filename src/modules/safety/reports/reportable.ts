@@ -27,7 +27,7 @@ import {
   userProfiles,
 } from "../../../db/schema-core";
 import { hasRowWhere } from "../../../lib/sql/keyed-read";
-import { forgetRateLimit, isWithinRateLimit } from "../../email";
+import { forgetRateLimit, isWithinRateLimit } from "../../ops/limits";
 import {
   AT_ONCE_HIDES_PER_DAY,
   REPORTS_PER_DAY,

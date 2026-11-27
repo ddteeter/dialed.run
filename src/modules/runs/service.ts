@@ -24,7 +24,7 @@ import { newUlid, ulidSchema } from "../../lib/ids";
 import type { Ulid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";
 import { selectOwnedRow } from "../../lib/sql/owned";
-import { isWithinRateLimit } from "../email";
+import { isWithinRateLimit } from "../ops/limits";
 import { manualReadingsForRuns, observationsForRuns } from "../weather";
 import type { WeatherReading } from "../weather";
 import { bandMiddleC, canSetConditions } from "./run-conditions";

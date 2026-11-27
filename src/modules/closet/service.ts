@@ -63,7 +63,7 @@ import {
   newRowsFor,
   resolveProduct,
 } from "../products";
-import { claimLimit, type SendClaim } from "../email";
+import { claimLimit, type SendClaim } from "../ops/limits";
 import { normalizeIdentity } from "../../lib/normalize";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";

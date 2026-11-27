@@ -16,7 +16,7 @@ import {
   sweepExpiredStates,
 } from "../auth/expired-rows";
 import { linkTypedGarments } from "../closet";
-import { sweepRateLimits } from "../email";
+import { sweepRateLimits } from "../ops/limits";
 import { sweepCopyrightHolds } from "../feed/moderation";
 import { fillMissingTimeZones } from "../onboarding";
 import { pruneStravaIds } from "../runs";

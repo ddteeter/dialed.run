@@ -22,7 +22,10 @@ import {
   createOrGetBrand,
   createOrGetProduct,
 } from "../../src/modules/products";
-import { DEAD_LETTER_REASON, MAX_RAW_ERROR_LENGTH } from "../../src/db/gave-up";
+import {
+  DEAD_LETTER_REASON,
+  MAX_RAW_ERROR_LENGTH,
+} from "../../src/modules/ops/gave-up/gave-up";
 import {
   ABANDONED_PER_FIRING,
   listAbandonedEnrichments,

@@ -45,7 +45,7 @@ import {
   oweInCore,
   weatherLater,
 } from "../queue-fakes";
-import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
+import { DEAD_LETTER_REASON } from "../../src/modules/ops/gave-up/gave-up";
 import {
   reminderFromSubject,
   reminderSubject,

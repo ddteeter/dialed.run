@@ -19,14 +19,13 @@ import { nowSeconds } from "../../../lib/now";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { TURNSTILE_ACTIONS } from "../../../lib/turnstile-actions";
+import { deliverEmail, type EmailDeps } from "../../email";
 import {
   claimEmailSend,
   countLimit,
-  deliverEmail,
   limitAllowed,
   limitClaimOf,
-  type EmailDeps,
-} from "../../email";
+} from "../../ops/limits";
 import type { TurnstileAttempt, TurnstileVerdict } from "../../ops";
 import { turnstileAttempt } from "../../ops/edge";
 import { isClosedAddress } from "./closed-addresses";

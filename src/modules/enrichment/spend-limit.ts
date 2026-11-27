@@ -30,7 +30,7 @@ import {
   type RateLimitKind,
 } from "../../lib/contracts/rate-limits";
 import { nowSeconds } from "../../lib/now";
-import { forgetRateLimit, isWithinRateLimit } from "../email";
+import { forgetRateLimit, isWithinRateLimit } from "../ops/limits";
 
 type Db = ReturnType<typeof drizzle>;
 

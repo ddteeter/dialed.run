@@ -19,7 +19,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { SIGN_IN_LIMITED_CODE } from "../../lib/contracts/access";
-import { claimSignInTry, forgetSignInTries } from "../email";
+import { claimSignInTry, forgetSignInTries } from "../ops/limits";
 
 type Db = ReturnType<typeof drizzle>;
 type HookContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];

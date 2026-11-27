@@ -12,26 +12,26 @@ import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { rateLimits } from "../../db/schema-core";
-import { SIGN_IN_TRIES, SIGN_IN_WINDOW_S } from "../../lib/contracts/access";
-import { EMAIL_SENDS_PER_HOUR } from "../../lib/contracts/email";
+import { rateLimits } from "../../../db/schema-core";
+import { SIGN_IN_TRIES, SIGN_IN_WINDOW_S } from "../../../lib/contracts/access";
+import { EMAIL_SENDS_PER_HOUR } from "../../../lib/contracts/email";
 import {
   HANDLE_CLAIMS_PER_HOUR,
   VISITOR_KINDS,
-} from "../../lib/contracts/rate-limits";
+} from "../../../lib/contracts/rate-limits";
 import type {
   RateLimitKind,
   SendLimitKind,
-} from "../../lib/contracts/rate-limits";
-import { nowSeconds } from "../../lib/now";
-import { PHOTO_UPLOADS_PER_DAY } from "../../lib/photo-constraints";
-import { visitorAddress } from "../../lib/visitor-address";
-import { deleteInBatches } from "../../lib/sql/batched-delete";
+} from "../../../lib/contracts/rate-limits";
+import { nowSeconds } from "../../../lib/now";
+import { PHOTO_UPLOADS_PER_DAY } from "../../../lib/photo-constraints";
+import { visitorAddress } from "../../../lib/visitor-address";
+import { deleteInBatches } from "../../../lib/sql/batched-delete";
 import {
   windowedCountSet,
   windowedCountUntil,
   windowedCountWithin,
-} from "../../lib/sql/window-count";
+} from "../../../lib/sql/window-count";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -265,7 +265,7 @@ function claimOf(rows: CountRows, limit: number, windowS: number): SendClaim {
  * is not, when the window ends: for a refusal the runner or visitor is
  * told about ("You can try again at {time}").
  */
-export async function claimRateLimit(
+async function claimRateLimit(
   db: Db,
   kind: RateLimitKind,
   subject: string,

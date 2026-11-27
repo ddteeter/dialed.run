@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { gaveUpUpsert } from "../src/db/gave-up";
+import { gaveUpUpsert } from "../src/modules/ops/gave-up/gave-up";
 import { gaveUp } from "../src/db/schema-core";
 import { env } from "../src/env";
 import type { GaveUpKind } from "../src/lib/contracts/gave-up";
