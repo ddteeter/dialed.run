@@ -47,6 +47,7 @@ import { isDeniedLink, isDeniedOnLanding } from "../../src/modules/safety";
 import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import { nowSeconds } from "../../src/lib/now";
 import { reportException } from "../../src/modules/ops/sentry/sentry";
+import { beforeNextWriteBatch } from "../before-write-batch";
 import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage, type SpiedMessage } from "../queue-fakes";
 
@@ -1226,7 +1227,68 @@ describe("the Desk's Gave up (R-119): only what the system stopped retrying", ()
     const row = await rowOf(productId);
     expect(row.extractionTries).toBeNull();
   });
+
+  it("leaves a product another message finished during the fetch done, past the day, and lists nothing", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(refusingOnceFinished(productId)),
+    );
+
+    expect(await statusOf(productId)).toBe("done");
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+  });
+
+  it("leaves a product another message finished during the fetch done, inside the day, and parks nothing", async () => {
+    const productId = await pendingProduct();
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(refusingOnceFinished(productId)),
+    );
+
+    expect(await statusOf(productId)).toBe("done");
+    await expectNothingParked(productId);
+  });
+
+  it("does not list a dead letter for a product another message finished after the read", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
+    const gap = beforeNextWriteBatch(() => finish(productId));
+
+    await handleEnrichmentDlqBatch(
+      batchOf("dialed-enrichment-dlq", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+      4,
+    );
+
+    expect(gap.fired()).toBe(true);
+    expect(await statusOf(productId)).toBe("done");
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+  });
 });
+
+/**
+Another message for the product finishing it: what a late retry leaves.
+*/
+async function finish(productId: string): Promise<void> {
+  await db()
+    .update(products)
+    .set({ extractionStatus: "done" })
+    .where(eq(products.id, productId));
+}
+
+/**
+ * A shop that refuses, answered only after another message for the
+ * product finished it: the gap between the consumer's read and its
+ * failure's writes.
+ */
+function refusingOnceFinished(productId: string): typeof fetch {
+  return vi.fn(async () => {
+    await finish(productId);
+    return new Response("blocked", { status: 403 });
+  });
+}
 
 /**
 A product failed inside its day with a failure parked, now `age` old.
