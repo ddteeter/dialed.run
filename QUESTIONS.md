@@ -99,7 +99,8 @@ Product questions for one owner round. The design doc is
 
 ## Q10: The paragraph's reach
 
-- Answered (owner, 2026-11-26): add the warm mirror (done: "You've been too warm {times} in this band.", a guess; the side with more runs shows, cold on a tie).
+- Answered (owner, 2026-11-26, amended the same day): a warm line, "You've been too warm {times} in this band." (a guess), shown only when warm runs outnumber cold ones and the kit is lighter than what was worn on them (a group dropped, or a piece swapped for one whose range starts warmer); too warm in a kit with nothing to shed says nothing. The cold line stays as built; a tie stays cold.
+- Contract addition proposed, to land with `verdictsSoFar` in the scorer's PR: what was worn on the band's too-warm runs, `{ bandFloorC: number; worn: readonly { pieceId: string; group: UiGroup; estimate?: TempRange }[] }` (`WarmRunsWorn` in `evidence/warm-runs.ts` until then). Nothing passes it yet, so the warm line never shows.
 
 - What: only cold runs ("too cold twice"), no "too warm" mirror; the board's "the half-zip fixes it" needs a fact naming the piece that fixes it, and its "at 41° last week" needs a date and temperature the contract does not carry. Prose reads only facts in the hour's own band.
 - Cost: contract fields if wanted.

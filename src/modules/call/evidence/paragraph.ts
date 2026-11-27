@@ -7,19 +7,30 @@
 import type { CallResult } from "../contract";
 import { bandRecord, loudestTooMuch } from "./facts";
 import { timesWord } from "./lines";
+import type { WarmRunsWorn } from "./warm-runs";
+import { isLighterThanWarmRuns } from "./warm-runs";
 import { fill } from "./words";
 
 /**
- * How often the runner was off in this band: the side with more runs, and
- * cold on a tie (the board's own sentence). Nothing when neither was.
+ * How often the runner was off in this band. The warm line explains a
+ * change the Call made, so it shows only when warm runs outnumber cold ones
+ * and the kit is lighter than what was worn on them (owner, 2026-11-26):
+ * too warm in a kit with nothing to shed says nothing of warmth. Otherwise
+ * the cold line, when any run was cold.
  */
-function bandSentence(result: CallResult): string | undefined {
+function bandSentence(
+  result: CallResult,
+  warmRuns: WarmRunsWorn | undefined,
+): string | undefined {
   const record = bandRecord(
     result.kit.flatMap((piece) => piece.evidence),
     result.bandFloorC,
   );
   if (record === undefined) return undefined;
-  if (record.warm > record.cold) {
+  if (
+    record.warm > record.cold &&
+    isLighterThanWarmRuns(result.kit, warmRuns, result.bandFloorC)
+  ) {
     return fill("warmRuns", { times: timesWord(record.warm) });
   }
   return record.cold === 0
@@ -50,9 +61,11 @@ The paragraph, or nothing when no fact in this band says anything.
 export function kitParagraph(
   result: CallResult,
   names: ReadonlyMap<string, string>,
+  warmRuns?: WarmRunsWorn,
 ): string | undefined {
-  const sentences = [bandSentence(result), skipSentence(result, names)].filter(
-    (sentence) => sentence !== undefined,
-  );
+  const sentences = [
+    bandSentence(result, warmRuns),
+    skipSentence(result, names),
+  ].filter((sentence) => sentence !== undefined);
   return sentences.length === 0 ? undefined : sentences.join(" ");
 }
