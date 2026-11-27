@@ -23,7 +23,7 @@ function reportOver(
   return formatReport(
     { engineVersion: "v1", metrics },
     { engineVersion: "v2", metrics },
-    noWorse(metrics, metrics, { tolerance: 0, reads }),
+    noWorse(metrics, metrics, { tolerance: 0, reads, observed: [] }),
   );
 }
 
@@ -42,7 +42,7 @@ describe("formatReport", () => {
     const report = formatReport(
       { engineVersion: "v1", metrics: baseline },
       { engineVersion: "v2", metrics: candidate },
-      noWorse(baseline, candidate, { tolerance: 0, reads: [] }),
+      noWorse(baseline, candidate, { tolerance: 0, reads: [], observed: [] }),
     );
     expect(report.source).toBe("v1-history");
     expect(report.text.split("\n")).toEqual([
@@ -70,7 +70,7 @@ describe("formatReport", () => {
     const report = formatReport(
       { engineVersion: "v1", metrics: better },
       { engineVersion: "v2", metrics: worse },
-      noWorse(better, worse, { tolerance: 0.5, reads: [] }),
+      noWorse(better, worse, { tolerance: 0.5, reads: [], observed: [] }),
     );
     expect(report.text.split("\n").at(-1)).toBe(
       "release check (tolerance 0.5): FAIL",

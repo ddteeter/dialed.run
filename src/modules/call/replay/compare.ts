@@ -46,6 +46,11 @@ export interface ReleaseOptions {
    * PR supplies the scorer's declaration.
    */
   reads: readonly ConditionRead[];
+  /**
+   * The fields `observedReads` found the candidate reading. Any it did not
+   * declare blocks the release.
+   */
+  observed: readonly ConditionRead[];
 }
 
 /**
@@ -91,13 +96,18 @@ function verdictOf(
 }
 
 /**
- * A scorer that reads what a rebuilt case does not carry is released only
- * over cases that do carry it.
+ * A scorer must declare every field it was seen reading, and one that
+ * reads what a rebuilt case does not carry is released only over cases
+ * that do carry it.
  */
 function blockedBy(
   source: ReplaySource,
-  reads: readonly ConditionRead[],
+  { reads, observed }: Pick<ReleaseOptions, "reads" | "observed">,
 ): string | undefined {
+  const undeclared = observed.filter((read) => !reads.includes(read));
+  if (undeclared.length > 0) {
+    return `the candidate reads fields it does not declare: ${undeclared.join(", ")}`;
+  }
   const unserved = NOT_REBUILT.filter((read) => reads.includes(read));
   return source !== "v1-history" || unserved.length === 0
     ? undefined
@@ -111,7 +121,7 @@ function blockedBy(
 export function noWorse(
   baseline: ReplayMetrics,
   candidate: ReplayMetrics,
-  { tolerance, reads }: ReleaseOptions,
+  { tolerance, reads, observed }: ReleaseOptions,
 ): Comparison {
   if (tolerance < 0) {
     throw new RangeError(
@@ -139,7 +149,7 @@ export function noWorse(
     coverage: judge("coverage"),
   };
   const source = sourceOf(candidate);
-  const blocked = blockedBy(source, reads);
+  const blocked = blockedBy(source, { reads, observed });
   return {
     tolerance,
     source,
