@@ -49,6 +49,9 @@ type Reason = "floor" | "own" | "actor" | "operator" | "machinery";
 
 const READERS: Readonly<Record<string, Reason>> = {
   "src/modules/account/access/accounts.ts": "operator",
+  // The deletion link's own account, to the holder of its token, and to
+  // the Desk (round 64).
+  "src/modules/account/data/deletion-link.ts": "own",
   "src/modules/account/export-build/export.ts": "own",
   "src/modules/account/handles/handle-rescreen.ts": "machinery",
   "src/modules/account/handles/handle-review.ts": "operator",

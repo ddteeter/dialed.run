@@ -121,6 +121,10 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "account/functions.ts resendConfirmationFn": "sessionless",
   "account/functions.ts confirmEmailFn": "sessionless",
   "account/functions.ts readEmailLinkFn": "sessionless",
+  // Round 64 #374.3: a closed account can't sign in; the link's token is
+  // the authority, single use and withdrawn by Reopen.
+  "account/functions.ts readDeletionLinkFn": "sessionless",
+  "account/functions.ts confirmDeletionLinkFn": "sessionless",
   // Q8: trusts the address.
   "account/functions.ts requestEmailChangeFn": "verified",
   "account/functions.ts turnstileSiteKeyQuery": "sessionless",
