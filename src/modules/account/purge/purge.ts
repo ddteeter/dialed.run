@@ -81,8 +81,8 @@ import { columnWhere, firstRowWhere } from "../../../lib/sql/keyed-read";
 import { listedPages } from "../../../lib/sql/r2-pages";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { nowSeconds } from "../../../lib/now";
+import type { RateLimitKind } from "../../../lib/contracts/rate-limits";
 import { forgetRateLimit, forgetSendLimits } from "../../email";
-import { forgetRunnerEnrichmentLimit } from "../../enrichment";
 import { deleteRuns, deleteRunsThrough, LIVE_HOLD } from "../../feed";
 import { captureException, outboxInsert, oweOutbox } from "../../ops";
 import { disconnectStrava } from "../../runs";
@@ -612,6 +612,28 @@ function forgetRedeemedLabel(db: Db, userId: string) {
 }
 
 /**
+ * The counts whose subject is the runner's id, each forgotten by the
+ * purge: a deleted account's id is not kept as a subject. A new
+ * runner-keyed kind joins this list; `handle-runner` was the one missed
+ * (owner, 2026-11-26, #1076). The report counts are `safety`'s
+ * (`forgetReportCounts`).
+ */
+const RUNNER_COUNTS = [
+  "change-runner",
+  "upload-runner",
+  "manual-run-runner",
+  "weather-runner",
+  "photo-runner",
+  "purge-runner",
+  "deletion-notice",
+  "correction-runner",
+  "strava-connect-runner",
+  "shared-row-runner",
+  "enrich-runner",
+  "handle-runner",
+] as const satisfies readonly RateLimitKind[];
+
+/**
  * Everything else, and the account itself — one batch, so the claim goes
  * only with the `user` row, and a purge that reaches here finishes whole.
  */
@@ -704,17 +726,7 @@ async function deleteAccountRows(
     ...fingerprints.map((row) =>
       db.insert(closedAddresses).values(row).onConflictDoNothing(),
     ),
-    forgetRateLimit(db, "change-runner", userId),
-    forgetRateLimit(db, "upload-runner", userId),
-    forgetRateLimit(db, "manual-run-runner", userId),
-    forgetRateLimit(db, "weather-runner", userId),
-    forgetRateLimit(db, "photo-runner", userId),
-    forgetRateLimit(db, "purge-runner", userId),
-    forgetRateLimit(db, "deletion-notice", userId),
-    forgetRateLimit(db, "correction-runner", userId),
-    forgetRateLimit(db, "strava-connect-runner", userId),
-    forgetRateLimit(db, "shared-row-runner", userId),
-    forgetRunnerEnrichmentLimit(db, userId),
+    ...RUNNER_COUNTS.map((kind) => forgetRateLimit(db, kind, userId)),
     ...forgetReportCounts(db, userId),
     // Reports they filed stay — what was said about someone else's post
     // is that runner's record too — but name nobody (the development

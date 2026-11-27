@@ -113,10 +113,3 @@ export const canSpendModelCall = acrossEveryone(
   MODEL_CALLS_PER_HOUR,
   HOUR_S,
 );
-
-/**
-A deleted account's id is not kept as a subject: one statement, for the purge.
-*/
-export function forgetRunnerEnrichmentLimit(db: Db, userId: string) {
-  return forgetRateLimit(db, "enrich-runner", userId);
-}
