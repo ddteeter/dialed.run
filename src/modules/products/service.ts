@@ -277,6 +277,20 @@ function wornBeyondItsMaker(): SQL {
 }
 
 /**
+ * The products a runner added, when their account is deleted: the product
+ * stays, shared, and `created_by` stops naming them. Each becomes
+ * `deleted:<product id>`, as a deleted runner's reports are rewritten, so
+ * it names no runner and no two products share it. Unsent: the purge
+ * runs it in its last batch.
+ */
+export function forgetMaker(db: Db, userId: string) {
+  return db
+    .update(products)
+    .set({ createdBy: sql`'deleted:' || ${products.id}` })
+    .where(eq(products.createdBy, userId));
+}
+
+/**
  * How many new shared rows a save naming this brand and (when given) this
  * model would make: the brand row if no brand normalizes the same, and
  * the product row if the brand has no product that normalizes the same.

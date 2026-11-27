@@ -104,7 +104,7 @@ views {
         A runner who signed in during the week and never kept the account is signed out here, so nothing can be written behind the purge.
       '''
     }
-    // source: src/modules/account/purge/purge.ts purgeAccount, liveDeps (revokeStrava); src/modules/runs/strava/oauth.ts disconnectStrava
+    // source: src/modules/account/purge/purge.ts purgeAccount, livePurgeDeps (revokeStrava); src/modules/runs/strava/oauth.ts disconnectStrava
     cf.app.account.purge -> cf.app.runs 'disconnects Strava, if still connected' {
       notes '''
         A connection the request could not close is closed here, before anything else of the runner\'s goes.
@@ -151,12 +151,12 @@ views {
         Found by listing the runner\'s prefixes, not from rows, so a file whose row was never written goes too.
       '''
     }
-    // source: src/modules/account/purge/purge.ts deleteAccountRows (db.batch, namedByOwnColumn, usernameHistory)
+    // source: src/modules/account/purge/purge.ts deleteAccountRows (db.batch, namedByOwnColumn, usernameHistory, forgetMaker); src/modules/products/service.ts forgetMaker
     cf.app.account.purge -> cf.coreDb 'deletes everything else, then the account and its claim, in one batch' {
       notes '''
         **Guard: the claim goes last,** with the account, so a claim that exists is always a purge still owed.
 
-        Kept on purpose: shared products, reports about the runner\'s content, moderation records, the reports they filed with the reporter replaced, and the handle, which is never released.
+        Kept on purpose: shared products, with the maker they name replaced, reports about the runner\'s content, moderation records, the reports they filed with the reporter replaced, and the handle, which is never released.
       '''
     }
   }

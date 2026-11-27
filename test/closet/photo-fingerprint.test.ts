@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { forgetMaker } from "../../src/modules/products";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
@@ -109,6 +110,7 @@ describe("garment photo fingerprints (D-142)", () => {
         revokeStrava: () => Promise.resolve(),
         importsBucket: env.IMPORTS,
         report: quiet,
+        forgetMaker,
       },
       userId,
     );

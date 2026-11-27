@@ -11,6 +11,7 @@ import * as weatherSchema from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { purgeAccount } from "../../src/modules/account/purge/purge";
+import { forgetMaker } from "../../src/modules/products";
 import { forgetManualBands } from "../../src/modules/weather";
 
 /**
@@ -131,8 +132,6 @@ const EXEMPT: Readonly<Record<string, string>> = {
     "the handle is never released (D-56, D-72): given up to a runner who will never exist again",
   "invite_redemptions.user_id":
     "the invite's use stays spent; its address is replaced (2b-1)",
-  "products.created_by":
-    "products are shared canonical rows; `created_by` names nobody once the account is gone",
   "reports.subject_id":
     "reports about the runner's profile are kept (SAF-3); the reports they filed are rewritten",
   "review_queue.subject_id":
@@ -325,6 +324,7 @@ function purge(runner: string) {
         throw error;
       },
       now: NOW,
+      forgetMaker,
     },
     runner,
   );

@@ -1,4 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
+import { forgetMaker } from "../../src/modules/products";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -58,6 +59,7 @@ function firingAt(
       },
       now,
       runPages,
+      forgetMaker,
     },
   };
 }
@@ -173,16 +175,14 @@ describe("the purge's run pages", () => {
   it("delete the entries on the runs they delete, and only those", async () => {
     const userId = await dueAccount(5);
     const runIds = await runIdsOf(userId);
-    await core
-      .insert(outfitEntries)
-      .values(
-        runIds.map((runId) => ({
-          id: newUlid(),
-          runId,
-          userId,
-          createdAt: NOW,
-        })),
-      );
+    await core.insert(outfitEntries).values(
+      runIds.map((runId) => ({
+        id: newUlid(),
+        runId,
+        userId,
+        createdAt: NOW,
+      })),
+    );
 
     await purgeDueAccounts([], firingAt(NOW, { page: 2, perFiring: 2 }).deps);
 

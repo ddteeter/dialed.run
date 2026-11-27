@@ -28,7 +28,8 @@ describe("the firings and the queue get their jobs from the dispatch", () => {
       'import { forgetAnsweredRequests } from "../account/access";',
       'import { checkTooLargeExports, sweepExports } from "../account/export-build";',
       'import { rescreenHandlesFromEnv } from "../account/handles";',
-      'import { purgeDueAccounts } from "../account/purge";',
+      'import { livePurgeDeps, purgeDueAccounts } from "../account/purge";',
+      'import { forgetMaker } from "../products";',
       'import { linkTypedGarments } from "../closet";',
       'import { sweepCopyrightHolds } from "../feed/moderation";',
     ]) {
@@ -38,7 +39,7 @@ describe("the firings and the queue get their jobs from the dispatch", () => {
       /import \{\s*sweepExpiredAuthRows,\s*sweepExpiredCounts,\s*sweepExpiredStates,\s*\} from "\.\.\/auth\/expired-rows";/u,
     );
     expect(code).toMatch(
-      /const liveUpkeep: Upkeep = \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*\};/u,
+      /const liveUpkeep: Upkeep = \{\s*purgeAccounts: \(anomalies\) =>\s*purgeDueAccounts\(anomalies, livePurgeDeps\(\{ forgetMaker \}\)\),\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*\};/u,
     );
     expect(code).toContain(
       "const upkeep: Upkeep = { ...liveUpkeep, ...handedIn };",

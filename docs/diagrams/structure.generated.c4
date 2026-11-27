@@ -228,6 +228,7 @@ model {
   cf.app.dispatch -[imports]-> cf.app.ops.publicWeb
   cf.app.dispatch -[imports]-> cf.app.ops.sentry
   cf.app.dispatch -[imports]-> cf.app.ops.speed
+  cf.app.dispatch -[imports]-> cf.app.products
   cf.app.dispatch -[imports]-> cf.app.runs
   cf.app.dispatch -[imports]-> cf.app.runs.imports
   cf.app.dispatch -[imports]-> cf.app.runs.strava

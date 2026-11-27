@@ -13,8 +13,8 @@
  * **An explicit exception to "retire, don't delete".** Garments an entry
  * used are deleted too: every entry goes first, and the runner is gone.
  *
- * **Kept, on purpose**: shared `products` (their `created_by` names nobody
- * once the account is gone); reports filed *about* the runner's content
+ * **Kept, on purpose**: shared `products`, with the runner named as their
+ * maker replaced (`forgetMaker`, below); reports filed *about* the runner's content
  * (SAF-3 keeps them); moderation actions and quarantined content (D-70:
  * evidence outlives the account); the reports they filed, with the
  * reporter replaced (below); the invite's use, with the address replaced;
@@ -23,7 +23,9 @@
  * Not in `account/index.ts`, and called by nothing in `ops` or `feed`: it
  * calls feed's delete primitives, and both import this module's barrel,
  * so either importing this would be a cycle. The dispatch, which nothing
- * imports, runs it on the daily firing (`liveUpkeep`, design 253).
+ * imports, runs it on the daily firing (`liveUpkeep`, design 253), and
+ * hands in what another module forgets in the last batch (`forgetMaker`),
+ * as design 271 plans for every module's step.
  */
 import {
   and,
@@ -39,6 +41,7 @@ import {
   sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
@@ -161,6 +164,13 @@ export interface PurgeDeps {
   The run pages' sizes, `PURGE_RUNS_PAGE` and `PURGE_RUNS_PER_FIRING` unless given.
   */
   readonly runPages?: { readonly page: number; readonly perFiring: number };
+  /**
+   * Products' `forgetMaker`: the statement, for the last batch, that
+   * replaces the runner named as the maker of the products they added.
+   * Handed in by the dispatch: `products` owns the table, and the purge
+   * imports no more modules (design 271).
+   */
+  readonly forgetMaker: (db: Db, userId: string) => BatchItem<"sqlite">;
 }
 
 /**
@@ -177,7 +187,12 @@ function everyRun(): RunBudget {
   return { left: Infinity };
 }
 
-function liveDeps(): PurgeDeps {
+/**
+ * The live purge, with what the dispatch hands in (`forgetMaker`).
+ */
+export function livePurgeDeps(
+  handedIn: Pick<PurgeDeps, "forgetMaker">,
+): PurgeDeps {
   const core = coreDb();
   return {
     core,
@@ -188,6 +203,7 @@ function liveDeps(): PurgeDeps {
     report: captureException,
     now: nowSeconds(),
     closedAddressSecret: env.CLOSED_ADDRESS_SECRET,
+    ...handedIn,
   };
 }
 
@@ -199,7 +215,7 @@ function liveDeps(): PurgeDeps {
  */
 export async function purgeDueAccounts(
   anomalies: string[],
-  deps: PurgeDeps = liveDeps(),
+  deps: PurgeDeps,
   // Milliseconds, for the budget.
   clock: () => number = Date.now,
 ): Promise<void> {
@@ -689,7 +705,7 @@ function keptIfClosed(
 async function deleteAccountRows(
   db: Db,
   userId: string,
-  deps: Pick<PurgeDeps, "now" | "closedAddressSecret">,
+  deps: Pick<PurgeDeps, "now" | "closedAddressSecret" | "forgetMaker">,
 ): Promise<{ isUnremembered: boolean }> {
   const { now } = deps;
   const addresses = await provedAddressesOf(db, userId);
@@ -708,8 +724,8 @@ async function deleteAccountRows(
     addresses,
     now,
   );
-  // Both directions. `follows` has no index led by the followee, so the
-  // second clause scans it — once, for a deletion.
+  // Both directions. Each clause has an index led by its column:
+  // `follows_pk` for the follower, `follows_followee` for the followee.
   const eitherFollow = involvingEither(
     follows.followerId,
     follows.followeeId,
@@ -790,6 +806,8 @@ async function deleteAccountRows(
       .update(reports)
       .set({ reporterId: sql`'deleted:' || ${reports.id}` })
       .where(eq(reports.reporterId, userId)),
+    // The products they added stay, shared, naming another maker.
+    deps.forgetMaker(db, userId),
     // The code they spent, where its label names the address they spent
     // it with: found by their own redemption, not by the address, so an
     // account that never confirmed its address leaves it too. Before the
