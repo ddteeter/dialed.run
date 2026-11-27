@@ -100,8 +100,9 @@ function body finds the 4 above and misses those.
 `pending` from the primary and both batch. Only a guard in SQL stops that
 (shape 1, or §2).
 
-**Where it lives.** The rule goes in a new `eslint-rules/` folder (1b),
-and `eslint.config.js` holds the selector or registers the rule. The brand
+**Where it lives.** The rule goes in `eslint/`, beside
+`dialed/table-writes` (design 263), with its tests in `test/eslint/`
+(`node`), and `eslint.config.js` registers it. The brand
 is in `src/env/d1.ts` and `src/lib/sql/d1-session.ts`, which are not
 protected paths. **Grant needed:** an `eslint.config.js` edit (a protected
 path, so the PR needs `owner-approved`). An architecture test under
@@ -246,7 +247,8 @@ a person chooses at each site.
 
 **Cost.** About 2 days for the rule and its tests. Then each of the 100
 sites needs `guarded()` or an opt-out. Some of them are in files other lanes
-are changing this wave (§Open question).
+are changing this wave, so PR 3 follows their merges (§Opt-outs at the
+existing sites).
 
 ## Recommendation (before the ruling)
 
@@ -321,21 +323,24 @@ Per option, if built (worker unless named):
 ## Issues
 
 - Owner questions: #1097 (which to build; answered, Ready) and #1098
-  (inline opt-outs or a baseline for §4; Needs owner, before PR 3).
-- The helper's PR opens one issue for its first users, the batch fixes in
-  lanes F1 and F2.
+  (inline opt-outs or a baseline for §4; answered, Ready).
+- #1101: the helper's first users, the batch fixes in lanes F1 and F2.
 
 ## Owner question (answered)
 
 Which of the three to build, and in what order? Answered 2026-11-26: §2,
 then §4, then §1b (§Ruling).
 
-## Open question (before PR 3)
+## Opt-outs at the existing sites (answered)
 
-The §4 rule fires 100 times on main. Inline opt-outs at all of them mean
-PR 3 edits dozens of files, some of which lanes F1 and F2 are changing
-this wave. The alternative is a baseline: the existing sites go in a list
-the rule reads, the list may only shrink (like the module ratchet's pins),
-and new code gets no baseline entry. The recommendation is the baseline,
-with each entry cleared as its file is next touched. PR 3 waits for the
-answer (#1098).
+The §4 rule fires 100 times on main. Should PR 3 put an opt-out at every
+site, or should the existing sites go in a baseline that may only shrink?
+
+**Owner ruled 2026-11-26** (#1098): inline reasons everywhere, no
+baseline. Each reason is a real one-line "safe because …" about its own
+site, not boilerplate. The rule rejects a missing or trivial one, as the
+`fallow-ignore` check does. Writing the reasons means re-reading every
+site, so PR 3 is also a re-read of all 100. A site with no honest safe
+reason is converted to `guarded()` when that is plainly right. Otherwise
+it goes to the wave coordinator, not into the repo. PR 3 is built after
+the wave's batch-fix lanes merge, because it touches dozens of files.
