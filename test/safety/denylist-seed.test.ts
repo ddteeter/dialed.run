@@ -6,7 +6,7 @@ import { env } from "../../src/env";
 import { deniedLinksOf } from "../../src/modules/safety";
 
 /**
- * The denylist's seed (R-176, migration 0078): link shorteners and
+ * The denylist's seed (R-176, core's `0001_seed.sql`): link shorteners and
  * redirectors are denied from a fresh database, before any operator has
  * said a word. No reset here — the seed is what is under test.
  */

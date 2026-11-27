@@ -5,120 +5,15 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1794206591086,
+      "when": 1795821435969,
       "tag": "0000_baseline",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1794206639381,
+      "when": 1795821436563,
       "tag": "0001_seed",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1794231068553,
-      "tag": "0002_add_run_conditions",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1794350695705,
-      "tag": "0003_add_system_account",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1794587790321,
-      "tag": "0004_add_user_privacy_seen_at",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1794769467555,
-      "tag": "0005_replace_email_send_limits_with_rate_limits",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1794795456362,
-      "tag": "0006_review_queue_hid",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1794848387701,
-      "tag": "0007_add_closed_addresses",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1795047930048,
-      "tag": "0008_add_import_claimed_by",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1795268872679,
-      "tag": "0009_add_session_user_id_index",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1795285795871,
-      "tag": "0010_add_copyright_hold_take_down_action",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "6",
-      "when": 1795285796408,
-      "tag": "0011_add_takedown_request_alerted_at",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "6",
-      "when": 1795298762462,
-      "tag": "0012_add_review_approved_at",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "6",
-      "when": 1795309886376,
-      "tag": "0013_add_takedown_request_hid_at",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "6",
-      "when": 1795310470503,
-      "tag": "0014_add_held_take_downs",
-      "breakpoints": true
-    },
-    {
-      "idx": 15,
-      "version": "6",
-      "when": 1795325959624,
-      "tag": "0015_add_access_asks_and_verification_expiry_index",
-      "breakpoints": true
-    },
-    {
-      "idx": 16,
-      "version": "6",
-      "when": 1795373791875,
-      "tag": "0016_drop_unread_takedown_indexes",
       "breakpoints": true
     }
   ]

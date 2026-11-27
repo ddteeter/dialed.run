@@ -415,7 +415,7 @@ review_queue:    id, subject_type, subject_id, source ('reports'|
 domain_denylist: domain PK (bare registrable host, lowercased, no 'www.'),
                  added_by, reason NULLABLE, created_at. Seeded with link
                    -- shorteners and redirectors, added_by 'seed'
-                   -- (R-176, migration 0078); a redirector host such as
+                   -- (R-176, core's 0001_seed.sql); a redirector host such as
                    -- l.facebook.com is a row for that subdomain only.
 link_landings:   url PK (a product link as typed), landed_domain (domainOf
                  form), checked_at -- where enrichment's read of the link
