@@ -98,6 +98,7 @@ export function replayCase(
   return {
     caseId: "case",
     runnerId: "runner",
+    origin: "rebuilt",
     request: request(),
     worn: worn(...wornIds),
     verdict,

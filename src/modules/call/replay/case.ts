@@ -28,6 +28,23 @@ export interface ReplayHistory {
 }
 
 /**
+ * Where a case's request came from: `logged`, the Call as served; or
+ * `rebuilt` by `casesFrom` from a run with a verdict, whose forecast is
+ * only the judged feel and precipitation class (owner, 2026-11-26).
+ */
+export type CaseOrigin = "rebuilt" | "logged";
+
+/**
+ * The forecast fields a scorer may read. A rebuilt case carries no real
+ * temperature or wind, so a scorer that reads either cannot be released on
+ * rebuilt cases alone (`noWorse`).
+ */
+export type ConditionRead = Exclude<
+  keyof Extract<CallConditions, { kind: "forecast" }>,
+  "kind"
+>;
+
+/**
  * A request and what the runner did after it: the pieces worn and the
  * verdict given. For a logged Call the request is the one served; for a
  * run from before the Call existed it is rebuilt by `casesFrom`.
@@ -35,6 +52,7 @@ export interface ReplayHistory {
 export interface ReplayCase {
   caseId: string;
   runnerId: string;
+  origin: CaseOrigin;
   request: CallRequest;
   worn: readonly WornPiece[];
   verdict: VerdictValue;
@@ -54,11 +72,12 @@ export const PRECIP_MM: Readonly<Record<PrecipClass, number>> = {
 };
 
 /**
- * The one filter on what replay counts. A manual-weather run's feel was
- * typed by its runner, so it is neither a fair forecast nor counted
- * history (CLAUDE.md: manual weather is excluded from aggregates).
+ * Which runs become cases. A manual-weather run's feel was typed by its
+ * runner, so it is not a forecast to test a Call against. It still counts
+ * as history: every earlier run, manual weather included, goes into the
+ * request, as the scorer's personal layer reads it (owner, 2026-11-26).
  */
-export function isReplayable(run: PersonalRun): boolean {
+export function isCaseRun(run: PersonalRun): boolean {
   return run.source !== "manual";
 }
 
@@ -73,9 +92,9 @@ function forecastFor(run: PersonalRun): CallConditions {
 }
 
 /**
- * One case per replayable run, oldest first, with no leakage: the request
- * for a run carries as history only the runs that started strictly before
- * it, and that run's own judged conditions as the forecast.
+ * One case per case run, oldest first, with no leakage: the request for a
+ * run carries as history only the runs that started strictly before it,
+ * and that run's own judged conditions as the forecast.
  *
  * The cohort is passed as one snapshot for every case. The export should
  * carry the cells each logged Call actually read.
@@ -84,22 +103,23 @@ export function casesFrom(
   history: ReplayHistory,
   cohort: readonly CohortCell[],
 ): ReplayCase[] {
-  const runs = history.runs
-    .filter((run) => isReplayable(run))
-    .toSorted((a, b) => a.startedAt - b.startedAt);
-  return runs.map((run) => ({
-    caseId: run.runId,
-    runnerId: history.runnerId,
-    request: {
-      hourStart: Math.floor(run.startedAt / HOUR_S) * HOUR_S,
-      effort: run.effort,
-      conditions: forecastFor(run),
-      runner: history.runner,
-      history: runs.filter((earlier) => earlier.startedAt < run.startedAt),
-      closet: history.closet,
-      cohort,
-    },
-    worn: run.worn,
-    verdict: run.verdict,
-  }));
+  const runs = history.runs.toSorted((a, b) => a.startedAt - b.startedAt);
+  return runs
+    .filter((run) => isCaseRun(run))
+    .map((run) => ({
+      caseId: run.runId,
+      runnerId: history.runnerId,
+      origin: "rebuilt",
+      request: {
+        hourStart: Math.floor(run.startedAt / HOUR_S) * HOUR_S,
+        effort: run.effort,
+        conditions: forecastFor(run),
+        runner: history.runner,
+        history: runs.filter((earlier) => earlier.startedAt < run.startedAt),
+        closet: history.closet,
+        cohort,
+      },
+      worn: run.worn,
+      verdict: run.verdict,
+    }));
 }

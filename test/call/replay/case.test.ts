@@ -7,7 +7,7 @@ import {
 import type { CohortCell } from "../../../src/modules/call/contract";
 import {
   casesFrom,
-  isReplayable,
+  isCaseRun,
   type ReplayHistory,
 } from "../../../src/modules/call/replay";
 import { PRECIP_MM } from "../../../src/modules/call/replay/case";
@@ -90,6 +90,7 @@ describe("casesFrom", () => {
     expect(cases[0]).toEqual({
       caseId: "c-early",
       runnerId: "runner-1",
+      origin: "rebuilt",
       request: {
         hourStart: T0 + HOUR,
         effort: "race",
@@ -111,15 +112,29 @@ describe("casesFrom", () => {
     expect(cases[2]?.request.hourStart).toBe(T0 + 3 * HOUR);
   });
 
-  it("leaves manual-weather runs out of the cases and of every history", () => {
+  it("keeps manual-weather runs in the history but never makes them cases", () => {
     const manual = personalRun({
       runId: "manual",
       startedAt: T0,
       source: "manual",
     });
-    const replayed = casesFrom(historyOf([manual, middle]), cohort);
+    const replayed = casesFrom(historyOf([middle, manual]), cohort);
     expect(replayed.map((c) => c.caseId)).toEqual(["b-middle"]);
-    expect(replayed[0]?.request.history).toEqual([]);
+    expect(replayed[0]?.request.history).toEqual([manual]);
+  });
+
+  it("orders the history oldest first, whatever order it was given in", () => {
+    const manual = personalRun({
+      runId: "z-manual",
+      startedAt: T0,
+      source: "manual",
+    });
+    const last = casesFrom(historyOf([late, middle, manual, early]), cohort)[2];
+    expect(last?.request.history.map((r) => r.runId)).toEqual([
+      "z-manual",
+      "c-early",
+      "b-middle",
+    ]);
   });
 
   it("does not reorder the history it was given", () => {
@@ -129,10 +144,10 @@ describe("casesFrom", () => {
   });
 });
 
-describe("isReplayable", () => {
+describe("isCaseRun", () => {
   it("is false only for manual weather", () => {
-    expect(isReplayable(personalRun({ source: "manual" }))).toBe(false);
-    expect(isReplayable(personalRun({ source: "visualcrossing" }))).toBe(true);
+    expect(isCaseRun(personalRun({ source: "manual" }))).toBe(false);
+    expect(isCaseRun(personalRun({ source: "visualcrossing" }))).toBe(true);
   });
 });
 
