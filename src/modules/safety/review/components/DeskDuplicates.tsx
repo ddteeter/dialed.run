@@ -1,9 +1,8 @@
 import type { JSX } from "react";
 
-import { Bracketed, Mono } from "../../../../ui";
+import { Bracketed, Mono, counted } from "../../../../ui";
 import type { DuplicateVariant } from "../duplicates";
 import type { DuplicateGroup, DuplicatesReport } from "../duplicates-report";
-import { counted } from "../../components/counted";
 
 /**
  * The Desk's D2 · Duplicates (task 110, Operator Screens D2): one probable

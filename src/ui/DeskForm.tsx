@@ -1,21 +1,21 @@
 import { useId } from "react";
-import type { JSX, ReactNode } from "react";
+import type { JSX, ReactNode, Ref } from "react";
 
 import type { z } from "zod";
 
+import { Bracketed } from "./Bracketed";
 import {
-  Bracketed,
   ChoiceField,
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
-  Mono,
-  MONO_CASED_CLASS,
   NO_CHOICE,
+  QUIET_PILL,
   SubmitButton,
-} from "../../../ui";
-import type { FieldProps, FormShell } from "../../../ui";
+} from "./form";
+import { Mono, MONO_CASED_CLASS } from "./Mono";
 import { shortId } from "./short-id";
+import type { FieldProps, FormShell } from "./use-form-submit";
 
 /**
  * A Desk's row of buttons: the chalk pill first, then outline pills, then
@@ -169,7 +169,7 @@ interface RecordNaming {
  * a screen reader hears, in the words' own case. The tag's brackets are
  * drawn, not said (D-150).
  */
-export function recordName({
+function recordName({
   subjectType,
   subjectId,
   owner,
@@ -217,5 +217,29 @@ export function RecordHead({
         <Mono step="xs">{date.label}</Mono>
       </span>
     </span>
+  );
+}
+
+/**
+A decision that needs no reason: an outline pill beside the row's submit.
+*/
+export function QuietAction({
+  label,
+  onPress,
+  buttonRef,
+}: Readonly<{
+  label: string;
+  onPress: () => void;
+  buttonRef?: Ref<HTMLButtonElement> | undefined;
+}>): JSX.Element {
+  return (
+    <button
+      ref={buttonRef}
+      className={`target ${QUIET_PILL}`}
+      type="button"
+      onClick={onPress}
+    >
+      {label}
+    </button>
   );
 }

@@ -16,7 +16,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
-import { shortId } from "../../src/modules/safety/components/short-id";
+import { shortId } from "../../src/ui/short-id";
 import { RemovalRequests } from "../../src/modules/safety/takedowns/components/RemovalRequests";
 import {
   ATTESTATION,

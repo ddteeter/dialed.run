@@ -9,7 +9,7 @@
  * `.dev.vars`, as the journey does. Every test seeds its rows with ids it
  * generated and removes exactly those.
  */
-import { shortId } from "../../src/modules/safety/components/short-id";
+import { shortId } from "../../src/ui/short-id";
 import { eq, or } from "drizzle-orm";
 
 import {

@@ -1,11 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode, Ref } from "react";
 
-import { Mono } from "../../../../ui";
+import { Mono, shortId } from "../../../../ui";
 import type { OtherPhoto, OtherPhotos as Others } from "../other-photos";
 import { useKitOriginSearch } from "./kit-origin";
 import { reviewPhotoSrc } from "./review-photo-src";
-import { shortId } from "../../components/short-id";
 
 /**
  * The same runner's other photos, on a Review row about an intimate image

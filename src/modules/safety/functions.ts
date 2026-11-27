@@ -52,13 +52,6 @@ import {
 } from "../account";
 import { placeholderHandle, renameRecord } from "./runners/rename";
 import { deskRunners, runnerCounts, runnersWhere } from "./runners/runners";
-import {
-  applyCorrection,
-  correctionKeyInput,
-  correctionsQueue,
-  declineCorrection,
-  declineCorrectionInput,
-} from "../products";
 import { deskKitFor } from "./review/desk-kit";
 import { duplicateProducts } from "./review/duplicates";
 import { duplicatesReport } from "./review/duplicates-report";
@@ -463,40 +456,6 @@ export const deskKitQuery = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const adminId = requireAdmin(await verifiedUserId());
     return deskKitFor(coreDb(), adminId, data.entryId);
-  });
-
-/**
- * The Desk's Corrections queue (D-163, R48·130): one row per product,
- * field and suggested value, most runners first.
- */
-export const deskCorrectionsQuery = createServerFn({ method: "GET" }).handler(
-  async () => {
-    requireAdmin(await verifiedUserId());
-    return correctionsQueue();
-  },
-);
-
-/**
- * Apply: the product takes the value, and every runner who suggested it
- * hears so. A name another product of the brand has is refused with an
- * answer the row can say, not an error (no Merge, R48·130).
- */
-export const applyCorrectionFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => correctionKeyInput.parse(data))
-  .handler(async ({ data }) => {
-    const actorId = requireAdmin(await verifiedUserId());
-    return applyCorrection({ actorId, key: data });
-  });
-
-/**
- * Decline, with the optional reason every runner in the row reads.
- */
-export const declineCorrectionFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => declineCorrectionInput.parse(data))
-  .handler(async ({ data }) => {
-    const { reason, ...key } = data;
-    const actorId = requireAdmin(await verifiedUserId());
-    await declineCorrection({ actorId, key, reason });
   });
 
 /**

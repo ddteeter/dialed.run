@@ -9,10 +9,11 @@ import {
   QUIET_PILL,
   useFormSubmit,
   useReturnFocus,
+  ACTION_BAR,
+  RECORD_PANEL,
 } from "../../../../ui";
 import { unblockRequesterInput } from "../../inputs";
 import type { TakedownBlockListed, UnblockResult } from "../takedown-blocks";
-import { ACTION_BAR, RECORD_PANEL } from "../../components/DeskForm";
 import { QuestionInPlace } from "./RemovalRequests";
 
 type Unblock = (input: {

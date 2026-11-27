@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { shortId } from "../../src/modules/safety/components/short-id";
+import { shortId } from "../../src/ui/short-id";
 import { OtherPhotos } from "../../src/modules/safety/review/components/OtherPhotos";
 import { RemovalRequests } from "../../src/modules/safety/takedowns/components/RemovalRequests";
 import { ReviewQueue } from "../../src/modules/safety/review/components/ReviewQueue";

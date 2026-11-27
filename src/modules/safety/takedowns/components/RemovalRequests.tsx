@@ -18,14 +18,14 @@ import {
   TextField,
   useFormSubmit,
   useReturnFocus,
+  ACTION_BAR,
+  shortId,
 } from "../../../../ui";
 import type { FormShell } from "../../../../ui";
 import { blockRequesterInput } from "../../inputs";
 import type { HoldState } from "../../limits/takedown-limits";
 import type { BlockResult, PendingTakedownRequest } from "../takedown-requests";
-import { ACTION_BAR } from "../../components/DeskForm";
 import { DueClock } from "../../components/DueClock";
-import { shortId } from "../../components/short-id";
 import { StatutoryLine } from "../../components/StatutoryLine";
 import {
   KitOriginContext,

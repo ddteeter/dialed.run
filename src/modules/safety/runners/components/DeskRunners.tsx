@@ -16,6 +16,9 @@ import {
   inFlight,
   useControlAction,
   useFormSubmit,
+  DeskForm,
+  PickOne,
+  counted,
 } from "../../../../ui";
 import {
   closureRuleLabels,
@@ -34,10 +37,8 @@ import type {
   RunnerState,
   RunnersFilter,
 } from "../runners";
-import { DeskForm, PickOne } from "../../components/DeskForm";
 import { NotRenamedBand } from "./NotRenamedBand";
 import { useFocusWhen } from "../../components/use-focus-when";
-import { counted } from "../../components/counted";
 
 /**
  * Desk · Runners, "D8" (round 27 #22). A search and four filters over a

@@ -15,6 +15,11 @@ import {
   QUIET_PILL,
   TextField,
   useFormSubmit,
+  ACTION_BAR,
+  DeskForm,
+  RECORD_BAR,
+  RECORD_PANEL,
+  RecordHead,
 } from "../../../../ui";
 import type {
   CaseOverOutcome,
@@ -27,13 +32,6 @@ import {
   counterNoticeInputFor,
   RECEIVED_ON_COPY,
 } from "../../inputs";
-import {
-  ACTION_BAR,
-  DeskForm,
-  RECORD_BAR,
-  RECORD_PANEL,
-  RecordHead,
-} from "../../components/DeskForm";
 import { useSettled } from "../../components/use-settled";
 
 type HoldAct<R, V = { holdId: string }> = (input: { data: V }) => Promise<R>;
