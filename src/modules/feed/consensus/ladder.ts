@@ -1,9 +1,9 @@
 import {
   CALL_VERDICT_THRESHOLD,
   coverageOfVerdicts,
-} from "../../lib/contracts";
-import type { VerdictCoverage } from "../../lib/contracts";
-import type { CoverageBand } from "../feed";
+} from "../../../lib/contracts";
+import type { VerdictCoverage } from "../../../lib/contracts";
+import type { CoverageBand } from "./coverage";
 
 /**
  * How well the app knows one band. O6's three colours: pink covered, teal

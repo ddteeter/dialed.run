@@ -24,7 +24,7 @@ import type {
   BacklogRow,
   BacklogSuggestion,
   Conditions,
-} from "../../feed";
+} from "../../../lib/contracts";
 import type { VerdictSlot } from "../backlog-keys";
 import { setConditionsForms } from "../run-conditions";
 import { actionForKey, rowAfterMove, verdictKeys } from "../backlog-keys";

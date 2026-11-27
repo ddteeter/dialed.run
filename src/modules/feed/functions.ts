@@ -6,7 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeaders } from "@tanstack/react-start/server";
 
-import { coreDb, waitUntil } from "../../env";
+import { coreDb } from "../../env";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import {
   attachKitInput,
@@ -36,8 +36,10 @@ import {
 import {
   feedConditions,
   consensusAt,
+  coverageLadder,
   garmentBandCountOrNone,
   garmentBandsInput,
+  ladderFrom,
 } from "./consensus";
 import {
   attachKit,
@@ -85,13 +87,7 @@ import {
 import { unitsFor } from "./conditions";
 import { publicKitForPage, publicProfileForPage } from "./public-web";
 import { nowSeconds } from "../../lib/now";
-import {
-  placeInput,
-  placeStampsFromEnv,
-  saveFoundPlace,
-} from "../onboarding";
 import { captureException, purgePublicPagesFor } from "../ops";
-import { timeZoneAtFor } from "../weather";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))
@@ -290,24 +286,12 @@ export const feedConditionsQuery = createServerFn({ method: "GET" }).handler(
 );
 
 /**
- * Location denied: Use this on the place Find came back with (round 26
- * #12) saves it as the profile's place, through the one writer of those
- * columns (FEED-5), with the zone it is in (design 142), and the tab never
- * asks again.
+ * O6, the Call tab's teaser: where the runner is on the ladder, from the
+ * bands they have logged in.
  */
-export const saveConditionsCityAction = createServerFn({ method: "POST" })
-  .validator((input: unknown) => placeInput.parse(input))
-  .handler(async ({ data }) => {
-    const userId = await requireUserId();
-    return saveFoundPlace(coreDb(), userId, data, {
-      verifyStamp: placeStampsFromEnv().verifyStamp,
-      zones: {
-        zoneAt: timeZoneAtFor(userId),
-        report: captureException,
-        keepAlive: waitUntil,
-      },
-    });
-  });
+export const callLadderQuery = createServerFn({ method: "GET" }).handler(
+  async () => ladderFrom(await coverageLadder(await requireUserId())),
+);
 
 // ---- Units (R-6) --------------------------------------------------------------
 

@@ -8,12 +8,4 @@ export {
   prefillForRun,
   type AttachContext,
 } from "./attach-context";
-export {
-  saveBacklogRow,
-  type Backlog,
-  type BacklogKit,
-  type BacklogRow,
-  type BacklogSuggestion,
-  unjudgedRunCount,
-  verdictBacklog,
-} from "./backlog";
+export { saveBacklogRow, unjudgedRunCount, verdictBacklog } from "./backlog";

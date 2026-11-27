@@ -15,7 +15,7 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { defaultUnits } from "../../src/lib/contracts";
-import type { BacklogRow, Conditions } from "../../src/modules/feed";
+import type { BacklogRow, Conditions } from "../../src/lib/contracts";
 import { VerdictBacklog } from "../../src/modules/runs/components/VerdictBacklog";
 import type { VerdictBacklogProps } from "../../src/modules/runs/components/VerdictBacklog";
 import { bracketed } from "../ui/bracketed";

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { coverageLadder } from "../../src/modules/feed";
+import { coverageLadder } from "../../src/modules/feed/consensus";
 import {
   NOW,
   makeEntry,

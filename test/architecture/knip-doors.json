@@ -92,11 +92,9 @@
     "RequestOutcome",
     "requestEnrichment"
   ],
-  "src/modules/feed/attach/index.ts": ["Backlog"],
   "src/modules/feed/entries/index.ts": ["Scope", "retractEntries"],
   "src/modules/feed/functions.ts": ["isFollowingQuery"],
   "src/modules/feed/index.ts": [
-    "Backlog",
     "Scope",
     "deleteEntryPhoto",
     "retractEntries",

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { roundCoordinate } from "../coords";
+import { latitudeSchema, longitudeSchema } from "./garments";
 import type { ResolvedPlace } from "./weather";
 
 /**
@@ -48,3 +50,33 @@ export const cityLookupInput = z.object({
 export function cityNotFound(label: string): string {
   return `We couldn't find "${label}". Check the spelling, or try a nearby city.`;
 }
+
+/**
+ * A profile's coordinates, rounded as they are parsed (task 127, STR-14;
+ * R-110): the fallback point is often home, and nothing needs more than
+ * `lib/coords`' two places. Rounding here, at the boundary both writers of
+ * the place parse through (O1's calibration and Your conditions' Use
+ * this), means `onboarding/profile.ts` stores what it is given and an
+ * absent coordinate never reaches the rounding at all.
+ */
+export const profileLatitude = latitudeSchema.transform(roundCoordinate);
+export const profileLongitude = longitudeSchema.transform(roundCoordinate);
+
+/**
+ * Find's stamp on a place, as Use this hands it back: hex, bounded, and
+ * checked by the place writers rather than here.
+ */
+export const placeStampSchema = z.string().max(64);
+
+/**
+ * A place the runner found and pressed Use this on: the provider's name
+ * for it and where it is (round 26 #12). What the one writer of the
+ * profile's place takes (FEED-5), from O1 and from Your conditions alike.
+ */
+export const placeInput = z.object({
+  cityLabel: z.string().trim().min(1).max(200),
+  lat: profileLatitude,
+  lng: profileLongitude,
+  stamp: placeStampSchema,
+});
+export type Place = z.infer<typeof placeInput>;

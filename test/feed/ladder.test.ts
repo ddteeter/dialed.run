@@ -4,12 +4,12 @@ import {
   BAND_COVERED_VERDICTS,
   CALL_VERDICT_THRESHOLD,
 } from "../../src/lib/contracts";
-import type { CoverageBand } from "../../src/modules/feed";
+import type { CoverageBand } from "../../src/modules/feed/consensus";
 import {
   bandCoverage,
   ladderFrom,
   verdictsIn,
-} from "../../src/modules/onboarding/ladder";
+} from "../../src/modules/feed/consensus/ladder";
 
 /**
  * The Call tab's ladder (D-16, O6). "Coverage is the progress bar — not run

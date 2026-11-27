@@ -7,7 +7,7 @@ import type { CityLookup } from "../../src/lib/contracts/city-lookup";
 import { ConditionsTab } from "../../src/modules/feed/consensus/components/ConditionsTab";
 import type { ConsensusResult } from "../../src/modules/feed/consensus/consensus";
 import type { ConditionsHome } from "../../src/modules/feed/consensus/home";
-import type { Place } from "../../src/modules/onboarding";
+import type { Place } from "../../src/lib/contracts/city-lookup";
 import { CITY_HINT } from "../../src/ui";
 import { MILES, renderFeedScreen } from "./feed-fixtures";
 

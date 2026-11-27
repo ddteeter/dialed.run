@@ -1,36 +1,21 @@
 import { z } from "zod";
 
-import { roundCoordinate } from "../../lib/coords";
 import { ulidSchema } from "../../lib/ids";
 
 import {
   distanceUnitSchema,
   GARMENT_BRAND_MAX,
   GARMENT_NAME_MAX,
-  latitudeSchema,
-  longitudeSchema,
   tempUnitSchema,
   thermalLevelSchema,
   withoutHiddenControls,
   writableAudienceSchema,
 } from "../../lib/contracts";
-
-/**
- * A profile's coordinates, rounded as they are parsed (task 127, STR-14;
- * R-110): the fallback point is often home, and nothing needs more than
- * `lib/coords`' two places. Rounding here, at the boundary both writers of
- * the place parse through (O1's calibration and Your conditions' Use
- * this), means `onboarding/profile.ts` stores what it is given and an
- * absent coordinate never reaches the rounding at all.
- */
-const profileLatitude = latitudeSchema.transform(roundCoordinate);
-const profileLongitude = longitudeSchema.transform(roundCoordinate);
-
-/**
- * Find's stamp on a place, as Use this hands it back: hex, bounded, and
- * checked by the place writers rather than here.
- */
-const placeStampSchema = z.string().max(64);
+import {
+  placeStampSchema,
+  profileLatitude,
+  profileLongitude,
+} from "../../lib/contracts/city-lookup";
 
 /**
  * Next pressed with a city typed but never found (round 26 #12): the
@@ -87,19 +72,6 @@ export const calibrationInput = z
     { path: ["cityLabel"], message: CITY_UNCONFIRMED },
   );
 export type Calibration = z.infer<typeof calibrationInput>;
-
-/**
- * A place the runner found and pressed Use this on: the provider's name
- * for it and where it is (round 26 #12). What the one writer of the
- * profile's place takes (FEED-5), from O1 and from Your conditions alike.
- */
-export const placeInput = z.object({
-  cityLabel: z.string().trim().min(1).max(200),
-  lat: profileLatitude,
-  lng: profileLongitude,
-  stamp: placeStampSchema,
-});
-export type Place = z.infer<typeof placeInput>;
 
 /**
  * What the units sub-page writes: the two display units.

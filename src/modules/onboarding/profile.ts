@@ -9,9 +9,9 @@ import {
 } from "../../lib/contracts";
 import { isFirstPartyRequest } from "../../lib/fetch-site";
 import { orSqlNull } from "../../lib/sql/sql-null";
+import type { Place } from "../../lib/contracts/city-lookup";
 import type {
   Calibration,
-  Place,
   Preferences,
   SharingChoice,
   UnitsChoice,

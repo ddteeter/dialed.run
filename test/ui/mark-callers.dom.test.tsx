@@ -9,11 +9,11 @@ import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
-import type { CoverageBand } from "../../src/modules/feed";
+import type { CoverageBand } from "../../src/modules/feed/consensus";
 import { OwnProfile } from "../../src/modules/feed/following/components/OwnProfile";
 import type { OwnProfile as OwnProfileData } from "../../src/modules/feed/following/profiles";
-import { CallLadder } from "../../src/modules/onboarding/components/CallLadder";
-import { ladderFrom } from "../../src/modules/onboarding/ladder";
+import { CallLadder } from "../../src/modules/feed/consensus/components/CallLadder";
+import { ladderFrom } from "../../src/modules/feed/consensus/ladder";
 
 /**
  * Rule 10 · **every graphic has words** — asked of the callers, which is

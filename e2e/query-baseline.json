@@ -1199,7 +1199,7 @@
         "max": 7
       }
     },
-    "serverFn:feed/saveConditionsCityAction": {
+    "serverFn:onboarding/saveConditionsCityAction": {
       "count": 1,
       "statements": {
         "p50": 6,
