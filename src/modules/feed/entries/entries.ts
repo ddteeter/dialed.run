@@ -54,7 +54,7 @@ import {
   isUnderReviewForAuthor,
   publicPhotoStatus,
   publiclyVisibleEntry,
-} from "../../safety";
+} from "../../safety/rules";
 import { requireOwned, requireOwner } from "../../../lib/sql/owned";
 import { allowedLinksOf, typeWordOf } from "../../closet";
 import { runEffortStatement } from "../../runs/writes";

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { reviewAudit } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { moderationThresholds } from "../../src/modules/safety";
+import { moderationThresholds } from "../../src/modules/safety/screening";
 import { fileReport } from "../../src/modules/safety/reports/reports";
 import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 import { reportersToHide } from "../../src/modules/safety/screening/thresholds";

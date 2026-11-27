@@ -6,11 +6,9 @@ import { outfitEntries, reports, reviewQueue } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import {
-  reconcileUnhiddenReports,
-  releaseStaleClaims,
-  moderationThresholds,
-} from "../../src/modules/safety";
+import { reconcileUnhiddenReports } from "../../src/modules/safety/reports";
+import { releaseStaleClaims } from "../../src/modules/safety/review";
+import { moderationThresholds } from "../../src/modules/safety/screening";
 import {
   claimForReview,
   claimLeaseSeconds,

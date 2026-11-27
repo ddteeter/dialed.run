@@ -12,7 +12,7 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { cronSchedules } from "../../src/modules/ops/desk/crons";
 import { handleScheduled } from "../../src/modules/dispatch";
-import { screenPhoto } from "../../src/modules/safety";
+import { screenPhoto } from "../../src/modules/safety/screening";
 import { fileReport } from "../../src/modules/safety/reports/reports";
 import { fileTakedownRequest } from "../../src/modules/safety/takedowns/takedown-requests";
 import {

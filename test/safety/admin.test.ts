@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
-import { adminUserIds, isAdmin, requireAdmin } from "../../src/modules/safety";
+import {
+  adminUserIds,
+  isAdmin,
+  requireAdmin,
+} from "../../src/modules/safety/rules";
 import {
   AdminRequiredError,
   isAdminRequired,

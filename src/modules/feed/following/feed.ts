@@ -42,7 +42,7 @@ import {
   isUnderReviewForAuthor,
   publicPhotoStatus,
   publiclyVisibleEntry,
-} from "../../safety";
+} from "../../safety/rules";
 
 export interface FeedCursor {
   createdAt: number;

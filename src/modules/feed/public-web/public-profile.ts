@@ -29,8 +29,7 @@ import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { lookUpHandle } from "../../account/handles";
 import { publicRotation } from "../../closet";
 import { firstPublishedPhotos, publicPageHeaders } from "../../ops/public-web";
-import { worldVisibleEntry } from "../../safety";
-import { runnerInStanding } from "../../safety/rules";
+import { runnerInStanding, worldVisibleEntry } from "../../safety/rules";
 
 import {
   observationsForRuns,

@@ -24,7 +24,7 @@ import { removalRequestNotice } from "../../src/lib/contracts/takedown";
 import {
   mintReceiptConfirmToken,
   requestSubjectOf,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/takedowns";
 import {
   blockAndDeclineAll,
   confirmTakedownRequest,

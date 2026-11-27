@@ -46,7 +46,7 @@ import {
 import { followRowsNaming, followRowsOpeningWith } from "../../notifications";
 import { claimLimit } from "../../ops/limits";
 import { purgePublicPages } from "../../ops/public-web";
-import { isPlaceholderHandle } from "../../safety";
+import { isPlaceholderHandle } from "../../safety/runners";
 import type { ScreenHandle } from "./handle-screen";
 import { currentTermsVersion, termsStanding } from "../terms";
 

@@ -25,11 +25,9 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import {
-  moderationThresholds,
-  reconcileUnhiddenReports,
-  resolveReview,
-} from "../../src/modules/safety";
+import { reconcileUnhiddenReports } from "../../src/modules/safety/reports";
+import { resolveReview } from "../../src/modules/safety/review";
+import { moderationThresholds } from "../../src/modules/safety/screening";
 import { reportersToHide } from "../../src/modules/safety/screening/thresholds";
 import {
   AT_ONCE_HIDES_PER_DAY,

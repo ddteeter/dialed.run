@@ -67,11 +67,9 @@ import { claimLimit, type SendClaim } from "../ops/limits";
 import { normalizeIdentity } from "../../lib/normalize";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
-import {
-  garmentPhotoForgotten,
-  isDeniedLink,
-  withdrawnGarmentUnderReview,
-} from "../safety";
+import { withdrawnGarmentUnderReview } from "../safety/review";
+import { isDeniedLink } from "../safety/rules";
+import { garmentPhotoForgotten } from "../safety/screening";
 import { shouldIncludeByTempFilter } from "./filters";
 import { linkDetailOf, type LinkDetail } from "./garment-link";
 import { DENIED_LINK } from "./link-copy";

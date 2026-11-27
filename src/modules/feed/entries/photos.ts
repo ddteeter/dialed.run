@@ -47,16 +47,18 @@ import {
   isAdmin,
   publicPhotoStatus,
   publiclyVisibleEntry,
-} from "../../safety";
+} from "../../safety/rules";
+import { screeningHoldNotice } from "../../safety/notices";
 import {
-  classifierFromEnv,
   enqueueForReview,
   isHeldAsRemovedCopy,
   photosHeldBelowLimit,
+} from "../../safety/review";
+import {
+  classifierFromEnv,
   screenPhoto,
-  screeningHoldNotice,
   type Classify,
-} from "../../safety";
+} from "../../safety/screening";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;

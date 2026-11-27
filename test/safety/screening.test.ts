@@ -16,7 +16,7 @@ import {
   moderationThresholds,
   screenPhoto,
   type Classify,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening";
 import {
   pendingGarmentFrom,
   pendingEntryPhotos,

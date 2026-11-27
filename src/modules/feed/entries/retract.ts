@@ -60,11 +60,8 @@ import {
 import { purgePublicPages } from "../../ops/public-web";
 import { captureException } from "../../ops/sentry";
 import { owedEmailHandlers } from "../../ops/owed-email";
-import {
-  screeningDeletes,
-  settleOpenReviews,
-  withdrawnUnderReview,
-} from "../../safety";
+import { settleOpenReviews, withdrawnUnderReview } from "../../safety/review";
+import { screeningDeletes } from "../../safety/screening";
 import {
   LIVE_HOLD,
   failsWhileHeld,

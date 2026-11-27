@@ -6,7 +6,7 @@ import { authMail } from "../account/verification";
 import { emailDepsFromEnv } from "../email";
 import { verifyTurnstileToken } from "../ops/edge";
 import { captureException } from "../ops/sentry";
-import { banGate } from "../safety";
+import { banGate } from "../safety/runners";
 import { breachVerdict } from "./breached-password";
 import { createAuth, googleCredentials } from "./create-auth";
 import { deletionGate } from "./leaving-gate";

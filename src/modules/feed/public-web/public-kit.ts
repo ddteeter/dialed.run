@@ -51,7 +51,7 @@ import {
   publishedPhotoUrls,
 } from "../../ops/public-web";
 import { allowedLinksOf, typeWordOf } from "../../closet";
-import { kitPiecesSelect, worldVisibleEntry } from "../../safety";
+import { kitPiecesSelect, worldVisibleEntry } from "../../safety/rules";
 
 import {
   observationsForRuns,

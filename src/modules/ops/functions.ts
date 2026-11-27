@@ -6,7 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { optionalVerifiedUserId, verifiedUserId } from "../auth";
-import { requireAdmin } from "../safety";
+import { requireAdmin } from "../safety/rules";
 import {
   deskToday,
   dropGaveUp,

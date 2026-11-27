@@ -110,7 +110,7 @@ views {
         A connection the request could not close is closed here, before anything else of the runner\'s goes.
       '''
     }
-    // source: src/modules/account/purge/purge.ts forgetScreenings; src/modules/safety/index.ts settleOpenReviews
+    // source: src/modules/account/purge/purge.ts forgetScreenings; src/modules/safety/review/review.ts settleOpenReviews
     cf.app.account.purge -> cf.coreDb 'forgets what the screener said of their photos, and settles open reviews' {
       notes '''
         Before the photos go, because the photos are how these rows are found.

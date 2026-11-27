@@ -18,15 +18,14 @@ import type { drizzle } from "drizzle-orm/d1";
 import { reviewQueue, userProfiles } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { nowSeconds } from "../../../lib/now";
+import { type HandleReviewValues } from "../../safety";
+import { reporterNotices } from "../../safety/notices";
 import {
-  openReviewRow,
-  placeholderHandle,
-  renameRecord,
-  reporterNotices,
+  openRow as openReviewRow,
   reviewResolution,
   settledHere,
-  type HandleReviewValues,
-} from "../../safety";
+} from "../../safety/review";
+import { placeholderHandle, renameRecord } from "../../safety/runners";
 import { forceRename } from "./username";
 
 type Db = ReturnType<typeof drizzle>;

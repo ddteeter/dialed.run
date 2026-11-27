@@ -40,15 +40,17 @@ import {
 } from "../ops/outbox";
 import { captureException } from "../ops/sentry";
 import {
-  classifierFromEnv,
   enqueueForReview,
-  garmentPhotoForgotten,
   withdrawnGarmentUnderReview,
   isHeldAsRemovedCopy,
   photosHeldBelowLimit,
+} from "../safety/review";
+import {
+  classifierFromEnv,
+  garmentPhotoForgotten,
   screenPhoto,
   type Classify,
-} from "../safety";
+} from "../safety/screening";
 
 type Db = ReturnType<typeof drizzle>;
 

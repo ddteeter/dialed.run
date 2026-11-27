@@ -140,7 +140,7 @@ model {
   cf.app.account -[wiring]-> cf.app.ops.edge
   cf.app.account -[wiring]-> cf.app.ops.owedEmail
   cf.app.account -[wiring]-> cf.app.ops.sentry
-  cf.app.account -[wiring]-> cf.app.safety
+  cf.app.account -[wiring]-> cf.app.safety.rules
   cf.app.account.access -[imports]-> cf.app.account.terms
   cf.app.account.access -[imports]-> cf.app.account.verification
   cf.app.account.access -[imports]-> cf.app.email
@@ -170,6 +170,10 @@ model {
   cf.app.account.handles -[imports]-> cf.app.ops.publicWeb
   cf.app.account.handles -[imports]-> cf.app.ops.sentry
   cf.app.account.handles -[imports]-> cf.app.safety
+  cf.app.account.handles -[imports]-> cf.app.safety.notices
+  cf.app.account.handles -[imports]-> cf.app.safety.review
+  cf.app.account.handles -[imports]-> cf.app.safety.runners
+  cf.app.account.handles -[imports]-> cf.app.safety.screening
   cf.app.account.purge -[imports]-> cf.app.account.access
   cf.app.account.purge -[imports]-> cf.app.account.data
   cf.app.account.purge -[imports]-> cf.app.enrichment
@@ -179,7 +183,8 @@ model {
   cf.app.account.purge -[imports]-> cf.app.ops.outbox
   cf.app.account.purge -[imports]-> cf.app.ops.sentry
   cf.app.account.purge -[imports]-> cf.app.runs
-  cf.app.account.purge -[imports]-> cf.app.safety
+  cf.app.account.purge -[imports]-> cf.app.safety.reports
+  cf.app.account.purge -[imports]-> cf.app.safety.review
   cf.app.account.purge -[imports]-> cf.app.safety.takedowns
   cf.app.account.purge -[imports]-> cf.app.weather
   cf.app.account.terms -[imports]-> cf.app.notifications
@@ -196,7 +201,7 @@ model {
   cf.app.auth -[imports]-> cf.app.ops.limits
   cf.app.auth -[imports]-> cf.app.ops.outbox
   cf.app.auth -[imports]-> cf.app.ops.sentry
-  cf.app.auth -[imports]-> cf.app.safety
+  cf.app.auth -[imports]-> cf.app.safety.runners
   cf.app.closet -[imports]-> cf.app.account.verification
   cf.app.closet -[wiring]-> cf.app.auth
   cf.app.closet -[imports]-> cf.app.enrichment
@@ -204,7 +209,9 @@ model {
   cf.app.closet -[imports]-> cf.app.ops.outbox
   cf.app.closet -[imports]-> cf.app.ops.sentry
   cf.app.closet -[imports]-> cf.app.products
-  cf.app.closet -[imports]-> cf.app.safety
+  cf.app.closet -[imports]-> cf.app.safety.review
+  cf.app.closet -[imports]-> cf.app.safety.rules
+  cf.app.closet -[imports]-> cf.app.safety.screening
   cf.app.dispatch -[imports]-> cf.app.account.access
   cf.app.dispatch -[imports]-> cf.app.account.exportBuild
   cf.app.dispatch -[imports]-> cf.app.account.handles
@@ -225,7 +232,11 @@ model {
   cf.app.dispatch -[imports]-> cf.app.runs
   cf.app.dispatch -[imports]-> cf.app.runs.imports
   cf.app.dispatch -[imports]-> cf.app.runs.strava
-  cf.app.dispatch -[imports]-> cf.app.safety
+  cf.app.dispatch -[imports]-> cf.app.safety.limits
+  cf.app.dispatch -[imports]-> cf.app.safety.reports
+  cf.app.dispatch -[imports]-> cf.app.safety.review
+  cf.app.dispatch -[imports]-> cf.app.safety.screening
+  cf.app.dispatch -[imports]-> cf.app.safety.takedowns
   cf.app.dispatch -[imports]-> cf.app.weather
   cf.app.dispatch -[imports]-> cf.app.weather.backlog
   cf.app.email -[wiring]-> cf.app.auth
@@ -256,8 +267,11 @@ model {
   cf.app.feed.entries -[imports]-> cf.app.ops.publicWeb
   cf.app.feed.entries -[imports]-> cf.app.ops.sentry
   cf.app.feed.entries -[imports]-> cf.app.runs.writes
-  cf.app.feed.entries -[imports]-> cf.app.safety
+  cf.app.feed.entries -[wiring]-> cf.app.safety
+  cf.app.feed.entries -[imports]-> cf.app.safety.notices
+  cf.app.feed.entries -[imports]-> cf.app.safety.review
   cf.app.feed.entries -[imports]-> cf.app.safety.rules
+  cf.app.feed.entries -[imports]-> cf.app.safety.screening
   cf.app.feed.entries -[imports]-> cf.app.safety.takedowns
   cf.app.feed.entries -[imports]-> cf.app.weather
   cf.app.feed.following -[imports]-> cf.app.account.handles
@@ -266,7 +280,6 @@ model {
   cf.app.feed.following -[imports]-> cf.app.feed.entries
   cf.app.feed.following -[imports]-> cf.app.notifications
   cf.app.feed.following -[imports]-> cf.app.ops.sentry
-  cf.app.feed.following -[imports]-> cf.app.safety
   cf.app.feed.following -[imports]-> cf.app.safety.rules
   cf.app.feed.moderation -[imports]-> cf.app.closet
   cf.app.feed.moderation -[imports]-> cf.app.email
@@ -277,13 +290,16 @@ model {
   cf.app.feed.moderation -[imports]-> cf.app.ops.publicWeb
   cf.app.feed.moderation -[imports]-> cf.app.ops.sentry
   cf.app.feed.moderation -[imports]-> cf.app.safety
+  cf.app.feed.moderation -[imports]-> cf.app.safety.notices
+  cf.app.feed.moderation -[imports]-> cf.app.safety.review
+  cf.app.feed.moderation -[imports]-> cf.app.safety.rules
+  cf.app.feed.moderation -[imports]-> cf.app.safety.screening
   cf.app.feed.moderation -[imports]-> cf.app.safety.takedowns
   cf.app.feed.publicWeb -[imports]-> cf.app.account.handles
   cf.app.feed.publicWeb -[imports]-> cf.app.closet
   cf.app.feed.publicWeb -[imports]-> cf.app.feed.conditions
   cf.app.feed.publicWeb -[wiring]-> cf.app.feed.entries
   cf.app.feed.publicWeb -[imports]-> cf.app.ops.publicWeb
-  cf.app.feed.publicWeb -[imports]-> cf.app.safety
   cf.app.feed.publicWeb -[imports]-> cf.app.safety.rules
   cf.app.notifications -[wiring]-> cf.app.auth
   cf.app.notifications -[wiring]-> cf.app.runs
@@ -294,12 +310,13 @@ model {
   cf.app.onboarding -[imports]-> cf.app.products
   cf.app.onboarding -[imports]-> cf.app.weather
   cf.app.ops -[wiring]-> cf.app.auth
-  cf.app.ops -[wiring]-> cf.app.safety
+  cf.app.ops -[wiring]-> cf.app.safety.rules
   cf.app.ops.daily -[imports]-> cf.app.ops.desk
   cf.app.ops.daily -[imports]-> cf.app.ops.outbox
   cf.app.ops.daily -[imports]-> cf.app.ops.owedEmail
   cf.app.ops.daily -[imports]-> cf.app.ops.sentry
-  cf.app.ops.daily -[imports]-> cf.app.safety
+  cf.app.ops.daily -[imports]-> cf.app.safety.reports
+  cf.app.ops.daily -[imports]-> cf.app.safety.rules
   cf.app.ops.desk -[imports]-> cf.app.email
   cf.app.ops.desk -[imports]-> cf.app.enrichment
   cf.app.ops.desk -[imports]-> cf.app.ops.gaveUp
@@ -308,7 +325,10 @@ model {
   cf.app.ops.desk -[imports]-> cf.app.products
   cf.app.ops.desk -[imports]-> cf.app.runs
   cf.app.ops.desk -[imports]-> cf.app.runs.writes
-  cf.app.ops.desk -[imports]-> cf.app.safety
+  cf.app.ops.desk -[imports]-> cf.app.safety.limits
+  cf.app.ops.desk -[imports]-> cf.app.safety.review
+  cf.app.ops.desk -[imports]-> cf.app.safety.rules
+  cf.app.ops.desk -[imports]-> cf.app.safety.runners
   cf.app.ops.edge -[imports]-> cf.app.ops.limits
   cf.app.ops.edge -[imports]-> cf.app.ops.publicWeb
   cf.app.ops.edge -[imports]-> cf.app.ops.sentry
@@ -318,17 +338,16 @@ model {
   cf.app.ops.owedEmail -[imports]-> cf.app.ops.outbox
   cf.app.ops.owedEmail -[imports]-> cf.app.ops.sentry
   cf.app.ops.owedEmail -[imports]-> cf.app.runs
-  cf.app.ops.owedEmail -[imports]-> cf.app.safety
+  cf.app.ops.owedEmail -[imports]-> cf.app.safety.takedowns
   cf.app.ops.publicWeb -[imports]-> cf.app.ops.limits
   cf.app.ops.publicWeb -[imports]-> cf.app.ops.sentry
-  cf.app.ops.publicWeb -[imports]-> cf.app.safety
+  cf.app.ops.publicWeb -[imports]-> cf.app.safety.rules
   cf.app.ops.speed -[imports]-> cf.app.ops.edge
   cf.app.ops.speed -[imports]-> cf.app.ops.sentry
   cf.app.products -[wiring]-> cf.app.auth
   cf.app.products -[imports]-> cf.app.notifications
   cf.app.products -[imports]-> cf.app.ops.limits
-  cf.app.products -[imports]-> cf.app.safety
-  cf.app.products -[wiring]-> cf.app.safety.rules
+  cf.app.products -[imports]-> cf.app.safety.rules
   cf.app.runs -[wiring]-> cf.app.auth
   cf.app.runs -[wiring]-> cf.app.feed
   cf.app.runs -[imports]-> cf.app.notifications

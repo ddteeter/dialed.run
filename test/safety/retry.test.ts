@@ -9,7 +9,7 @@ import { uploadItemPhoto } from "../../src/modules/closet/photos";
 import {
   retryPendingScreenings,
   type Classify,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening";
 import { contentTypeOf } from "../../src/modules/safety/screening/retry";
 import {
   imageCategories,

@@ -3,9 +3,7 @@
     "account": 8,
     "feed": 9
   },
-  "doorWidth": {
-    "safety": 93
-  },
+  "doorWidth": {},
   "pastDoor": {},
   "files": {},
   "parentDoor": {
@@ -13,7 +11,7 @@
     "auth": 19,
     "feed": 9,
     "runs": 15,
-    "safety": 93,
+    "safety": 8,
     "weather": 16
   },
   "direction": {},

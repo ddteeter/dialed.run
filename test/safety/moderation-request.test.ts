@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { env } from "../../src/env";
-import { classifierFromEnv } from "../../src/modules/safety";
+import { classifierFromEnv } from "../../src/modules/safety/screening";
 import {
   classifyImage,
   MODERATION_MODEL,

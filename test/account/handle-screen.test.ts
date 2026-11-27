@@ -5,7 +5,7 @@ import {
   handleScreenFromEnv,
   screenHandle,
 } from "../../src/modules/account/handles/handle-screen";
-import { MODERATION_MODEL } from "../../src/modules/safety";
+import { MODERATION_MODEL } from "../../src/modules/safety/screening";
 
 /**
  * OpenAI's moderation of a handle at claim time (task 126; owner,

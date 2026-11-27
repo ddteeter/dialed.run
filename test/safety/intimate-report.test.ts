@@ -15,7 +15,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
-import { reconcileUnhiddenReports } from "../../src/modules/safety";
+import { reconcileUnhiddenReports } from "../../src/modules/safety/reports";
 import {
   fileReport,
   isQueuedForReview,

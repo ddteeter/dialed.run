@@ -36,7 +36,7 @@ import {
   syncPublicPhotos,
   type PublicPhotoDeps,
 } from "../../src/modules/ops/public-web/public-photos";
-import { mintReceiptConfirmToken } from "../../src/modules/safety";
+import { mintReceiptConfirmToken } from "../../src/modules/safety/takedowns";
 import { banUser } from "../../src/modules/safety/runners/bans";
 import {
   blockAndDeclineAll,

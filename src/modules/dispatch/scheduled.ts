@@ -52,23 +52,28 @@ import {
   type SentryReport,
 } from "../ops/sentry";
 import {
-  classifierFromEnv,
   dayHeadroom,
-  declineLapsedRequests,
   HEADROOM_WARN_SHARE,
-  pendingReviewCount,
   quietScreenerWeek,
-  purgeExpiredQuarantine,
-  reconcileUnhiddenReports,
-  releaseStaleClaims,
-  retryPendingScreenings,
-  sweepModerationRecords,
   TRIP_LOOKBACK_S,
   tripsSince,
   type CeilingReading,
+} from "../safety/limits";
+import {
+  reconcileUnhiddenReports,
+  sweepModerationRecords,
+} from "../safety/reports";
+import { pendingReviewCount, releaseStaleClaims } from "../safety/review";
+import {
+  classifierFromEnv,
+  retryPendingScreenings,
   thresholdsAnomaly,
   moderationThresholds,
-} from "../safety";
+} from "../safety/screening";
+import {
+  declineLapsedRequests,
+  purgeExpiredQuarantine,
+} from "../safety/takedowns";
 
 import { nowSeconds } from "../../lib/now";
 

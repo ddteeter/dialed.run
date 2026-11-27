@@ -41,18 +41,19 @@ import { notificationRaise } from "../../notifications";
 import { oweOutbox } from "../../ops/outbox";
 import { captureException } from "../../ops/sentry";
 import {
-  garmentPhotoForgotten,
-  garmentRemovalNotice,
   keptGarmentFingerprint,
+  wasFlaggedAutomatically,
+} from "../../safety/review";
+import {
+  garmentRemovalNotice,
   moderationActionInsert,
-  quarantineInsert,
   removalRuleOf,
   removalStatements,
-  uploaderContextOf,
-  wasFlaggedAutomatically,
   wasModerated,
   type RemovalReason,
-} from "../../safety";
+} from "../../safety/rules";
+import { garmentPhotoForgotten } from "../../safety/screening";
+import { quarantineInsert, uploaderContextOf } from "../../safety/takedowns";
 
 import { commit, type Report, type Statements } from "../entries";
 

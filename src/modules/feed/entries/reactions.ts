@@ -13,8 +13,7 @@ import {
 import { coreDb } from "../../../env";
 import { hasRowWhere } from "../../../lib/sql/keyed-read";
 import { countOf, countWhere } from "../conditions";
-import { entryVisibleTo } from "../../safety";
-import { runnerInStanding } from "../../safety/rules";
+import { entryVisibleTo, runnerInStanding } from "../../safety/rules";
 import { nowSeconds } from "../../../lib/now";
 
 function db() {

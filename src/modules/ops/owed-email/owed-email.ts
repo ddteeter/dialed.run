@@ -26,7 +26,7 @@ import {
   type EmailDeps,
 } from "../../email";
 import { isReminderStillOwed, reminderEmailSent } from "../../runs";
-import { mintReceiptConfirmToken } from "../../safety";
+import { mintReceiptConfirmToken } from "../../safety/takedowns";
 
 type Db = ReturnType<typeof drizzle>;
 

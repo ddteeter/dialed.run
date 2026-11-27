@@ -33,7 +33,7 @@ import {
   retractEntry,
 } from "../../src/modules/feed/entries/retract";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
-import { reconcileUnhiddenReports } from "../../src/modules/safety";
+import { reconcileUnhiddenReports } from "../../src/modules/safety/reports";
 import { fileReport } from "../../src/modules/safety/reports/reports";
 
 import { noPurge } from "../purge-spy";

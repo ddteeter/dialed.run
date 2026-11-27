@@ -29,12 +29,11 @@ import { clearedPhoto } from "../../closet";
 import { oweOutbox } from "../../ops/outbox";
 import { captureException } from "../../ops/sentry";
 import {
-  garmentPhotoForgotten,
-  isStuck,
-  openReviewRow,
+  openRow as openReviewRow,
   type ResolveOutcome,
   type ReviewSubjectType,
-} from "../../safety";
+} from "../../safety/review";
+import { garmentPhotoForgotten, isStuck } from "../../safety/screening";
 
 import {
   commit,

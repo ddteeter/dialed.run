@@ -17,7 +17,7 @@
 import { z } from "zod";
 
 import { env } from "../../../env";
-import { MODERATION_MODEL } from "../../safety";
+import { MODERATION_MODEL } from "../../safety/screening";
 
 const MODERATIONS_URL = "https://api.openai.com/v1/moderations";
 

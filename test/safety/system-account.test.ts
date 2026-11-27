@@ -17,7 +17,7 @@ import { follow } from "../../src/modules/feed/following/follows";
 import { visibleRunnerHandle } from "../../src/modules/feed/following/profiles";
 import { publicProfileRead } from "../../src/modules/feed/public-web/public-profile";
 import { searchRunners } from "../../src/modules/feed/following/search";
-import { worldVisibleEntry } from "../../src/modules/safety";
+import { worldVisibleEntry } from "../../src/modules/safety/rules";
 
 import { addAccount } from "../feed/helpers";
 import {

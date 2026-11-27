@@ -41,7 +41,10 @@ import {
   PAGE_FETCHES_PER_HOUR,
   PROXY_CALLS_PER_DAY,
 } from "../../src/modules/enrichment/spend-limit";
-import { isDeniedLink, isDeniedOnLanding } from "../../src/modules/safety";
+import {
+  isDeniedLink,
+  isDeniedOnLanding,
+} from "../../src/modules/safety/rules";
 import { denyDomain } from "../../src/modules/safety/rules/denylist";
 import { nowSeconds } from "../../src/lib/now";
 import { reportException } from "../../src/modules/ops/sentry/sentry";

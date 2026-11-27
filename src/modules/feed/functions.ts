@@ -79,10 +79,10 @@ import {
   copyrightHoldInput,
   garmentMatchActionInput,
   removalDecisionInput,
-  requireAdmin,
   reviewActionInput,
   takedownInput,
 } from "../safety";
+import { requireAdmin } from "../safety/rules";
 import { unitsFor } from "./conditions";
 import { publicKitForPage, publicProfileForPage } from "./public-web";
 import { nowSeconds } from "../../lib/now";
