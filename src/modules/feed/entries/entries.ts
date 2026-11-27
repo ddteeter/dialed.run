@@ -46,6 +46,7 @@ import {
 } from "../../safety";
 import { requireOwned, requireOwner } from "../../../lib/sql/owned";
 import { allowedLinksOf, typeWordOf } from "../../closet";
+import { runEffortStatement } from "../../runs/writes";
 import { purgePublicPages } from "../../ops";
 import { newUlid } from "../../../lib/ids";
 import { bandFloorC } from "../../../lib/contracts/temperature";
@@ -346,16 +347,15 @@ export async function submitVerdict(
         ),
     ),
     // The runner's own pick of effort (G5), in the verdict's batch because
-    // it is the same Log it. It replaces a watch's prefill for good.
+    // it is the same Log it: `runs`' write, on their own run.
     ...(input.effort === undefined
       ? []
       : [
-          database
-            .update(runs)
-            .set({ effort: input.effort, effortSource: "runner" })
-            .where(
-              and(eq(runs.id, owned.runId), eq(runs.userId, input.userId)),
-            ),
+          runEffortStatement(
+            database,
+            { runId: owned.runId, userId: input.userId },
+            input.effort,
+          ),
         ]),
   ];
 
