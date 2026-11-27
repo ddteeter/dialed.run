@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { Confidence } from "../../../src/modules/call/contract";
+import {
+  CONFIDENCES,
+  type Confidence,
+} from "../../../src/modules/call/contract";
 import {
   measure,
   rate,
@@ -281,6 +284,12 @@ describe("measure", () => {
 });
 
 describe("byRank", () => {
+  it("is the contract's own order, whatever order the levels arrive in", () => {
+    expect(CONFIDENCES.toReversed().toSorted(byRank)).toStrictEqual([
+      ...CONFIDENCES,
+    ]);
+  });
+
   it("orders confidence from none of its own to confident", () => {
     const shuffled: Confidence[] = [
       "probable",

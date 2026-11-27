@@ -5,7 +5,12 @@
  */
 import type { UiGroup, VerdictValue } from "../../../lib/contracts";
 import type { TempRange } from "../../../lib/contracts/thermal";
-import type { Confidence, ScoredPiece, WornPiece } from "../contract";
+import {
+  CONFIDENCES,
+  type Confidence,
+  type ScoredPiece,
+  type WornPiece,
+} from "../contract";
 import type { ReplayOutcome } from "./run";
 
 export interface Share {
@@ -50,19 +55,11 @@ export interface ReplayMetrics extends ConfidenceSplit {
 }
 
 /**
- * Narrowest knowledge first. A record, so the compiler fails here if the
- * contract's `Confidence` gains or loses a value.
+ * Least knowledge first: the order of the contract's own `CONFIDENCES`
+ * (owner, 2026-11-26, #1105), so a level added there is ranked here.
  */
-const CONFIDENCE_RANK: Readonly<Record<Confidence, number>> = {
-  "below-threshold": 0,
-  "best-guess": 1,
-  borrowed: 2,
-  probable: 3,
-  confident: 4,
-};
-
 export function byRank(a: Confidence, b: Confidence): number {
-  return CONFIDENCE_RANK[a] - CONFIDENCE_RANK[b];
+  return CONFIDENCES.indexOf(a) - CONFIDENCES.indexOf(b);
 }
 
 /**

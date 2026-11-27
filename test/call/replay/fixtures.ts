@@ -84,6 +84,7 @@ export function result(
     engineVersion: "test",
     hourStart: 1_767_600_000,
     confidence,
+    verdictsSoFar: 0,
     personalRunsInBand: 0,
     kit,
     ranking: kit,
