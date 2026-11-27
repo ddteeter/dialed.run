@@ -66,9 +66,11 @@ The rest are docs:
 ## Issues
 
 - Closes: #1173, #1155
-- Opens: the by-hand export script, if ask D is approved
+- Opens: #1180 (the by-hand export script, and how the copy reaches the
+  runner: an owner question)
 
 ## Open questions
 
-Asks A–D above are with the coordinator. I'm building the docs-only parts
-in the meantime.
+None open. The coordinator answered asks A–D on 2026-11-27: A, the
+subscription id is a secret, owner-approved (D-208); B, the test pins the
+id's shape; C, the comment follows the Cache Rule; D, #1180.
