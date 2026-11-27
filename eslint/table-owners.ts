@@ -262,15 +262,7 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
   runs: {
     owner: "runs",
     others: {
-      feed: {
-        delete: true,
-        update: ["effort", "effortSource"],
-        why: "deleting a run from its kit (design D5); the effort, which B7 moves behind runs' door",
-      },
-      ops: {
-        update: ["weatherStatus"],
-        why: "the Desk's weather retry; B7 moves it behind runs' door",
-      },
+      feed: { delete: true, why: "deleting a run from its kit (design D5)" },
       weather: { update: ["weatherStatus"], why: "attaching an observation" },
     },
   },
@@ -279,10 +271,6 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
     others: {
       account: { delete: true, why: purge },
       feed: { delete: true, why: "deleting a run from its kit (design D5)" },
-      ops: {
-        update: ["status", "failureReason"],
-        why: "the Desk's import retry; B7 moves it behind runs' door",
-      },
     },
   },
   processed_webhook_events: { owner: "runs" },
@@ -353,7 +341,13 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
   // Operations.
   outbox: {
     owner: "ops",
-    others: { account: { delete: true, why: "a revoked invite's email" } },
+    others: {
+      account: { delete: true, why: "a revoked invite's email" },
+      runs: {
+        delete: true,
+        why: "a retried import's file-expiry row, which would delete the file it retries (design 275)",
+      },
+    },
   },
   gave_up: {
     owner: "ops",

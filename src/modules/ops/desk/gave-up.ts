@@ -30,11 +30,10 @@ import { firstColumnWhere, firstRowWhere } from "../../../lib/sql/keyed-read";
 import { reextract, retryFailedEnrichment } from "../../enrichment";
 import {
   reminderFromSubject,
-  retryFailedImport,
-  retryFailedWeather,
   type ImportJob,
   type ReminderJob,
 } from "../../runs";
+import { retryFailedImport, retryFailedWeather } from "../../runs/writes";
 import type { GaveUpRetry } from "../inputs";
 import { ownerHandles } from "./owner-handles";
 import { enrichmentDeps } from "./queues";

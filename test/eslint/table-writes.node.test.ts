@@ -23,6 +23,7 @@ const IN = {
   feed: "src/modules/feed/following/follows.ts",
   safety: "src/modules/safety/reports/blocks.ts",
   ops: "src/modules/ops/desk/gave-up.ts",
+  weather: "src/modules/weather/provider/visual-crossing.ts",
 } as const;
 
 const HEAD = `
@@ -214,8 +215,8 @@ await wipe(outbox);`;
     const body = `
 await didClaim(db, runs, { id: runs.id, status: runs.weatherStatus }, "r", ["pending"], { weatherStatus: "done" });
 await didClaim(db, runs, { id: runs.id, status: runs.weatherStatus }, "r", ["pending"], { weatherStatus: "done", startedAt: 1 });`;
-    expect(await messagesIn("ops", body)).toStrictEqual([
-      "`ops` updates `runs`.startedAt, which the owner map does not list for it (`runs` owns the table).",
+    expect(await messagesIn("weather", body)).toStrictEqual([
+      "`weather` updates `runs`.startedAt, which the owner map does not list for it (`runs` owns the table).",
     ]);
   });
 

@@ -15,7 +15,8 @@ back to pending, as `enrichment` does for its own retry
 
 ## Approach
 
-A new file, `src/modules/runs/retries.ts`, exported on `runs`' door:
+A new sub-module, `src/modules/runs/writes/` (its door `writes/index.ts`,
+the code in `writes.ts`):
 
 - `retryFailedImport(db, importId, deps)`: the body of today's
   `retryImport`. It reads the import, checks its file is still in the
@@ -37,20 +38,24 @@ today. `ops` keeps the queue, the file check and the reporter, and hands
 them in as `retryFailedEnrichment`'s deps are. `ops/desk/gave-up.ts` keeps
 the switch, the enrichment and reminder retries, and `RetryOutcome`.
 
-**Numbers.** `runs`' door 16 → 19. Every pair of modules already exists:
-`ops` and `feed` import `runs` today, so no fan-out changes and no
-cross-module arrow is added.
+**Numbers.** A sub-module, not three more names on `runs`' door:
+that door is pinned at 16 (`parentDoor`), and design 240 rule 4 says a
+new name goes on a sub-module's door. `ops` and `feed` import
+`runs/writes`, so no fan-out changes and no module pair is added. The
+new unit's own door is 3 names.
 
-**A2's owner map** (#1044, unmerged). After the rebase onto A2, these
-rows change to `runs`: `imports` (status) from `ops`; `runs` (weather
-status) from `ops`; `runs` (effort) from `feed`; and `outbox`'s delete of
-an owed `import_file_expire` from `ops`.
+**A2's owner map** (`eslint/table-owners.ts`). `runs` owns `imports`
+and `runs`, so `ops`' lines for import status and weather status go, and
+so does `feed`'s effort columns. `outbox` is `ops`', so `runs` gains a
+line for deleting a retried import's owed `import_file_expire`. The
+rule's helper test, which used `ops`' weather-status line as its
+example, now uses `weather`'s.
 
 ## Contract touches
 
 - Schema changes: **none**. Bindings, queues, crons: **none**.
-- Protected paths: `stryker.conf.json` (`runs/retries.ts` joins `runs`'
-  explicit entry), and the owner map when A2 lands. No pin changes.
+- Protected paths: `stryker.conf.json` (`runs/writes/**/*.ts` joins `runs`'
+  explicit entry), and `eslint/table-owners.ts`. No pin changes.
 
 ## Diagrams
 
@@ -62,7 +67,7 @@ names `runs`' function where it now runs.
 
 - The Desk's retry tests (`test/ops/`, gave-up) keep passing unchanged:
   they drive `retryGaveUp` and read the database.
-- `test/runs/retries.test.ts` (worker): each export alone, including the
+- `test/runs/writes.test.ts` (worker): each export alone, including the
   `gone` paths and the effort statement's owner scope, since `runs`'
   files are mutation tested on their own.
 

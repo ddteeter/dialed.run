@@ -13,7 +13,7 @@ import {
   retryFailedImport,
   retryFailedWeather,
   runEffortStatement,
-} from "../../src/modules/runs/retries";
+} from "../../src/modules/runs/writes";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
 
 /**

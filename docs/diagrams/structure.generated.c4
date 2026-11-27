@@ -94,6 +94,7 @@ model {
       imports = module 'runs/imports'
       parsers = module 'runs/parsers'
       strava = module 'runs/strava'
+      writes = module 'runs/writes'
     }
     safety = module 'safety' {
       blur = module 'safety/blur'
@@ -233,7 +234,7 @@ model {
   cf.app.feed.entries -[imports]-> cf.app.notifications
   cf.app.feed.entries -[imports]-> cf.app.ops
   cf.app.feed.entries -[imports]-> cf.app.ops.owedEmail
-  cf.app.feed.entries -[imports]-> cf.app.runs
+  cf.app.feed.entries -[imports]-> cf.app.runs.writes
   cf.app.feed.entries -[imports]-> cf.app.safety
   cf.app.feed.entries -[imports]-> cf.app.weather
   cf.app.feed.following -[imports]-> cf.app.account
@@ -278,6 +279,7 @@ model {
   cf.app.ops.desk -[imports]-> cf.app.ops.sentry
   cf.app.ops.desk -[imports]-> cf.app.products
   cf.app.ops.desk -[imports]-> cf.app.runs
+  cf.app.ops.desk -[imports]-> cf.app.runs.writes
   cf.app.ops.desk -[imports]-> cf.app.safety
   cf.app.ops.edge -[imports]-> cf.app.email
   cf.app.ops.edge -[imports]-> cf.app.ops.publicWeb
