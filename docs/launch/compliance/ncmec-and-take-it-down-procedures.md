@@ -200,8 +200,9 @@ covers the quarantine; this keeps the ban from tipping off the uploader.
   request under 18 U.S.C. §2703(f)), move `retain_until` on by hand with
   `wrangler d1 execute` before it passes, and note why in the evidence
   store. [CHECK: §2703(f)'s 90-day period and renewal.]
-- The `moderation_actions` row stays after the purge (D-70). Its own 3-year
-  clock (D-131) comes with C7.
+- The `moderation_actions` row stays after the purge (D-70), and is
+  deleted 3 years after it was written, once no record names it (D-131;
+  `safety/reports/retention.ts` `sweepModerationRecords`, daily).
 - `quarantine/` is not in the photo backup (#530). A 365-day R2 bucket
   lock on that prefix is what keeps the year's preservation: an owner's
   dashboard step before friends (`docs/deployment.md` §10).
@@ -306,13 +307,13 @@ may then say "identical copies we find", and this section is rewritten.
 
 ### Step 3: the record
 
-| Record                            | Kept                                                                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `takedown_requests` row           | Requester email, signature, location, statement, `dueAt`, decision, reason, `resolvedAt`         |
-| `moderation_actions` row          | Who removed what, when, and the request id                                                       |
-| `takedown_blocks`                 | A blocked requester's keys (D-118)                                                               |
-| How long                          | **Until deleted today.** D-131's 3 years after the decision arrives with C7 (before public).     |
-| The copies search, and its limits | A note in the evidence store under `takedown/<request id>/` (D-148); the app has no field for it |
+| Record                            | Kept                                                                                                                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `takedown_requests` row           | Requester email, signature, location, statement, `dueAt`, decision, reason, `resolvedAt`                                                                                       |
+| `moderation_actions` row          | Who removed what, when, and the request id                                                                                                                                     |
+| `takedown_blocks`                 | A blocked requester's keys (D-118)                                                                                                                                             |
+| How long                          | The request and its `moderation_actions` row: 3 years after the decision (D-131; `safety/reports/retention.ts` `sweepModerationRecords`). A block: until the operator lifts it |
+| The copies search, and its limits | A note in the evidence store under `takedown/<request id>/` (D-148); the app has no field for it                                                                               |
 
 ## When the owner is away
 
