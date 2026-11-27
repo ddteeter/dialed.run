@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 64 &nbsp;/&nbsp; 372–374 · 2026-11-27</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">The runner decides. The Desk only offers.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Three items. The Desk offers deletion from the closed-account panel, beside Reopen. Once the runner schedules it, Reopen goes. An under-18 closure deletes with no link, and Reopen stays as the way to undo a mistake. The link's page uses the link landings' ask, so opening it spends nothing. Dates are UTC, as every deletion date is (R40 C2). The words are proposals for the owner.</p>
+    </div>
+
+    <!-- 372 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">372 · Send deletion link · D8 closed runner</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ panels }}" as="p" hint-placeholder-count="5">
+          <div style="flex: 0 0 380px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ p.label }}</span>
+            <div data-screen-label="{{ p.screen }}" style="width: 380px; background: #0B0B0E; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 20px; font-weight: 600;">@runner_1290</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #B9B8AE;">{{ p.meta }}</span></div>
+              <div style="border: 1px solid #3A3A42; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">ACCOUNT CLOSED</span>
+                <span style="font-size: 13px; line-height: 1.45; color: #B9B8AE;">{{ p.rule }}</span>
+                <sc-if value="{{ p.status }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 4px; border-top: 1px solid #2A2A31;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F4F3EF; padding-top: 8px;">{{ p.status }}</span>
+                    <span style="font-size: 13px; line-height: 1.45; color: #B9B8AE;">{{ p.statusLine }}</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ p.ask }}" hint-placeholder-val="{{ false }}">
+                  <div style="border: 1px solid #F4F3EF; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
+                    <span style="font-size: 14px; line-height: 1.45;">Send a deletion link to m•••@hey.com? It works once, until Fri, Dec 4. Nothing is deleted unless they use it.</span>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                      <span style="height: 44px; padding: 0 20px; border-radius: 999px; background: #F4F3EF; color: #0B0B0E; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Send link</span>
+                      <span style="height: 44px; padding: 0 20px; border-radius: 999px; border: 1px solid #3A3A42; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Cancel</span>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ p.pills }}" hint-placeholder-val="{{ true }}">
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <sc-for list="{{ p.pills }}" as="b" hint-placeholder-count="2">
+                      <span style="height: 44px; padding: 0 20px; border-radius: 999px; border: 1px solid #3A3A42; display: flex; align-items: center; font-size: 15px; font-weight: 700;">{{ b }}</span>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">{{ p.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- 373 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">373 · The under-18 closure</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 0 0 380px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">D4 · CLOSE ACCOUNT · UNDER 18 PICKED</span>
+          <div data-screen-label="373 close picker age" style="width: 380px; background: #0B0B0E; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">CLOSE ACCOUNT · REASON</span>
+            <div style="display: flex; flex-direction: column;">
+              <sc-for list="{{ rules }}" as="r" hint-placeholder-count="3">
+                <span style="min-height: 44px; display: flex; align-items: center; gap: 12px; font-size: 14px; color: #B9B8AE;"><span style="width: 18px; height: 18px; border-radius: 999px; border: 1px solid #3A3A42;"></span>{{ r }}</span>
+              </sc-for>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93; padding: 4px 0;">+ 7 MORE RULES, AS BUILT</span>
+              <div style="border-top: 1px solid #3A3A42; margin-top: 8px; padding-top: 8px;">
+                <span style="min-height: 44px; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600;"><span style="width: 18px; height: 18px; border-radius: 999px; border: 5px solid #F4F3EF;"></span>Under 18</span>
+              </div>
+              <div style="border-top: 1px solid #3A3A42; margin-top: 8px; padding-top: 8px;">
+                <span style="min-height: 44px; display: flex; align-items: center; gap: 12px; font-size: 14px; color: #B9B8AE;"><span style="width: 18px; height: 18px; border-radius: 999px; border: 1px solid #3A3A42;"></span>Suspected CSAM</span>
+              </div>
+            </div>
+            <div style="border: 1px solid #F4F3EF; padding: 12px 14px; font-size: 14px; line-height: 1.45; outline: 1px dashed #FF2D8A; outline-offset: 3px;">Closing for age also deletes the account on Fri, Dec 4. No link is sent.</div>
+            <span style="align-self: flex-start; height: 44px; padding: 0 20px; border-radius: 999px; background: #F4F3EF; color: #0B0B0E; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Close account</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Ten rules, a hairline, Under 18, a hairline, then CSAM, as built. The line shows only while Under 18 is picked, above the submit, and stays there if submit fails.</p>
+        </div>
+        <div style="flex: 0 0 380px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">D8 · CLOSED FOR AGE</span>
+          <div data-screen-label="373 closed for age" style="width: 380px; background: #0B0B0E; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 20px; font-weight: 600;">@runner_1290</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #B9B8AE;">[CLOSED] [PENDING DELETE]</span></div>
+            <div style="border: 1px solid #3A3A42; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">ACCOUNT CLOSED</span>
+              <span style="font-size: 13px; line-height: 1.45; color: #B9B8AE;">Under 18 · closed Nov 27</span>
+              <div style="display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #2A2A31; padding-top: 12px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em;">[DELETES 4 DEC]</span>
+                <span style="font-size: 13px; line-height: 1.45; color: #B9B8AE;">Reopening before then also cancels the deletion.</span>
+              </div>
+              <span style="align-self: flex-start; height: 44px; padding: 0 20px; border-radius: 999px; border: 1px solid #3A3A42; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Reopen</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">No Send deletion link. Reopen stays for the 7 days, because the Desk made this call and can be wrong about an age. After the purge the row is gone.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 374 -->
+    <div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">374 · The email and the page it opens</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ emails }}" as="e" hint-placeholder-count="2">
+          <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ e.label }}</span>
+            <div data-screen-label="{{ e.screen }}" style="width: 390px; background: #F4F3EF; color: #0B0B0E; display: flex; flex-direction: column;">
+              <div style="padding: 14px 20px; border-bottom: 1px solid #DCDBD2; display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;"><span>FROM HELLO@DIALED.RUN · TO MARA@HEY.COM</span><span style="font-family: Archivo, Helvetica, sans-serif; font-size: 15px; font-weight: 600; letter-spacing: 0; color: #0B0B0E;">{{ e.subject }}</span></div>
+              <div style="padding: 24px 20px; display: flex; flex-direction: column; gap: 16px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em;">dialed.run</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">{{ e.tag }}</span>
+                <span style="font-size: 15px; line-height: 1.5;">{{ e.body }}</span>
+                <sc-if value="{{ e.button }}" hint-placeholder-val="{{ true }}">
+                  <span style="align-self: flex-start; height: 48px; padding: 0 24px; border-radius: 999px; background: #0B0B0E; color: #F4F3EF; display: flex; align-items: center; font-size: 15px; font-weight: 700;">{{ e.button }}</span>
+                </sc-if>
+                <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ e.after }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64; padding-top: 8px; border-top: 1px solid #DCDBD2;">PRIVACY POLICY · TERMS · COPYRIGHT</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ pages }}" as="s" hint-placeholder-count="4">
+          <div style="flex: 0 0 320px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ s.label }}</span>
+            <div data-screen-label="{{ s.screen }}" style="width: 320px; min-height: 420px; background: #F4F3EF; color: #0B0B0E; padding: 32px 20px; display: flex; flex-direction: column; gap: 16px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em;">dialed.run</span>
+              <sc-if value="{{ s.kicker }}" hint-placeholder-val="{{ false }}">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; padding-top: 16px;">{{ s.kicker }}</span>
+              </sc-if>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; line-height: 1.1; letter-spacing: -0.025em;">{{ s.head }}</span>
+              <span style="font-size: 15px; line-height: 1.5; color: #4E4E44;">{{ s.body }}</span>
+              <sc-if value="{{ s.button }}" hint-placeholder-val="{{ false }}">
+                <span style="height: 48px; border-radius: 999px; background: #0B0B0E; color: #F4F3EF; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;">{{ s.button }}</span>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">The page is the link landings' ask (R27 #8, R60·324), not the signed-in delete sheet: no bars, MEASURE.panel, one ink button, pending brackets, and a failure band NOT DELETED, "That didn't go through.". The sheet's "Log in before … to keep everything" can't apply to a closed account, so its words aren't reused. Done also sends the existing delete-scheduled email, with "Log in before…" replaced by "If this wasn't you, reply to this email before Fri, Dec 4."</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 64</span>
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93; padding-top: 12px;">{{ g.h }}</span>
+          <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 120px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+                <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+                <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') || v === 'NOTED' ? C : v.includes('DRAWN') ? D : A });
+    const rule = 'Rule 3 · Harassment · closed Nov 20';
+    const panels = [
+      { label: '1 · CLOSED · NOTHING SENT', screen: '372 closed rest', meta: '[CLOSED]', rule, pills: ['Reopen', 'Send deletion link'], note: 'Beside Reopen, the same kind (QUIET_PILL). Neither is the panel\'s primary, and the Desk offers deletion; it doesn\'t do it.' },
+      { label: '2 · ASK IN PLACE', screen: '372 ask', meta: '[CLOSED]', rule, ask: true, note: 'Replaces the pills in place, as Reopen\'s and Unblock\'s asks do. The address is masked as everywhere on the Desk. Cancel returns focus to the pill. A failed send fails on the row: NOT SENT.' },
+      { label: '3 · SENT, WAITING', screen: '372 sent', meta: '[CLOSED]', rule, status: '[SENT 27 NOV]', statusLine: 'The link works until Dec 4. Reopening cancels it.', pills: ['Reopen'], note: 'Reopen stays: the runner hasn\'t chosen yet. "Send deletion link" goes, so one link is out at a time.' },
+      { label: '4 · LINK USED, SCHEDULED', screen: '372 scheduled', meta: '[CLOSED] [PENDING DELETE]', rule, status: '[DELETES 5 DEC]', statusLine: 'The runner confirmed on Nov 28.', pills: false, note: 'No pills. The runner chose deletion, so the Desk can\'t undo it with Reopen. The row\'s tags follow R60·327.' },
+      { label: '5 · LINK EXPIRED', screen: '372 expired', meta: '[CLOSED]', rule, status: '[LINK EXPIRED 4 DEC]', statusLine: '', pills: ['Reopen', 'Send again'], note: 'Back to state 1 with the expiry recorded and the pill reading "Send again". Its ask is the same, with a new date.' },
+    ];
+    const rules = ['Rule 1 · Hate or harassment', 'Rule 2 · Threats', 'Rule 3 · Impersonation'];
+    const emails = [
+      { label: '374 · THE DELETION-LINK EMAIL · PROPOSED', screen: '374 email link', subject: 'Delete your closed dialed.run account', tag: 'DELETE', body: 'Your account @runner_1290 is closed. If you want it deleted too, use this link. Your runs, closet, entries and photos go 7 days after you confirm.', button: 'Delete my account', after: 'The link works once, until Fri, Dec 4. If you\'d rather keep the account closed, ignore this email and nothing happens.' },
+      { label: '373 · THE AGE CLOSURE EMAIL · PROPOSED', screen: '373 email age', subject: 'Your dialed.run account is closed', tag: 'ACCOUNT CLOSED', body: 'We closed @runner_1290 because dialed.run is for runners 18 and over. Your runs, closet, entries and photos will be deleted on Fri, Dec 4.', button: false, after: 'If we got your age wrong, reply to this email before then.' },
+    ];
+    const pages = [
+      { label: 'ASK', screen: '374 page ask', kicker: false, head: 'Delete your account?', body: '@runner_1290 is closed. Deleting it removes your runs, closet, entries and photos on Fri, Dec 4. You can\'t undo this.', button: 'Delete my account' },
+      { label: 'DONE', screen: '374 page done', kicker: 'DELETION SCHEDULED', head: 'Your account goes on Fri, Dec 4.', body: 'We\'ve sent an email saying so. There\'s nothing more to do.', button: false },
+      { label: 'EXPIRED OR UNKNOWN', screen: '374 page expired', kicker: 'LINK EXPIRED', head: 'This link doesn\'t work any more.', body: 'To ask for a new one, reply to the email it came in.', button: false },
+      { label: 'ALREADY USED', screen: '374 page used', kicker: 'DELETION SCHEDULED', head: 'This account already goes on Fri, Dec 4.', body: 'The link was used. There\'s nothing more to do.', button: false },
+    ];
+    const groups = [
+      { h: 'NOTICES', rows: [
+        R('Deleting a closed account', 'NOTED', `Desk sends a link to the account's own address; the link schedules the deletion with no sign-in, once, and expires. An under-18 closure schedules with no link. Signing in stays closed.`),
+        R('Email words', 'NOTED', `Every email and page sentence on this board is a proposal for the owner.`),
+      ]},
+      { h: 'DESK › RUNNERS', rows: [
+        R('372 · Send deletion link', 'CHANGED · DRAWN', `Beside Reopen, the same kind (QUIET_PILL). The ask is in place: "Send a deletion link to m•••@hey.com? It works once, until Fri, Dec 4. Nothing is deleted unless they use it." with Send link (CHALK_PILL) and Cancel. Statuses in MONO.sm brackets with one TYPE.small line: [SENT 27 NOV] keeps Reopen (reopening cancels the link) and removes the send pill; [DELETES 5 DEC] removes both pills and adds [PENDING DELETE] to the row; [LINK EXPIRED 4 DEC] shows Reopen and "Send again". Purge 7 days after the link is used. The link lasts 7 days.`),
+        R('373 · Under-18 reason', 'CHANGED · DRAWN', `Label "Under 18", not "terms §age". It sits between the ten rules and Suspected CSAM, with a hairline on each side. Pre-submit line: "Closing for age also deletes the account on {date}. No link is sent." Closed: "Under 18 · closed {date}", [DELETES {date}], "Reopening before then also cancels the deletion." Reopen stays for the 7 days. The age email names no rule: proposed words on the board.`),
+      ]},
+      { h: 'EMAIL AND THE PAGE IT OPENS', rows: [
+        R('374 · The email', 'CHANGED · DRAWN', `The account-email layout. Subject "Delete your closed dialed.run account". Kicker DELETE. Body says the account is closed and offers deletion; it doesn't say "you asked", because the Desk sends it. One ink link "Delete my account". Expiry and "ignore this" sit after the link. UTC dates.`),
+        R('374 · The page', 'CHANGED · DRAWN', `The link landings' ask (R27 #8, R60·324), not the signed-in sheet: no bars, MEASURE.panel, ask first so that opening the link spends nothing. Four states: ask, done (DELETION SCHEDULED), expired or unknown (LINK EXPIRED), already used. Done sends the existing delete-scheduled email with its keep line changed to "If this wasn't you, reply to this email before {date}."`),
+      ]},
+    ];
+    return { panels, rules, emails, pages, groups };
+  }
+}
+</script>
+</body>
+</html>
