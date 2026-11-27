@@ -33,11 +33,7 @@ import {
   maskedAddress,
   type EmailDeps,
 } from "../../email";
-import {
-  outboxInsert,
-  oweOutbox,
-  type OutboxDebtOf,
-} from "../../ops";
+import { outboxInsert, oweOutbox, type OutboxDebtOf } from "../../ops";
 import { settleOwedEmail } from "../../ops/owed-email";
 import {
   didClaimEmailLink,
@@ -192,7 +188,7 @@ export async function resendConfirmation(
       return { status: "visitor-limited", until: claim.until };
     }
   }
-  const parsed = address.safeParse(input.email);
+  const parsed = address().safeParse(input.email);
   if (!parsed.success) return { status: "sent" };
   const email = parsed.data;
   const claim = await claimEmailSend(db, "verify", email, now);

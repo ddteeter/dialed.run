@@ -3,7 +3,7 @@
 > #570 for `src/lib/contracts/email-kinds.ts`, after #1080 (the email
 > shard hit the 240-minute cap) and #1081 (the cap is 360 as a stopgap).
 > Behaviour-neutral: every schema accepts and returns exactly what it does
-> now. **Needs owner** before anything is built (§Open questions).
+> now. The owner ruled yes on #1146 (§Open questions).
 
 ## Problem
 
@@ -76,8 +76,6 @@ internals); `ignoreStatic` and higher timeouts (ruled out on #570).
 
 ## Open questions
 
-- **Owner:** may the email contract's schemas become builder functions, and
-  the outbox's `email` field a transform, as §Approach says? It costs about
-  0.2 ms per email parse and a call at every caller. It should take the
-  email shard from about 3 h 40 cold to well under the old 240 minutes, so
-  the cap could later return to 240. Recommended: yes.
+- **Owner, 2026-11-26 (#1146): yes.** The email schemas become builder
+  functions, built fresh on every call, and the outbox's `email` field a
+  transform, as §Approach says.

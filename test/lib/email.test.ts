@@ -65,7 +65,7 @@ describe("emailTemplateSchema", () => {
       // Parsed back to exactly itself: every field the kind carries is a
       // field its variant declares, so nothing is stripped on the way.
       expect(
-        emailTemplateSchema.safeParse(payload),
+        emailTemplateSchema().safeParse(payload),
         JSON.stringify(payload),
       ).toStrictEqual({ success: true, data: payload });
     }
@@ -73,28 +73,28 @@ describe("emailTemplateSchema", () => {
 
   it("refuses a ban notice with no reason", () => {
     expect(
-      emailTemplateSchema.safeParse({ kind: "account_closed", reason: "" })
+      emailTemplateSchema().safeParse({ kind: "account_closed", reason: "" })
         .success,
     ).toBe(false);
   });
 
   it("refuses a reopen notice naming an empty handle", () => {
     expect(
-      emailTemplateSchema.safeParse({ kind: "account_reopened", handle: "" })
+      emailTemplateSchema().safeParse({ kind: "account_reopened", handle: "" })
         .success,
     ).toBe(false);
   });
 
   it("refuses a removal notice with no reason, or about anything but an entry or a photo", () => {
     expect(
-      emailTemplateSchema.safeParse({
+      emailTemplateSchema().safeParse({
         kind: "content_removed",
         subject: "photo",
         reason: "",
       }).success,
     ).toBe(false);
     expect(
-      emailTemplateSchema.safeParse({
+      emailTemplateSchema().safeParse({
         kind: "content_removed",
         subject: "run",
         reason: "it's spam",
@@ -105,11 +105,12 @@ describe("emailTemplateSchema", () => {
   it("reads a copyright notice as a removal's cause, and an old row without one (law 9)", () => {
     const removal = { kind: "content_removed", subject: "photo", reason: "x" };
     expect(
-      emailTemplateSchema.parse({ ...removal, cause: "copyright_notice" }),
+      emailTemplateSchema().parse({ ...removal, cause: "copyright_notice" }),
     ).toStrictEqual({ ...removal, cause: "copyright_notice" });
-    expect(emailTemplateSchema.parse(removal)).toStrictEqual(removal);
+    expect(emailTemplateSchema().parse(removal)).toStrictEqual(removal);
     expect(
-      emailTemplateSchema.safeParse({ ...removal, cause: "intimate" }).success,
+      emailTemplateSchema().safeParse({ ...removal, cause: "intimate" })
+        .success,
     ).toBe(false);
   });
 
@@ -137,9 +138,11 @@ describe("emailTemplateSchema", () => {
 describe("emailRecipientSchema", () => {
   it("accepts a bare address, not only a userId", () => {
     expect(
-      emailRecipientSchema.safeParse({ address: "a@example.com" }).success,
+      emailRecipientSchema().safeParse({ address: "a@example.com" }).success,
     ).toBe(true);
-    expect(emailRecipientSchema.safeParse({ userId: "u1" }).success).toBe(true);
+    expect(emailRecipientSchema().safeParse({ userId: "u1" }).success).toBe(
+      true,
+    );
   });
 
   it("holds an address to the longest one a mail path carries", () => {
@@ -148,10 +151,10 @@ describe("emailRecipientSchema", () => {
       address: `${"a".repeat(length - domain.length)}${domain}`,
     });
     expect(
-      emailRecipientSchema.safeParse(ofLength(EMAIL_MAX_LENGTH)).success,
+      emailRecipientSchema().safeParse(ofLength(EMAIL_MAX_LENGTH)).success,
     ).toBe(true);
     expect(
-      emailRecipientSchema.safeParse(ofLength(EMAIL_MAX_LENGTH + 1)).success,
+      emailRecipientSchema().safeParse(ofLength(EMAIL_MAX_LENGTH + 1)).success,
     ).toBe(false);
   });
 });
@@ -162,7 +165,7 @@ describe("emailPayloadSchema", () => {
       to: { address: "a@example.com" },
       template: { kind: "existing_account" as const },
     };
-    expect(emailPayloadSchema.parse(payload)).toStrictEqual(payload);
+    expect(emailPayloadSchema().parse(payload)).toStrictEqual(payload);
   });
 });
 
@@ -181,7 +184,8 @@ describe("preferenceFor", () => {
 });
 
 function isExportTokenAccepted(token: string): boolean {
-  return emailTemplateSchema.safeParse({ kind: "export_ready", token }).success;
+  return emailTemplateSchema().safeParse({ kind: "export_ready", token })
+    .success;
 }
 
 describe("export_ready", () => {
@@ -207,12 +211,15 @@ Local dev's scheme, which the link schema must accept: `http://localhost`.
 const PLAIN_HTTP = ["ht", "tp"].join("");
 
 function isLinkAccepted(url: string): boolean {
-  return emailTemplateSchema.safeParse({ kind: "verify_email", url }).success;
+  return emailTemplateSchema().safeParse({ kind: "verify_email", url }).success;
 }
 
 function isReminderAccepted(landedAt: string, runs: number): boolean {
-  return emailTemplateSchema.safeParse({ kind: "run_reminder", landedAt, runs })
-    .success;
+  return emailTemplateSchema().safeParse({
+    kind: "run_reminder",
+    landedAt,
+    runs,
+  }).success;
 }
 
 describe("notificationSettingsSchema", () => {

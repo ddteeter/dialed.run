@@ -132,7 +132,19 @@ export type ReminderEmailRef = z.infer<typeof reminderEmailRefSchema>;
  */
 const emailFields = {
   dedupeKey: z.string().min(1),
-  email: emailPayloadSchema,
+  email: z.unknown().transform((value, context): EmailPayload => {
+    // A fresh build on every row, never this union's own copy (design
+    // 283): the email schemas are built on use, so their mutants are not
+    // static. It accepts and returns what `emailPayloadSchema()` does.
+    const parsed = emailPayloadSchema().safeParse(value);
+    if (!parsed.success) {
+      // One issue that carries the payload schema's own message: any issue
+      // fails the row, and `readOutboxRow` reports none of them.
+      context.addIssue(parsed.error.message);
+      return z.NEVER;
+    }
+    return parsed.data;
+  }),
 };
 
 const email = z.object({

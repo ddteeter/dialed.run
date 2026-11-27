@@ -59,32 +59,39 @@ export type EmailPreferenceKind = z.infer<typeof emailPreferenceKindSchema>;
  */
 export const EMAIL_SENDS_PER_HOUR = 5;
 
-export const emailTemplateSchema = z.discriminatedUnion("kind", [
-  verifyEmail,
-  existingAccount,
-  resetPassword,
-  emailChange,
-  emailChanged,
-  accessConfirm,
-  runReminder,
-  contentRemoved,
-  accountClosed,
-  accountReopened,
-  invite,
-  stravaDisconnected,
-  deletionScheduled,
-  digest,
-  exportReady,
-  removalDue,
-  removalRequested,
-  removalRequestReceived,
-  removalRequestDecided,
-  removalReminder,
-  removalReminderSummary,
-  takedownValve,
-]);
+/**
+ * Each schema here is built on every call, never cached (design 283): a
+ * module-scope build made every mutant in it static, and a cached one would
+ * count only a test file's first test as covering it.
+ */
+export function emailTemplateSchema() {
+  return z.discriminatedUnion("kind", [
+    verifyEmail(),
+    existingAccount(),
+    resetPassword(),
+    emailChange(),
+    emailChanged(),
+    accessConfirm(),
+    runReminder(),
+    contentRemoved(),
+    accountClosed(),
+    accountReopened(),
+    invite(),
+    stravaDisconnected(),
+    deletionScheduled(),
+    digest(),
+    exportReady(),
+    removalDue(),
+    removalRequested(),
+    removalRequestReceived(),
+    removalRequestDecided(),
+    removalReminder(),
+    removalReminderSummary(),
+    takedownValve(),
+  ]);
+}
 
-export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
+export type EmailTemplate = z.infer<ReturnType<typeof emailTemplateSchema>>;
 export type EmailKind = EmailTemplate["kind"];
 
 /**
@@ -92,19 +99,23 @@ export type EmailKind = EmailTemplate["kind"];
  * someone with no account (an invite) or to an address that is not the
  * account's yet (an email change).
  */
-export const emailRecipientSchema = z.union([
-  z.strictObject({ userId: z.string().min(1) }),
-  z.strictObject({ address }),
-]);
+export function emailRecipientSchema() {
+  return z.union([
+    z.strictObject({ userId: z.string().min(1) }),
+    z.strictObject({ address: address() }),
+  ]);
+}
 
-export type EmailRecipient = z.infer<typeof emailRecipientSchema>;
+export type EmailRecipient = z.infer<ReturnType<typeof emailRecipientSchema>>;
 
-export const emailPayloadSchema = z.object({
-  to: emailRecipientSchema,
-  template: emailTemplateSchema,
-});
+export function emailPayloadSchema() {
+  return z.object({
+    to: emailRecipientSchema(),
+    template: emailTemplateSchema(),
+  });
+}
 
-export type EmailPayload = z.infer<typeof emailPayloadSchema>;
+export type EmailPayload = z.infer<ReturnType<typeof emailPayloadSchema>>;
 
 /**
  * Which switch governs an email, or `undefined` for a transactional one.
