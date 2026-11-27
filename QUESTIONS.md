@@ -434,3 +434,69 @@ each entry keeps the question as asked. Design doc: `docs/designs/sprint-a3-call
 The `eslint/table-owners.ts` line (`"call",` after `"auth",` in `AREAS`) is
 its own commit, byte-identical to lane A1's, as the coordinator asked and
 the owner approved in this session (2026-11-26).
+
+# Questions from sprint lane A4 (the Call's engine, integrated)
+
+What stacking the three lanes raised. Design doc:
+`docs/designs/sprint-a4-call-integration.md`. The sections above are each
+lane's own, unchanged, so a few of their "meanwhile" lines describe the
+branch as it was. Landed since, in this stack: `verdictsSoFar` and the
+warm-runs fact on `CallResult` (A2 Q8 and Q10, so the warm line now
+shows), `CONFIDENCES` in `call/contract` (A3 Q7), and the scorer's declared
+forecast reads, which the release check receives (A3 Q5).
+
+## Q1: A piece's line never shows the cohort's share or the estimate
+
+- What: the scorer puts the band's fact on every piece of a Call that has a
+  band, zeros included (A1 Q16, until the contract has result-level
+  evidence). The evidence lines' strength order ranks the band's record
+  above the cohort's share and the estimate (A2 Q9, approved). Together, a
+  piece the runner never wore in the band shows the band's record, and on
+  a borrowed Call every piece reads `[0 RUNS] IN [77–86°]` while the fact
+  behind the pick, `CLIMATE COHORT · [90%] AT [77–86°]`, is carried and
+  never shown. C1b draws the cohort's line there.
+- Cost: a change to an owner's answer (the strength order) or to the
+  contract (A1 Q16), so this lane changed neither.
+- Recommend: do A1 Q16 next: the band's fact moves to the result, a
+  piece's evidence holds only facts about the piece or its group, and the
+  approved order then falls through to the cohort and the estimate. The
+  smaller fix, a band fact with no runs showing nothing, repairs the
+  borrowed Call only.
+- Meanwhile: as built. `test/call/wiring/evidence.test.ts` pins both the
+  carried fact and the line shown, so the answer changes one test.
+
+## Q2: Does a result below the threshold offer a kit?
+
+- What: the three parts read it three ways. The scorer still fills the kit
+  below `CALL_VERDICT_THRESHOLD` (A1 Q6, so the teaser can show a line).
+  `b2View` lists that kit's pieces and its why-nots under the
+  `UNTIL YOUR FIRST CALL` count. Replay counts the same result as offering
+  no kit, for coverage and for both kit measures.
+- Cost: owner time; then one line, in the scorer or the view model.
+- Recommend: the scorer keeps ranking and returns no kit below the
+  threshold, so all three agree and C0b's teaser reads the ranking. Decide
+  it with the screen (#457).
+- Meanwhile: as built; `test/call/wiring/evidence.test.ts` pins the view.
+
+## Q3: What the warm-runs fact reads
+
+- What: the owner's amended answer (#1104 Q10) names the pieces worn on the
+  band's too-warm runs. Built as: the runs are the Call's own counted runs,
+  in its band and its condition class, the same runs the band's `warm`
+  count is of; each piece is named once with the group it was worn as; its
+  estimate is the closet's today, and absent for a piece the closet no
+  longer holds. So a retired piece can show the kit dropped its group, but
+  a swap away from it is never called lighter.
+- Cost: none; one function, `scorer/warm-runs.ts`.
+- Recommend: as built.
+- Meanwhile: as built, on `CallResult.warmRuns`.
+
+## Q4: The D-rows for #1103's Q14 and Q3 are not written
+
+- What: the owner's answer on #1103 gives the group floor (Q14) and
+  typed-weather runs counting in the runner's own layer (Q3) a D-row "with
+  the PR". `docs/decisions.md` is numbered where it lands, and this lane
+  opens no PR.
+- Cost: none.
+- Recommend: the coordinator writes both rows in the scorer's PR (chunk 1).
+- Meanwhile: neither row exists; the rules are built and tested.
