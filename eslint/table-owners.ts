@@ -191,10 +191,6 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
   products: {
     owner: "products",
     others: {
-      dispatch: {
-        update: ["extractionStatus"],
-        why: "the enrichment sweep; B5 moves it out of dispatch",
-      },
       enrichment: {
         update: [
           "extractionStatus",

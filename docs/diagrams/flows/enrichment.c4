@@ -47,7 +47,7 @@ views {
         **This column is the recovery marker.** `pending` means the product still owes an extraction.
       '''
     }
-    // source: src/modules/enrichment/request.ts requestEnrichment (queue.send, askedAt); src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, ENRICHMENT_STALL_GRACE_S (15 minutes); src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
+    // source: src/modules/enrichment/request.ts requestEnrichment (queue.send, askedAt); src/modules/enrichment/sweep.ts redispatchStalledEnrichments, ENRICHMENT_STALL_GRACE_S (15 minutes); src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
     cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob: the product id and when it was asked' {
       notes '''
         **Not atomic with the claim.** D1 and a queue are two systems.
@@ -183,7 +183,7 @@ views {
       cf.app.enrichment.request -[async]-> cf.enrichmentQueue 'sends EnrichJob'
     }
     catch 'the send fails, or the Worker dies first' {
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, stalledPending, ENRICHMENT_STALL_GRACE_S, runHourly, hourlyReport (limit 100); src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
+      // source: src/modules/enrichment/sweep.ts redispatchStalledEnrichments, ENRICHMENT_STALL_GRACE_S; src/lib/sql/keyed-read.ts stalledPending (limit 100); src/modules/dispatch/scheduled.ts runHourly, hourlyReport; src/modules/ops/desk/crons.ts cronRegistry (30 * * * *)
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'finds products pending for 15+ minutes' {
         notes '''
           Fifteen minutes of grace, counted from when the product was made, so the sweep rarely races a send still in flight. At most 100 a firing, drawn at random, so past 100 waiting each firing sends a random hundred and a product may wait more than one firing.
@@ -191,7 +191,7 @@ views {
           **No age or try ceiling on `pending`.** A product the consumer cannot finish (the page budget is spent, or the dead-letter mark throws) is sent again every hour, and each firing\'s report counts it, until the consumer runs. Then a failure past the first day goes straight to Gave up.
         '''
       }
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, redispatchEach
+      // source: src/modules/enrichment/sweep.ts redispatchStalledEnrichments; src/lib/sql/queue-batch.ts redispatchEach
       cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again' {
         notes 'Safe to repeat: the consumer works only a `pending` product, and reuses a page stored in the last hour or not yet read.'
       }
@@ -221,7 +221,7 @@ views {
       }
     }
     opt 'failed, inside the product\'s first day, and under 6 tries' {
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, failedAndOwed; src/modules/enrichment/abandon.ts sweepOwed, ENRICHMENT_RETRY_WINDOW_S, ENRICHMENT_SWEEP_TRIES (6)
+      // source: src/modules/enrichment/sweep.ts redispatchStalledEnrichments, failedAndOwed; src/modules/enrichment/abandon.ts sweepOwed, ENRICHMENT_RETRY_WINDOW_S, ENRICHMENT_SWEEP_TRIES (6)
       cf.app.cronHourly30 -[recovery]-> cf.coreDb 'claims failed products back to pending' {
         notes '''
           A claim, not just a send: the consumer ignores a product that is not `pending`. Hourly inside the product\'s first day, while it has fewer than 6 tries: a dead letter counts 4 (one for each delivery), a failed fetch or an unreadable answer 1. Past the cap it waits out its day `failed`.
@@ -229,7 +229,7 @@ views {
           The closet\'s link line says "retrying" by the same rule.
         '''
       }
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledEnrichments, redispatchEach
+      // source: src/modules/enrichment/sweep.ts redispatchStalledEnrichments; src/lib/sql/queue-batch.ts redispatchEach
       cf.app.cronHourly30 -[recovery]-> cf.enrichmentQueue 'sends them again'
     }
     opt 'failed, and past the product\'s first day' {

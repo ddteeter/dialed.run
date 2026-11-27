@@ -112,3 +112,51 @@ export function deadLetterEach<Job>(
     message.ack();
   });
 }
+
+/**
+What a re-dispatch sends, and what it says: the three callbacks and the queue.
+*/
+export interface RedispatchHandlers<TRow, TMessage> extends Reporter {
+  queue: { send: (message: TMessage) => Promise<unknown> };
+  message: (row: TRow) => TMessage;
+  errorContext: (row: TRow) => Record<string, string>;
+  describe: (count: number) => string;
+}
+
+/**
+ * Re-dispatch a batch of rows to a queue, one message each: the producer
+ * half of a reconciliation sweep, where `consumeEach` is the consumer's.
+ *
+ * The three re-dispatch sweeps (stalled imports, stranded Strava
+ * revocations, stalled enrichments) had written this out: the early return
+ * on an empty batch, the per-row `send` in a `try` so one bad row cannot
+ * abandon the rest, the Sentry capture, and the anomaly line at the end.
+ * They differ in the queue, the message, the Sentry context and the
+ * sentence, which is what the handlers are.
+ *
+ * **The `try` is inside the loop on purpose and must stay there.** A
+ * failed send is reported and skipped, not fatal: these are reconciliation
+ * passes, so a row that cannot be dispatched this hour is picked up the
+ * next. Hoisting the `try` out would let one failure strand every row
+ * behind it until someone noticed.
+ *
+ * The anomaly is pushed on the row count, not on the number of successful
+ * sends, and that is also deliberate — the digest is reporting that a
+ * backlog existed, which is true whether or not the re-dispatch landed.
+ */
+export async function redispatchEach<TRow extends { id: string }, TMessage>(
+  anomalies: string[],
+  rows: readonly TRow[],
+  handlers: Readonly<RedispatchHandlers<TRow, TMessage>>,
+): Promise<void> {
+  if (rows.length === 0) return;
+
+  for (const row of rows) {
+    try {
+      await handlers.queue.send(handlers.message(row));
+    } catch (error) {
+      handlers.captureException(error, handlers.errorContext(row));
+    }
+  }
+  anomalies.push(handlers.describe(rows.length));
+}

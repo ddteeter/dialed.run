@@ -24,4 +24,5 @@ export {
   pairWithReminder,
   unpairedUploadFor,
 } from "./reminder-match";
+export { redispatchStrandedRevocations } from "./stranded";
 export { stravaDeliveryResponse, stravaHandshakeResponse } from "./webhook";

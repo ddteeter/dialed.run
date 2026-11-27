@@ -15,7 +15,7 @@ import { pageFailureReason } from "./bounds";
  * (PR #72 review). Past it the product is *abandoned* — the sweep stops,
  * the digest reports it, and the Desk's Gave up lists it.
  *
- * Here rather than in `ops`, which owns the sweep, because the consumer
+ * Here, beside the sweep (`sweep.ts`), and not in it, because the consumer
  * reads it too: a failure inside the window is a try the sweep will make
  * again, not a job the system stopped retrying, and the Desk lists only
  * the second (Operator Screens D6; R-119).

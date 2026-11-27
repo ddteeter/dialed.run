@@ -109,6 +109,7 @@ model {
     }
     weather = module 'weather' {
       description 'Attaches observed conditions to a run'
+      backlog = module 'weather/backlog'
       provider = module 'weather/provider'
     }
     cronDaily1200 = onCron 'Cron: daily at 12:00 UTC' {
@@ -204,8 +205,11 @@ model {
   cf.app.dispatch -[imports]-> cf.app.ops.sentry
   cf.app.dispatch -[imports]-> cf.app.ops.speed
   cf.app.dispatch -[imports]-> cf.app.runs
+  cf.app.dispatch -[imports]-> cf.app.runs.imports
+  cf.app.dispatch -[imports]-> cf.app.runs.strava
   cf.app.dispatch -[imports]-> cf.app.safety
   cf.app.dispatch -[imports]-> cf.app.weather
+  cf.app.dispatch -[imports]-> cf.app.weather.backlog
   cf.app.email -[wiring]-> cf.app.auth
   cf.app.enrichment -[imports]-> cf.app.email
   cf.app.enrichment -[imports]-> cf.app.products

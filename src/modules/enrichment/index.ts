@@ -4,14 +4,9 @@
  * consume the queue, and to re-run extraction over a stored page.
  */
 export {
-  abandonedBefore,
   ENRICHMENT_SWEEP_TRIES,
-  extractionDone,
-  extractionFailed,
-  extractionPending,
   isSweepOwed,
   listAbandonedEnrichments,
-  sweepOwed,
 } from "./abandon";
 export {
   handleEnrichmentBatch,
@@ -20,6 +15,13 @@ export {
   type EnrichmentDeps,
 } from "./consume";
 export { enqueueEnrichment } from "./enqueue";
+// The hourly sweep and the digest's two checks, which `dispatch` runs
+// (design 258 proposal 5).
+export {
+  checkAbandonedEnrichments,
+  checkExtractionYield,
+  redispatchStalledEnrichments,
+} from "./sweep";
 export { extractionModelFromEnv } from "./model/from-env";
 export { type EnrichJob } from "./queue-messages";
 export {

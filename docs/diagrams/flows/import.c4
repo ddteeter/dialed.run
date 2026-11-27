@@ -34,7 +34,7 @@ views {
         **This row is the recovery marker.** From here on, `pending` means the work is still owed, whatever happens to the request, the queue or the Worker.
       '''
     }
-    // source: src/modules/runs/imports/imports.ts startImport, startFileUpload, repeatOf; src/modules/runs/queue-messages.ts importJob; src/modules/dispatch/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
+    // source: src/modules/runs/imports/imports.ts startImport, startFileUpload, repeatOf; src/modules/runs/queue-messages.ts importJob; src/modules/runs/imports/stalled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
     cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob' {
       notes '''
         **Not atomic with the row.** The send can fail, or the Worker can die first.
@@ -164,11 +164,11 @@ views {
       }
 
     try {
-      // source: src/modules/runs/imports/imports.ts startImport (queue.send); src/modules/dispatch/scheduled.ts redispatchStalledImports
+      // source: src/modules/runs/imports/imports.ts startImport (queue.send); src/modules/runs/imports/stalled.ts redispatchStalledImports
       cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
     }
     catch 'the send fails, or the Worker dies first' {
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S, stalledPending
+      // source: src/modules/runs/imports/stalled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S; src/lib/sql/keyed-read.ts stalledPending
       cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'finds imports pending for 15+ minutes' {
         notes '''
           Fifteen minutes of grace, so the sweep never races a dispatch still in flight.
@@ -176,7 +176,7 @@ views {
           **Bounded.** At most 100 imports a day, oldest first.
         '''
       }
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledImports, redispatchEach; src/modules/runs/queue-messages.ts importJob; src/modules/runs/consumer.ts didClaimImport
+      // source: src/modules/runs/imports/stalled.ts redispatchStalledImports; src/lib/sql/queue-batch.ts redispatchEach; src/modules/runs/queue-messages.ts importJob; src/modules/runs/consumer.ts didClaimImport
       cf.app.cronDaily1200 -[recovery]-> cf.importsQueue 'enqueues them again' {
         notes '''
           **Guard: each message is its own claimant.** The sweep\'s message carries a claim id of its own. It claims the row only if it is `pending`, so it never works beside another message, and a copy of an import that already ended stops.
