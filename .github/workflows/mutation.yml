@@ -234,8 +234,14 @@ jobs:
     # each runs the whole suite) were split across three entries in
     # stryker.conf.json in the same change. A shard that hits the cap reports
     # cancelled, the `Mutation` job counts that as a failure, and on main
-    # `main-status` below opens the alert.
-    timeout-minutes: 240
+    # `main-status` below opens the alert. Raised from 240 to 360, GitHub's
+    # maximum for a hosted runner, on 2026-11-26 (owner's one-time grant,
+    # #1081): the `lib/contracts/email (ts)` shard ran 150 to 232 minutes on
+    # main, then hit 240 (#1080). Its `email-kinds.ts` is 100 static mutants
+    # that no split can reach, and alone it took about 3h40 cold on a PR
+    # (#1084). At 360 this cap is also GitHub's default, so it no longer
+    # stops a stuck shard any sooner. The lasting fix is #570's lazy schemas.
+    timeout-minutes: 360
     permissions:
       contents: read
       # To find main's runs and download a shard's report from one.
