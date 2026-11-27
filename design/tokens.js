@@ -130,6 +130,7 @@ export const HEIGHT = {
 
 export const SPACE_RULES = [
   'Inside a row or chip: SPACE[2]–SPACE[3]. Between rows: SPACE[2]. Between groups: SPACE[6]. Screen edge: SPACE[5] on phone, SPACE[6] at width.',
+  'Round 62 #360: SPACE[5] is the phone gutter for every Page screen. The closet\'s 16 is the one exception (R55·185).',
   'Odd board values (5, 6, 7, 9, 10, 11, 14, 18, 22, 28) collapse to the nearest step. 14 → 16. 18 → 16. 22 → 24. 28 → 32.',
   'Hit targets are ≥ 44px tall regardless of the type step inside them. Padding grows; type does not.',
 ];
