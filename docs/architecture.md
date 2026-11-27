@@ -586,8 +586,17 @@ words.
   closet and uploads (their R2 owed to the drain), and last, in one batch,
   every remaining row, Better Auth's, and the claim. Each step deletes what
   is left, so a purge that stops anywhere is finished by the next firing.
-  The purge also lists and deletes the runner's export ZIPs. Drawn as
+  The purge also lists and deletes the runner's export ZIPs. A closed
+  account, which cannot sign in, reaches the same claim two ways (design
+  289): through a single-use link the Desk emails to its own address
+  (`email_verifications`, purpose `delete`, 7 days), whose page spends it
+  with no session; or through an "Under 18" closure, which writes the
+  claim in the ban's batch. `account_deletions.cause` says which: Reopen
+  cancels an `under_18` claim, and a claim the runner chose (`asked`)
+  holds the account closed. Drawn as
   [`deletionStory`](https://ddteeter.github.io/dialed.run/#/view/deletionStory/),
+  [`deletionLinkStory`](https://ddteeter.github.io/dialed.run/#/view/deletionLinkStory/),
+  [`deletionForAge`](https://ddteeter.github.io/dialed.run/#/view/deletionForAge/),
   [`deletionPurge`](https://ddteeter.github.io/dialed.run/#/view/deletionPurge/)
   and [`deletionRecovery`](https://ddteeter.github.io/dialed.run/#/view/deletionRecovery/).
 - **Data export** (task 126, ACC-10) is **reconciliation** too:

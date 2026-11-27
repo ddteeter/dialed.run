@@ -4,8 +4,9 @@
 > board `design/Round 64 Rulings.dc.html`). The words below are the
 > owner-approved ones (2026-11-27), quoted as written; `{…}` marks what the
 > build computes (a date, a handle, a masked address). Over the template's
-> page: the schema proposal and the file list are the deliverable. **The
-> schema part stops for the coordinator's OK** (§Schema).
+> page: the schema and the file list are the deliverable. The coordinator
+> approved the schema, and the owner ruled on every open question
+> (2026-11-27, §Rulings).
 
 ## Problem
 
@@ -96,7 +97,7 @@ is untouched: from `purge_after` it claims the row like any other.
 **374.4.** `deletion_scheduled` gains an optional `closed: true` (law 9: an
 older build ignores it). For a closed account, the foot "Didn't ask? Log in
 and keep it, then change your password." becomes "If this wasn't you,
-reply to this email before {day}." The Keep button goes too (open question 3).
+reply to this email before {day}." The Keep button goes too (ruling 3).
 
 **The under-18 closure (373, 374.2).** `closureRules` gains `under_18`,
 "Under 18", between the rules and Suspected CSAM, with a hairline on each
@@ -117,14 +118,14 @@ wrong, reply to this email before then." It names no rule.
 ahead of the lift and folded on "still banned". They delete an unstarted
 `under_18` deletion ("Reopening before then also cancels the deletion.")
 and withdraw any delete link ("Reopening cancels it."). A deletion the
-runner chose (`asked`) blocks the lift (open question 4), and so does a
+runner chose (`asked`) blocks the lift (ruling 4), and so does a
 purge that has started.
 
 **The Desk panel.** `DeskRunner` gains `bannedAt`, `maskedEmail` (email's
 `maskedAddress`, server side) and `deletion` {requestedAt, purgeAfter,
 cause} in place of `isLeaving`. It also gains `deletionLink` {expiresAt,
 isUsed}, read by account's `deletionLinksOf` and handed in by the server
-function, as `listAccounts` is. A pure `closedPanelState` picks the state.
+function, as `listAccounts` is. A pure `closedPanelOf` picks the state.
 The panel moves to a new `ClosedAccountPanel.tsx` (DeskRunners.tsx is 805
 lines). Both pills are QUIET_PILL ("the same kind; neither is the panel's
 primary"). The states:
@@ -155,7 +156,7 @@ sequenceDiagram
   Note over D1 core: daily purge from purge_after (unchanged)
 ```
 
-## Schema (stops here for the coordinator's OK)
+## Schema (approved by the coordinator, 2026-11-27)
 
 **Migration `0002_add_account_deletion_cause` (core):**
 `ALTER TABLE account_deletions ADD cause text DEFAULT 'asked' NOT NULL`.
@@ -175,7 +176,7 @@ banned_at` (the age closure writes both in one batch). It holds only by
   as age, so Reopen would cancel it. A ban is one fact (`bans.ts`). This
   one should be too.
 - **Rejected:** a `user_profiles.ban_rule` column. It would also give the
-  board's "{rule} · closed …" line for every closure (open question 6), but
+  board's "{rule} · closed …" line for every closure (ruling 6), but
   it can't tell a runner's own earlier request from an age deletion.
 
 **No migration, still in `schema-core.ts`:** `email_verifications.purpose`'s
@@ -243,7 +244,7 @@ already the single-use, replaceable link store, purged with the account.
   and lifts nothing once a purge has started.
 - worker `test/safety/contracts.test.ts`: the order of `closureRules`.
   `test/email/render.test.ts`: the three emails' words and reply-to.
-- worker: `closedPanelState` for every state, including one exactly at
+- worker: `closedPanelOf` for every state, including one exactly at
   expiry.
 - dom `test/safety/desk-runners.dom.test.tsx`: each panel state, the ask
   and Cancel's focus, NOT SENT, the age line while Under 18 is picked and
@@ -263,32 +264,49 @@ already the single-use, replaceable link store, purged with the account.
 ## Issues
 
 - Closes: #1179.
-- Opens: whatever the owner defers below.
 
-## Open questions
+## Rulings (2026-11-27)
 
-1. **Schema (coordinator):** OK to take `0002` for `account_deletions.cause`
-   and to add `delete` to `email_verifications.purpose` in `schema-core.ts`?
-2. **A runner closed before picking a handle** has no `@{handle}` for the
-   two emails or the page's ask. I propose "Your account is closed.", "We
-   closed your account because…" and "Your account is closed. Deleting
-   it…". These are new words.
-3. **374.4:** the email's foot today is "Didn't ask? Log in and keep it,
-   then change your password.", not "Log in before…". I'll replace that
-   foot. I'd also drop its "Keep my account" button for a closed account,
-   which can't log in. OK?
-4. **Reopen once the runner chose deletion** is refused on the server as
-   well as hidden. This also covers a runner who asked before being closed:
-   today their panel shows Reopen. I recommend yes.
-5. **Dates:** the rulings say UTC "as every deletion date is (R40 C2)", but
-   every deletion day since round 46 is said in the runner's home zone, in
-   UTC only when there is none (`deletionDay`). I recommend `deletionDay`
-   for the runner's emails and page, so this flow agrees with the others.
-   The Desk's dates stay UTC.
-6. **The board's "{rule} · closed {date}"** on every closed panel: the rule
-   isn't stored. I'll keep the operator's reason as built, and use
-   "Under 18 · closed {date}" for age only.
-7. **Under 18, as I'm proceeding unless vetoed:** the Why field stays
-   required (it is the record and is not emailed). Reporters are told it was
-   removed, since only CSAM is silent. Strava is disconnected when the link
-   is used, but not at an age closure, so a Reopen restores it.
+The open questions this doc asked, as the coordinator and the owner
+answered them. Each is built as ruled.
+
+1. **Schema:** approved. Migration `0002` adds `account_deletions.cause`
+   (`asked` by default); `email_verifications.purpose` gains `delete`.
+   Additive, before the first deploy.
+2. **A runner with no handle:** the fallback lines are approved: "Your
+   account is closed." (the link email and the page's ask) and "We closed
+   your account because…" (the age email).
+3. **374.4:** the foot "Didn't ask? Log in and keep it, then change your
+   password." becomes "If this wasn't you, reply to this email before
+   {day}.", and the "Keep my account" button goes, for a closed account.
+4. **Reopen once the runner chose deletion** is refused on the server and
+   hidden on the panel, including a runner who asked before being closed.
+5. **Dates:** the runner's emails and the link's page say the day in the
+   runner's home zone (`deletionDay`, UTC when there is none). The Desk
+   stays UTC.
+6. **The closed panel** keeps the operator's reason as built; "Under 18 ·
+   closed {date}" is for age closures only.
+7. **Under 18:** the Why field stays required; reporters are told it was
+   removed, as for any closure but suspected CSAM; Strava is disconnected
+   when the link is used, not at an age closure.
+8. **The legal texts:** another session drafts the terms and privacy
+   policy line that ships with this PR. This PR writes none.
+9. **The token:** the hashed random secret is approved, not an HMAC: the
+   link is single use and withdrawn by Reopen through the existing
+   `email_verifications` machinery.
+
+## As built
+
+- The email layout has no kicker slot, so the two new emails carry none,
+  as no account email does (Design delta).
+- Desk brackets date as the Desk's other mono dates do (`monthDayLabel`:
+  "SENT NOV 27"), not the board's "27 NOV" (Design delta).
+- Reopen is a QUIET_PILL beside "Send deletion link" (372: "the same
+  kind; neither is the panel's primary"), where round 44 #104 made it
+  the chalk pill; the ask's Cancel is `QUIET_CANCEL`, as the Desk's
+  other asks.
+- The link email and the age email reply to the Desk's inbox
+  (`APPEAL_ADDRESS`); the closed variant of "delete scheduled" replies to
+  the From address, as the runner's own does.
+- The page reuses `LinkLanding`'s `AskPanel`, `LandingEnd` and
+  `useConfirmLink`.

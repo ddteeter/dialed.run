@@ -125,6 +125,26 @@ model {
       technology 'in the request: one attempt, the runner is waiting'
       description 'Keep my account: deletes the claim while the purge has not started'
     }
+    deletionLink = inRequest 'confirmDeletionLinkFn' {
+      technology 'in the request: one attempt, the runner is waiting'
+      description 'Delete my account, from the Desk\'s link and signed out: spends the link and writes the claim'
+    }
+  }
+
+  // A closed account's deletion: the Desk's link, or an age closure.
+  extend cf.app.safety {
+    sendDeletionLink = inRequest 'sendDeletionLinkAction' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'Desk: emails a closed account a single-use link to delete itself'
+    }
+    closeAccount = inRequest 'banUserAction' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'Desk: closes an account; for age, also schedules its deletion'
+    }
+    reopenAccount = inRequest 'unbanUserAction' {
+      technology 'in the request: one attempt, the operator is waiting'
+      description 'Desk: reopens a closed account, unless the runner chose deletion'
+    }
   }
 
   // Photo screening: a photo is classified before strangers see it.
@@ -316,6 +336,15 @@ model {
   cf.app.account.deletionRequest -> cf.app.runs 'disconnects Strava'
   runner -> cf.app.account.keep 'keeps the account'
   cf.app.account.keep -> cf.coreDb 'deletes the claim before the purge starts'
+  operator -> cf.app.safety.sendDeletionLink 'sends a closed account its deletion link'
+  cf.app.safety.sendDeletionLink -> cf.coreDb 'writes the link, one live at a time'
+  cf.app.safety.sendDeletionLink -> cf.app.email 'emails the link to the account\'s own address'
+  runner -> cf.app.account.deletionLink 'deletes a closed account through the link'
+  cf.app.account.deletionLink -> cf.coreDb 'spends the link, writes the claim, owes the email'
+  operator -> cf.app.safety.closeAccount 'closes an account'
+  cf.app.safety.closeAccount -> cf.coreDb 'closes it, and for age writes the claim'
+  operator -> cf.app.safety.reopenAccount 'reopens an account'
+  cf.app.safety.reopenAccount -> cf.coreDb 'lifts the ban, cancels an age deletion, withdraws the link'
   cf.app.cronDaily1200 -> cf.app.account.purge 'purges the accounts past their week'
   cf.app.cronDaily1200 -[recovery]-> cf.app.account.purge 'takes a failed purge again'
   cf.app.account.purge -> cf.coreDb 'claims, then deletes the account\'s rows'
