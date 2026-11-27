@@ -203,7 +203,13 @@ describe("directionOf", () => {
   it("lists the composers and the floor of design 261 ruling 4", () => {
     expect(DIRECTION_LISTS).toStrictEqual({
       composers: ["account/purge", "dispatch"],
-      floor: ["ops/outbox", "ops/sentry", "safety/rules"],
+      floor: [
+        "ops/gave-up",
+        "ops/limits",
+        "ops/outbox",
+        "ops/sentry",
+        "safety/rules",
+      ],
     });
   });
 });
