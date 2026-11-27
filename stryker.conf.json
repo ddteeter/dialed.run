@@ -48,7 +48,7 @@
     "src/modules/account/terms/**/*.ts",
     "src/modules/account/route-decisions.ts,src/modules/account/inputs.ts,src/modules/account/index.ts,src/modules/account/client.ts,src/modules/account/theme.ts,src/modules/account/theme-answer.ts,src/modules/account/use-go-home.ts,src/modules/account/use-saved-page.ts,src/modules/account/handles/**/*.ts,src/modules/account/access/**/*.ts,src/modules/account/export-build/**/*.ts,src/modules/account/verification/**/*.ts,src/modules/account/data/**/*.ts,src/modules/account/purge/**/*.ts,!src/modules/account/functions.ts",
     "src/modules/auth/**/*.ts,!src/modules/auth/functions.ts,!src/modules/auth/index.ts,!src/modules/auth/require-user.ts",
-    "src/modules/call/**/*.ts",
+    "src/modules/call/**/*.ts,src/modules/call/**/*.tsx",
     "src/modules/closet/tap-list-data.ts",
     "src/modules/closet/service.ts,src/modules/closet/components/**/*.ts,src/modules/closet/client.ts,src/modules/closet/filters.ts,src/modules/closet/form-mapping.ts,src/modules/closet/form-schema.ts,src/modules/closet/garment-link.ts,src/modules/closet/garment-page.ts,src/modules/closet/index.ts,src/modules/closet/inputs.ts,src/modules/closet/link-copy.ts,src/modules/closet/nearby.ts,src/modules/closet/photo-url.ts,src/modules/closet/photos.ts,src/modules/closet/piece-not-found.ts,src/modules/closet/product-link.ts,src/modules/closet/public-rotation.ts,src/modules/closet/retired-label.ts,src/modules/closet/tap-list-placeholder.ts,src/modules/closet/tap-list.ts,src/modules/closet/type-labels.ts,!src/modules/closet/functions.ts",
     "src/modules/email/**/*.ts,!src/modules/email/functions.ts",
