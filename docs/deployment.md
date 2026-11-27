@@ -517,6 +517,10 @@ needs its own Strava app, not a second subscription.
     `vitals-refused` line; the next day's digest should carry no `speed`
     line about configuration, and `perf_daily` in `dialed-ops` should have
     yesterday's rows.
+- **Which queries cost the most** (design 182):
+  `npx wrangler d1 insights dialed-core --sort-by reads --time-period 7d --limit 10`
+  ranks the week's queries by rows read on real data (`--sort-type avg`
+  for the dearest per call; `dialed-weather` and `dialed-ops` alike).
 - **Asking the speed data a question by hand.** The SQL API takes the
   query as the body (`curl -H "Authorization: Bearer $TOKEN" --data
 "<sql>" https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/analytics_engine/sql`).

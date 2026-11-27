@@ -66,7 +66,7 @@ them twice:
 | Create the `dialed-public-photos` bucket, connect `photos.dialed.run` as its custom domain (r2.dev URL off), and turn on the CSAM Scanning Tool for the zone with the owner's address for notifications, add a response-header Transform Rule setting `X-Robots-Tag: noindex` on `photos.dialed.run`, add the Cache Rule that makes every photo on `photos.dialed.run` eligible for cache with its TTLs from the origin (without it no photo is cached, so none is scanned), and register with NCMEC as an electronic service provider, before the first deploy that binds `PUBLIC_PHOTOS`. | owner, per `docs/deployment.md` §2           | D-153             |
 | Confirm Workers Caching (`"cache": { "enabled": true }` in `wrangler.jsonc`) is available on the account's plan, and after the first deploy that a public page (`/kit/<id>`) answers a second request with `cf-cache-status: HIT`, a signed-in page (`/feed`) never shows `HIT`, and making that kit private shows `/kit/<id>`'s not-public page within a minute (Sentry's `edge purge refused` says when a purge was not taken). If it is not available, deploy with the setting removed: the public pages still work, uncached.                                                           | owner                                        | D-154, design 163 |
 | After the first deploy, confirm a purge started outside a request lands: delete a test account that has a `world` kit (the account-deletion cron purges it) and check `/kit/<id>` stops answering `HIT` within a minute. A cron or queue handler may not count as the same entrypoint as `fetch` for a Workers Cache purge (design 163); if it does not, retracted public pages last until their 60 s TTL.                                                                                                                                                                                  | owner                                        | design 163, D-154 |
-| Create the `dialed-media-backup` bucket (`--location enam`) **before the first deploy that binds `MEDIA_BACKUP`**: the binding is already in `wrangler.jsonc`, and a deploy whose bucket does not exist fails. On `dialed-media`, add the bucket lock for prefix `quarantine/`, 365 days, in place of a backup copy (#530, pending the owner's answer).                                                                                                                                                                                                                                     | owner, per `docs/deployment.md` §10          | D-172, design 186 |
+| Create the `dialed-media-backup` bucket (`--location enam`) **before the first deploy that binds `MEDIA_BACKUP`**: the binding is already in `wrangler.jsonc`, and a deploy whose bucket does not exist fails. On `dialed-media`, add the bucket lock for prefix `quarantine/`, 365 days, in place of a backup copy (#530; owner, 2026-11-09).                                                                                                                                                                                                                                              | owner, per `docs/deployment.md` §10          | D-172, design 186 |
 | Observability: tracing **on** (design 165: the 2026-12-01 pricing includes 50 GB of ingest on Workers Paid; check D1 spans first, `deployment.md` §8); logs at full sample (`head_sampling_rate: 1` is fine at launch volume).                                                                                                                                                                                                                                                                                                                                                              | owner                                        | workflow.md       |
 | Usage notifications for Workers, D1, R2 and Email.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | owner                                        | §3.7              |
 
@@ -152,12 +152,13 @@ this section is left for the owner.
 
 ## 4. Email (Cloudflare Email Sending)
 
-| step                                                                                                                                                                                                                      | cites               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| Onboard `dialed.run` as the sending domain; publish the SPF, DKIM and DMARC records it asks for. Choose the sender address (e.g. `hello@dialed.run`).                                                                     | decision D-42, §2.3 |
-| Verify the owner's address as a destination, for the digest (free to verified destinations).                                                                                                                              | §3.5                |
-| Check the account's daily quota against the stage: fine for the owner and friends; confirm it before public. **Fallback vendor**: note one (e.g. Postmark or Resend) and what switching costs, since the service is beta. | §2.3                |
-| The `send_email` binding itself is added by task 126 (ACC-2) with the owner's authorisation, not in this sweep.                                                                                                           | decision D-42       |
+| step                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | cites               |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| Onboard `dialed.run` as the sending domain; publish the SPF, DKIM and DMARC records it asks for. Choose the sender address (e.g. `hello@dialed.run`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | decision D-42, §2.3 |
+| Verify the owner's address as a destination, for the digest (free to verified destinations).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | §3.5                |
+| **Inbound mail**: every `@dialed.run` address forwards to the owner (D-62), and the app names three (`src/lib/contracts/contact.ts`: `hello@` is the From line, `desk@` the appeal address and moderation Reply-To, `copyright@` the DMCA contact). Onboard `dialed.run` onto **Email Routing** (Email Service → Email Routing → Onboard Domain, which adds its MX and SPF records on `dialed.run` itself; Email Sending's sit on `cf-bounce.dialed.run`, and Cloudflare manages the two separately). Then turn on the **catch-all rule**, Send to an email, to the owner's verified address. Check: a message to each of the three arrives. | D-62                |
+| Check the account's daily quota against the stage: fine for the owner and friends; confirm it before public. **Fallback vendor**: note one (e.g. Postmark or Resend) and what switching costs, since the service is beta.                                                                                                                                                                                                                                                                                                                                                                                                                    | §2.3                |
+| The `send_email` binding itself is added by task 126 (ACC-2) with the owner's authorisation, not in this sweep.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | decision D-42       |
 
 ## 5. Third-party accounts
 
@@ -370,6 +371,9 @@ audit's list; where the two differ, the plan is current.
   harmless cache), and that `wrangler rollback` does not roll back
   migrations.
 - **Do a restore drill** on a scratch database once before friends.
+- **A data export too large to build** (PR #1033): the digest names the
+  runner, and the screen promises a copy made by hand. The script and the
+  way the copy reaches the runner are #1180, before public.
 - **Deploys are gradual** after the first one (design 186, #504): upload,
   0% plus a production smoke test through the version override, then
   100% (no 10% soak until #505 can watch one; owner, 2026-11-10). Rolling
@@ -403,7 +407,8 @@ From the first deploy on, every merged security fix is deployed at once
 - **Sentry proven** from a fetch and a cron; the digest alert rule and the
   cron heartbeat in place; uptime ping on.
 - Email: the domain onboarded; a verification email and a password reset
-  received end to end.
+  received end to end; a message to `hello@`, `desk@` and `copyright@`
+  each reaches the owner (§4, D-62).
 - Strava: callback domain set, webhook subscribed, `STRAVA_SUBSCRIPTION_ID`
   set; connect, disconnect and a revoke that **succeeds on Strava's side**
   (127's STR-1/2).
@@ -419,9 +424,12 @@ From the first deploy on, every merged security fix is deployed at once
 - **The owner's account, through the invite gate** (126 · ACC-5). Sign-up
   needs a code from the start, and there is no Desk before there is an
   operator, so the first code is a deployment step, not a migration (a
-  code in the repo would be a public way in). Pick four characters with
-  no 0/O/1/I and run, once:
-  `npx wrangler d1 execute dialed-core --remote --command "INSERT INTO invite_codes (id, code, label, max_uses, created_at) VALUES ('owner-seed', 'DIAL-XXXX', 'owner', 1, unixepoch())"`.
+  code in the repo would be a public way in). A code is `DIAL-` and two
+  groups of four (design 225), so pick eight characters from
+  `INVITE_ALPHABET` (`src/lib/contracts/access.ts`), upper case, and
+  store them with both hyphens, as `normalizeInviteCode` writes a code:
+  sign-up refuses any other shape. Run, once:
+  `npx wrangler d1 execute dialed-core --remote --command "INSERT INTO invite_codes (id, code, label, max_uses, created_at) VALUES ('owner-seed', 'DIAL-XXXX-XXXX', 'owner', 1, unixepoch())"`.
   Sign up with it, then put the new account's id in `ADMIN_USER_IDS`;
   every later code comes from Desk D7.
 
@@ -437,6 +445,26 @@ owner keeps the deploy record. Lane 15a listed them (2026-11-18).
   missing or does not match, and the CSAM Scanning Tool scans no photo
   until it does. Note its `cache-control` too: `public, max-age=60`. Then
   make the kit private, and within a minute the photo's URL answers 404.
+- **What a stored log line holds** (#902, design 244). Request any page
+  with a query string, `/?probe=1`, and read its line in Workers Logs: the
+  URL is there without `?probe=1` (`observability.redact_query_string`).
+  Note what else the line holds.
+- **A refused send carries a `code`** (#902, design 244).
+  `deliverOwedEmail` (`src/modules/email/deliver.ts`) reads a string `code`
+  on the error Cloudflare's send throws, and the tests make that error by
+  hand. To produce one, sign up a test account (a code from D7) at an
+  address that does not exist on a domain the owner controls (not
+  `dialed.run`, whose catch-all takes everything), so its verification
+  email bounces, then ask for the verification email again. Once
+  Cloudflare has suppressed the address, the send
+  throws `E_RECIPIENT_SUPPRESSED`. Read the error in Workers Logs and note
+  its `code` and message. If the address is never suppressed, the first
+  real refusal is the check: the outbox reports it with the sender's code.
+  Delete the test account afterwards.
+- **One Garmin import** (PR #275). With `GARMIN_API_KEY` and
+  `GARMIN_OWNER_USER_ID` set, import one run from Garmin as the owner and
+  note whether it lands credited to Garmin. Every path to Garmin has run
+  only locally so far.
 - **Secrets before the first upload.** Cloudflare runs the Worker's start-up
   code on upload and rejects a failure with code 10021; the auth instance is
   built at start-up and needs `BETTER_AUTH_SECRET`. Set §2's secrets first,
@@ -481,6 +509,11 @@ Everything in stage 0, plus:
 - Google: each friend added as a test user, or the consent screen switched
   to In production. (Open conflict with `legal-readiness-plan.md` Step 4;
   see §5's Google table.)
+- **D1's replicas serve reads** (design 143). During the first friends
+  week, read the per-region metrics of `dialed-core` and `dialed-weather`
+  in the D1 dashboard: some reads are served by a replica, not all by the
+  primary. If none are, check read replication is on (`docs/deployment.md`
+  §1).
 - A photo uploaded from a phone has **no GPS in the served bytes** (128's
   SAF-1); check with an EXIF reader.
 - The **VoiceOver checklist** (`docs/launch/voiceover-checklist.md`, plan 161) run on a real iPhone, its run recorded there, and each failure fixed
