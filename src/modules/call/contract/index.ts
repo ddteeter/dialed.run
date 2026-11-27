@@ -1,6 +1,8 @@
 /**
- * The door of `call/contract`: the types the Call's parts share.
+ * The door of `call/contract`: the types the Call's parts share, and the
+ * list of confidences they are ranked by.
  */
+export { CONFIDENCES } from "./types";
 export type {
   CallConditions,
   CallRequest,

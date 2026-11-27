@@ -1,11 +1,12 @@
 /**
  * The Call's shared contract (design 194): what the scorer reads and what
- * it answers. Types only, so it holds no mutants.
+ * it answers. Types, and one runtime value: `CONFIDENCES`, the list
+ * `Confidence` is derived from.
  *
- * Frozen for the sprint. Three lanes build against it on separate
- * branches, and each adds this file byte for byte, so the branches merge
- * cleanly. A lane that needs a change writes it in QUESTIONS.md and keeps
- * any new type in its own sub-module.
+ * The scorer, the evidence lines and the replay harness are all built
+ * against it, so a change here is a change to all three. A part that
+ * needs one writes it in QUESTIONS.md and keeps any new type in its own
+ * sub-module until the owner approves it.
  */
 import type { z } from "zod";
 
@@ -136,12 +137,20 @@ export interface CallRequest {
 }
 
 /**
- * How much the Call knows here. `below-threshold` means too few verdicts
- * for any Call; `best-guess` means none of its own (O5); `borrowed` means
- * none in this band (C1b).
+ * How much the Call knows here, least first: the order the replay harness
+ * ranks results in. `below-threshold` means too few verdicts for any
+ * Call; `best-guess` means none of its own (O5); `borrowed` means none in
+ * this band (C1b).
  */
-export type Confidence =
-  "below-threshold" | "best-guess" | "borrowed" | "probable" | "confident";
+export const CONFIDENCES = [
+  "below-threshold",
+  "best-guess",
+  "borrowed",
+  "probable",
+  "confident",
+] as const;
+
+export type Confidence = (typeof CONFIDENCES)[number];
 
 /**
  * A counted fact behind a pick. Evidence lines are templates over these,
