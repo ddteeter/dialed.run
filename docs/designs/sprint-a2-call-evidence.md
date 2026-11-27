@@ -25,7 +25,8 @@ importing only `call/contract` and `lib/contracts`:
   that renders. No fact → `NO VERDICTS YET`. A cohort share under 5 band
   runners renders nothing (pinned to `feed`'s `MIN_RUNNERS` in a test).
 - `paragraph.ts`: ≤2 sentences, only from facts in the result's own band:
-  "too cold N times" from `personal-band`, "skip the X" from the strongest
+  "too cold N times" or "too warm N times" from `personal-band` (the
+  side with more runs, cold on a tie), "skip the X" from the strongest
   `too_much` flag on a ranked piece the kit left out.
 - `header.ts`: one header per `Confidence`; the kit verb (`WEAR THIS` /
   `PROBABLY WEAR`); below threshold, `CALL_VERDICT_THRESHOLD` − verdicts.
@@ -49,6 +50,7 @@ never bracketed (`docs/product.md` §Bracket notation).
 ## Test plan
 
 All vitest `worker`, under `test/call/evidence/`:
+
 - `lines.test.ts`: each fact kind × °F/°C; strength order; foreign-piece
   facts ignored; cohort floor at 4/5; rounding half up; plurals.
 - `paragraph.test.ts`, `header.test.ts` (each `Confidence`; 0, 14, 15),
@@ -61,19 +63,21 @@ All vitest `worker`, under `test/call/evidence/`:
 - Closes: none (the coordinator wires the lanes). Opens: none from a cloud
   session; QUESTIONS.md holds them for the owner round.
 
-## Open questions (guesses this branch proceeds on; QUESTIONS.md has each)
+## Open questions
 
-1. Every "why not" answer is a guess; the board draws only the question.
-2. Which pieces get a "why not": the best runner-up in each chosen group,
-   plus the best piece of each group the kit left out.
-3. Cohort source naming: `CLIMATE COHORT` for zone rungs, `ALL RUNNERS`
-   for `everyone`; the board's "DENVER COHORT" needs a zone's place name.
-4. B2's "RUNNERS YOU FOLLOW" block is feed consensus: out of scope.
-5. #401's receipt sentence: needs a flag fact tied to a threshold; skipped.
-6. "EASY TO SHED" / "CHEAP INSURANCE" have no fact kind; not rendered.
-7. The below-threshold count needs total verdicts, which `CallResult` does
-   not carry: `b2View` takes `verdictsSoFar`.
-8. Strength order within personal facts (piece, flag, band).
-9. Paragraph: cold only (no "too warm" mirror); the board's "the half-zip
-   fixes it" needs a fact naming the fix, so it is not written.
-10. The said forms and every pluralised or generalised template.
+Answered by the owner on 2026-11-26 (QUESTIONS.md, issue #1104):
+
+1. Guessed wording: approved as v1, still marked `guess` in `words-data.ts`.
+2. "Why not" answers and their order stand; 3. one in every group.
+3. `CLIMATE COHORT` / `ALL RUNNERS` with the band stand.
+4. The followed-runners block comes from `feed` later; 6. #401's receipt
+   sentence is dropped; 7. no kicker words in v1; 9. strength order stands.
+5. `verdictsSoFar` moves onto `CallResult` in the scorer's PR (the contract
+   stays byte-identical here); `b2View`'s option switches to it at rebase.
+6. The paragraph has a warm mirror, "You've been too warm {times} in this
+   band." (a guess). When both apply, the side with more runs shows, and
+   cold on a tie, the board's own sentence. The paragraph holds no
+   measure, so its said form is its shown form.
+
+The scorer no longer returns `best-guess` (#1103); its header stays while
+the contract lists the level.

@@ -60,6 +60,11 @@ export const words = {
     origin: "board",
     text: "You've been too cold {times} in this band.",
   },
+  // The owner's warm mirror of C0a's cold sentence (Q10, 2026-11-26).
+  warmRuns: {
+    origin: "guess",
+    text: "You've been too warm {times} in this band.",
+  },
   // C0a: "Skip gloves — too much at 41° last week." The contract carries
   // a count, not a date or a temperature.
   skipPiece: {

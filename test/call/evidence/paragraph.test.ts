@@ -46,9 +46,45 @@ describe("kitParagraph", () => {
     );
   });
 
-  it("says nothing of cold when no run was cold", () => {
-    const zip = piece("zip", "tops", [{ ...band, cold: 0 }]);
+  it("says nothing of the band when no run was cold or warm", () => {
+    const zip = piece("zip", "tops", [{ ...band, cold: 0, warm: 0 }]);
     expect(kitParagraph(result({ kit: [zip] }), runner)).toBeUndefined();
+  });
+
+  it("says the warm mirror when only warm runs count", () => {
+    const zip = piece("zip", "tops", [{ ...band, cold: 0, warm: 1 }]);
+    expect(kitParagraph(result({ kit: [zip] }), runner)).toBe(
+      "You've been too warm once in this band.",
+    );
+  });
+
+  it("says the side with more runs when both apply", () => {
+    const warmer = piece("zip", "tops", [{ ...band, cold: 1, warm: 3 }]);
+    expect(kitParagraph(result({ kit: [warmer] }), runner)).toBe(
+      "You've been too warm 3 times in this band.",
+    );
+    const colder = piece("zip", "tops", [{ ...band, cold: 3, warm: 2 }]);
+    expect(kitParagraph(result({ kit: [colder] }), runner)).toBe(
+      "You've been too cold 3 times in this band.",
+    );
+  });
+
+  it("says cold on a tie, as the board does", () => {
+    const even = piece("zip", "tops", [{ ...band, cold: 2, warm: 2 }]);
+    expect(kitParagraph(result({ kit: [even] }), runner)).toBe(
+      "You've been too cold twice in this band.",
+    );
+  });
+
+  it("says the warm mirror beside a skip", () => {
+    const zip = piece("zip", "tops", [{ ...band, cold: 0, warm: 2 }]);
+    const call = result({
+      kit: [zip],
+      ranking: [zip, piece("gloves", "hands_head", [tooMuch("gloves", 1)])],
+    });
+    expect(kitParagraph(call, runner)).toBe(
+      "You've been too warm twice in this band. Skip the gloves — too much once in this band.",
+    );
   });
 
   it("reads only the band of this hour", () => {

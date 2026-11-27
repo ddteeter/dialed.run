@@ -1,19 +1,28 @@
 /**
  * B2's hi-viz paragraph: the app telling the runner something, from the
- * kit's facts. At most two sentences: how often they were too cold in this
- * band, and the piece they said was too much that the kit left out.
+ * kit's facts. At most two sentences: how often they were too cold or too
+ * warm in this band, and the piece they said was too much that the kit
+ * left out. The paragraph holds no measure, so it is said as it is shown.
  */
 import type { CallResult } from "../contract";
 import { bandRecord, loudestTooMuch } from "./facts";
 import { timesWord } from "./lines";
 import { fill } from "./words";
 
-function coldSentence(result: CallResult): string | undefined {
+/**
+ * How often the runner was off in this band: the side with more runs, and
+ * cold on a tie (the board's own sentence). Nothing when neither was.
+ */
+function bandSentence(result: CallResult): string | undefined {
   const record = bandRecord(
     result.kit.flatMap((piece) => piece.evidence),
     result.bandFloorC,
   );
-  return record === undefined || record.cold === 0
+  if (record === undefined) return undefined;
+  if (record.warm > record.cold) {
+    return fill("warmRuns", { times: timesWord(record.warm) });
+  }
+  return record.cold === 0
     ? undefined
     : fill("coldRuns", { times: timesWord(record.cold) });
 }
@@ -42,7 +51,7 @@ export function kitParagraph(
   result: CallResult,
   names: ReadonlyMap<string, string>,
 ): string | undefined {
-  const sentences = [coldSentence(result), skipSentence(result, names)].filter(
+  const sentences = [bandSentence(result), skipSentence(result, names)].filter(
     (sentence) => sentence !== undefined,
   );
   return sentences.length === 0 ? undefined : sentences.join(" ");
