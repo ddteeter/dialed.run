@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { user } from "../../src/db/schema-auth";
 import { cronCheckpoints, outbox } from "../../src/db/schema-core";
@@ -19,6 +19,7 @@ import {
   type OutboxDebt,
 } from "../../src/modules/ops/outbox/outbox";
 import { emailHandler } from "../../src/modules/ops/owed-email";
+import { beforeNextWriteBatch } from "../before-write-batch";
 import { fakeMail, seedUser } from "../email/helpers";
 
 /**
@@ -187,6 +188,31 @@ describe("oweDigestEmail", () => {
       .where(eq(cronCheckpoints.cronName, "digest-email"));
     expect(marks).toStrictEqual([
       { cronName: "digest-email", lastRunAt: midnight + DAY },
+    ]);
+  });
+
+  it("sends once when a second firing owed and sent the day while the first was building its batch (#1092)", async () => {
+    vi.restoreAllMocks();
+    const midnight = 20_000 * 86_400;
+    let sends = 0;
+    const mail = digestMail(["op-a"], async (_db, debt) => {
+      sends += 1;
+      await db.delete(outbox).where(eq(outbox.id, debt.id));
+    });
+    // The other firing marks the day at its very first second.
+    const overlap = beforeNextWriteBatch(() =>
+      oweDigestEmail(db, mail, midnight),
+    );
+    await oweDigestEmail(db, mail, midnight + 60);
+    vi.restoreAllMocks();
+    expect(overlap.fired()).toBe(true);
+    expect(sends).toBe(1);
+    const marks = await db
+      .select()
+      .from(cronCheckpoints)
+      .where(eq(cronCheckpoints.cronName, "digest-email"));
+    expect(marks).toStrictEqual([
+      { cronName: "digest-email", lastRunAt: midnight },
     ]);
   });
 

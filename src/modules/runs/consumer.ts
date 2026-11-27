@@ -11,7 +11,6 @@
  * entry) so a test can make it fail.
  */
 import { and, eq, isNull, or, sql } from "drizzle-orm";
-import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import { dlqBatchHandler } from "../../db/gave-up";
@@ -25,7 +24,7 @@ import {
 import { effortFromWatch, type RunDraft } from "../../lib/contracts";
 import { GARMIN_DEVICE_NAME } from "./garmin";
 import { didClaim } from "../../lib/sql/claim";
-import { rowWhere } from "../../lib/sql/row-where";
+import { guarded, runGuarded } from "../../lib/sql/batch-guard";
 import { newUlid, type Ulid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
@@ -49,12 +48,7 @@ import {
 import type { StravaApi } from "./strava";
 import { deauthorizeAthlete, type Owe } from "./strava";
 import { owedReminderEmail, reminderHistory } from "./strava";
-import {
-  runPairedAt,
-  pairRunWith,
-  pairWithReminder,
-  unpairedUploadFor,
-} from "./strava";
+import { pairRunWith, pairWithReminder, unpairedUploadFor } from "./strava";
 import { findDuplicateRun, initialWeatherStatus, storedStart } from "./service";
 import { MAX_START_AHEAD_SECONDS } from "./inputs";
 
@@ -520,16 +514,18 @@ async function processReminderJob(
   // The claim lands only with the pairing (design 278): two reminders
   // read the same unpaired run, and the one whose pairing lost would
   // otherwise be claimed with nothing written, its run never reminded.
-  // Then the job is decided again from what is there now: a claim that
-  // landed stops it at its first read, and one that did not means another
-  // reminder paired the run first, so this one finds another upload or
-  // writes its reminder.
+  // The pairing is guarded, so a lost one writes nothing, and the job is
+  // decided again from what is there now: another upload, or its reminder.
   if (uploaded !== undefined) {
-    await deps.db.batch([
-      pairRunWith(deps.db, uploaded, job.eventTime),
-      claimWhere(deps.db, job, runPairedAt(deps.db, uploaded, job.eventTime)),
+    const paired = await runGuarded(deps.db, [
+      ...guarded(
+        deps.db,
+        pairRunWith(deps.db, uploaded, job.eventTime),
+        "reminder-pairing",
+      ),
+      claim,
     ]);
-    await processReminderJob(deps, job);
+    if (!paired.ok) await processReminderJob(deps, job);
     return;
   }
 
@@ -565,21 +561,6 @@ async function processReminderJob(
     }),
     ...(email === undefined ? [] : [deps.owe(email.message, email.notBefore)]),
   ]);
-}
-
-/**
-The event's claim, landing only if `onlyIf` holds when it runs.
-*/
-function claimWhere(db: CoreDb, job: ReminderJob, onlyIf: SQL) {
-  const row = {
-    objectId: job.objectId,
-    aspectType: job.aspectType,
-    eventTime: job.eventTime,
-  };
-  return db
-    .insert(processedWebhookEvents)
-    .select(rowWhere(processedWebhookEvents, row, onlyIf))
-    .onConflictDoNothing();
 }
 
 /**

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 
@@ -11,6 +11,7 @@ import {
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { beforeNextWriteBatch } from "../before-write-batch";
 import { queriesDuring } from "../d1-spy";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -108,6 +109,54 @@ describe("attachKit refuses what is not the caller's", () => {
     await expect(
       attachKit({ userId, runId, itemIds: [newUlid()] }),
     ).rejects.toThrow(/own items/);
+  });
+});
+
+describe("attachKit beside the runner's own delete (#1091)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("writes nothing for a run deleted just before its batch, and says the run is gone", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    // Another of their runs stays, so only this run's absence can refuse.
+    await makeRun({ userId });
+    const itemId = await makeItem({ userId });
+    const deleted = beforeNextWriteBatch(() =>
+      db().delete(runs).where(eq(runs.id, runId)),
+    );
+
+    await expect(
+      attachKit({ userId, runId, itemIds: [itemId] }),
+    ).rejects.toThrow(/run not found/);
+
+    expect(deleted.fired()).toBe(true);
+    expect(await db().select().from(outfitEntries)).toStrictEqual([]);
+    expect(await db().select().from(outfitEntryItems)).toStrictEqual([]);
+  });
+
+  it("leaves off the kit a garment deleted just before its batch, and keeps the rest", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const kept = await makeItem({ userId });
+    const gone = await makeItem({ userId });
+    // A garment the kit does not name stays off it.
+    await makeItem({ userId });
+    const deleted = beforeNextWriteBatch(() =>
+      db().delete(wardrobeItems).where(eq(wardrobeItems.id, gone)),
+    );
+
+    const entryId = await attachKit({ userId, runId, itemIds: [kept, gone] });
+
+    expect(deleted.fired()).toBe(true);
+    const rows = await db()
+      .select()
+      .from(outfitEntryItems)
+      .where(eq(outfitEntryItems.entryId, entryId));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ entryId, itemId: kept });
+    expect(rows[0]?.flag).toBeNull();
   });
 });
 

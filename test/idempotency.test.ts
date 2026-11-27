@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished } from "vitest";
 
 import { follows, outfitEntries } from "../src/db/schema-core";
 import { env } from "../src/env";
@@ -124,16 +124,21 @@ describe("natural keys: no column needed, property pinned", () => {
     // garments in it, which renders as an empty kit and cannot be told from
     // a deliberate one.
     //
-    // Forced here by passing the same item twice, which violates the UNIQUE
-    // `entry_items_pk` pair. With two statements the entry survives; in a
-    // batch it does not.
+    // Forced here by a trigger that refuses every kit row, so the entry,
+    // first in the batch, is the statement that must not survive.
     const userId = await makeUser();
     const runId = await makeRun({ userId });
     const itemId = await makeItem({ userId });
+    await db().run(
+      sql`CREATE TRIGGER refuse_kit_rows BEFORE INSERT ON outfit_entry_items BEGIN SELECT RAISE(ABORT, 'kit row refused'); END`,
+    );
+    onTestFinished(async () => {
+      await db().run(sql`DROP TRIGGER IF EXISTS refuse_kit_rows`);
+    });
 
     await expect(
-      attachKit({ userId, runId, itemIds: [itemId, itemId] }),
-    ).rejects.toThrow();
+      attachKit({ userId, runId, itemIds: [itemId] }),
+    ).rejects.toThrow(/kit row refused/);
 
     const orphans = await db()
       .select({ id: outfitEntries.id })

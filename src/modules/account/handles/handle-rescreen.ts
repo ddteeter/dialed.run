@@ -23,11 +23,12 @@
  */
 import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type { drizzle } from "drizzle-orm/d1";
 
 import { accountDeletions, userProfiles } from "../../../db/schema-core";
 import { coreDb, env } from "../../../env";
 import { nowSeconds } from "../../../lib/now";
+import { guarded, runGuarded } from "../../../lib/sql/batch-guard";
 import { captureException } from "../../ops";
 import { enqueueForReview } from "../../safety";
 import { screenHandle, type HandleScreenVerdict } from "./handle-screen";
@@ -35,7 +36,7 @@ import { screenHandle, type HandleScreenVerdict } from "./handle-screen";
 /**
 Safety's review write takes drizzle's plain database type, so this module does too.
 */
-type Db = DrizzleD1Database;
+type Db = ReturnType<typeof drizzle>;
 
 /**
  * Handles asked about per firing. Each call may take its full five
@@ -149,11 +150,11 @@ async function claim(db: Db, now: number) {
 }
 
 /**
- * A flagged handle's verdict and its review row, together — but only for
- * a claim still standing, which a read settles first (a batch cannot
- * branch). A rename between that read and the batch is not worth a
- * guard: the batch's own update writes nothing then, and the review row
- * shows the reviewer the handle the runner holds now.
+ * A flagged handle's verdict and its review row, together, and only for
+ * a claim still standing when the batch runs (#1093): the settle is
+ * guarded, so a rename or a moderator's force-rename since the claim
+ * stops the batch, and the review row, which would otherwise re-open a
+ * profile review a moderator had closed, is not written either.
  */
 async function flag(
   db: Db,
@@ -161,14 +162,8 @@ async function flag(
   handle: string,
   now: number,
 ): Promise<void> {
-  const [standing] = await db
-    .select({ userId: userProfiles.userId })
-    .from(userProfiles)
-    .where(stillClaimed(userId, handle))
-    .limit(1);
-  if (standing === undefined) return;
-  await db.batch([
-    settle(db, userId, handle, "flagged", now),
+  await runGuarded(db, [
+    ...guarded(db, settle(db, userId, handle, "flagged", now), "handle-claim"),
     enqueueForReview(db, {
       subjectType: "profile",
       subjectId: userId,

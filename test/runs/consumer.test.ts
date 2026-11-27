@@ -32,6 +32,7 @@ import { MAX_START_AHEAD_SECONDS } from "../../src/modules/runs/inputs";
 import { unreadNotificationCount } from "../../src/modules/notifications";
 import { attachObservation } from "../../src/modules/weather";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
+import { beforeNextWriteBatch } from "../before-write-batch";
 import { fitFile } from "./fit-file";
 import validTcx from "./fixtures/valid.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
@@ -1713,6 +1714,42 @@ describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
       .where(eq(stravaConnections.athleteId, athleteId));
     expect(kept).toHaveLength(1);
     expect(await revokedRows(userId)).toStrictEqual([]);
+    expect(
+      await coreDb()
+        .select()
+        .from(stravaRevocations)
+        .where(eq(stravaRevocations.refreshToken, refreshToken)),
+    ).toStrictEqual([]);
+  });
+
+  it("tells nobody and revokes nothing when the runner reconnected just before its batch (#1094)", async () => {
+    const { userId, athleteId, refreshToken } = await seedConnection(1000);
+    // A reconnect: Strava may hand back the same refresh token.
+    const reconnect = beforeNextWriteBatch(() =>
+      coreDb()
+        .update(stravaConnections)
+        .set({ connectedAt: 4000 })
+        .where(eq(stravaConnections.athleteId, athleteId)),
+    );
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
+
+    await handleImportsBatch(
+      fakeBatch([
+        { body: { type: "strava_deauthorize", athleteId, eventTime: 3000 } },
+      ]).batch,
+      makeDeps(),
+    );
+
+    expect(reconnect.fired()).toBe(true);
+    const kept = await coreDb()
+      .select({ connectedAt: stravaConnections.connectedAt })
+      .from(stravaConnections)
+      .where(eq(stravaConnections.athleteId, athleteId));
+    expect(kept).toStrictEqual([{ connectedAt: 4000 }]);
+    expect(await revokedRows(userId)).toStrictEqual([]);
+    expect(await owedEmailsTo(userId)).toStrictEqual([]);
     expect(
       await coreDb()
         .select()

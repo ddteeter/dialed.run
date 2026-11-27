@@ -1,6 +1,7 @@
 export { cronNameFor, type CronName } from "./crons";
 export { deskToday, isOperator, todayCounts, type TodayCounts } from "./desk";
 export {
+  claimDayStatement,
   DIGEST_OWED,
   DIGEST_UNCONFIRMED,
   markedAt,

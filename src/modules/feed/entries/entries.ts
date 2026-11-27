@@ -10,7 +10,16 @@
  * the authz *logic* (who may attach to which run, using which items)
  * stays in this module regardless.
  */
-import { and, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  exists,
+  inArray,
+  isNotNull,
+  ne,
+  sql,
+} from "drizzle-orm";
 import type { z } from "zod";
 
 import {
@@ -25,6 +34,8 @@ import {
   wardrobeItems,
 } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
+import { guarded, runGuarded } from "../../../lib/sql/batch-guard";
+import { rowWhere } from "../../../lib/sql/row-where";
 import type {
   Audience,
   Effort,
@@ -34,7 +45,7 @@ import type {
 } from "../../../lib/contracts";
 import { kitCacheTags, type PurgeTags } from "../../../lib/cache-tags";
 import { WORLD_AUDIENCE } from "../../../lib/contracts";
-import { ForbiddenError } from "../../../lib/errors";
+import { ForbiddenError, NotFoundError } from "../../../lib/errors";
 import { readInChunks } from "../../../lib/chunked";
 import { forIds } from "../../../lib/for-ids";
 import {
@@ -191,7 +202,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
   // than writing a literal null) inserts SQL NULL either way. `verdict`
   // is the same, and is now written explicitly because a caller may have
   // it — see `AttachKitInput`.
-  const insertEntry = database.insert(outfitEntries).values({
+  const entry = {
     id: entryId,
     runId: input.runId,
     userId: input.userId,
@@ -209,22 +220,64 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     // unjudged state `shouldPromptForVerdict` looks for.
     verdict: input.verdict,
     createdAt: nowSeconds(),
-  });
+  };
+  // Held to the run still being there as the batch runs (#1091), and
+  // guarded: a run its runner deleted since the read stops the batch, so
+  // no entry, copy or kit row is left naming it.
+  const entryRow = rowWhere(
+    outfitEntries,
+    entry,
+    runStillThere(database, input.runId),
+  );
+  const insertEntry = guarded(
+    database,
+    database.insert(outfitEntries).select(entryRow),
+    "kit-run",
+  );
   // The entry's half of its run's copy (D-175) reads the row back, so it
   // follows the insert in the same batch.
   const copy = entryHalfStatement(database, entryId);
-  if (input.itemIds.length === 0) {
-    await database.batch([insertEntry, copy]);
-    return entryId;
-  }
-  await database.batch([
-    insertEntry,
-    copy,
-    database
-      .insert(outfitEntryItems)
-      .values(input.itemIds.map((itemId) => ({ entryId, itemId }))),
-  ]);
+  const kit =
+    input.itemIds.length === 0
+      ? []
+      : [kitRowsOf(database, entryId, [...input.itemIds])];
+  const attached = await runGuarded(database, [...insertEntry, copy, ...kit]);
+  if (!attached.ok) throw new NotFoundError("run not found");
   return entryId;
+}
+
+/**
+ * Whether the run is there when the statement runs.
+ */
+function runStillThere(database: ReturnType<typeof db>, runId: string) {
+  return exists(
+    database
+      .select({ one: sql`1` })
+      .from(runs)
+      .where(eq(runs.id, runId)),
+  );
+}
+
+/**
+ * A kit row for each of `itemIds` still in the closet when the batch runs
+ * (#1091): a garment its runner deleted since the read is left off the
+ * kit rather than named by a row nothing can show. In the table's column
+ * order, which is the order drizzle names them in.
+ */
+function kitRowsOf(
+  database: ReturnType<typeof db>,
+  entryId: string,
+  itemIds: string[],
+) {
+  const rows = database
+    .select({
+      entryId: sql<string>`${entryId}`.as(outfitEntryItems.entryId.name),
+      itemId: wardrobeItems.id,
+      flag: sql<null>`null`.as(outfitEntryItems.flag.name),
+    })
+    .from(wardrobeItems)
+    .where(inArray(wardrobeItems.id, itemIds));
+  return database.insert(outfitEntryItems).select(rows);
 }
 
 interface ItemFlagInput {
