@@ -40,12 +40,8 @@ import { settleOwedEmail } from "../ops/owed-email";
 
 import { keepAccount } from "./runners/account-flags";
 import { banEmail, banUser, reopenEmailFor, unbanUser } from "./runners/bans";
-import {
-  accountCount,
-  forceRename,
-  listAccounts,
-  reviewFlaggedHandle,
-} from "../account";
+import { accountCount, listAccounts } from "../account/access";
+import { forceRename, reviewFlaggedHandle } from "../account/handles";
 import { placeholderHandle, renameRecord } from "./runners/rename";
 import { deskRunners, runnerCounts, runnersWhere } from "./runners/runners";
 import { deskKitFor } from "./review/desk-kit";

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { env, primaryCoreDb, waitUntil } from "../../env";
-import { receiveAccessRequest } from "../../modules/account";
+import { receiveAccessRequest } from "../../modules/account/access";
 import { deploymentPosture } from "../../modules/auth";
 import { emailDepsFromEnv } from "../../modules/email";
 import { verifyTurnstileToken } from "../../modules/ops/edge";

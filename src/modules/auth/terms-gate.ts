@@ -41,10 +41,10 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import {
   currentTermsVersion,
-  emailConfirmationRead,
   latestAcceptanceOf,
   termsStandingOf,
-} from "../account";
+} from "../account/terms";
+import { emailConfirmationRead } from "../account/verification";
 import { offerRunnerBookmark, pinPrimary } from "../../lib/sql/d1-session";
 import {
   AccountLeavingError,

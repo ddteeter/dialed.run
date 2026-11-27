@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { user } from "../../src/db/schema-auth";
 import { outfitEntries } from "../../src/db/schema-core";
-import { isUnconfirmed } from "../../src/modules/account";
+import { isUnconfirmed } from "../../src/modules/account/verification";
 import { emailConfirmationOf } from "../../src/modules/account/verification/email-links";
 import {
   attachKit,

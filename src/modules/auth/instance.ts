@@ -1,7 +1,8 @@
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
 import { env, primaryCoreDb, waitUntil } from "../../env";
-import { accessGate, authMail } from "../account";
+import { accessGate } from "../account/access";
+import { authMail } from "../account/verification";
 import { emailDepsFromEnv } from "../email";
 import { verifyTurnstileToken } from "../ops/edge";
 import { captureException } from "../ops/sentry";

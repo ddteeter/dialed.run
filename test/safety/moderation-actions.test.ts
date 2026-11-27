@@ -47,11 +47,8 @@ import {
   photoResponse,
   reviewerPhotoResponse,
 } from "../../src/modules/feed/entries/photos";
-import {
-  accountCount,
-  forceRename,
-  listAccounts,
-} from "../../src/modules/account";
+import { accountCount, listAccounts } from "../../src/modules/account/access";
+import { forceRename } from "../../src/modules/account/handles";
 import {
   ACCOUNTS_PAGE,
   prefixPattern,

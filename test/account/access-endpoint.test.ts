@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { accessAsks, rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { ACCESS_NOTE_MAX } from "../../src/lib/contracts/access";
-import { receiveAccessRequest } from "../../src/modules/account";
+import { receiveAccessRequest } from "../../src/modules/account/access";
 import type { AccessEndpointDeps } from "../../src/modules/account/access/access-endpoint";
 import type {
   TurnstileAttempt,

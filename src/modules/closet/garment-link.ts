@@ -15,7 +15,7 @@
 import type { drizzle } from "drizzle-orm/d1";
 
 import { domainOf, linkDomainOf } from "../../lib/domain";
-import { isUnconfirmed } from "../account";
+import { isUnconfirmed } from "../account/verification";
 import { isSweepOwed } from "../enrichment";
 import type { ProductForDetail } from "../products";
 import { deniedLinksOf } from "../safety";

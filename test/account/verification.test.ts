@@ -12,7 +12,7 @@ import {
   emailVerifications,
   outbox,
 } from "../../src/db/schema-core";
-import { authMail } from "../../src/modules/account";
+import { authMail } from "../../src/modules/account/verification";
 import {
   EMAIL_LINK_TTL_S,
   issueEmailLink,

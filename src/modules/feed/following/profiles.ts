@@ -30,7 +30,7 @@ import { proseDayLabel, runDayOf } from "../../../lib/dates";
 import { topByCount } from "../../../lib/top-by-count";
 import { bandsAscending, tallyCoverage, type CoverageBand } from "../consensus";
 import { followerCount, followingCount, isFollowing } from "./follows";
-import { lookUpHandle } from "../../account";
+import { lookUpHandle } from "../../account/handles";
 import { isUnderReviewForAuthor, publiclyVisibleEntry } from "../../safety";
 import { columnWhere } from "../../../lib/sql/keyed-read";
 import type { Units } from "../../../lib/contracts";

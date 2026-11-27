@@ -48,7 +48,7 @@ import { newUlid } from "../../lib/ids";
 import { topByCount } from "../../lib/top-by-count";
 import type { TempRange } from "../../lib/contracts/thermal";
 import { estimateTempRange } from "../../lib/contracts/thermal";
-import { isUnconfirmed } from "../account";
+import { isUnconfirmed } from "../account/verification";
 import { enqueueEnrichment } from "../enrichment";
 import {
   outboxInsert,

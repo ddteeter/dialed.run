@@ -32,7 +32,7 @@ import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
 import { wardrobeItems } from "../../db/schema-core";
 import { isListedName } from "../../lib/contracts/profanity";
 import { ownedBy } from "../../lib/sql/owned";
-import { isUnconfirmed } from "../account";
+import { isUnconfirmed } from "../account/verification";
 import { captureException } from "../ops/sentry";
 import {
   OWED_AGAIN,

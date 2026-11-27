@@ -4,7 +4,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { userProfiles } from "../../../db/schema-core";
 import { SHARED_AUDIENCE, writableAudienceOf } from "../../../lib/contracts";
 import type { WritableAudience } from "../../../lib/contracts";
-import { isUnconfirmed } from "../../account";
+import { isUnconfirmed } from "../../account/verification";
 
 /**
  * The audience this runner's new entries start with (D-109): `runners`,

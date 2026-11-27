@@ -26,7 +26,7 @@ import { handleCacheTag } from "../../../lib/cache-tags";
 import { usernameSchema } from "../../../lib/contracts/garments";
 import { distanceNumber } from "../../../lib/contracts/measures";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
-import { lookUpHandle } from "../../account";
+import { lookUpHandle } from "../../account/handles";
 import { publicRotation } from "../../closet";
 import { firstPublishedPhotos, publicPageHeaders } from "../../ops/public-web";
 import { worldVisibleEntry } from "../../safety";
