@@ -21,20 +21,21 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import {
   entryPhotos,
+  moderationActions,
   outfitEntries,
   reviewQueue,
   takedownRequests,
   wardrobeItems,
 } from "../../../db/schema-core";
 import { newUlid } from "../../../lib/ids";
-import { firstRowWhere } from "../../../lib/sql/keyed-read";
+import { nowSeconds } from "../../../lib/now";
 import { qualified } from "../../../lib/sql/qualified";
 import { reportHidingAtOnce, requestHolds } from "../limits";
 import { removalStatements } from "../rules";
-import { moderationActionInsert } from "../rules";
+import { moderationActionInsertWhere } from "../rules";
 import {
   keptFingerprints,
-  keptGarmentFingerprint,
+  keptGarmentFingerprintWhere,
 } from "./removed-fingerprints";
 
 type Db = ReturnType<typeof drizzle>;
@@ -73,67 +74,101 @@ function underReview(): SQL {
 
 /**
  * What an owner's delete of these kit photos keeps, for the delete's
- * batch, ahead of the statements that take the photos: read first,
- * since a batch cannot branch. `photosInScope` is a condition on
- * `entry_photos`; only `ownerId`'s photos are read.
+ * batch, ahead of the statement that settles their reviews: for each of
+ * `ownerId`'s photos in scope that is under review as the batch reaches
+ * it, a `withdrawn` audit row, then its fingerprint naming that row.
+ * Nothing is read before the batch: the photos are chosen in SQL, so a
+ * photo uploaded or reviewed since the delete began, or a review settled
+ * since, is answered as it stands. `photosInScope` is a condition on
+ * `entry_photos`.
  */
-export async function withdrawnUnderReview(
+export function withdrawnUnderReview(
   db: Db,
   ownerId: string,
   photosInScope: SQL | undefined,
-): Promise<BatchItem<"sqlite">[]> {
-  const withdrawn = await db
-    .select({ id: entryPhotos.id })
+): [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] {
+  const createdAt = nowSeconds();
+  const theirs = inArray(
+    entryPhotos.entryId,
+    db
+      .select({ id: outfitEntries.id })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.userId, ownerId)),
+  );
+  // One per photo, so minted in SQL as the fingerprints' ids are; the
+  // record is found again below by what it says, which only this batch
+  // writes: the owner, withdrawing this photo, in this second.
+  const into = moderationActions;
+  const records = db
+    .select({
+      id: sql<string>`lower(hex(randomblob(16)))`.as(into.id.name),
+      actorId: sql<string>`${ownerId}`.as(into.actorId.name),
+      action: sql<string>`${"withdrawn"}`.as(into.action.name),
+      subjectType: sql<string>`${"photo"}`.as(into.subjectType.name),
+      subjectId: sql<string>`${entryPhotos.id}`.as(into.subjectId.name),
+      subjectOwnerId: sql<string>`${ownerId}`.as(into.subjectOwnerId.name),
+      reason: sql<string>`${removalStatements.intimate}`.as(into.reason.name),
+      preservedKey: sql<null>`null`.as(into.preservedKey.name),
+      createdAt: sql<number>`${createdAt}`.as(into.createdAt.name),
+      runId: sql<null>`null`.as(into.runId.name),
+    })
     .from(entryPhotos)
-    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
-    .where(
-      and(photosInScope, eq(outfitEntries.userId, ownerId), underReview()),
-    );
-  return withdrawn.flatMap((photo) => {
-    const id = newUlid();
-    return [
-      moderationActionInsert(db, {
-        id,
-        actorId: ownerId,
-        action: "withdrawn",
-        subjectType: "photo",
-        subjectId: photo.id,
-        subjectOwnerId: ownerId,
-        reason: removalStatements.intimate,
-      }),
-      ...keptFingerprints(db, "intimate", eq(entryPhotos.id, photo.id), id),
-    ];
-  });
+    .where(and(photosInScope, theirs, underReview()));
+  const recordOfThisPhoto = and(
+    eq(into.action, "withdrawn"),
+    eq(into.subjectType, "photo"),
+    sql`${into.subjectId} = ${qualified(entryPhotos, entryPhotos.id)}`,
+    eq(into.actorId, ownerId),
+    eq(into.createdAt, createdAt),
+  );
+  const recordId = sql`(select ${into.id} from ${into} where ${recordOfThisPhoto} limit 1)`;
+  const recorded = sql`exists (select 1 from ${into} where ${recordOfThisPhoto})`;
+  return [
+    db.insert(moderationActions).select(records),
+    // Scoped as the records are, so the read seeks the photos in scope
+    // rather than scanning every photo for a record.
+    ...keptFingerprints(
+      db,
+      "intimate",
+      and(photosInScope, theirs, recorded),
+      recordId,
+    ),
+  ];
 }
 
 /**
  * The garment-photo form, for an owner's replace, remove or garment
  * delete: the same keep and record when the garment's photo is held as a
- * copy of a removed image and still under review. Read before the batch.
+ * copy of a removed image and still under review as the batch reaches
+ * it, with the fingerprint the garment has then. Nothing is read before
+ * the batch, so it goes ahead of the review settle.
  */
-export async function withdrawnGarmentUnderReview(
+export function withdrawnGarmentUnderReview(
   db: Db,
   ownerId: string,
   itemId: string,
-): Promise<BatchItem<"sqlite">[]> {
+): BatchItem<"sqlite">[] {
   const held = sql`exists (select 1 from ${reviewQueue} where ${inArray(reviewQueue.status, ["pending", "reviewing"])} and ${eq(reviewQueue.subjectType, "garment")} and ${eq(reviewQueue.subjectId, itemId)} and ${eq(reviewQueue.source, "fingerprint")})`;
-  const item = await firstRowWhere(
-    db,
-    wardrobeItems,
-    and(eq(wardrobeItems.id, itemId), eq(wardrobeItems.userId, ownerId), held),
+  const theGarment = and(
+    eq(wardrobeItems.id, itemId),
+    eq(wardrobeItems.userId, ownerId),
+    held,
   );
-  if (item === undefined) return [];
   const id = newUlid();
   return [
-    moderationActionInsert(db, {
-      id,
-      actorId: ownerId,
-      action: "withdrawn",
-      subjectType: "garment",
-      subjectId: item.id,
-      subjectOwnerId: ownerId,
-      reason: removalStatements.intimate,
-    }),
-    ...keptGarmentFingerprint(db, "intimate", item, id),
+    moderationActionInsertWhere(
+      db,
+      {
+        id,
+        actorId: ownerId,
+        action: "withdrawn",
+        subjectType: "garment",
+        subjectId: itemId,
+        subjectOwnerId: ownerId,
+        reason: removalStatements.intimate,
+      },
+      sql`exists (select 1 from ${wardrobeItems} where ${theGarment})`,
+    ),
+    ...keptGarmentFingerprintWhere(db, theGarment, id),
   ];
 }

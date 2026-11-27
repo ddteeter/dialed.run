@@ -236,6 +236,7 @@ model {
   cf.app.feed.entries -[imports]-> cf.app.ops.owedEmail
   cf.app.feed.entries -[imports]-> cf.app.runs.writes
   cf.app.feed.entries -[imports]-> cf.app.safety
+  cf.app.feed.entries -[imports]-> cf.app.safety.takedowns
   cf.app.feed.entries -[imports]-> cf.app.weather
   cf.app.feed.following -[imports]-> cf.app.account
   cf.app.feed.following -[imports]-> cf.app.feed.conditions

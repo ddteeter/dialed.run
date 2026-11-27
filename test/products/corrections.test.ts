@@ -1,6 +1,14 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
 import { z } from "zod";
 
 import {
@@ -625,6 +633,153 @@ const weightLight = (productId: string): CorrectionKey => ({
   value: "light",
 });
 
+/**
+ * The core binding, with `before` landing just ahead of the decision's
+ * write: its second batch, after `toDecide`'s read. The spy is gone before
+ * `before` runs, so whatever it writes goes straight through.
+ */
+function landingBeforeTheWrite(before: () => Promise<unknown>): void {
+  const binding = env.DIALED_CORE;
+  const batch: D1Database["batch"] = binding.batch.bind(binding);
+  let calls = 0;
+  const spy = vi
+    .spyOn(binding, "batch")
+    .mockImplementation(async <T>(statements: D1PreparedStatement[]) => {
+      calls += 1;
+      if (calls === 2) {
+        spy.mockRestore();
+        await before();
+      }
+      return batch<T>(statements);
+    });
+  onTestFinished(() => {
+    spy.mockRestore();
+  });
+}
+
+describe("a decision another lands first", () => {
+  it("writes nothing on Apply when a Decline of the value lands first, leaving the field's other rows waiting", async () => {
+    const { productId } = await product();
+    const ada = await owner(productId);
+    const bo = await owner(productId);
+    await file(ada, productId, "weight", "light");
+    await file(bo, productId, "weight", "heavy");
+    landingBeforeTheWrite(() =>
+      declineCorrection({
+        actorId: "op2",
+        key: weightLight(productId),
+        reason: "none",
+      }),
+    );
+
+    expect(
+      await applyCorrection({ actorId: "op", key: weightLight(productId) }),
+    ).toStrictEqual({ outcome: "changed" });
+    expect(await productRow(productId)).toMatchObject({ weight: "mid" });
+    expect(await rowsOf(ada.userId)).toMatchObject([
+      { status: "declined", decidedBy: "op2" },
+    ]);
+    expect(await rowsOf(bo.userId)).toMatchObject([{ status: "waiting" }]);
+    const adaBell = await bellOf(ada.userId);
+    expect(adaBell.map((bell) => bell.kind)).toStrictEqual([
+      "correction_declined",
+    ]);
+    expect(await bellOf(bo.userId)).toStrictEqual([]);
+  });
+
+  it("answers a second Apply that read before the first landed as changed, ringing once", async () => {
+    const { productId } = await product();
+    const ada = await owner(productId);
+    await file(ada, productId, "weight", "light");
+    // A double-click: the first press lands after the second's read.
+    landingBeforeTheWrite(() =>
+      applyCorrection({ actorId: "op", key: weightLight(productId) }),
+    );
+
+    expect(
+      await applyCorrection({ actorId: "op", key: weightLight(productId) }),
+    ).toStrictEqual({ outcome: "changed" });
+    expect(await productRow(productId)).toMatchObject({ weight: "light" });
+    expect(await bellOf(ada.userId)).toHaveLength(1);
+  });
+
+  it("tells nobody it was kept when an Apply lands first", async () => {
+    const { productId } = await product();
+    const ada = await owner(productId);
+    await file(ada, productId, "weight", "light");
+    landingBeforeTheWrite(() =>
+      applyCorrection({ actorId: "op2", key: weightLight(productId) }),
+    );
+
+    await declineCorrection({
+      actorId: "op",
+      key: weightLight(productId),
+      reason: "none",
+    });
+
+    expect(await productRow(productId)).toMatchObject({ weight: "light" });
+    expect(await rowsOf(ada.userId)).toMatchObject([
+      { status: "applied", decidedBy: "op2" },
+    ]);
+    const bell = await bellOf(ada.userId);
+    expect(bell.map((each) => each.kind)).toStrictEqual(["correction_applied"]);
+  });
+
+  it("leaves a runner who files again in the window waiting, and decides the rest", async () => {
+    const { productId } = await product();
+    const ada = await owner(productId);
+    const bo = await owner(productId);
+    await file(ada, productId, "weight", "light");
+    await file(bo, productId, "weight", "light");
+    landingBeforeTheWrite(() => file(ada, productId, "weight", "heavy"));
+
+    expect(
+      await applyCorrection({ actorId: "op", key: weightLight(productId) }),
+    ).toStrictEqual({ outcome: "applied" });
+    expect(await productRow(productId)).toMatchObject({ weight: "light" });
+    expect(await rowsOf(ada.userId)).toMatchObject([
+      { status: "waiting", value: "heavy" },
+    ]);
+    expect(await bellOf(ada.userId)).toStrictEqual([]);
+    expect(await rowsOf(bo.userId)).toMatchObject([{ status: "applied" }]);
+    expect(await bellOf(bo.userId)).toHaveLength(1);
+  });
+
+  it("writes nothing on Apply when the only runner files again in the window", async () => {
+    const { productId } = await product();
+    const ada = await owner(productId);
+    await file(ada, productId, "weight", "light");
+    landingBeforeTheWrite(() => file(ada, productId, "weight", "heavy"));
+
+    expect(
+      await applyCorrection({ actorId: "op", key: weightLight(productId) }),
+    ).toStrictEqual({ outcome: "changed" });
+    expect(await productRow(productId)).toMatchObject({ weight: "mid" });
+    expect(await rowsOf(ada.userId)).toMatchObject([
+      { status: "waiting", value: "heavy" },
+    ]);
+    expect(await bellOf(ada.userId)).toStrictEqual([]);
+  });
+
+  it("declines only a row still waiting on the declined value", async () => {
+    const { productId } = await product();
+    const ada = await owner(productId);
+    await file(ada, productId, "weight", "light");
+    landingBeforeTheWrite(() => file(ada, productId, "weight", "heavy"));
+
+    await declineCorrection({
+      actorId: "op",
+      key: weightLight(productId),
+      reason: "none",
+    });
+
+    expect(await rowsOf(ada.userId)).toMatchObject([
+      { status: "waiting", value: "heavy" },
+    ]);
+    expect(await bellOf(ada.userId)).toStrictEqual([]);
+  });
+});
+
 describe("Apply (R48·130)", () => {
   it("decides a field a hundred runners filed on (SA-M37)", async () => {
     const { productId } = await product();
@@ -749,6 +904,20 @@ describe("Apply (R48·130)", () => {
     const rows = await rowsOf(ada.userId);
     expect(rows[0]?.status).toBe("waiting");
     expect(await bellOf(ada.userId)).toHaveLength(0);
+  });
+
+  it("answers changed, before asking whether the name is taken, for a name no runner is waiting on", async () => {
+    const { productId } = await product();
+    await product("Rover Half-Zip");
+    const ada = await owner(productId);
+    // The runner filed again since the page showed "Rover Half-Zip".
+    await file(ada, productId, "name", "Trail Half-Zip");
+    expect(
+      await applyCorrection({
+        actorId: "op",
+        key: { productId, field: "name", value: "rover  half-zip" },
+      }),
+    ).toStrictEqual({ outcome: "changed" });
   });
 
   it("allows a name that only differs from the product's own", async () => {

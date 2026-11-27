@@ -51,7 +51,7 @@ import {
 import { queriesDuring } from "../d1-spy";
 import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
 import { noPurge } from "../purge-spy";
-import { opened } from "./helpers";
+import { firstBatchAfter, opened } from "./helpers";
 
 /**
  * D-147 (design 152): a photo removed as an intimate image keeps its
@@ -958,6 +958,144 @@ describe("an owner's delete under review (design 232)", () => {
     expect(await withdrawals()).toMatchObject([{ subjectId: first.photoId }]);
   });
 
+  it("keeps nothing when the review is decided before the delete's write", async () => {
+    const first = await posted(await sceneJpeg(4));
+    await reportedAs("intimate", "photo", first.photoId);
+    // A moderator's Approve commits after the delete began, just before
+    // its batch.
+    const landing = firstBatchAfter(() =>
+      core()
+        .update(reviewQueue)
+        .set({ status: "approved" })
+        .where(eq(reviewQueue.subjectId, first.photoId)),
+    );
+
+    await deleteEntryPhoto(
+      landing,
+      first.userId,
+      first.photoId,
+      quiet,
+      noPurge,
+    );
+
+    expect(await withdrawals()).toStrictEqual([]);
+    expect(await keptRows()).toStrictEqual([]);
+    expect(await photoRow(first.photoId)).toBeUndefined();
+  });
+
+  it("keeps a photo another runner's report hides before the delete's write", async () => {
+    const first = await posted(await sceneJpeg(4));
+    // The report commits after the kit's delete began, just before its
+    // batch.
+    const landing = firstBatchAfter(() =>
+      reportedAs("intimate", "photo", first.photoId),
+    );
+
+    await retractEntries(
+      landing,
+      first.userId,
+      [first.entryId],
+      quiet,
+      noPurge,
+    );
+
+    expect(await withdrawals()).toMatchObject([
+      { actorId: first.userId, subjectId: first.photoId },
+    ]);
+    expect(await keptRows()).toMatchObject([{ photoId: first.photoId }]);
+  });
+
+  it("keeps a held copy the owner uploads to the kit before the run's delete writes", async () => {
+    const bytes = await sceneJpeg(4);
+    const original = await posted(bytes);
+    await removed("photo", original.photoId);
+    const kit = await posted(await sceneJpeg(3));
+    const [entry] = await core()
+      .select({ runId: outfitEntries.runId })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, kit.entryId));
+    if (entry === undefined) throw new Error("no kit");
+    // The owner's own upload of a copy of the removed image, held for a
+    // person, lands after the run's delete began, just before its batch.
+    const copy: { photoId?: string } = {};
+    const landing = firstBatchAfter(async () => {
+      const held = await posted(await copyOf(bytes), kit);
+      copy.photoId = held.photoId;
+    });
+
+    await deleteRuns(landing, kit.userId, [entry.runId], quiet, noPurge);
+
+    expect(copy.photoId).toBeDefined();
+    expect(await withdrawals()).toMatchObject([
+      { actorId: kit.userId, subjectId: copy.photoId },
+    ]);
+  });
+
+  it.each([
+    [
+      "a photo",
+      "SEARCH entry_photos USING INDEX sqlite_autoindex_entry_photos_1 (id=?)",
+      (kit: Awaited<ReturnType<typeof posted>>) =>
+        deleteEntryPhoto(core(), kit.userId, kit.photoId, quiet, noPurge),
+    ],
+    [
+      "a kit",
+      "SEARCH entry_photos USING INDEX entry_photos_idempotency (entry_id=?)",
+      (kit: Awaited<ReturnType<typeof posted>>) =>
+        retractEntries(core(), kit.userId, [kit.entryId], quiet, noPurge),
+    ],
+  ])(
+    "keeps the fingerprints of %s by seeking its photos, never a scan of every photo",
+    async (_what, seek, work) => {
+      const kit = await posted(await sceneJpeg(4));
+      const { prepared } = await queriesDuring(() => work(kit));
+      const keep = prepared.find((query) =>
+        query.includes('insert into "removed_fingerprints"'),
+      );
+      if (keep === undefined) throw new Error("no fingerprint keep");
+      const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${keep}`)
+        .bind(...Array.from(keep.matchAll(/\?/g), () => 0))
+        .all<{ detail: string }>();
+      const details = plan.results.map((row) => row.detail);
+
+      expect(details).toContain(seek);
+      expect(details).not.toContain("SCAN entry_photos");
+    },
+  );
+
+  it("keeps each photo under review under its own record, and nothing more", async () => {
+    const first = await posted(await sceneJpeg(4));
+    const second = await posted(await sceneJpeg(3), first);
+    await posted(await sceneJpeg(2), first);
+    const theirs = await posted(await sceneJpeg(1));
+    for (const photo of [first, second, theirs]) {
+      await reportedAs("intimate", "photo", photo.photoId);
+    }
+
+    await retractEntries(core(), first.userId, [first.entryId], quiet, noPurge);
+
+    const records = await core()
+      .select({
+        id: moderationActions.id,
+        subjectId: moderationActions.subjectId,
+      })
+      .from(moderationActions)
+      .where(eq(moderationActions.action, "withdrawn"));
+    expect(new Set(records.map((row) => row.id)).size).toBe(2);
+    expect(
+      byPhoto(records.map((row) => [row.subjectId, row.id])),
+    ).toMatchObject(
+      byPhoto([
+        [first.photoId, expect.any(String)],
+        [second.photoId, expect.any(String)],
+      ]),
+    );
+    const kept = await keptRows();
+    expect(
+      byPhoto(kept.map((row) => [row.photoId ?? "", row.moderationActionId])),
+    ).toStrictEqual(byPhoto(records.map((row) => [row.subjectId, row.id])));
+  });
+
   it("keeps nothing once the review is decided", async () => {
     const first = await posted(await sceneJpeg(4));
     await reportedAs("intimate", "photo", first.photoId);
@@ -971,6 +1109,13 @@ describe("an owner's delete under review (design 232)", () => {
     expect(await withdrawals()).toStrictEqual([]);
   });
 });
+
+/**
+`[photo, record]` pairs in photo order, so two lists of them compare.
+*/
+function byPhoto(pairs: readonly (readonly [string, unknown])[]) {
+  return pairs.toSorted(([one], [other]) => one.localeCompare(other));
+}
 
 /**
 The fingerprint an owner's delete kept, the only one kept.

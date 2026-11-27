@@ -492,7 +492,9 @@ export async function claimUsername(
     if (!standing.within) return tooOften(standing);
   }
 
-  const ownHistoryRow = ownUnlocked(userId, typed);
+  // The runner's own history row goes only where the claim below landed:
+  // the update has run by then, so the profile holds `typed` as written.
+  const takenBack = and(ownUnlocked(userId, typed), stillHolds(userId, typed));
   // The handle is set only where D-56 and the rename cap still allow it; a
   // refusal writes nothing, and the read at the end of the batch notices.
   const mayTake = and(
@@ -516,7 +518,7 @@ export async function claimUsername(
           usernameResetReason: CLEARED,
         })
         .where(mayTake),
-      db.delete(usernameHistory).where(ownHistoryRow),
+      db.delete(usernameHistory).where(takenBack),
       holdersNow(db, holdsTyped),
     ]);
     const held = results[4];

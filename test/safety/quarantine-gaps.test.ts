@@ -65,6 +65,7 @@ import {
   makeItem,
   makeRun,
   makeUser,
+  firstBatchAfter,
   opened,
   resetSafetyTables,
 } from "./helpers";
@@ -1085,6 +1086,13 @@ async function heldGarment() {
     });
   const garment = await closetGarment();
   await upload(garment, bytes, neverAsked());
+  // Held, not screened: a case that reached the hold ceiling would test
+  // nothing.
+  const [row] = await core()
+    .select({ visibility: wardrobeItems.visibility })
+    .from(wardrobeItems)
+    .where(eq(wardrobeItems.id, garment.itemId));
+  expect(row).toStrictEqual({ visibility: "hidden_pending_review" });
   return { ...garment, fingerprint: await fingerprintOfBytes(bytes) };
 }
 
@@ -1112,6 +1120,8 @@ async function keptFor(itemId: string) {
 }
 
 describe("an owner's garment-photo delete under review (design 232)", () => {
+  beforeEach(freshState);
+
   it("keeps the fingerprint and writes the record when the owner removes a held photo", async () => {
     const garment = await heldGarment();
 
@@ -1160,6 +1170,52 @@ describe("an owner's garment-photo delete under review (design 232)", () => {
 
     expect(await garmentWithdrawals(garment.itemId)).toMatchObject([
       { subjectId: garment.itemId },
+    ]);
+  });
+
+  it("keeps nothing when the review is decided before the remove's write", async () => {
+    const garment = await heldGarment();
+    // A moderator's Approve commits after the remove began, just before its
+    // batch.
+    const landing = firstBatchAfter(() =>
+      core()
+        .update(reviewQueue)
+        .set({ status: "approved" })
+        .where(eq(reviewQueue.subjectId, garment.itemId)),
+    );
+
+    await removeItemPhoto(landing, garment.userId, garment.itemId);
+
+    expect(await garmentWithdrawals(garment.itemId)).toStrictEqual([]);
+    expect(await keptFor(garment.itemId)).toStrictEqual([]);
+  });
+
+  it("keeps a held copy the owner uploads between the remove's start and its write", async () => {
+    const bytes = await sceneJpeg(3);
+    await core()
+      .insert(removedFingerprints)
+      .values({
+        id: newUlid(),
+        fingerprint: await fingerprintOfBytes(bytes),
+        moderationActionId: await anIntimateRemoval(),
+        createdAt: nowSeconds(),
+      });
+    const garment = await closetGarment();
+    // The owner's own upload of a held copy lands after the remove began,
+    // just before its batch.
+    const landing = firstBatchAfter(() => upload(garment, bytes, neverAsked()));
+
+    await removeItemPhoto(landing, garment.userId, garment.itemId);
+
+    expect(await garmentWithdrawals(garment.itemId)).toStrictEqual([
+      {
+        actorId: garment.userId,
+        subjectType: "garment",
+        subjectId: garment.itemId,
+      },
+    ]);
+    expect(await keptFor(garment.itemId)).toStrictEqual([
+      { fingerprint: await fingerprintOfBytes(bytes) },
     ]);
   });
 

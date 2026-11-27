@@ -154,7 +154,7 @@ views {
 
     // source: src/modules/feed/functions.ts takedownAction; src/modules/feed/moderation/moderation.ts moderateContent; src/modules/safety/rules/contracts.ts isCopyrightTakedown
     operator -> cf.app.feed.copyrightTakedown 'takes a kit or a photo down on a copyright notice'
-    // source: src/modules/safety/takedowns/copyright-holds.ts copyrightHoldWrites, hideWriters, isCopyrightHeld, COPYRIGHT_HOLD_SECONDS; src/modules/feed/entries/retract.ts commit, assertNotHeld; src/modules/account/purge/purge.ts liveHold
+    // source: src/modules/safety/takedowns/copyright-holds.ts copyrightHoldWrites, hideWriters, isCopyrightHeld, failsWhileHeld, COPYRIGHT_HOLD_SECONDS; src/modules/feed/entries/retract.ts commit, batchUnlessHeld; src/modules/account/purge/purge.ts liveHold
     cf.app.feed.copyrightTakedown -> cf.coreDb 'opens the hold, hides the subject, records the action and tells the author, in one batch' {
       notes '''
         **Guard: one live hold a subject.** A second takedown answers that it is already removed.

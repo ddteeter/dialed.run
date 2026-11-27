@@ -58,15 +58,55 @@ type Db = ReturnType<typeof drizzle>;
  * photos: in one batch they are read before they go. A photo with no
  * fingerprint keeps nothing, and any reason but `intimate` keeps nothing
  * at all. Nor does one too plain to tell from other pictures (design 164),
- * which would hold every upload near it.
+ * which would hold every upload near it. `moderationActionId` may be SQL
+ * over `entry_photos`, for a record chosen per photo in the same batch.
  */
 export function keptFingerprints(
   db: Db,
   reason: RemovalReason,
-  photosInScope: SQL,
+  photosInScope: SQL | undefined,
+  moderationActionId: string | SQL,
+) {
+  return reason === "intimate"
+    ? [keptFrom(db, KIT_PHOTOS, photosInScope, moderationActionId)]
+    : [];
+}
+
+/**
+ * A garment's photo's fingerprint as the batch reaches it, kept under the
+ * garment's id wherever `garment` (a condition on `wardrobe_items`) still
+ * holds: for an owner's remove, replace or delete of a photo under review,
+ * which reads nothing before its batch.
+ */
+export function keptGarmentFingerprintWhere(
+  db: Db,
+  garment: SQL | undefined,
   moderationActionId: string,
 ) {
-  if (reason !== "intimate") return [];
+  return [keptFrom(db, GARMENT_PHOTOS, garment, moderationActionId)];
+}
+
+/**
+The photo rows a fingerprint is kept from: its id, and the fingerprint.
+*/
+const KIT_PHOTOS = {
+  table: entryPhotos,
+  id: entryPhotos.id,
+  fingerprint: entryPhotos.fingerprint,
+} as const;
+
+const GARMENT_PHOTOS = {
+  table: wardrobeItems,
+  id: wardrobeItems.id,
+  fingerprint: wardrobeItems.photoFingerprint,
+} as const;
+
+function keptFrom(
+  db: Db,
+  photos: typeof KIT_PHOTOS | typeof GARMENT_PHOTOS,
+  inScope: SQL | undefined,
+  moderationActionId: string | SQL,
+) {
   // Each field is named for the column it fills, read from the table.
   const into = removedFingerprints;
   const kept = db
@@ -74,23 +114,23 @@ export function keptFingerprints(
       // Minted in SQL, one per photo: an `INSERT … SELECT` has nowhere to
       // mint one in code per row, and nothing sorts these ids.
       id: sql<string>`lower(hex(randomblob(16)))`.as(into.id.name),
-      fingerprint: filling<string>(into.fingerprint, entryPhotos.fingerprint),
-      photoId: filling<string>(into.photoId, entryPhotos.id),
+      fingerprint: filling<string>(into.fingerprint, photos.fingerprint),
+      photoId: filling<string>(into.photoId, photos.id),
       moderationActionId: filling<string>(
         into.moderationActionId,
         moderationActionId,
       ),
       createdAt: filling<number>(into.createdAt, nowSeconds()),
     })
-    .from(entryPhotos)
+    .from(photos.table)
     .where(
       and(
-        photosInScope,
-        isNotNull(entryPhotos.fingerprint),
-        distinctive(entryPhotos.fingerprint),
+        inScope,
+        isNotNull(photos.fingerprint),
+        distinctive(photos.fingerprint),
       ),
     );
-  return [db.insert(removedFingerprints).select(kept)];
+  return db.insert(removedFingerprints).select(kept);
 }
 
 /**

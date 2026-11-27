@@ -226,8 +226,12 @@ export async function fileReport(
   // (`./thresholds`), one person when it is missing: the lowest bar of
   // the reasons filed, whatever order they came in (design 232), which is
   // the sweep's rule too.
+  // One filing is one row, one reason: a single `values` object, and the
+  // UNIQUE index drops a repeat. So `added` holds this report or nothing,
+  // and its id is all `stillOverTheBar` needs to count it.
+  const [filedRow] = added;
   if (
-    added.length === 0 ||
+    filedRow === undefined ||
     reporterCount < fewestReportersToHide(filed, moderationThresholds())
   ) {
     return { status: "filed", reporterCount, hiddenPendingReview: false };
@@ -243,6 +247,7 @@ export async function fileReport(
   await hidePendingReview(input.subjectType, input.subjectId, alerts, purge, {
     canHide,
     isAtOnce,
+    heldTo: stillOverTheBar(input.subjectType, input.subjectId, filedRow.id),
   });
   return { status: "filed", reporterCount, hiddenPendingReview: canHide };
 }
@@ -417,6 +422,36 @@ function sinceLastApproved(): SQL {
 }
 
 /**
+ * `fileReport`'s bar, asked again as its batch runs: the reports filed
+ * since the subject was last approved, and the one being filed, still
+ * number at least the lowest bar among their reasons. An Approve that
+ * lands after the count answers the reports before it, and the one being
+ * filed counts as if it had been filed a moment later, whichever second
+ * its time fell in. So a report the Approve leaves under the bar re-opens
+ * and hides nothing, and one over its bar alone still hides.
+ */
+function stillOverTheBar(
+  subjectType: ReportSubjectType,
+  subjectId: string,
+  filedId: string,
+): SQL {
+  const onSubject = subjectMatches(
+    reports.subjectType,
+    reports.subjectId,
+    subjectType,
+    subjectId,
+  );
+  const since = and(
+    onSubject,
+    or(sinceLastApproved(), eq(reports.id, filedId)),
+  );
+  // One aggregate row however many reports: no report since leaves the
+  // bar NULL, which `coalesce` reads as under it.
+  const overTheBar = sql`${countDistinct(reports.reporterId)} >= ${lowestFiledBar(moderationThresholds())}`;
+  return sql`coalesce((select ${overTheBar} from ${reports} where ${since}), 0)`;
+}
+
+/**
  * The join condition between a queue row and the reports filed on its
  * subject: same type, same id. The reconcile sweep and the removal reminder
  * each join the two this way; the join kind (left or inner) stays the
@@ -538,18 +573,32 @@ async function hidePendingReview(
   subjectId: string,
   alerts: BatchItem<"sqlite">[],
   purge: PurgeTags,
-  opening: { readonly canHide: boolean; readonly isAtOnce: boolean },
+  opening: {
+    readonly canHide: boolean;
+    readonly isAtOnce: boolean;
+    /**
+     * What the re-open, the hides and the author's notice still hold to
+     * as the batch runs (`fileReport`'s bar); the reconcile's own read
+     * needs none.
+     */
+    readonly heldTo?: SQL | undefined;
+  },
 ): Promise<void> {
   const { canHide } = opening;
-  const queueWrite = enqueueForReview(db(), {
-    subjectType,
-    subjectId,
-    source: "reports",
-    // What the reports breaker counts: an opening it let hide (design
-    // 164), 1; one a reason that hides at once hid without asking it, 2;
-    // one that only queued, 0.
-    hid: hidAs(opening),
-  });
+  const heldTo = opening.heldTo ?? sql`1`;
+  const queueWrite = enqueueForReview(
+    db(),
+    {
+      subjectType,
+      subjectId,
+      source: "reports",
+      // What the reports breaker counts: an opening it let hide (design
+      // 164), 1; one a reason that hides at once hid without asking it, 2;
+      // one that only queued, 0.
+      hid: hidAs(opening),
+    },
+    { reopenOnlyIf: heldTo },
+  );
   // Queued only, it still owes its alerts (design 232): a person must
   // still look within the 48 hours, and the alert is what says so.
   if (!canHide) {
@@ -559,7 +608,7 @@ async function hidePendingReview(
 
   // Read before the batch, which cannot branch: whose it is, for the
   // author's notice that it was hidden (C8, D-145).
-  const told = await hiddenNotice(db(), subjectType, subjectId);
+  const told = await hiddenNotice(db(), subjectType, subjectId, heldTo);
 
   // The operators' alerts ride in the same batch (design 136): a hide that
   // starts a 48-hour clock never lands without the email that says so. So
@@ -567,7 +616,7 @@ async function hidePendingReview(
   // restriction DSA Art. 17 forbids.
   await db().batch([
     queueWrite,
-    ...hideWritesFor[subjectType](subjectId),
+    ...hideWritesFor[subjectType](subjectId, heldTo),
     ...alerts,
     ...told,
   ]);
@@ -592,6 +641,21 @@ function hidAs(opening: {
 }
 
 /**
+ * The subject's row, unless it is in the one state a report's hide must
+ * not overwrite, while the report still holds to `heldTo`.
+ */
+function hideableWhere(
+  columns: Readonly<{ id: SQLiteColumn; status: SQLiteColumn }>,
+  hide: Readonly<{ subjectId: string; notOver: string; heldTo: SQL }>,
+): SQL | undefined {
+  return and(
+    eq(columns.id, hide.subjectId),
+    ne(columns.status, hide.notOver),
+    hide.heldTo,
+  );
+}
+
+/**
  * What crossing the threshold hides, per subject type.
  *
  * Keyed rather than written as `if (subjectType !== "entry")`, which was
@@ -603,18 +667,18 @@ function hidAs(opening: {
  */
 const hideWritesFor: Record<
   ReportSubjectType,
-  (subjectId: string) => BatchItem<"sqlite">[]
+  (subjectId: string, heldTo: SQL) => BatchItem<"sqlite">[]
 > = {
   // Never over `removed`, a copyright takedown's hide (D-130): it is
   // hidden already, and a review's Approve must not be what ends it.
-  entry: (subjectId) => [
+  entry: (subjectId, heldTo) => [
     db()
       .update(outfitEntries)
       .set({ moderationStatus: "hidden_pending_review" })
       .where(
-        and(
-          eq(outfitEntries.id, subjectId),
-          ne(outfitEntries.moderationStatus, "removed"),
+        hideableWhere(
+          { id: outfitEntries.id, status: outfitEntries.moderationStatus },
+          { subjectId, notOver: "removed", heldTo },
         ),
       ),
   ],
@@ -624,14 +688,14 @@ const hideWritesFor: Record<
   // means. Entry photos only — a garment photo carries the same subject
   // type but lives in `wardrobe_items.visibility`, and a closet is
   // private, so nobody but its owner can see one to report it.
-  photo: (subjectId) => [
+  photo: (subjectId, heldTo) => [
     db()
       .update(entryPhotos)
       .set({ screenStatus: "hidden_pending_review" })
       .where(
-        and(
-          eq(entryPhotos.id, subjectId),
-          ne(entryPhotos.screenStatus, heldPhotoStatus),
+        hideableWhere(
+          { id: entryPhotos.id, status: entryPhotos.screenStatus },
+          { subjectId, notOver: heldPhotoStatus, heldTo },
         ),
       ),
   ],

@@ -55,7 +55,13 @@ import {
 import { removalsOnRun } from "../../src/modules/safety/takedowns/run-removals";
 
 import { noPurge } from "../purge-spy";
-import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import {
+  firstBatchAfter,
+  makeEntry,
+  makeRun,
+  makeUser,
+  resetSafetyTables,
+} from "./helpers";
 
 /**
  * D-130, design 149: a copyright takedown hides for 30 days; a counter-
@@ -924,6 +930,46 @@ describe("the runner's own delete of what a hold names (SA-L09)", () => {
       expect(await entryStatus(entryId)).toBeDefined();
       expect(await photoRow(photoId)).toBeDefined();
       expect(await isStored(key)).toBe(true);
+    },
+  );
+
+  it.each(["kit", "run", "photo"] as const)(
+    "refuses the %s when the hold lands between the delete's reads and its write",
+    async (noun) => {
+      const { author, runId, entryId, photoId, key } = await posted();
+      // The Desk's takedown commits after every read the delete makes,
+      // just before its batch.
+      const landing = firstBatchAfter(() => takeDown("entry", entryId));
+      const attempts = {
+        kit: () => retractEntry(landing, author, entryId, quiet),
+        run: () => deleteRun(landing, author, runId, quiet),
+        photo: () => deleteEntryPhoto(landing, author, photoId, quiet, noPurge),
+      };
+
+      expect(await refusalOf(attempts[noun]())).toBe(heldSentence(noun));
+      expect(await entryStatus(entryId)).toBeDefined();
+      expect(await photoRow(photoId)).toBeDefined();
+      expect(await isStored(key)).toBe(true);
+      expect(await holdOf(entryId)).toMatchObject({ status: "hidden" });
+    },
+  );
+
+  it.each([
+    "D1_ERROR: the database is unavailable",
+    "D1_ERROR: NOT NULL constraint failed: entry_photos.photo_key: SQLITE_CONSTRAINT",
+    "D1_ERROR: CHECK constraint failed: copyright_holds.status: SQLITE_CONSTRAINT",
+  ])(
+    "lets any other failure of the delete's batch through: %s",
+    async (text) => {
+      const { author, entryId } = await posted();
+      const failing = firstBatchAfter(() => {
+        throw new Error(text);
+      });
+
+      const attempt = retractEntry(failing, author, entryId, quiet);
+      await expect(attempt).rejects.toThrow(text);
+      await expect(attempt).rejects.not.toBeInstanceOf(ControlRefusal);
+      expect(await entryStatus(entryId)).toBeDefined();
     },
   );
 

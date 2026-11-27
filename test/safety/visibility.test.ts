@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   accountDeletions,
@@ -296,6 +296,29 @@ describe("a block (SAF-12)", () => {
     await expect(
       setUsefulReaction(posted.entryId, blocked, true),
     ).rejects.toThrow("entry is not visible to this viewer");
+  });
+
+  it("leaves no mark when the block lands between the check and the write", async () => {
+    const posted = await postedEntry();
+    const blocked = await makeVerifiedUser();
+    const binding = env.DIALED_CORE;
+    const batch: D1Database["batch"] = binding.batch.bind(binding);
+    // The block commits after the visibility check, just before the mark.
+    const spy = vi
+      .spyOn(binding, "batch")
+      .mockImplementation(async <T>(statements: D1PreparedStatement[]) => {
+        spy.mockRestore();
+        await blockRunner(posted.author, blocked);
+        return batch<T>(statements);
+      });
+    onTestFinished(() => {
+      spy.mockRestore();
+    });
+
+    expect(
+      await setUsefulReaction(posted.entryId, blocked, true),
+    ).toStrictEqual({ status: "set", useful: false, count: 0 });
+    expect(await usefulCount(posted.entryId)).toBe(0);
   });
 
   it("answers a blocked runner's take-back with no count", async () => {

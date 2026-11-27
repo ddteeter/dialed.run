@@ -65,6 +65,7 @@ import {
   settleOpenReviews,
   withdrawnUnderReview,
 } from "../../safety";
+import { failsWhileHeld, isHeldRefusal } from "../../safety/takedowns";
 import { manualConditionsHandler } from "../../weather";
 import { clearEntryHalves, deleteRunCopies } from "../conditions";
 
@@ -84,15 +85,12 @@ type Debt = OutboxDebtOf<keyof typeof settledHere>;
 export type Statements = [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 
 /**
- * `statements` with `kept` after the first, so ahead of every delete
- * (design 232): the first of a photo's or a kit's statements is a review
- * settle, which no keep depends on.
+ * `statements` with `kept` ahead of them all (design 232): each keep asks
+ * in SQL whether its photo is still under review, so it goes before the
+ * review settle that opens a photo's or a kit's statements.
  */
-function keeping(
-  [first, ...rest]: Statements,
-  kept: readonly BatchItem<"sqlite">[],
-): Statements {
-  return [first, ...kept, ...rest];
+function keeping(statements: Statements, kept: Statements): Statements {
+  return [...kept, ...statements];
 }
 
 /**
@@ -198,15 +196,23 @@ export function mediaDebts(userId: string, scope: Scope): Debt[] {
 }
 
 /**
-The batch, then the fast path for each debt.
-*/
+ * The batch, then the fast path for each debt. Given a `held` check (the
+ * runner's own deletes), the batch opens with it, so a live hold refuses
+ * the delete as the batch runs.
+ */
 export async function commit(
   db: Db,
   statements: Statements,
   debts: readonly Debt[],
   report: Report,
+  held?: HeldCheck,
 ): Promise<void> {
-  await db.batch([...statements, ...debts.map((d) => outboxInsert(db, d))]);
+  const owed = debts.map((d) => outboxInsert(db, d));
+  if (held === undefined) {
+    await db.batch([...statements, ...owed]);
+  } else {
+    await batchUnlessHeld(db, held, [...statements, ...owed]);
+  }
   for (const debt of debts) await settleOutbox(db, debt, settledHere, report);
 }
 
@@ -226,6 +232,16 @@ export function deletionCacheTags(
 }
 
 /**
+ * What a delete does beyond its rows: report, purge, and for the runner's
+ * own delete of one row, the hold that refuses it.
+ */
+interface Effects {
+  readonly report: Report;
+  readonly purge: PurgeTags;
+  readonly held?: HeldCheck | undefined;
+}
+
+/**
  * The frame every scope-taking delete shares: resolve `scope` to the
  * runner's own rows in `table`, hand them to `build` (which may itself read
  * before it can say what to write — a batch cannot branch on its own
@@ -241,7 +257,7 @@ async function retractScoped(
   table: typeof outfitEntries | typeof runs,
   userId: string,
   scope: Scope,
-  effects: { readonly report: Report; readonly purge: PurgeTags },
+  effects: Effects,
   build: (rows: ReturnType<typeof owned>) => Promise<{
     statements: Statements;
     debts: readonly Debt[];
@@ -250,7 +266,7 @@ async function retractScoped(
 ): Promise<void> {
   const rows = owned(db, table, userId, scope);
   const { statements, debts, tags } = await build(rows);
-  await commit(db, statements, debts, effects.report);
+  await commit(db, statements, debts, effects.report, effects.held);
   effects.purge(tags);
 }
 
@@ -263,27 +279,25 @@ export async function retractEntries(
   scope: Scope,
   report: Report = captureException,
   purge: PurgeTags = purgePublicPages,
+  held?: HeldCheck,
 ): Promise<void> {
   await retractScoped(
     db,
     outfitEntries,
     userId,
     scope,
-    { report, purge },
-    async (entries) => ({
+    { report, purge, held },
+    (entries) => {
       // A photo under review keeps its fingerprint and its record
       // (design 232).
-      statements: keeping(
-        entryStatements(db, userId, entries),
-        await withdrawnUnderReview(
-          db,
-          userId,
-          inArray(entryPhotos.entryId, entries),
-        ),
-      ),
-      debts: mediaDebts(userId, scope),
-      tags: deletionCacheTags(userId, scope),
-    }),
+      const photos = inArray(entryPhotos.entryId, entries);
+      const kept = withdrawnUnderReview(db, userId, photos);
+      return Promise.resolve({
+        statements: keeping(entryStatements(db, userId, entries), kept),
+        debts: mediaDebts(userId, scope),
+        tags: deletionCacheTags(userId, scope),
+      });
+    },
   );
 }
 
@@ -322,8 +336,7 @@ async function retractOne(
   held: HeldCheck,
 ): Promise<void> {
   await assertOwned(db, table, userId, id, notFoundMessage);
-  await assertNotHeld(db, held);
-  await deleteScoped(db, userId, [id], effects.report, effects.purge);
+  await deleteScoped(db, userId, [id], effects.report, effects.purge, held);
 }
 
 /**
@@ -346,13 +359,20 @@ export interface HeldCheck {
  */
 export const LIVE_HOLD = ["hidden", "purging"] as const;
 
-async function assertNotHeld(db: Db, check: HeldCheck): Promise<void> {
-  const [hold] = await db
-    .select({ id: copyrightHolds.id })
-    .from(copyrightHolds)
-    .where(and(inArray(copyrightHolds.status, LIVE_HOLD), check.entries))
-    .limit(1);
-  if (hold !== undefined) {
+/**
+ * `statements` in one batch that a live hold on `check`'s kits refuses,
+ * as the batch runs rather than from a read before it.
+ */
+async function batchUnlessHeld(
+  db: Db,
+  check: HeldCheck,
+  statements: Statements,
+): Promise<void> {
+  const live = and(inArray(copyrightHolds.status, LIVE_HOLD), check.entries);
+  try {
+    await db.batch([failsWhileHeld(db, live), ...statements]);
+  } catch (error: unknown) {
+    if (!isHeldRefusal(error)) throw error;
     throw new ControlRefusal(
       `This ${check.noun} is held while a copyright claim is settled, so it can't be deleted yet.`,
     );
@@ -368,6 +388,7 @@ type ScopedDelete = (
   scope: Scope,
   report: Report,
   purge: PurgeTags,
+  held: HeldCheck,
 ) => Promise<void>;
 
 /**
@@ -459,22 +480,15 @@ export async function deleteEntryPhoto(
     and(eq(entryPhotos.id, photoId), eq(outfitEntries.userId, userId)),
   );
   if (photo === undefined) throw new NotFoundError("photo not found");
-  await assertNotHeld(db, {
-    entries: eq(copyrightHolds.entryId, photo.entryId),
-    noun: "photo",
-  });
-  // Read before the batch (design 232): a photo under review keeps its
-  // fingerprint and its record.
-  const kept = await withdrawnUnderReview(
-    db,
-    userId,
-    eq(entryPhotos.id, photoId),
-  );
+  // A photo under review keeps its fingerprint and its record (design
+  // 232), asked in the batch.
+  const kept = withdrawnUnderReview(db, userId, eq(entryPhotos.id, photoId));
   await commit(
     db,
     keeping(photoDeletion(db, photoId, userId), kept),
     mediaDebts(userId, [photo.entryId]),
     report,
+    { entries: eq(copyrightHolds.entryId, photo.entryId), noun: "photo" },
   );
   if (photo.audience === WORLD_AUDIENCE) {
     purge(kitCacheTags(userId, photo.entryId));
@@ -512,16 +526,16 @@ function uploadsOf(userId: string, ownedRuns: ReturnType<typeof owned>) {
  * fingerprint and its record, design 232), the runs' notifications,
  * upload rows and copies, then the runs.
  */
-async function runStatements(
+function runStatements(
   db: Db,
   userId: string,
   ownedRuns: ReturnType<typeof owned>,
   theirEntries: ReturnType<typeof owned>,
-): Promise<Statements> {
+): Statements {
   return [
     ...keeping(
       entryStatements(db, userId, theirEntries),
-      await withdrawnUnderReview(
+      withdrawnUnderReview(
         db,
         userId,
         inArray(entryPhotos.entryId, theirEntries),
@@ -562,8 +576,9 @@ export async function deleteRuns(
   scope: Scope,
   report: Report = captureException,
   purge: PurgeTags = purgePublicPages,
+  held?: HeldCheck,
 ): Promise<void> {
-  const effects = { report, purge };
+  const effects = { report, purge, held };
   await retractScoped(db, runs, userId, scope, effects, async (ownedRuns) => {
     const uploads =
       scope === "all"
@@ -591,7 +606,7 @@ export async function deleteRuns(
     const bandRuns = scope === "all" ? [] : await ownedRuns;
     const theirEntries = owned(db, outfitEntries, userId, entryScope);
     return {
-      statements: await runStatements(db, userId, ownedRuns, theirEntries),
+      statements: runStatements(db, userId, ownedRuns, theirEntries),
       debts: [
         ...mediaDebts(userId, entryScope),
         ...uploads.map((upload) =>
@@ -635,7 +650,7 @@ export async function deleteRunsThrough(
     "all",
     inArray(outfitEntries.runId, ownedRuns),
   );
-  const statements = await runStatements(db, userId, ownedRuns, theirEntries);
+  const statements = runStatements(db, userId, ownedRuns, theirEntries);
   await commit(db, statements, [], report);
   purge(deletionCacheTags(userId, "all"));
 }

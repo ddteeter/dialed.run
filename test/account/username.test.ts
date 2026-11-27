@@ -1092,6 +1092,33 @@ describe("the rename cap (SA-L02)", () => {
     expect(await handleOf(userId)).toBe("late_current");
   });
 
+  it("keeps an old handle in the history when another change refuses taking it back", async () => {
+    const userId = await runner({ username: "back_current" });
+    const now = nowSeconds();
+    await db.insert(usernameHistory).values([
+      { username: "back_a", userId, retiredAt: now - 60 },
+      { username: "back_b", userId, retiredAt: now - 60 },
+      // Retired before the window, so taking it back would fit the cap.
+      { username: "back_old", userId, retiredAt: now - RENAME_WINDOW_S - 60 },
+    ]);
+    // Another change of the runner's own lands just before the take-back's
+    // write, and spends the last rename.
+    const landing = beforeBatch(async () => {
+      expect(await claimUsername(db, userId, "back_new", CLEAR)).toMatchObject({
+        kind: "claimed",
+      });
+    });
+
+    expect(
+      await claimUsername(landing, userId, "back_old", CLEAR),
+    ).toMatchObject({ kind: "too_often" });
+    expect(await handleOf(userId)).toBe("back_new");
+    const history = await historyOf(userId);
+    expect(
+      history.map((row) => row.username).toSorted((a, b) => a.localeCompare(b)),
+    ).toStrictEqual(["back_a", "back_b", "back_current", "back_old"]);
+  });
+
   it("refuses, rather than fails, when the profile is gone after it was read", async () => {
     const userId = await runner({ username: "gone_current" });
     const vanishing: ScreenHandle = async () => {
