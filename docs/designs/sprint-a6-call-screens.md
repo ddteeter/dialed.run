@@ -27,16 +27,20 @@ Components, in `screen/components/` (so the targets check reads them):
 | `NoForecastCard` | `when?`                                                                                     | C0a; 366.3                          |
 | `KitPieces`      | `pieces: readonly B2Piece[]`                                                                | B2 probable; 364.1, 364.3           |
 | `KitParagraph`   | `text?: string`                                                                             | B2; 364.2 (absent, not empty)       |
-| `WhyNots`        | `rows: readonly WhyNot[]`                                                                   | B2 probable; 365                    |
+| `WhyNots`        | `rows: readonly WhyNotRow[]`                                                                | B2 probable; 365                    |
 | `CallCount`      | the count `B2Header`, `verdictsLogged?`                                                     | Call Epic C0b; 362                  |
+
+`CallHeading`, `BorrowedField` and `NoForecastCard` live in
+`CallScreen.tsx`; `DrawnLine` draws a `Line` and `WhenLine` the hour line.
 
 `sameConditions` is a node the route fills with the feed's block (367);
 `feed` is not imported. `when` is the hour line ("TOMORROW · 6:10 AM ·
 STEADY"), also a node: it needs a clock and a time zone.
 
 Where a board needs what `B2View` does not hold, a pure function in
-`screen/facts.ts` derives it (each listed in `QUESTIONS.md`, A6, as
-belonging in `call/evidence` once the contract settles):
+`screen/facts.ts` derives it, with Round 62's words in `screen/words.ts`
+(each listed in `QUESTIONS.md`, A6, as
+belonging in `call/evidence` once the contract settles:
 
 - `drawn(line)`: the shown line without its slot brackets, split at
   " · " so it wraps only there (364.1: brackets are not drawn).
@@ -61,6 +65,9 @@ Where the boards and the view model disagree, and what is built:
 7. The verb and `BORROWED CALL` have no sentence-case said form.
 8. C1b and C0a draw no why-nots; C0a's note says they still show. Built:
    shown wherever the view offers one.
+9. C0a's lines say "ALL YOUR RUNS"; the view names each fact's band.
+   Built: the view's lines.
+10. The hour line and the effort are not in the view. Built: a slot.
 
 Styling: `@theme` classes and `ui` primitives only. Marks are the board's
 text marks (`+`, `−`, `▸`), hidden from screen readers; the state is
@@ -80,7 +87,8 @@ No Playwright: no route, no server hop.
 
 - `test/call/screen/fixtures.ts`: one `CallResult` per state through the
   real `b2View`.
-- `facts.test.ts` (worker): `drawn`, `screenFacts`, `verdictsCounted`.
+- `facts.test.ts` (worker): `drawn`, `screenFacts`, `verdictsCounted`,
+  the words.
 - `call-screen.dom.test.tsx`: each state, present and absent parts, the
   heading and names as said.
 - `why-nots.dom.test.tsx`: one open at a time, three then "N more".
@@ -94,4 +102,5 @@ No Playwright: no route, no server hop.
 ## Open questions
 
 In `QUESTIONS.md`, A6. Guesses proceeded on: the verb is the screen's
-`h1`; the feed's slot sits between the paragraph and the why-nots.
+`h1`; the feed's slot sits between the paragraph and the why-nots; "N
+more" reveals the rest and goes; the count draws its reading and no meter.

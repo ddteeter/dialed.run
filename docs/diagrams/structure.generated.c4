@@ -68,6 +68,7 @@ model {
       evidence = module 'call/evidence'
       replay = module 'call/replay'
       scorer = module 'call/scorer'
+      screen = module 'call/screen'
     }
     closet = module 'closet'
     dispatch = module 'dispatch'
@@ -188,6 +189,8 @@ model {
   cf.app.call.evidence -[imports]-> cf.app.call.contract
   cf.app.call.replay -[imports]-> cf.app.call.contract
   cf.app.call.scorer -[imports]-> cf.app.call.contract
+  cf.app.call.screen -[imports]-> cf.app.call.contract
+  cf.app.call.screen -[imports]-> cf.app.call.evidence
   cf.app.closet -[imports]-> cf.app.account
   cf.app.closet -[wiring]-> cf.app.auth
   cf.app.closet -[imports]-> cf.app.email

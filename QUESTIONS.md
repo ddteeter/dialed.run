@@ -500,3 +500,157 @@ forecast reads, which the release check receives (A3 Q5).
 - Cost: none.
 - Recommend: the coordinator writes both rows in the scorer's PR (chunk 1).
 - Meanwhile: neither row exists; the rules are built and tested.
+
+# Questions from sprint lane A6 (the Call's screen components)
+
+Screen B2 as pure components in `src/modules/call/screen/`, over `b2View`.
+Design doc: `docs/designs/sprint-a6-call-screens.md`. No route mounts the
+screen, and `call/evidence`, `scorer`, `contract` and `replay` are not
+edited. Q1 to Q5 are each a pure function in `screen/facts.ts` or
+`screen/words.ts` that **belongs in `call/evidence` once the contract
+settles**.
+
+## Q1: A line carries slot brackets, and Round 62 draws none
+
+- What: the view's shown lines are bracketed (`DIALED [8 OF 9] · [32–41°]`).
+  364.1 rules "the brackets are the engine's slots and are not drawn", and
+  that a line wraps at its " · ". The lane's brief also asks for bracket
+  notation on measured values; the ruling names these lines, so it wins.
+- Cost: none now. If brackets are wanted after all, one function changes.
+- Recommend: the evidence table's shown forms drop their brackets, or the
+  view gives a line as its parts.
+- Meanwhile: `drawn(shown)` strips the brackets and splits at the mark;
+  `DrawnLine` holds each part on one line, in `Mono`, with the said form
+  beside it for a screen reader. The header chip is drawn the same way.
+
+## Q2: C0a's header with no forecast is not in the view
+
+- What: with no forecast the view's title is `PROBABLE · [0 RUNS] IN BAND`.
+  366.3 rules `PROBABLE · [N RUNS]`, no "IN BAND", N being all the runner's
+  runs. The view also has no flag for "no forecast".
+- Cost: a header kind or field in `call/evidence`.
+- Recommend: `callHeader` answers it when the result has no band.
+- Meanwhile: `screenFacts` reads `bandFloorC === undefined` and builds the
+  title from `verdictsSoFar`. **Its said form, "Probable, N runs", is this
+  lane's guess**, shaped like the table's `probableSaid`.
+
+## Q3: The why-nots are ids, best first; 365 wants answers in group order
+
+- What: `B2View.whyNot` lists piece ids by rank. 365 draws question and
+  answer rows "in group order", and the answer needs the result and the
+  names.
+- Cost: a change to `B2View` (rows in place of ids).
+- Recommend: the view carries `{ pieceId, question, answer }` in
+  `uiGroups` order.
+- Meanwhile: `screenFacts(result, view, names).whyNots` resolves each id
+  with the door's `whyNot` and orders by `uiGroups`.
+
+## Q4: 362's count and its line need a number no result carries
+
+- What: 362 rules the reading "0 of 15 verdicts counted" and, for a runner
+  with verdicts of which none counts, "Verdicts count on runs with
+  conditions. Yours so far have none." The result counts only verdicts on
+  runs with conditions (`verdictsSoFar`); nothing says how many the runner
+  gave in all.
+- Cost: a field on the result or the view, or the route passes it.
+- Recommend: the route passes it until the Call tab (K) becomes this state.
+- Meanwhile: `verdictsCounted(header)` is the threshold less `remaining`;
+  `CallCount` takes `verdictsLogged` as a prop and shows the line when
+  nothing is counted and that is above zero. Without the prop the line
+  never shows.
+
+## Q5: The screen's own words table
+
+- What: `screen/words.ts` holds the strings Round 62 rules that the
+  evidence table lacks: the no-forecast card's two lines (366.3), the
+  all-runs header (366.3), "Why not" and "N more" (365), 362's two lines.
+  Mono captions are typed in sentence case and drawn in capitals.
+- Cost: none.
+- Recommend: move them into `evidence/words-data.ts`, marked `board`.
+- Meanwhile: as above; `test/call/screen/facts.test.ts` pins them.
+
+## Q6: C0a's piece lines name a band; the board says "ALL YOUR RUNS"
+
+- What: the board draws `DIALED 14 OF 17 · ALL YOUR RUNS` and `23 RUNS`.
+  With no forecast the view gives each fact with the band it is from
+  (`DIALED [14 OF 17] · [41–50°]`).
+- Cost: line forms in `call/evidence` for a result with no band.
+- Recommend: decide with the contract change; the screen cannot derive it
+  without writing wording.
+- Meanwhile: the screen draws the view's lines.
+
+## Q7: Below the threshold the screen draws the count alone
+
+- What: on this branch the view still lists a kit and why-nots under the
+  count (A4 Q2). The owner ruled ranking and no kit (#1102, 2026-11-27),
+  and the coordinator reports the contract lane has built it: below the
+  threshold `b2View` gives the count header, no pieces, no paragraph and
+  no why-nots. A teaser line below the threshold has nothing in the view
+  model yet; the screen derives none.
+- Cost: none; the screen agrees with the view either way.
+- Recommend: as built.
+- Meanwhile: `CallScreen` draws only `CallCount` for a count header. It
+  draws the count's reading as a line and no meter: the meter's drawing
+  (the Call Epic's bar, or K's fifteen cells from round 26) is the Call
+  tab's.
+
+## Q8: The hour line has no source in the view
+
+- What: the boards draw "TOMORROW · 6:10 AM · STEADY" over the verb (B2)
+  and on the card (C0a). The result has `hourStart` but not the effort,
+  and a day and a time need a clock and the runner's time zone.
+- Cost: the route formats it, or the view carries an hour line.
+- Recommend: the route passes it.
+- Meanwhile: `slots.when`, a node, drawn in MONO.xs where each board has
+  it. C1b's board draws none, so the borrowed Call shows none.
+
+## Q9: Where the feed's block sits, and why-nots on C1b and C0a
+
+- What: the feed's "RUNNERS IN THESE CONDITIONS" (367) is a slot,
+  `slots.sameConditions`. The Call Epic's B2 puts it between the paragraph
+  and the why-nots; 365 says why-nots sit "under the paragraph". The C1b
+  and C0a boards draw no why-nots, and C0a's note says they still show.
+- Cost: owner time; one line each.
+- Recommend: as built.
+- Meanwhile: paragraph, the slot, then the why-nots; why-nots are drawn
+  wherever the view offers one, C1b included.
+
+## Q10: "▸ N more" has no way back, and the marks are text
+
+- What: 365 draws the fold but no closed-again state. The board's marks are
+  a fullwidth plus, a minus and ▸.
+- Cost: a word for folding again, if wanted.
+- Recommend: as built.
+- Meanwhile: "N more" reveals the rest and goes, and focus moves to the
+  first row revealed. The marks are text, hidden from a screen reader; the
+  plus is ASCII `+`, since the self-hosted fonts do not carry the fullwidth
+  one. The state is `aria-expanded`, and each answer is in the page, hidden
+  until opened.
+
+## Q11: Things the screen cannot say without writing words
+
+- What: the verb (`PROBABLY WEAR`, `WEAR THIS`) and `BORROWED CALL` have no
+  sentence-case said form, so a screen reader is given capitals. A piece
+  the lookup has no name for has nothing to be called.
+- Cost: said forms in the evidence table; a rule for an unnamed piece.
+- Recommend: add the said forms with the copy review (#454).
+- Meanwhile: the words are drawn as given; an unnamed piece draws its line
+  alone.
+
+## Q12: The verb is the screen's `h1`
+
+- What: the Accessibility Contract gives a screen one `h1`, the Archivo
+  Black headline. On B2 that is the verb; on C0b the count ("7 more
+  verdicts"). The Call Epic's tab also draws "The Call" as a title.
+- Cost: one tag, when a route mounts the screen.
+- Recommend: decide with the Call tab (#457); `one-h1-per-route` will fail
+  if both stand.
+- Meanwhile: the verb and the count are `h1`; "Why not" is an `h2`.
+
+## Q13: One line in `stryker.conf.json` (a protected path)
+
+- What: `test/architecture/mutation-config.test.ts` requires every module
+  file to match exactly one entry, and the Call's entry took only `.ts`.
+- Done: the entry is now `src/modules/call/**/*.ts,src/modules/call/**/*.tsx`,
+  in a commit of its own (`chore: put the Call's components in the mutation
+ratchet`). The owner labels it later.
