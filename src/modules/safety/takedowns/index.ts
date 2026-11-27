@@ -12,6 +12,7 @@ export {
 } from "./copyright-holds";
 export {
   purgeExpiredQuarantine,
+  quarantinedScopes,
   quarantineInsert,
   uploaderContextOf,
 } from "./quarantine";

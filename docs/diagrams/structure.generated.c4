@@ -287,6 +287,7 @@ model {
   cf.app.feed.moderation -[imports]-> cf.app.feed.conditions
   cf.app.feed.moderation -[imports]-> cf.app.feed.entries
   cf.app.feed.moderation -[imports]-> cf.app.notifications
+  cf.app.feed.moderation -[imports]-> cf.app.ops.daily
   cf.app.feed.moderation -[imports]-> cf.app.ops.outbox
   cf.app.feed.moderation -[imports]-> cf.app.ops.publicWeb
   cf.app.feed.moderation -[imports]-> cf.app.ops.sentry

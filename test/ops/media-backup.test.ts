@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { env } from "../../src/env";
 import { quarantineKeyFor } from "../../src/lib/entry-photo-key";
@@ -7,6 +7,7 @@ import { nowSeconds } from "../../src/lib/now";
 import {
   BACKED_UP_PREFIXES,
   backUpMedia,
+  dropBackupCopies,
   GONE_PREFIX,
   GONE_RETENTION_S,
   MAX_COPIES_PER_FIRING,
@@ -20,6 +21,13 @@ import {
 
 function backupBucket(): R2Bucket {
   return env.MEDIA_BACKUP;
+}
+
+/**
+No quarantine record covers anything.
+*/
+function none(): Promise<readonly string[]> {
+  return Promise.resolve([]);
 }
 
 /**
@@ -58,11 +66,15 @@ async function run(
   options: { now?: number; maxCopies?: number } = {},
 ): Promise<string[]> {
   const anomalies: string[] = [];
-  await backUpMedia({ source: env.MEDIA, backup: backupBucket() }, anomalies, {
-    now: options.now ?? nowSeconds(),
-    prefixes: [prefix],
-    ...(options.maxCopies !== undefined && { maxCopies: options.maxCopies }),
-  });
+  await backUpMedia(
+    { source: env.MEDIA, backup: backupBucket(), quarantined: none },
+    anomalies,
+    {
+      now: options.now ?? nowSeconds(),
+      prefixes: [prefix],
+      ...(options.maxCopies !== undefined && { maxCopies: options.maxCopies }),
+    },
+  );
   return anomalies;
 }
 
@@ -85,7 +97,7 @@ describe("what it backs up", () => {
     const anomalies: string[] = [];
 
     await backUpMedia(
-      { source: env.MEDIA, backup: backupBucket() },
+      { source: env.MEDIA, backup: backupBucket(), quarantined: none },
       anomalies,
       {
         now: nowSeconds(),
@@ -139,10 +151,14 @@ describe("copying", () => {
     await run(prefix);
     const { bucket, puts } = countingPuts(backupBucket());
 
-    await backUpMedia({ source: env.MEDIA, backup: bucket }, [], {
-      now: nowSeconds(),
-      prefixes: [prefix],
-    });
+    await backUpMedia(
+      { source: env.MEDIA, backup: bucket, quarantined: none },
+      [],
+      {
+        now: nowSeconds(),
+        prefixes: [prefix],
+      },
+    );
 
     expect(puts).toStrictEqual([]);
   });
@@ -171,10 +187,14 @@ describe("copying", () => {
       get: (key: string) => env.MEDIA.get(key),
     };
 
-    await backUpMedia({ source: paged, backup: backupBucket() }, [], {
-      now: nowSeconds(),
-      prefixes: [prefix],
-    });
+    await backUpMedia(
+      { source: paged, backup: backupBucket(), quarantined: none },
+      [],
+      {
+        now: nowSeconds(),
+        prefixes: [prefix],
+      },
+    );
 
     const copied = await backupBucket().list({ prefix });
     expect(copied.objects.map((object) => object.key)).toStrictEqual([
@@ -220,7 +240,7 @@ describe("copying", () => {
     const anomalies: string[] = [];
 
     await backUpMedia(
-      { source: vanishing, backup: backupBucket() },
+      { source: vanishing, backup: backupBucket(), quarantined: none },
       anomalies,
       {
         now: nowSeconds(),
@@ -248,10 +268,14 @@ describe("copying", () => {
     };
     const anomalies: string[] = [];
 
-    await backUpMedia({ source: failing, backup: backupBucket() }, anomalies, {
-      now: nowSeconds(),
-      prefixes: [prefix],
-    });
+    await backUpMedia(
+      { source: failing, backup: backupBucket(), quarantined: none },
+      anomalies,
+      {
+        now: nowSeconds(),
+        prefixes: [prefix],
+      },
+    );
 
     expect(await backupBucket().head(`${prefix}b`)).not.toBeNull();
     expect(anomalies).toStrictEqual([
@@ -324,10 +348,14 @@ describe("a photo deleted from MEDIA (#529)", () => {
       },
     };
 
-    await backUpMedia({ source: env.MEDIA, backup: counting }, [], {
-      now: nowSeconds() + 2 * GONE_RETENTION_S,
-      prefixes: [freshPrefix()],
-    });
+    await backUpMedia(
+      { source: env.MEDIA, backup: counting, quarantined: none },
+      [],
+      {
+        now: nowSeconds() + 2 * GONE_RETENTION_S,
+        prefixes: [freshPrefix()],
+      },
+    );
 
     expect(batches).toStrictEqual([1000, 1000]);
     const left = await real.list({ prefix: mine });
@@ -349,10 +377,14 @@ describe("a photo deleted from MEDIA (#529)", () => {
     };
     const anomalies: string[] = [];
 
-    await backUpMedia({ source: env.MEDIA, backup: refusing }, anomalies, {
-      now: nowSeconds(),
-      prefixes: [prefix],
-    });
+    await backUpMedia(
+      { source: env.MEDIA, backup: refusing, quarantined: none },
+      anomalies,
+      {
+        now: nowSeconds(),
+        prefixes: [prefix],
+      },
+    );
 
     expect(await real.head(key)).not.toBeNull();
     expect(anomalies).toStrictEqual([
@@ -371,13 +403,200 @@ describe("a photo deleted from MEDIA (#529)", () => {
     };
     const anomalies: string[] = [];
 
-    await backUpMedia({ source: env.MEDIA, backup: refusing }, anomalies, {
-      now: nowSeconds() + 2 * GONE_RETENTION_S,
-      prefixes: [freshPrefix()],
-    });
+    await backUpMedia(
+      { source: env.MEDIA, backup: refusing, quarantined: none },
+      anomalies,
+      {
+        now: nowSeconds() + 2 * GONE_RETENTION_S,
+        prefixes: [freshPrefix()],
+      },
+    );
 
     expect(anomalies).toStrictEqual([
       "media-backup: 1 copies or deletes failed; the next firing retries them",
     ]);
+  });
+});
+
+/**
+Every key the backup holds under these prefixes, in the order R2 lists them.
+*/
+async function heldUnder(...prefixes: string[]): Promise<string[]> {
+  const held: string[] = [];
+  for (const prefix of prefixes) {
+    const listed = await backupBucket().list({ prefix });
+    held.push(...listed.objects.map((object) => object.key));
+  }
+  return held;
+}
+
+/**
+Quarantine records that cover exactly these scopes.
+*/
+function covering(...scopes: string[]): () => Promise<readonly string[]> {
+  return () => Promise.resolve(scopes);
+}
+
+async function runCovering(
+  prefix: string,
+  scopes: readonly string[],
+  backup: BackupLike = backupBucket(),
+): Promise<string[]> {
+  const anomalies: string[] = [];
+  await backUpMedia(
+    { source: env.MEDIA, backup, quarantined: covering(...scopes) },
+    anomalies,
+    { now: nowSeconds(), prefixes: [prefix] },
+  );
+  return anomalies;
+}
+
+describe("a photo a quarantine record covers (D-70)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is never copied, even while its source is still there", async () => {
+    const prefix = freshPrefix();
+    const key = `${prefix}photo`;
+    await env.MEDIA.put(key, "held");
+
+    expect(await runCovering(prefix, [key])).toStrictEqual([]);
+
+    expect(await heldUnder(prefix, `${GONE_PREFIX}${prefix}`)).toStrictEqual(
+      [],
+    );
+  });
+
+  it("has its copy deleted, never set aside, whether its source is there or gone", async () => {
+    const prefix = freshPrefix();
+    const kept = `${prefix}kept`;
+    const deleted = `${prefix}deleted`;
+    await env.MEDIA.put(kept, "kept");
+    await env.MEDIA.put(deleted, "deleted");
+    await run(prefix);
+    await env.MEDIA.delete(deleted);
+
+    expect(await runCovering(prefix, [kept, deleted])).toStrictEqual([]);
+
+    expect(await heldUnder(prefix, `${GONE_PREFIX}${prefix}`)).toStrictEqual(
+      [],
+    );
+  });
+
+  it("has its gone/ copy deleted at any age, and another's kept", async () => {
+    const prefix = freshPrefix();
+    const key = `${prefix}photo`;
+    const other = `${prefix}other`;
+    for (const each of [key, other]) {
+      await backupBucket().put(`${GONE_PREFIX}${each}`, "set aside today");
+    }
+
+    expect(await runCovering(freshPrefix(), [key])).toStrictEqual([]);
+
+    expect(await heldUnder(`${GONE_PREFIX}${prefix}`)).toStrictEqual([
+      `${GONE_PREFIX}${other}`,
+    ]);
+  });
+
+  it("covers the scope itself and what is beneath it, never a key beside it", async () => {
+    const prefix = freshPrefix();
+    // A kit's prefix, a garment photo's version, and a kit photo's key.
+    const kit = `${prefix}kit/`;
+    const version = `${prefix}version`;
+    const photo = `${prefix}photo`;
+    const covered = [`${kit}a`, `${version}/card.webp`, photo];
+    const beside = [`${prefix}kitx/a`, `${version}x/card.webp`, `${photo}x`];
+    for (const key of [...covered, ...beside]) await env.MEDIA.put(key, key);
+
+    expect(await runCovering(prefix, [kit, version, photo])).toStrictEqual([]);
+
+    expect(await heldUnder(prefix)).toStrictEqual(
+      beside.toSorted((a, b) => a.localeCompare(b)),
+    );
+  });
+
+  it("copies nothing when the records cannot be read, and says why", async () => {
+    const prefix = freshPrefix();
+    await env.MEDIA.put(`${prefix}a`, "a");
+    const failure = new Error("D1 is down");
+
+    await expect(
+      backUpMedia(
+        {
+          source: env.MEDIA,
+          backup: backupBucket(),
+          quarantined: () => Promise.reject(failure),
+        },
+        [],
+        { now: nowSeconds(), prefixes: [prefix] },
+      ),
+    ).rejects.toBe(failure);
+
+    expect(await heldUnder(prefix)).toStrictEqual([]);
+  });
+
+  it("reports a delete of its copy that failed, and keeps the copy for the next firing", async () => {
+    const prefix = freshPrefix();
+    const key = `${prefix}photo`;
+    await env.MEDIA.put(key, "held");
+    await run(prefix);
+    const real = backupBucket();
+    const refusing: BackupLike = {
+      list: (options) => real.list(options),
+      get: (k: string) => real.get(k),
+      put: (k, value, options) => real.put(k, value, options),
+      delete: () => Promise.reject(new Error("R2 is down")),
+    };
+
+    expect(await runCovering(prefix, [key], refusing)).toStrictEqual([
+      "media-backup: 1 copies or deletes failed; the next firing retries them",
+    ]);
+    expect(await heldUnder(prefix)).toStrictEqual([key]);
+
+    expect(await runCovering(prefix, [key])).toStrictEqual([]);
+    expect(await heldUnder(prefix)).toStrictEqual([]);
+  });
+});
+
+describe("dropBackupCopies", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("deletes a quarantine's copies under their keys and under gone/ at once, and nothing beside them", async () => {
+    const prefix = freshPrefix();
+    const photo = `${prefix}photo`;
+    const kit = `${prefix}kit/`;
+    for (const key of [photo, `${photo}x`, `${kit}a`]) {
+      await backupBucket().put(key, key);
+      await backupBucket().put(`${GONE_PREFIX}${key}`, key);
+    }
+
+    await dropBackupCopies(photo);
+    await dropBackupCopies(kit);
+
+    expect(await heldUnder(prefix, `${GONE_PREFIX}${prefix}`)).toStrictEqual([
+      `${photo}x`,
+      `${GONE_PREFIX}${photo}x`,
+    ]);
+  });
+
+  it("deletes nothing, and calls no delete, when the backup holds none", async () => {
+    const real = backupBucket();
+    const deletes = vi.spyOn(real, "delete");
+
+    await dropBackupCopies(`${freshPrefix()}photo`, real);
+
+    expect(deletes).not.toHaveBeenCalled();
+  });
+
+  it("throws what R2 throws, for its caller to report", async () => {
+    const prefix = freshPrefix();
+    await backupBucket().put(`${prefix}photo`, "photo");
+    const failure = new Error("R2 is down");
+    vi.spyOn(backupBucket(), "delete").mockRejectedValueOnce(failure);
+
+    await expect(dropBackupCopies(`${prefix}photo`)).rejects.toBe(failure);
   });
 });
