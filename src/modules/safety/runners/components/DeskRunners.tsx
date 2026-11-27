@@ -2,10 +2,10 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { monthDayLabel } from "../../../../lib/dates";
+import { DELETION_GRACE_S } from "../../../../lib/contracts/garments";
+import { monthDayLabel, proseDayLabel } from "../../../../lib/dates";
 import {
   Bracketed,
-  CHALK_PILL,
   ControlFailureBand,
   DeskDetail,
   DeskPaneName,
@@ -21,6 +21,7 @@ import {
   counted,
 } from "../../../../ui";
 import {
+  CLOSURE_HAIRLINES,
   closureRuleLabels,
   closureRuleSchema,
   closureRules,
@@ -37,6 +38,7 @@ import type {
   RunnerState,
   RunnersFilter,
 } from "../runners";
+import { ClosedAccountPanel } from "./ClosedAccountPanel";
 import { NotRenamedBand } from "./NotRenamedBand";
 import { useFocusWhen } from "../../components/use-focus-when";
 
@@ -56,7 +58,7 @@ type Ban = (input: {
   data: { userId: string; reason: string; rule: ClosureRule };
 }) => Promise<unknown>;
 /**
-Reopen account, and Keep account (D-161): an act on the account by id.
+Reopen account, and Send deletion link: an act on the account by id.
 */
 type OnAccount = (input: { data: { userId: string } }) => Promise<unknown>;
 /**
@@ -247,7 +249,7 @@ function StateTags({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
     // two rulings meet, held for Design (#838). From desk, one line.
     <span className="flex flex-wrap gap-x-2 desk:flex-nowrap">
       <StateTag state={runner.state} />
-      {runner.state === "CLOSED" && runner.isLeaving ? (
+      {runner.state === "CLOSED" && runner.deletion !== undefined ? (
         <StateTag state="PENDING DELETE" />
       ) : undefined}
       {runner.flaggedAt === undefined ? undefined : (
@@ -458,7 +460,8 @@ function CloseAccountPanel({
   runner,
   act: ban,
   onDone,
-}: Readonly<PanelProps<Ban>>): JSX.Element {
+  now,
+}: Readonly<PanelProps<Ban> & { now: number }>): JSX.Element {
   const [reason, setReason] = useState("");
   const [rule, setRule] = useState<ClosureRule | undefined>();
   const form = useFormSubmit({
@@ -497,93 +500,23 @@ function CloseAccountPanel({
         label={CLOSE_LABELS.rule}
         options={closureRules}
         optionLabels={closureRuleLabels}
-        // Round 39 #76: the terms' rules, a hairline, then CSAM.
-        hairlineBefore="suspected_csam"
+        // Round 39 #76, round 64 #373: the terms' rules, a hairline,
+        // Under 18, a hairline, then CSAM.
+        hairlinesBefore={CLOSURE_HAIRLINES}
         schema={closureRuleSchema}
         value={rule}
         onChange={setRule}
         field={form.field}
         error={form.fieldErrors.rule}
       />
+      {/* Round 64 #373: above the submit while Under 18 is picked, and
+          still there if the submit fails. Desk days are UTC. */}
+      {rule === "under_18" ? (
+        <p className="m-0 text-small">
+          {`Closing for age also deletes the account on ${proseDayLabel(now + DELETION_GRACE_S)}. No link is sent.`}
+        </p>
+      ) : undefined}
     </DeskForm>
-  );
-}
-
-/**
- * A panel with one act on the account: a heading, what is on record, and
- * a button that runs `act` on the runner (Reopen account, Keep account).
- * `words.still` names what stays true when the act fails.
- */
-function AccountActPanel({
-  runner,
-  act,
-  onDone,
-  words,
-}: Readonly<
-  PanelProps<OnAccount> & {
-    words: Readonly<{
-      heading: string;
-      said: string;
-      button: string;
-      still: string;
-      isFlag?: boolean;
-    }>;
-  }
->): JSX.Element {
-  const control = useControlAction({
-    action: () => act({ data: { userId: runner.userId } }),
-    kicker: words.still,
-    onSuccess: onDone,
-  });
-  const isFlag = words.isFlag === true;
-  return (
-    <section
-      className={
-        isFlag
-          ? "flex flex-col gap-3 border border-hiviz-text p-4"
-          : "flex flex-col gap-3 border border-hairline p-4"
-      }
-    >
-      <h2 className="m-0">
-        <Mono step="xs" className={isFlag ? "text-hiviz-text" : undefined}>
-          {words.heading}
-        </Mono>
-      </h2>
-      <p className="text-body">{words.said}</p>
-      <FormStatus>{control.status}</FormStatus>
-      <button
-        type="button"
-        {...inFlight(control.pending)}
-        // R47·124: Keep account is an outline pill, beside Close account's
-        // chalk below. Reopen is the closed runner's one action, so it is
-        // the chalk pill (round 44 #104).
-        className={isFlag ? `target ${QUIET_PILL}` : `target ${CHALK_PILL}`}
-        onClick={() => {
-          void control.run();
-        }}
-      >
-        {words.button}
-      </button>
-      <ControlFailureBand
-        failure={control.failure}
-        onRetry={control.retry}
-        retryRef={control.retryRef}
-      />
-    </section>
-  );
-}
-
-function ReopenPanel(props: Readonly<PanelProps<OnAccount>>): JSX.Element {
-  return (
-    <AccountActPanel
-      {...props}
-      words={{
-        heading: "Account closed",
-        said: props.runner.banReason ?? "No reason recorded.",
-        button: "Reopen account",
-        still: "Still closed",
-      }}
-    />
   );
 }
 
@@ -593,22 +526,43 @@ function ReopenPanel(props: Readonly<PanelProps<OnAccount>>): JSX.Element {
  * below, is the other answer. Nothing closes the account by itself.
  */
 function FlaggedPanel({
+  runner,
   flaggedAt,
   act,
-  ...props
+  onDone,
 }: Readonly<PanelProps<OnFlag> & { flaggedAt: number }>): JSX.Element {
+  const control = useControlAction({
+    action: () => act({ data: { userId: runner.userId, flaggedAt } }),
+    kicker: "Still flagged",
+    onSuccess: onDone,
+  });
   return (
-    <AccountActPanel
-      {...props}
-      act={({ data }) => act({ data: { ...data, flaggedAt } })}
-      words={{
-        heading: "Flagged",
-        said: `A takedown of an image they posted was upheld on ${monthDayLabel(flaggedAt)}. Nothing has happened to the account. Keep it, or ban it below.`,
-        button: "Keep account",
-        still: "Still flagged",
-        isFlag: true,
-      }}
-    />
+    <section className="flex flex-col gap-3 border border-hiviz-text p-4">
+      <h2 className="m-0">
+        <Mono step="xs" className="text-hiviz-text">
+          Flagged
+        </Mono>
+      </h2>
+      <p className="text-body">{`A takedown of an image they posted was upheld on ${monthDayLabel(flaggedAt)}. Nothing has happened to the account. Keep it, or ban it below.`}</p>
+      <FormStatus>{control.status}</FormStatus>
+      <button
+        type="button"
+        {...inFlight(control.pending)}
+        // R47·124: Keep account is an outline pill, beside Close account's
+        // chalk below.
+        className={`target ${QUIET_PILL}`}
+        onClick={() => {
+          void control.run();
+        }}
+      >
+        Keep account
+      </button>
+      <ControlFailureBand
+        failure={control.failure}
+        onRetry={control.retry}
+        retryRef={control.retryRef}
+      />
+    </section>
   );
 }
 
@@ -643,6 +597,7 @@ function RunnerHead({ runner }: Readonly<{ runner: DeskRunner }>): JSX.Element {
 function RunnerPanels({
   runner,
   acts,
+  now,
   onDone,
   onCleared,
 }: Readonly<{
@@ -652,7 +607,9 @@ function RunnerPanels({
     ban: Ban;
     unban: OnAccount;
     keep: OnFlag;
+    sendLink: OnAccount;
   }>;
+  now: number;
   onDone: () => void;
   /**
   After Keep, a ban or an unban of a flagged runner: each one clears the
@@ -687,13 +644,21 @@ function RunnerPanels({
         onDone={onDone}
       />
       {isClosed ? (
-        <ReopenPanel runner={runner} act={acts.unban} onDone={onDecided} />
+        <ClosedAccountPanel
+          key={`closed-${runner.userId}`}
+          runner={runner}
+          now={now}
+          reopen={acts.unban}
+          sendLink={acts.sendLink}
+          onDone={onDecided}
+        />
       ) : (
         <CloseAccountPanel
           key={`close-${runner.userId}`}
           runner={runner}
           act={acts.ban}
           onDone={onDecided}
+          now={now}
         />
       )}
     </>
@@ -704,10 +669,15 @@ export function DeskRunners({
   runners,
   counts,
   filter,
+  now,
   ...acts
 }: Readonly<{
   runners: readonly DeskRunner[];
   filter: RunnersFilter;
+  /**
+  The page's load time, in epoch seconds (round 64's link states).
+  */
+  now: number;
   /**
   Every filter's whole-table count (round 28 #8; Flagged's per R47·124).
   */
@@ -716,6 +686,7 @@ export function DeskRunners({
   ban: Ban;
   unban: OnAccount;
   keep: OnFlag;
+  sendLink: OnAccount;
 }>): JSX.Element {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | undefined>();
@@ -762,6 +733,7 @@ export function DeskRunners({
                   <RunnerPanels
                     runner={selected}
                     acts={acts}
+                    now={now}
                     onDone={refresh}
                     onCleared={(userId) => {
                       setCleared({ userId, among: runners });

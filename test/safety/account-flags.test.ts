@@ -1,10 +1,13 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
+import { deletionLinksOf } from "../../src/modules/account/data/deletion-link";
+import { maskedAddress } from "../../src/modules/email";
 
 import { user } from "../../src/db/schema-auth";
 import {
   accountDeletions,
+  emailVerifications,
   entryPhotos,
   moderationActions,
 } from "../../src/db/schema-core";
@@ -102,12 +105,15 @@ async function listed(filter: RunnersFilter["filter"]) {
     query: undefined,
     only: runnersWhere(filter),
   });
-  return deskRunners(core(), accounts);
+  return deskRunners(core(), accounts, async (chunk) =>
+    deletionLinksOf(core(), chunk),
+  );
 }
 
 beforeEach(async () => {
   await resetSafetyTables();
   await core().delete(accountDeletions);
+  await core().delete(emailVerifications);
   await core().delete(user);
 });
 
@@ -279,6 +285,39 @@ describe("the flag from a real Remove (feed's moderateContent)", () => {
 });
 
 describe("D8 Runners: state and flag (PR#126-1, D-161 1)", () => {
+  it("reads each account's deletion link, who scheduled its deletion, and its masked address (round 64)", async () => {
+    const sent = await runner("sent@example.com");
+    const age = await runner("age@example.com");
+    await core().insert(emailVerifications).values({
+      userId: sent,
+      purpose: "delete",
+      email: "sent@example.com",
+      tokenHash: "hash",
+      expiresAt: 500,
+      usedAt: 400,
+    });
+    await core().insert(accountDeletions).values({
+      userId: age,
+      requestedAt: 3,
+      purgeAfter: 4,
+      cause: "under_18",
+    });
+
+    const all = await listed("all");
+    const rows = new Map(all.map((row) => [row.userId, row]));
+    expect(rows.get(sent)?.deletionLink).toStrictEqual({
+      expiresAt: 500,
+      isUsed: true,
+    });
+    expect(rows.get(age)?.deletionLink).toBeUndefined();
+    expect(rows.get(age)?.deletion).toStrictEqual({
+      requestedAt: 3,
+      purgeAfter: 4,
+      cause: "under_18",
+    });
+    expect(rows.get(sent)?.maskedEmail).toBe(maskedAddress("sent@example.com"));
+  });
+
   it("reads PENDING DELETE from a deletion request, and CLOSED over it", async () => {
     const leaving = await runner("leaving@example.com");
     const closed = await runner("closed@example.com");
@@ -304,12 +343,12 @@ describe("D8 Runners: state and flag (PR#126-1, D-161 1)", () => {
       ]),
     );
     expect(
-      new Map(rows.map((row) => [row.userId, row.isLeaving])),
+      new Map(rows.map((row) => [row.userId, row.deletion])),
     ).toStrictEqual(
       new Map([
-        [leaving, true],
-        [closed, true],
-        [active, false],
+        [leaving, { requestedAt: 1, purgeAfter: 2, cause: "asked" }],
+        [closed, { requestedAt: 1, purgeAfter: 2, cause: "asked" }],
+        [active, undefined],
       ]),
     );
   });

@@ -60,8 +60,10 @@ const ada: DeskRunner = {
   runs: 12,
   reports: 2,
   state: "ACTIVE",
-  isLeaving: false,
+  deletion: undefined,
   banReason: undefined,
+  maskedEmail: "ad•••@example.com",
+  deletionLink: undefined,
   flaggedAt: undefined,
 };
 
@@ -73,10 +75,24 @@ const bo: DeskRunner = {
   runs: 0,
   reports: 0,
   state: "CLOSED",
-  isLeaving: false,
+  deletion: undefined,
   banReason: "Spam accounts",
+  maskedEmail: "bo•••@example.com",
+  deletionLink: undefined,
   flaggedAt: undefined,
 };
+
+/**
+ * The page's load time (Fri Nov 27 2026, 12:00 UTC), and a day: the
+ * board's example dates (round 64).
+ */
+const NOW_S = Date.UTC(2026, 10, 27, 12) / 1000;
+const DAY_S = 24 * 60 * 60;
+const LEAVING = {
+  requestedAt: NOW_S - DAY_S,
+  purgeAfter: NOW_S + 6 * DAY_S,
+  cause: "asked",
+} as const;
 
 const COUNTS = { all: 412, reported: 9, closed: 6, flagged: 0 } as const;
 
@@ -87,19 +103,24 @@ async function renderDesk(overrides: Partial<Props> = {}) {
   const ban = vi.fn<Props["ban"]>().mockResolvedValue({ banned: true });
   const unban = vi.fn<Props["unban"]>().mockResolvedValue({ banned: false });
   const keep = vi.fn<Props["keep"]>().mockResolvedValue({ kept: true });
+  const sendLink = vi
+    .fn<Props["sendLink"]>()
+    .mockResolvedValue({ status: "sent" });
   const router = await renderWithRouter(
     <DeskRunners
       runners={[ada, bo]}
       counts={COUNTS}
       filter={{ filter: "all" }}
+      now={NOW_S}
       rename={rename}
       ban={ban}
       unban={unban}
       keep={keep}
+      sendLink={sendLink}
       {...overrides}
     />,
   );
-  return { rename, ban, unban, keep, router };
+  return { rename, ban, unban, keep, sendLink, router };
 }
 
 // At desk unless a case says otherwise: the pane beside the table.
@@ -438,6 +459,8 @@ function NextList({
         ban={vi.fn<Props["ban"]>()}
         unban={vi.fn<Props["unban"]>()}
         keep={vi.fn<Props["keep"]>().mockResolvedValue({ kept: true })}
+        now={NOW_S}
+        sendLink={vi.fn<Props["sendLink"]>()}
       />
     </>
   );
@@ -507,14 +530,14 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
 
   it("draws PENDING DELETE as a state, once", async () => {
     await renderDesk({
-      runners: [{ ...ada, state: "PENDING DELETE", isLeaving: true }],
+      runners: [{ ...ada, state: "PENDING DELETE", deletion: LEAVING }],
     });
 
     expect(screen.getByText(bracketed("PENDING DELETE"))).toBeInTheDocument();
   });
 
   it("draws PENDING DELETE after CLOSED for a closed account that is leaving (SA-L09)", async () => {
-    await renderDesk({ runners: [{ ...bo, isLeaving: true }] });
+    await renderDesk({ runners: [{ ...bo, deletion: LEAVING }] });
 
     const closed = screen.getByText(bracketed("CLOSED"));
     const leaving = screen.getByText(bracketed("PENDING DELETE"));
@@ -530,7 +553,7 @@ describe("a flagged account (D-161 1, R47·124) and PENDING DELETE (PR#126-1)", 
   });
 
   it("draws no second tag for an active account marked leaving", async () => {
-    await renderDesk({ runners: [{ ...ada, isLeaving: true }] });
+    await renderDesk({ runners: [{ ...ada, deletion: LEAVING }] });
 
     expect(screen.queryByText(bracketed("PENDING DELETE"))).toBeNull();
   });
@@ -762,7 +785,7 @@ describe("Close account (D3)", () => {
     });
   });
 
-  it("rules the terms' rules off from the CSAM option, last (round 39 #76)", async () => {
+  it("rules Under 18 off on each side, then the CSAM option, last (round 39 #76, round 64 #373)", async () => {
     const user = userEvent.setup();
     await renderDesk();
     await user.click(screen.getByRole("button", { name: "@ada" }));
@@ -770,12 +793,50 @@ describe("Close account (D3)", () => {
     const select = screen.getByRole("combobox", {
       name: /Which rule it breaks/,
     });
-    const hairline = select.querySelector("hr");
-    expect(select.querySelectorAll("hr")).toHaveLength(1);
-    expect(hairline?.nextElementSibling).toHaveTextContent(
+    const [first, second] = select.querySelectorAll("hr");
+    expect(select.querySelectorAll("hr")).toHaveLength(2);
+    expect(first?.nextElementSibling).toHaveTextContent("Under 18");
+    expect(first?.nextElementSibling?.nextElementSibling).toBe(second);
+    expect(second?.nextElementSibling).toHaveTextContent(
       "Suspected CSAM (the notice names no rule)",
     );
-    expect(hairline?.nextElementSibling?.nextElementSibling).toBeNull();
+    expect(second?.nextElementSibling?.nextElementSibling).toBeNull();
+  });
+
+  it("says an age closure also deletes, only while Under 18 is picked, and still after a failed submit (round 64 #373)", async () => {
+    const user = userEvent.setup();
+    const ban = vi
+      .fn<Props["ban"]>()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    await renderDesk({ ban });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    const line =
+      "Closing for age also deletes the account on Fri, Dec 4. No link is sent.";
+    expect(screen.queryByText(line)).toBeNull();
+
+    const rule = screen.getByRole("combobox", { name: /Which rule it breaks/ });
+    await user.selectOptions(rule, "Under 18");
+    expect(screen.getByText(line)).toBeInTheDocument();
+    // Above the submit.
+    expect(
+      screen
+        .getByText(line)
+        .compareDocumentPosition(
+          screen.getByRole("button", { name: "Close account" }),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    await user.selectOptions(rule, "Suspected CSAM (the notice names no rule)");
+    expect(screen.queryByText(line)).toBeNull();
+    await user.selectOptions(rule, "Under 18");
+
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Says 15");
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+    expect(ban).toHaveBeenCalledWith({
+      data: { userId: "u-ada", reason: "Says 15", rule: "under_18" },
+    });
+    expect(await screen.findByText("Nothing saved")).toBeInTheDocument();
+    expect(screen.getByText(line)).toBeInTheDocument();
   });
 
   it("closes over suspected CSAM naming no rule (C8)", async () => {
@@ -859,8 +920,10 @@ describe("Close account (D3)", () => {
       screen.queryByRole("button", { name: "Close account" }),
     ).not.toBeInTheDocument();
     const reopen = screen.getByRole("button", { name: "Reopen account" });
-    // Round 44 #104: the closed runner's one action is the chalk pill.
-    expect(reopen).toHaveClass("target", "rounded-pill", "bg-ink");
+    // Round 64 #372: beside Send deletion link, the same kind, and neither
+    // is the panel's primary.
+    expect(reopen).toHaveClass("target", "rounded-pill", "border-hairline");
+    expect(reopen).not.toHaveClass("bg-ink");
     await user.click(reopen);
 
     expect(unban).toHaveBeenCalledWith({ data: { userId: "u-bo" } });
@@ -881,6 +944,161 @@ describe("Close account (D3)", () => {
     await user.click(screen.getByRole("button", { name: "Reopen account" }));
 
     expect(await screen.findByText("Still closed")).toBeInTheDocument();
+  });
+});
+
+/**
+Bo, closed, with the deletion state a case gives, and their panels open.
+*/
+async function openClosed(overrides: Partial<DeskRunner> = {}) {
+  const user = userEvent.setup();
+  const props = await renderDesk({ runners: [{ ...bo, ...overrides }] });
+  await user.click(screen.getByRole("button", { name: "—" }));
+  return { user, ...props };
+}
+
+describe("a closed account's deletion (round 64 #372–373)", () => {
+  it("offers Send deletion link beside Reopen, the same kind, with nothing sent", async () => {
+    await openClosed();
+    const send = screen.getByRole("button", { name: "Send deletion link" });
+    expect(send).toHaveClass("target", "rounded-pill", "border-hairline");
+    expect(send).not.toHaveClass("bg-ink");
+    expect(
+      screen.getByRole("button", { name: "Reopen account" }),
+    ).toBeInTheDocument();
+    expect(document.querySelector('[data-part="deletion-status"]')).toBeNull();
+  });
+
+  it("asks in place, masked, until a week on, and sends on Send link", async () => {
+    const { user, sendLink, router } = await openClosed();
+    const invalidate = vi.spyOn(router, "invalidate");
+    await user.click(
+      screen.getByRole("button", { name: "Send deletion link" }),
+    );
+
+    expect(
+      screen.getByText(
+        "Send a deletion link to bo•••@example.com? It works once, until Fri, Dec 4. Nothing is deleted unless they use it.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reopen account" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Send deletion link" }),
+    ).toBeNull();
+    const sendIt = screen.getByRole("button", { name: "Send link" });
+    expect(sendIt).toHaveClass("target", "rounded-pill", "bg-ink");
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass(
+      "target",
+      "underline",
+    );
+
+    await user.click(sendIt);
+    expect(sendLink).toHaveBeenCalledWith({ data: { userId: "u-bo" } });
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalled();
+    });
+  });
+
+  it("hands focus back to the pill on Cancel, and sends nothing", async () => {
+    const { user, sendLink } = await openClosed();
+    await user.click(
+      screen.getByRole("button", { name: "Send deletion link" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByText(/^Send a deletion link to/u)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Send deletion link" }),
+    ).toHaveFocus();
+    expect(sendLink).not.toHaveBeenCalled();
+  });
+
+  it("does not take focus to the pill before a Cancel", async () => {
+    await openClosed();
+    expect(
+      screen.getByRole("button", { name: "Send deletion link" }),
+    ).not.toHaveFocus();
+  });
+
+  it("says NOT SENT on the row when the send fails, still asking", async () => {
+    const sendLink = vi
+      .fn<Props["sendLink"]>()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    const user = userEvent.setup();
+    await renderDesk({ runners: [bo], sendLink });
+    await user.click(screen.getByRole("button", { name: "—" }));
+    await user.click(
+      screen.getByRole("button", { name: "Send deletion link" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Send link" }));
+
+    expect(await screen.findByText("Not sent")).toBeInTheDocument();
+    expect(screen.getByText(/^Send a deletion link to/u)).toBeInTheDocument();
+  });
+
+  it("says when a live link went and until when, and offers only Reopen", async () => {
+    await openClosed({
+      deletionLink: { expiresAt: NOW_S + 7 * DAY_S, isUsed: false },
+    });
+    expect(screen.getByText(bracketed("Sent Nov 27"))).toBeInTheDocument();
+    expect(
+      screen.getByText("The link works until Dec 4. Reopening cancels it."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reopen account" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Send deletion link|Send again/u }),
+    ).toBeNull();
+  });
+
+  it("says a link ran out, and offers Send again, whose ask has a new date", async () => {
+    const { user } = await openClosed({
+      deletionLink: { expiresAt: NOW_S - 2 * DAY_S, isUsed: false },
+    });
+    expect(
+      screen.getByText(bracketed("Link expired Nov 25")),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Send again" }));
+    expect(
+      screen.getByText(/It works once, until Fri, Dec 4\./u),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no pills once the runner chose deletion, and tags the row", async () => {
+    await openClosed({
+      deletion: LEAVING,
+      deletionLink: { expiresAt: NOW_S + 6 * DAY_S, isUsed: true },
+    });
+    expect(screen.getByText(bracketed("Deletes Dec 3"))).toBeInTheDocument();
+    expect(
+      screen.getByText("The runner confirmed on Nov 26."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reopen account" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Send deletion link|Send again/u }),
+    ).toBeNull();
+    expect(screen.getAllByText(bracketed("PENDING DELETE"))).not.toHaveLength(
+      0,
+    );
+  });
+
+  it("shows an age closure as Under 18, its deletion, and Reopen only", async () => {
+    const { user, unban } = await openClosed({
+      banReason: "Says 15",
+      deletion: { ...LEAVING, cause: "under_18" },
+    });
+    expect(screen.getByText("Under 18 · closed Nov 26")).toBeInTheDocument();
+    expect(screen.queryByText("Says 15")).toBeNull();
+    expect(screen.getByText(bracketed("Deletes Dec 3"))).toBeInTheDocument();
+    expect(
+      screen.getByText("Reopening before then also cancels the deletion."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Send deletion link|Send again/u }),
+    ).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Reopen account" }));
+    expect(unban).toHaveBeenCalledWith({ data: { userId: "u-bo" } });
   });
 });
 

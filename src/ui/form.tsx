@@ -1318,7 +1318,7 @@ export function ChoiceField<TOption extends string>({
   optionLabels,
   onChange,
   placeholder = NOT_SET,
-  hairlineBefore,
+  hairlinesBefore = [],
 }: Readonly<
   Omit<ChoosableProps<TOption>, "field"> & {
     /**
@@ -1335,11 +1335,12 @@ export function ChoiceField<TOption extends string>({
      */
     placeholder?: string | undefined;
     /**
-     * An option the list is ruled off before: a native `<hr>` in the
+     * The options the list is ruled off before: a native `<hr>` in the
      * select, which the platform draws as its separator. D8's rule select
-     * sets the CSAM option apart from the terms' rules (round 39 #76).
+     * sets Under 18 and the CSAM option apart from the terms' rules (round
+     * 39 #76, round 64 #373).
      */
-    hairlineBefore?: TOption | undefined;
+    hairlinesBefore?: readonly TOption[] | undefined;
   }
 >): JSX.Element {
   // Per instance, for the reason `TextField` gives (R-165).
@@ -1360,7 +1361,7 @@ export function ChoiceField<TOption extends string>({
         <option value={NO_CHOICE}>{placeholder}</option>
         {options.map((option) => (
           <Fragment key={option}>
-            {option === hairlineBefore ? <hr /> : undefined}
+            {hairlinesBefore.includes(option) ? <hr /> : undefined}
             <option value={option}>{optionLabels[option]}</option>
           </Fragment>
         ))}

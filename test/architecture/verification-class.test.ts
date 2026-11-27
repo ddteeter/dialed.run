@@ -311,6 +311,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts banUserAction": "admin",
   "safety/functions.ts denyDomainAction": "admin",
   "safety/functions.ts unbanUserAction": "admin",
+  // Round 64 #372: the Desk's deletion link for a closed account.
+  "safety/functions.ts sendDeletionLinkAction": "admin",
   "safety/functions.ts keepAccountAction": "admin",
   "safety/functions.ts reviewHandleAction": "admin",
   "safety/functions.ts forceRenameAction": "admin",
