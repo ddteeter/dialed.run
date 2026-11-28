@@ -17,9 +17,15 @@ on:
 permissions:
   contents: read
 
+# A newer push cancels a pull request's stale run, but never main's: a
+# cancelled main run could stop `deploy` between the migrations it applied
+# and `wrangler deploy` (15:37Z on 2026-11-28, run for 9b8f5ac37). On main
+# the next run waits instead. A group holds one running and one pending
+# run, and a newer push replaces the pending one, so a burst of merges
+# runs the first and then the newest, which carries every merge before it.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   test:
@@ -276,6 +282,12 @@ jobs:
     needs: [test, e2e]
     if: github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
+    # One build and deploy at a time, never cancelled, whatever starts
+    # them. The workflow's own group already queues main's runs; this
+    # holds if that group ever changes.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     steps:
       # Audit first (design 196): reports the hosts this job reaches and
       # blocks none. It moves to `block` once that list is known and short.
@@ -318,6 +330,10 @@ jobs:
     needs: [bundle]
     if: github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
+    # `bundle`'s group, for the same reason.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     # The Cloudflare secrets live in this environment, which only `main` may
     # use, so no other job and no pull request can read them
     # (docs/deployment.md §7).
