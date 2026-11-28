@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dataExports } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -268,6 +268,26 @@ describe("sweepExports", () => {
     expect(deleted).toStrictEqual([[keyOf(staged)]]);
     expect(anomalies).toStrictEqual([]);
     expect(reports).toStrictEqual([]);
+  });
+
+  it("sends no delete to D1 or R2 when nothing is due", async () => {
+    const remove = vi.spyOn(db, "delete");
+    const deleted: (string | readonly string[])[] = [];
+    const { deps: sweep } = deps({
+      bucket: {
+        delete: (keys) => {
+          deleted.push(keys);
+          return env.IMPORTS.delete(keys);
+        },
+      },
+    });
+
+    await sweepExports([], sweep);
+    const calls = remove.mock.calls.length;
+    remove.mockRestore();
+
+    expect(calls).toBe(0);
+    expect(deleted).toStrictEqual([]);
   });
 
   it("forgets failures no build claimed without asking R2 to delete no keys", async () => {
