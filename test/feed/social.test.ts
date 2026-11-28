@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -184,6 +184,24 @@ describe("follows", () => {
     await follow(follower, banned);
 
     expect(await followRowsOf(banned)).toHaveLength(0);
+  });
+
+  it("counts a runner's followers by a seek on follows_followee, never a scan", async () => {
+    // followerCount's statement: COUNT(*) over the follows naming them.
+    const { sql, params } = core()
+      .select({ n: count() })
+      .from(followsTable)
+      .where(eq(followsTable.followeeId, newUlid()))
+      .toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail).join("\n");
+
+    expect(details).toMatch(
+      /SEARCH follows USING COVERING INDEX follows_followee \(followee_id=\?\)/u,
+    );
+    expect(details).not.toMatch(/SCAN/u);
   });
 });
 

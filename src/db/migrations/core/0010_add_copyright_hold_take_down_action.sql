@@ -1,1 +1,0 @@
-ALTER TABLE `copyright_holds` ADD `taken_down_by` text;

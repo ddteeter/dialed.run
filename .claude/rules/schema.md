@@ -66,9 +66,12 @@ applies every migration to a fresh D1, which is what catches it.
 
 ## The baseline, and never squashing again
 
-Each database's history was squashed once, before the first deploy
-(D-174, #506): `0000_baseline.sql` per database, and core's `0001_seed.sql`
-for the rows the old chain inserted. Numbering continues from there.
+Each database's history was squashed before the first deploy (D-174,
+#506): `0000_baseline.sql` per database, and core's `0001_seed.sql` for
+the rows the old chain inserted. Core was squashed a second time, still
+before the first deploy (#670), with the seed carried over word for word;
+weather and ops had not grown. Numbering continues from there: a new
+core migration is `0002`, a new weather or ops one `0001`.
 
 **After the first deploy, never squash again.** A deployed database's
 `d1_migrations` table records every name it applied, so a new baseline

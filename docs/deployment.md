@@ -77,7 +77,8 @@ not cover the new version's first requests. By hand, wait a minute between
 Sentry for "no such column" or "no such table" right after a deploy that
 carried a migration.
 
-**The first deploy applies one baseline per database** (D-174, #506):
+**The first deploy applies one baseline per database** (D-174, #506;
+core squashed again in #670):
 `0000_baseline.sql` in each, then core's `0001_seed.sql`, which inserts the
 curated brands and the link-shortener denylist. The seed is data, not
 schema, so regenerating from `schema-core.ts` would not reproduce it;

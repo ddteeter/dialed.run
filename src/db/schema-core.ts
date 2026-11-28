@@ -396,7 +396,7 @@ export const accountDeletions = /*#__PURE__*/ sqliteTable(
  *
  * Written as the account is made (the user create hook, in the batch that
  * spends its invite) and by the terms prompt's Accept. `version` is the
- * integer on the terms' own "Version N." line (`account/terms-acceptance`).
+ * integer on the terms' own "Version N." line (`account/terms/terms-acceptance`).
  * The unique key is both law 8b's idempotency — a repeat keeps the first
  * time — and the index the gate's latest-version read uses. Deleted with
  * the account by the purge.
@@ -468,7 +468,7 @@ export const dataExports = /*#__PURE__*/ sqliteTable(
 
 /**
  * Invite codes (task 126, ACC-5; decision D-39; round 26 #20). `DIAL-XXXX-XXXX`,
- * stored as `lib/access.ts` normalizes it, minted on Desk D7 — by hand,
+ * stored as `lib/contracts/access.ts` normalizes it, minted on Desk D7 — by hand,
  * or by answering an access request — or seeded for the owner as a
  * deployment step. A code works `max_uses` times; revoking one stops it at
  * once, and an undo clears `revoked_at` again.
@@ -1087,7 +1087,7 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     uniqueIndex("entries_run").on(t.runId),
     index("entries_user_created").on(t.userId, t.createdAt),
     // Shared entries (SHARED or PUBLIC), newest first: "Your conditions"
-    // (`feed/consensus.ts`). Partial on `sharedAudience`, so a query that
+    // (`feed/consensus/consensus.ts`). Partial on `sharedAudience`, so a query that
     // names the same predicate seeks it with no audience column at all:
     // two audience values in an indexed column cannot seek and come back
     // in `created_at` order (D-151 made it two). moderationStatus is in the
@@ -1099,7 +1099,7 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
       .on(t.moderationStatus, t.createdAt)
       .where(sharedAudience(t.audience)),
     // One runner's shared entries, newest first: the Following feed's
-    // per-author seek (FEED-5 review, `feed/feed.ts`) and H's entries.
+    // per-author seek (FEED-5 review, `feed/following/feed.ts`) and H's entries.
     // Driving the page from the viewer's followees, each read to at most a
     // page, is what makes the rows it scans scale with who they follow
     // rather than with every runner on the site.
@@ -1225,7 +1225,13 @@ export const follows = /*#__PURE__*/ sqliteTable(
     followeeId: text("followee_id").notNull(),
     createdAt: integer("created_at").notNull(),
   },
-  (t) => [uniqueIndex("follows_pk").on(t.followerId, t.followeeId)],
+  (t) => [
+    uniqueIndex("follows_pk").on(t.followerId, t.followeeId),
+    // A runner's followers: the own profile's count
+    // (`feed/following/follows.ts` followerCount) and the purge's delete
+    // seek it, where `follows_pk` leads with the follower.
+    index("follows_followee").on(t.followeeId),
+  ],
 );
 
 /**
@@ -1377,7 +1383,7 @@ export const stravaRevocations = /*#__PURE__*/ sqliteTable(
  * written in the same `db.batch()` as the D1 change that created the debt.
  *
  * `kind` + `payload` are a wire format between deploys (law 9), parsed on
- * the way out by `outboxMessageSchema` in lib/outbox.ts. The UNIQUE pair is
+ * the way out by `outboxMessageSchema` in lib/sql/outbox.ts. The UNIQUE pair is
  * what makes a second enqueue of the same debt one row rather than two.
  * A row here is work not yet confirmed done: a fast path deletes it on
  * success, and the daily drainer in modules/ops re-drives what is left,

@@ -1,1 +1,0 @@
-ALTER TABLE `review_queue` ADD `hid` integer;

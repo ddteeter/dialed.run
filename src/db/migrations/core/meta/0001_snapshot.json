@@ -1,9 +1,90 @@
 {
-  "id": "f70f6086-50fc-488f-9dc2-6369e6de8119",
-  "prevId": "5f4a3bab-f795-470d-ab5e-7c06ef153997",
+  "id": "7e9e4408-eff0-4bf8-b09d-c4f8dc614723",
+  "prevId": "e2eb7e42-5df1-4df6-b572-3e9e961cfdb1",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
+    "access_asks": {
+      "name": "access_asks",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "blocked_region": {
+          "name": "blocked_region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "access_asks_token": {
+          "name": "access_asks_token",
+          "columns": [
+            "token_hash"
+          ],
+          "isUnique": true
+        },
+        "access_asks_email": {
+          "name": "access_asks_email",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        },
+        "access_asks_created": {
+          "name": "access_asks_created",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "access_requests": {
       "name": "access_requests",
       "columns": {
@@ -221,6 +302,38 @@
             "normalized"
           ],
           "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "closed_addresses": {
+      "name": "closed_addresses",
+      "columns": {
+        "hash": {
+          "name": "hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "closed_addresses_closed": {
+          "name": "closed_addresses_closed",
+          "columns": [
+            "closed_at"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -580,45 +693,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "email_send_limits": {
-      "name": "email_send_limits",
-      "columns": {
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "window_started_at": {
-          "name": "window_started_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "sends": {
-          "name": "sends",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "email_send_limits_window": {
-          "name": "email_send_limits_window",
-          "columns": [
-            "window_started_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "email_verifications": {
       "name": "email_verifications",
       "columns": {
@@ -884,6 +958,13 @@
             "followee_id"
           ],
           "isUnique": true
+        },
+        "follows_followee": {
+          "name": "follows_followee",
+          "columns": [
+            "followee_id"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -973,6 +1054,67 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "held_take_downs": {
+      "name": "held_take_downs",
+      "columns": {
+        "action_id": {
+          "name": "action_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject_type": {
+          "name": "subject_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entry_id": {
+          "name": "entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "held_take_downs_subject": {
+          "name": "held_take_downs_subject",
+          "columns": [
+            "subject_type",
+            "subject_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "imports": {
       "name": "imports",
       "columns": {
@@ -1035,6 +1177,13 @@
         },
         "garmin_activity_id": {
           "name": "garmin_activity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "claimed_by": {
+          "name": "claimed_by",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -2506,6 +2655,60 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "rate_limits": {
+      "name": "rate_limits",
+      "columns": {
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "window_started_at": {
+          "name": "window_started_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "rate_limits_window": {
+          "name": "rate_limits_window",
+          "columns": [
+            "window_started_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "rate_limits_kind_subject_pk": {
+          "columns": [
+            "kind",
+            "subject"
+          ],
+          "name": "rate_limits_kind_subject_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "reactions": {
       "name": "reactions",
       "columns": {
@@ -2874,6 +3077,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "claimed_at": {
           "name": "claimed_at",
           "type": "integer",
@@ -2890,6 +3100,13 @@
         },
         "opened_at": {
           "name": "opened_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "hid": {
+          "name": "hid",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -2933,6 +3150,127 @@
           "columns": [
             "source",
             "opened_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "run_conditions": {
+      "name": "run_conditions",
+      "columns": {
+        "run_id": {
+          "name": "run_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "feels_like_c": {
+          "name": "feels_like_c",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "min_feels_like_c": {
+          "name": "min_feels_like_c",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "max_feels_like_c": {
+          "name": "max_feels_like_c",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "precip_class": {
+          "name": "precip_class",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "entry_created_at": {
+          "name": "entry_created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "entry_shared": {
+          "name": "entry_shared",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "judged_feels_like_c": {
+          "name": "judged_feels_like_c",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "generated": {
+            "type": "virtual",
+            "as": "(CASE WHEN \"verdict\" < 0 THEN \"min_feels_like_c\" WHEN \"verdict\" > 0 THEN \"max_feels_like_c\" ELSE \"feels_like_c\" END)"
+          }
+        },
+        "judged_bucket": {
+          "name": "judged_bucket",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "generated": {
+            "type": "virtual",
+            "as": "(CAST(\"judged_feels_like_c\" + 1000 AS INTEGER) - 1000)"
+          }
+        }
+      },
+      "indexes": {
+        "run_conditions_band": {
+          "name": "run_conditions_band",
+          "columns": [
+            "precip_class",
+            "judged_bucket",
+            "entry_created_at"
+          ],
+          "where": "\"run_conditions\".\"entry_shared\" = 1 AND \"run_conditions\".\"source\" != 'manual'",
+          "isUnique": false
+        },
+        "run_conditions_user": {
+          "name": "run_conditions_user",
+          "columns": [
+            "user_id"
           ],
           "isUnique": false
         }
@@ -3369,6 +3707,20 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "alerted_at": {
+          "name": "alerted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "hid_at": {
+          "name": "hid_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -3404,10 +3756,17 @@
           ],
           "isUnique": false
         },
-        "takedown_requests_held_at": {
-          "name": "takedown_requests_held_at",
+        "takedown_requests_hid_at": {
+          "name": "takedown_requests_hid_at",
           "columns": [
-            "held_at"
+            "hid_at"
+          ],
+          "isUnique": false
+        },
+        "takedown_requests_alerted_at": {
+          "name": "takedown_requests_alerted_at",
+          "columns": [
+            "alerted_at"
           ],
           "isUnique": false
         },
@@ -3640,6 +3999,21 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'system'"
+        },
+        "privacy_seen_at": {
+          "name": "privacy_seen_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "system_account": {
+          "name": "system_account",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         }
       },
       "indexes": {
@@ -4201,6 +4575,14 @@
             "expires_at"
           ],
           "isUnique": false
+        },
+        "session_user_id": {
+          "name": "session_user_id",
+          "columns": [
+            "user_id",
+            "created_at"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -4340,6 +4722,13 @@
           "name": "verification_identifier",
           "columns": [
             "identifier"
+          ],
+          "isUnique": false
+        },
+        "verification_expires_at": {
+          "name": "verification_expires_at",
+          "columns": [
+            "expires_at"
           ],
           "isUnique": false
         }

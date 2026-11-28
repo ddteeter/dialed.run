@@ -1,1 +1,0 @@
-ALTER TABLE `imports` ADD `claimed_by` text;

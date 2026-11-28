@@ -1,3 +1,16 @@
+CREATE TABLE `access_asks` (
+	`id` text PRIMARY KEY NOT NULL,
+	`email` text NOT NULL,
+	`note` text,
+	`blocked_region` text,
+	`token_hash` text NOT NULL,
+	`created_at` integer NOT NULL,
+	`confirmed_at` integer
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `access_asks_token` ON `access_asks` (`token_hash`);--> statement-breakpoint
+CREATE INDEX `access_asks_email` ON `access_asks` (`email`);--> statement-breakpoint
+CREATE INDEX `access_asks_created` ON `access_asks` (`created_at`);--> statement-breakpoint
 CREATE TABLE `access_requests` (
 	`id` text PRIMARY KEY NOT NULL,
 	`email` text NOT NULL,
@@ -35,6 +48,12 @@ CREATE TABLE `brands` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `brands_normalized` ON `brands` (`normalized`);--> statement-breakpoint
+CREATE TABLE `closed_addresses` (
+	`hash` text PRIMARY KEY NOT NULL,
+	`closed_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `closed_addresses_closed` ON `closed_addresses` (`closed_at`);--> statement-breakpoint
 CREATE TABLE `copyright_holds` (
 	`id` text PRIMARY KEY NOT NULL,
 	`moderation_action_id` text NOT NULL,
@@ -90,13 +109,6 @@ CREATE TABLE `domain_denylist` (
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `email_send_limits` (
-	`key` text PRIMARY KEY NOT NULL,
-	`window_started_at` integer NOT NULL,
-	`sends` integer NOT NULL
-);
---> statement-breakpoint
-CREATE INDEX `email_send_limits_window` ON `email_send_limits` (`window_started_at`);--> statement-breakpoint
 CREATE TABLE `email_verifications` (
 	`user_id` text NOT NULL,
 	`purpose` text NOT NULL,
@@ -142,6 +154,7 @@ CREATE TABLE `follows` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `follows_pk` ON `follows` (`follower_id`,`followee_id`);--> statement-breakpoint
+CREATE INDEX `follows_followee` ON `follows` (`followee_id`);--> statement-breakpoint
 CREATE TABLE `gave_up` (
 	`id` text PRIMARY KEY NOT NULL,
 	`kind` text NOT NULL,
@@ -155,6 +168,16 @@ CREATE TABLE `gave_up` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `gave_up_kind_subject` ON `gave_up` (`kind`,`subject_id`);--> statement-breakpoint
 CREATE INDEX `gave_up_last_failed` ON `gave_up` (`last_failed_at`);--> statement-breakpoint
+CREATE TABLE `held_take_downs` (
+	`action_id` text PRIMARY KEY NOT NULL,
+	`subject_type` text NOT NULL,
+	`subject_id` text NOT NULL,
+	`entry_id` text NOT NULL,
+	`owner_id` text NOT NULL,
+	`created_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `held_take_downs_subject` ON `held_take_downs` (`subject_type`,`subject_id`);--> statement-breakpoint
 CREATE TABLE `imports` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -164,7 +187,8 @@ CREATE TABLE `imports` (
 	`run_id` text,
 	`created_at` integer NOT NULL,
 	`idempotency_key` text,
-	`garmin_activity_id` text
+	`garmin_activity_id` text,
+	`claimed_by` text
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `imports_idempotency` ON `imports` (`user_id`,`idempotency_key`);--> statement-breakpoint
@@ -393,6 +417,15 @@ CREATE TABLE `quarantined_content` (
 CREATE INDEX `quarantined_content_quarantined` ON `quarantined_content` (`quarantined_at`);--> statement-breakpoint
 CREATE INDEX `quarantined_content_retain` ON `quarantined_content` (`retain_until`);--> statement-breakpoint
 CREATE INDEX `quarantined_content_action` ON `quarantined_content` (`moderation_action_id`);--> statement-breakpoint
+CREATE TABLE `rate_limits` (
+	`kind` text NOT NULL,
+	`subject` text NOT NULL,
+	`window_started_at` integer NOT NULL,
+	`count` integer NOT NULL,
+	PRIMARY KEY(`kind`, `subject`)
+);
+--> statement-breakpoint
+CREATE INDEX `rate_limits_window` ON `rate_limits` (`window_started_at`);--> statement-breakpoint
 CREATE TABLE `reactions` (
 	`entry_id` text NOT NULL,
 	`user_id` text NOT NULL,
@@ -452,9 +485,11 @@ CREATE TABLE `review_queue` (
 	`status` text DEFAULT 'pending' NOT NULL,
 	`resolved_by` text,
 	`resolved_at` integer,
+	`approved_at` integer,
 	`claimed_at` integer,
 	`created_at` integer NOT NULL,
-	`opened_at` integer
+	`opened_at` integer,
+	`hid` integer
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `review_queue_subject` ON `review_queue` (`subject_type`,`subject_id`);--> statement-breakpoint
@@ -462,6 +497,23 @@ CREATE INDEX `review_queue_claimed` ON `review_queue` (`status`,`claimed_at`);--
 CREATE INDEX `review_queue_status_created` ON `review_queue` (`status`,`created_at`);--> statement-breakpoint
 CREATE INDEX `review_queue_resolved` ON `review_queue` (`resolved_at`);--> statement-breakpoint
 CREATE INDEX `review_queue_source_opened` ON `review_queue` (`source`,`opened_at`);--> statement-breakpoint
+CREATE TABLE `run_conditions` (
+	`run_id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`feels_like_c` real,
+	`min_feels_like_c` real,
+	`max_feels_like_c` real,
+	`precip_class` text,
+	`source` text,
+	`verdict` integer,
+	`entry_created_at` integer,
+	`entry_shared` integer DEFAULT false NOT NULL,
+	`judged_feels_like_c` real GENERATED ALWAYS AS (CASE WHEN "verdict" < 0 THEN "min_feels_like_c" WHEN "verdict" > 0 THEN "max_feels_like_c" ELSE "feels_like_c" END) VIRTUAL,
+	`judged_bucket` integer GENERATED ALWAYS AS (CAST("judged_feels_like_c" + 1000 AS INTEGER) - 1000) VIRTUAL
+);
+--> statement-breakpoint
+CREATE INDEX `run_conditions_band` ON `run_conditions` (`precip_class`,`judged_bucket`,`entry_created_at`) WHERE "run_conditions"."entry_shared" = 1 AND "run_conditions"."source" != 'manual';--> statement-breakpoint
+CREATE INDEX `run_conditions_user` ON `run_conditions` (`user_id`);--> statement-breakpoint
 CREATE TABLE `runs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -528,14 +580,17 @@ CREATE TABLE `takedown_requests` (
 	`held_at` integer,
 	`confirm_token_hash` text,
 	`confirmed_at` integer,
-	`poster_username` text
+	`poster_username` text,
+	`alerted_at` integer,
+	`hid_at` integer
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `takedown_requests_idempotency` ON `takedown_requests` (`requester_email`,`idempotency_key`);--> statement-breakpoint
 CREATE INDEX `takedown_requests_status_due` ON `takedown_requests` (`status`,`due_at`);--> statement-breakpoint
 CREATE INDEX `takedown_requests_requester_status` ON `takedown_requests` (`requester_key`,`status`);--> statement-breakpoint
 CREATE INDEX `takedown_requests_ip_status` ON `takedown_requests` (`ip_key`,`status`);--> statement-breakpoint
-CREATE INDEX `takedown_requests_held_at` ON `takedown_requests` (`held_at`);--> statement-breakpoint
+CREATE INDEX `takedown_requests_hid_at` ON `takedown_requests` (`hid_at`);--> statement-breakpoint
+CREATE INDEX `takedown_requests_alerted_at` ON `takedown_requests` (`alerted_at`);--> statement-breakpoint
 CREATE UNIQUE INDEX `takedown_requests_confirm_token` ON `takedown_requests` (`confirm_token_hash`);--> statement-breakpoint
 CREATE INDEX `takedown_requests_resolved` ON `takedown_requests` (`resolved_at`);--> statement-breakpoint
 CREATE TABLE `terms_acceptances` (
@@ -568,7 +623,9 @@ CREATE TABLE `user_profiles` (
 	`count_in_totals` integer DEFAULT true NOT NULL,
 	`public_profile` integer DEFAULT false NOT NULL,
 	`public_closet` integer DEFAULT false NOT NULL,
-	`theme` text DEFAULT 'system' NOT NULL
+	`theme` text DEFAULT 'system' NOT NULL,
+	`privacy_seen_at` integer,
+	`system_account` integer DEFAULT false NOT NULL
 );
 --> statement-breakpoint
 CREATE INDEX `user_profiles_username_screen_pending` ON `user_profiles` (`username_screen`) WHERE "user_profiles"."username_screen" IN ('unknown', 'checking');--> statement-breakpoint
@@ -657,6 +714,7 @@ CREATE TABLE `session` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `session_token` ON `session` (`token`);--> statement-breakpoint
 CREATE INDEX `session_expires_at` ON `session` (`expires_at`);--> statement-breakpoint
+CREATE INDEX `session_user_id` ON `session` (`user_id`,`created_at`);--> statement-breakpoint
 CREATE TABLE `user` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -677,4 +735,5 @@ CREATE TABLE `verification` (
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `verification_identifier` ON `verification` (`identifier`);
+CREATE INDEX `verification_identifier` ON `verification` (`identifier`);--> statement-breakpoint
+CREATE INDEX `verification_expires_at` ON `verification` (`expires_at`);

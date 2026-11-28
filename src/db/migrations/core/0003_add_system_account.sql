@@ -1,1 +1,0 @@
-ALTER TABLE `user_profiles` ADD `system_account` integer DEFAULT false NOT NULL;
