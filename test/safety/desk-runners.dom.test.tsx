@@ -1059,9 +1059,31 @@ describe("a closed account's deletion (round 64 #372–373)", () => {
     expect(
       screen.getByText(bracketed("Link expired Nov 25")),
     ).toBeInTheDocument();
+    // A bracket and no line under it.
+    expect(
+      document.querySelector('[data-part="deletion-status"] p'),
+    ).toBeNull();
     await user.click(screen.getByRole("button", { name: "Send again" }));
     expect(
       screen.getByText(/It works once, until Fri, Dec 4\./u),
+    ).toBeInTheDocument();
+  });
+
+  it("starts each closed runner's panel afresh, the ask closed", async () => {
+    const dee: DeskRunner = { ...bo, userId: "u-dee", username: "dee" };
+    const user = userEvent.setup();
+    await renderDesk({ runners: [bo, dee] });
+    await user.click(screen.getByRole("button", { name: "—" }));
+    await user.click(
+      screen.getByRole("button", { name: "Send deletion link" }),
+    );
+    expect(screen.getByText(/^Send a deletion link to/u)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "@dee" }));
+
+    expect(screen.queryByText(/^Send a deletion link to/u)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Send deletion link" }),
     ).toBeInTheDocument();
   });
 

@@ -75,9 +75,6 @@ export interface ClosedStatus {
 
 export function closedStatusOf(panel: ClosedPanel): ClosedStatus | undefined {
   switch (panel.kind) {
-    case "offer": {
-      return undefined;
-    }
     case "sent": {
       return {
         tag: `Sent ${monthDayLabel(panel.sentAt)}`,
@@ -103,6 +100,8 @@ export function closedStatusOf(panel: ClosedPanel): ClosedStatus | undefined {
       };
     }
   }
+  // `offer`: nothing is sent, so there is nothing to say.
+  return undefined;
 }
 
 /**

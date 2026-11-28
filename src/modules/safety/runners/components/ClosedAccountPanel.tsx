@@ -82,7 +82,8 @@ function ClosedActs({
   onDone,
   panel,
 }: PanelProps & { readonly panel: ClosedPanel }): JSX.Element {
-  const [phase, setPhase] = useState<"pills" | "asking" | "cancelled">("pills");
+  // The pills until the ask opens; "cancelled" is the pills again, focused.
+  const [phase, setPhase] = useState<"asking" | "cancelled">();
   const reopening = useControlAction({
     action: () => reopen({ data: { userId: runner.userId } }),
     kicker: "Still closed",
