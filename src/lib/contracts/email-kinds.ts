@@ -244,6 +244,38 @@ export function stravaDisconnected() {
 export function deletionScheduled() {
   return emailKind("deletion_scheduled", {
     day: z.string().min(1),
+    /**
+     * A closed account's, through the Desk's deletion link (round 64
+     * #374.4): no way to keep it, since it can't log in, and a reply
+     * instead. Optional (law 9): an older build sends the runner's own.
+     */
+    closed: z.literal(true).optional(),
+  });
+}
+
+/**
+ * Round 64 #374.1: the Desk's link that lets a closed account schedule its
+ * own deletion, and the day it stops working. Sent now, never through the
+ * outbox: it carries a live token. `handle` is absent for a runner closed
+ * before they picked one.
+ */
+export function deletionLink() {
+  return emailKind("deletion_link", {
+    url: link(),
+    until: z.string().min(1),
+    handle: z.string().min(1).optional(),
+  });
+}
+
+/**
+ * Round 64 #374.2: the Desk closed the account because its runner is
+ * under 18, and the day its deletion lands. It names no rule and quotes no
+ * reason. `handle` is absent for a runner closed before they picked one.
+ */
+export function accountClosedAge() {
+  return emailKind("account_closed_age", {
+    day: z.string().min(1),
+    handle: z.string().min(1).optional(),
   });
 }
 

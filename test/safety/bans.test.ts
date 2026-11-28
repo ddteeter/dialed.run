@@ -1,9 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { session, user } from "../../src/db/schema-auth";
 import {
+  moderationActions,
   notifications,
   outbox,
   reports,
@@ -24,6 +25,7 @@ import {
   banUser,
   unbanUser,
   type Reopening,
+  type ReopenDeletion,
 } from "../../src/modules/safety/runners/bans";
 
 import { noPurge } from "../purge-spy";
@@ -266,6 +268,30 @@ describe("banning", () => {
     expect(await core().select().from(notifications)).toStrictEqual([]);
   });
 
+  it("tells the reporters of an age closure that it went (owner, 2026-11-27)", async () => {
+    const userId = await signedInUser(1);
+    const reporterId = await makeUser();
+    await core().insert(reports).values({
+      id: newUlid(),
+      reporterId,
+      subjectType: "profile",
+      subjectId: userId,
+      reason: "other",
+      createdAt: NOW,
+    });
+
+    await banUser(
+      { userId, reason: "Says 15", rule: "under_18", bannedBy: "op" },
+      noPurge,
+    );
+
+    expect(
+      await core()
+        .select({ userId: notifications.userId, kind: notifications.kind })
+        .from(notifications),
+    ).toStrictEqual([{ userId: reporterId, kind: "report_removed" }]);
+  });
+
   it("leaves other people's sessions alone", async () => {
     const banned = await signedInUser(2);
     const bystander = await signedInUser(2);
@@ -438,6 +464,79 @@ describe("unbanning", () => {
     await unbanUser(userId, "desk-operator", second);
     expect(second.settle).not.toHaveBeenCalled();
     expect(await owedReopens()).toStrictEqual([]);
+  });
+
+  it("lifts, records, owes and undoes nothing while a deletion holds it (round 64)", async () => {
+    const userId = await signedInUser(1);
+    await banUser(
+      { userId, reason: "spam", rule: "spam", bannedBy: "op" },
+      noPurge,
+    );
+    await core().delete(outbox);
+    const settle = vi.fn(() => Promise.resolve());
+    const writes = vi.fn<ReopenDeletion["writes"]>((database, stillBanned) => [
+      outboxInsertWhere(
+        database,
+        oweOutbox(reopenEmail(`${userId}-undo`, undefined)),
+        stillBanned,
+      ),
+    ]);
+
+    expect(
+      await unbanUser(
+        userId,
+        "desk-operator",
+        {
+          owe: (database, stillBanned) =>
+            outboxInsertWhere(
+              database,
+              oweOutbox(reopenEmail(userId, undefined)),
+              stillBanned,
+            ),
+          settle,
+        },
+        { heldBy: sql`1`, writes },
+      ),
+    ).toStrictEqual({ isReopened: false });
+
+    expect(await banStateOf(userId)).toMatchObject({ banned: true });
+    expect(await owedReopens()).toStrictEqual([]);
+    expect(settle).not.toHaveBeenCalled();
+    expect(
+      await core()
+        .select({ action: moderationActions.action })
+        .from(moderationActions)
+        .where(eq(moderationActions.subjectId, userId)),
+    ).toStrictEqual([{ action: "ban" }]);
+  });
+
+  it("runs the deletion's writes in the lift's batch when nothing holds it", async () => {
+    const userId = await signedInUser(1);
+    await banUser(
+      { userId, reason: "spam", rule: "spam", bannedBy: "op" },
+      noPurge,
+    );
+    await core().delete(outbox);
+    const writes = vi.fn<ReopenDeletion["writes"]>((database, stillBanned) => [
+      outboxInsertWhere(
+        database,
+        oweOutbox(reopenEmail(`${userId}-undo`, undefined)),
+        stillBanned,
+      ),
+    ]);
+
+    expect(
+      await unbanUser(userId, "desk-operator", undefined, {
+        heldBy: sql`0`,
+        writes,
+      }),
+    ).toStrictEqual({ isReopened: true });
+
+    expect(await banStateOf(userId)).toMatchObject({ banned: false });
+    // Ahead of the lift, so it read the account still closed.
+    expect(await owedReopens()).toStrictEqual([
+      { dedupeKey: `account_reopened:${userId}-undo` },
+    ]);
   });
 
   it("owes nothing for a runner who was never closed", async () => {

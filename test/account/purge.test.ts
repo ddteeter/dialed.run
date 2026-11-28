@@ -1342,6 +1342,7 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
         requestedAt: NOW - 8 * 86_400,
         purgeAfter: NOW - 86_400,
         purgeStartedAt: NOW - 600,
+        cause: "asked",
       },
     ]);
   });

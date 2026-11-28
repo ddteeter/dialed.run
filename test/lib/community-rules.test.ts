@@ -16,8 +16,10 @@ import {
 } from "../../src/lib/contracts/community-rules";
 import {
   closureRuleLabels,
+  CLOSURE_HAIRLINES,
   closureRuleOf,
   closureRules,
+  isAgeClosure,
   closureRuleSchema,
   removalReasons,
   removalReasonSchema,
@@ -127,17 +129,25 @@ describe("the rule a removal names", () => {
 });
 
 describe("the rule a closure names", () => {
-  it("offers every rule, then suspected CSAM, which names none", () => {
+  it("offers every rule, then Under 18 and suspected CSAM, which name none", () => {
     expect(closureRules).toStrictEqual([
       ...communityRuleKeys,
+      "under_18",
       "suspected_csam",
     ]);
     expect(closureRuleOf("suspected_csam")).toBeUndefined();
+    expect(closureRuleOf("under_18")).toBeUndefined();
     expect(closureRuleOf("harassment")).toBe("harassment");
     expect(closureRuleLabels).toStrictEqual({
       ...communityRules,
+      under_18: "Under 18",
       suspected_csam: "Suspected CSAM (the notice names no rule)",
     });
+    // Round 64 #373: a hairline on each side of Under 18.
+    expect(CLOSURE_HAIRLINES).toStrictEqual(["under_18", "suspected_csam"]);
+    expect(isAgeClosure("under_18")).toBe(true);
+    expect(isAgeClosure("suspected_csam")).toBe(false);
+    expect(isAgeClosure("harassment")).toBe(false);
     expect(
       closureRuleSchema.safeParse(undefined).error?.issues[0]?.message,
     ).toBe("Pick the rule it breaks.");

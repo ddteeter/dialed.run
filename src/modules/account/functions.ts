@@ -41,6 +41,7 @@ import {
   leavingView,
   requestAccountDeletion,
 } from "./data/deletion";
+import { confirmDeletionLink, readDeletionLanding } from "./data/deletion-link";
 import {
   acceptTermsInput,
   accessConfirmInput,
@@ -196,6 +197,27 @@ export const resendConfirmationFn = createServerFn({ method: "POST" })
 export const readEmailLinkFn = createServerFn({ method: "GET" })
   .validator((data: unknown) => confirmInput.parse(data))
   .handler(async ({ data }) => readEmailLanding(db(), data.token));
+
+/**
+ * The Desk's deletion link's page, as it opens (round 64 #374.3): what
+ * the link would do, or why it can't. GET, and it claims nothing (D-64).
+ * No session: a closed account can't sign in, and the token is the
+ * authority.
+ */
+export const readDeletionLinkFn = createServerFn({ method: "GET" })
+  .validator((data: unknown) => confirmInput.parse(data))
+  .handler(async ({ data }) => readDeletionLanding(db(), data.token));
+
+/**
+ * "Delete my account" on that page: spend the link and schedule the
+ * purge a week on. POST because it changes state; on the primary, whose
+ * reads authorise the write. No session, as above.
+ */
+export const confirmDeletionLinkFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => confirmInput.parse(data))
+  .handler(async ({ data }) =>
+    confirmDeletionLink(primaryCoreDb(), data.token, deletionEffectsFromEnv()),
+  );
 
 /**
  * The landing's one button: spend the link, and say which landing to

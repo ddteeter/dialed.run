@@ -12,12 +12,21 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { getRequest } from "@tanstack/react-start/server";
 
+import {
+  ageClosure,
+  deletionLinksOf,
+  reopenDeletionWrites,
+  reopenHeldBy,
+  sendDeletionLink,
+} from "../account/data";
+import { emailDepsFromEnv } from "../email";
 import { deploymentPosture, requireUserId, verifiedUserId } from "../auth";
 
 import { verifyTurnstileToken } from "../ops/edge";
 import { oweInCore, oweInCoreWhere } from "../ops/outbox";
 import { turnstileAttempt } from "../ops/edge";
 import { requireAdmin } from "./rules/admin";
+import { isAgeClosure } from "./rules/contracts";
 import {
   blockAndDeclineAll,
   confirmTakedownRequest,
@@ -32,6 +41,7 @@ import {
 } from "./takedowns/takedown-blocks";
 
 import { coreDb, env, primaryCoreDb } from "../../env";
+import { nowSeconds } from "../../lib/now";
 import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
 import { outboxInsert, outboxInsertWhere, oweOutbox } from "../ops/outbox";
 import { purgePublicPages, purgePublicPagesFor } from "../ops/public-web";
@@ -286,9 +296,17 @@ export const banUserAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const bannedBy = requireAdmin(await verifiedUserId());
     const ban = { ...data, bannedBy };
+    // Round 64 #373: an age closure schedules the deletion in the ban's
+    // batch and sends the age email in place of the ban's.
+    const age = await ageClosure(
+      primaryCoreDb(),
+      data.userId,
+      isAgeClosure(data.rule),
+    );
     // The ban's email, owed in the ban's batch, then the fast path.
-    const debt = oweOutbox(banEmail(ban));
+    const debt = oweOutbox(age.email ?? banEmail(ban));
     await banUser(ban, purgePublicPages, (database) => [
+      ...age.writes(database),
       outboxInsert(database, debt),
     ]);
     await settleOwedEmail(coreDb(), debt);
@@ -311,12 +329,35 @@ export const unbanUserAction = createServerFn({ method: "POST" })
     // lift's batch only while the account is still closed, and sent by the
     // fast path only when the lift reopened it (`unbanUser`).
     const debt = oweOutbox(await reopenEmailFor(data.userId));
-    await unbanUser(data.userId, unbannedBy, {
-      owe: (database, stillBanned) =>
-        outboxInsertWhere(database, debt, stillBanned),
-      settle: () => settleOwedEmail(coreDb(), debt),
-    });
-    return { banned: false };
+    const { isReopened } = await unbanUser(
+      data.userId,
+      unbannedBy,
+      {
+        owe: (database, stillBanned) =>
+          outboxInsertWhere(database, debt, stillBanned),
+        settle: () => settleOwedEmail(coreDb(), debt),
+      },
+      // Round 64: a deletion the runner chose holds it closed; a reopen
+      // cancels an age closure's deletion and withdraws a deletion link.
+      {
+        heldBy: reopenHeldBy(data.userId),
+        writes: (database, stillBanned) =>
+          reopenDeletionWrites(database, data.userId, stillBanned),
+      },
+    );
+    return { banned: !isReopened };
+  });
+
+/**
+ * D8's "Send deletion link" on a closed account (round 64 #372): a
+ * single-use link to the account's own address, for 7 days. Admin-only;
+ * the read that allows it is the primary's.
+ */
+export const sendDeletionLinkAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => unbanUserInput.parse(input))
+  .handler(async ({ data }) => {
+    requireAdmin(await verifiedUserId());
+    return sendDeletionLink(primaryCoreDb(), data.userId, emailDepsFromEnv());
   });
 
 /**
@@ -385,7 +426,11 @@ export const deskRunnersQuery = createServerFn({ method: "GET" })
       only: runnersWhere(data.filter),
     });
     return {
-      runners: await deskRunners(db, accounts),
+      runners: await deskRunners(db, accounts, async (chunk) =>
+        deletionLinksOf(db, chunk),
+      ),
+      // The load's time, so the panel's link states and the page agree.
+      now: nowSeconds(),
       // Round 28 #8 and R47·124: every filter's count, Flagged's at 0 too.
       counts: await runnerCounts(async (only) => accountCount(db, only)),
     };

@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
+import { deletionLinksOf } from "../../src/modules/account/data/deletion-link";
 
 import { user } from "../../src/db/schema-auth";
 import {
@@ -94,7 +95,9 @@ async function deskPage() {
     only: runnersWhere("all"),
   });
   const [runners, total] = await Promise.all([
-    deskRunners(core(), accounts),
+    deskRunners(core(), accounts, async (chunk) =>
+      deletionLinksOf(core(), chunk),
+    ),
     accountCount(core()),
   ]);
   return { runners, total };
@@ -115,19 +118,20 @@ async function seededDesk(n: number) {
 }
 
 describe("the Desk's runner list (listAccounts + deskRunners + accountCount)", () => {
-  // A legitimate formula: 1 list + 5 reads per `IN_LIST_CHUNK` (80,
+  // A legitimate formula: 1 list + 6 reads per `IN_LIST_CHUNK` (80,
   // src/lib/chunked.ts) of listed accounts (`deskRunners`: runs, profile
-  // reports, profiles, pending deletions, open flags) + 1 count. A page is
-  // at most `ACCOUNTS_PAGE` (100, src/modules/account/access/accounts.ts), so
-  // 1 + 5×2 + 1 at most; 1 and 25 accounts are both one chunk.
-  it("asks 1 + 5 + 1 for 1 account and for 25", async () => {
+  // reports, profiles, pending deletions, open flags, deletion links) + 1
+  // count. A page is at most `ACCOUNTS_PAGE` (100,
+  // src/modules/account/access/accounts.ts), so 1 + 6×2 + 1 at most; 1 and
+  // 25 accounts are both one chunk.
+  it("asks 1 + 6 + 1 for 1 account and for 25", async () => {
     const one = await seededDesk(1);
     const many = await seededDesk(25);
 
     expect(one.result.runners).toHaveLength(1);
     expect(many.result.runners).toHaveLength(25);
     expect(many.result.total).toBe(25);
-    expect(one.counts.core).toBe(1 + 5 + 1);
+    expect(one.counts.core).toBe(1 + 6 + 1);
     expectFlat(one.counts, many.counts);
   });
 });

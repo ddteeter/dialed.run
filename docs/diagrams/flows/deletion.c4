@@ -79,6 +79,124 @@ views {
     }
   }
 
+  dynamic view deletionLinkStory {
+    title 'A closed account is deleted through a link the Desk sends'
+
+    include
+      runner with {
+        description 'Holds a closed account, so cannot sign in'
+      }
+    include
+      cf.coreDb with {
+        description 'The delete link row, then the account_deletions row'
+      }
+
+    // source: src/modules/safety/functions.ts sendDeletionLinkAction; src/modules/account/data/deletion-link.ts sendDeletionLink, closedAccountOf
+    operator -> cf.app.safety.sendDeletionLink 'sends a closed account its deletion link' {
+      notes '''
+        Only a closed account with no deletion scheduled can be sent one, read on the primary.
+      '''
+    }
+    // source: src/modules/account/verification/email-links.ts claimFreshEmailLink, LINK_TTL_S; src/lib/contracts/garments.ts DELETION_LINK_TTL_S
+    cf.app.safety.sendDeletionLink -> cf.coreDb 'writes the link: its hash, for 7 days' {
+      notes '''
+        **Guard: one live link an account.** The write replaces only a link that ran out unused, so a second press sends nothing.
+      '''
+    }
+    // source: src/modules/account/data/deletion-link.ts sendDeletionLink, deletionLinkUrl; src/modules/email/deliver.ts deliverEmail
+    cf.app.safety.sendDeletionLink -> cf.app.email 'emails it to the account\'s own address, now' {
+      notes '''
+        **Not atomic with the write.** A failed send deletes the link, and the Desk reads NOT SENT and can press again. The link never rides the outbox.
+      '''
+    }
+    // source: src/modules/account/functions.ts readDeletionLinkFn; src/modules/account/data/deletion-link.ts readDeletionLanding, spendableOrEnd
+    runner -> cf.app.account.deletionLink 'opens the link: it asks, and spends nothing' {
+      notes '''
+        A link that ran out, was replaced, or was withdrawn by Reopen reads as LINK EXPIRED, whichever it was.
+      '''
+    }
+    // source: src/modules/account/functions.ts confirmDeletionLinkFn; src/modules/account/data/deletion-link.ts confirmDeletionLink, landedOrReleased; src/modules/account/verification/email-links.ts didClaimEmailLink
+    cf.app.account.deletionLink -> cf.coreDb 'claims the link, then writes the claim and owes the email, in one batch' {
+      notes '''
+        **Guard: claim, then work.** Two presses at once schedule once; the other reads already used.
+
+        **Guard: still closed.** The claim is written only while the account is closed, so a Reopen in between schedules nothing.
+
+        **If it fails:** the link is handed back, and the next press tries again.
+      '''
+    }
+    // source: src/modules/account/data/deletion-link.ts confirmDeletionLink (effects.keepAlive, effects.settle); src/modules/ops/owed-email/owed-email.ts settleOwedEmail
+    cf.app.account.deletionLink -[async]-> cf.app.ops.owedEmail 'sends "delete scheduled", after the response' {
+      notes '''
+        **Timing boundary: the press has answered.** The send goes on under waitUntil, with no way to keep the account: a reply instead.
+
+        **If it is lost:** the owed row stays, and an hourly drain sends it.
+      '''
+      navigateTo deletionRecovery
+    }
+    // source: src/modules/account/data/deletion-link.ts confirmDeletionLink (deletion-link-strava); src/modules/runs/strava/oauth.ts disconnectStrava
+    cf.app.account.deletionLink -> cf.app.runs 'disconnects Strava' {
+      notes '''
+        **Degrade, don\'t fail.** A failure is reported, and the purge disconnects whatever is still connected.
+      '''
+    }
+    // source: src/modules/account/data/deletion-link.ts confirmDeletionLink, deletionDay
+    runner <- cf.app.account.deletionLink 'answers with the day it goes' {
+      notes '''
+        **Timing boundary: the press ends here,** and a week begins. Signing in stays closed, and Reopen can no longer undo it.
+      '''
+    }
+    // source: src/modules/dispatch/scheduled.ts runDailyDigest, liveUpkeep (purgeDueAccounts); src/modules/ops/desk/crons.ts cronRegistry (0 12 * * *)
+    cf.app.cronDaily1200 -> cf.app.account.purge 'a week on, purges the account' {
+      notes '''
+        **Timing boundary: the week has passed.** The purge is the one every deletion ends in.
+      '''
+      navigateTo deletionPurge
+    }
+  }
+
+  dynamic view deletionForAge {
+    title 'The Desk closes an account for age, and its deletion is scheduled'
+
+    include
+      cf.coreDb with {
+        description 'The account_deletions row is the durable marker'
+      }
+
+    // source: src/modules/safety/functions.ts banUserAction; src/modules/safety/rules/contracts.ts isAgeClosure, closureRules
+    operator -> cf.app.safety.closeAccount 'closes the account: Under 18' {
+      notes '''
+        No link is sent: the Desk made this call.
+      '''
+    }
+    // source: src/modules/safety/runners/bans.ts banUser (db.batch); src/modules/account/data/deletion-link.ts ageClosure; src/lib/contracts/garments.ts DELETION_GRACE_S
+    cf.app.safety.closeAccount -> cf.coreDb 'closes it, signs it out, writes the claim and owes the age email, in one batch' {
+      notes '''
+        **Guard: one claim a runner.** A runner who had asked already keeps their own date, and the email says it.
+      '''
+    }
+    // source: src/modules/safety/functions.ts banUserAction; src/modules/ops/owed-email/owed-email.ts settleOwedEmail
+    cf.app.safety.closeAccount -> cf.app.ops.owedEmail 'sends the age email' {
+      notes '''
+        **If it fails:** the owed row stays, and an hourly drain sends it.
+      '''
+    }
+    opt 'the Desk reopens it within the week' {
+      // source: src/modules/safety/functions.ts unbanUserAction; src/modules/safety/runners/bans.ts unbanUser
+      operator -> cf.app.safety.reopenAccount 'reopens the account'
+      // source: src/modules/safety/runners/bans.ts unbanUser (db.batch); src/modules/account/data/deletion-link.ts reopenHeldBy, reopenDeletionWrites
+      cf.app.safety.reopenAccount -> cf.coreDb 'lifts the ban, cancels the deletion and withdraws any link, in one batch' {
+        notes '''
+          **Guard: held by a choice.** A deletion the runner chose, or a purge under way, keeps the account closed, and nothing is written.
+        '''
+      }
+    }
+    // source: src/modules/dispatch/scheduled.ts runDailyDigest, liveUpkeep (purgeDueAccounts); src/modules/ops/desk/crons.ts cronRegistry (0 12 * * *)
+    cf.app.cronDaily1200 -> cf.app.account.purge 'a week on, purges the account' {
+      navigateTo deletionPurge
+    }
+  }
+
   dynamic view deletionPurge {
     title 'An account is purged at the end of its week'
 

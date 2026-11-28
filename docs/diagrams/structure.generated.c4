@@ -368,8 +368,10 @@ model {
   cf.app.runs.strava -[imports]-> cf.app.ops.gaveUp
   cf.app.runs.strava -[imports]-> cf.app.ops.limits
   cf.app.safety -[wiring]-> cf.app.account.access
+  cf.app.safety -[wiring]-> cf.app.account.data
   cf.app.safety -[wiring]-> cf.app.account.handles
   cf.app.safety -[wiring]-> cf.app.auth
+  cf.app.safety -[wiring]-> cf.app.email
   cf.app.safety -[wiring]-> cf.app.ops.edge
   cf.app.safety -[wiring]-> cf.app.ops.outbox
   cf.app.safety -[wiring]-> cf.app.ops.owedEmail

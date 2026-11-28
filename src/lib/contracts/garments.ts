@@ -414,6 +414,12 @@ export const accountDeletionSchema = accountDeletionInput.extend({
 export const DELETION_GRACE_S = 7 * 24 * 60 * 60;
 
 /**
+ * How long the Desk's deletion link works for a closed account (round 64
+ * #372: "The link lasts 7 days").
+ */
+export const DELETION_LINK_TTL_S = 7 * 24 * 60 * 60;
+
+/**
  * The server's refusal of a deletion from an account with no password
  * whose Google sign-in is more than ten minutes old (ACC-9; round 27
  * #14): where the password field would be, above "Continue with Google".

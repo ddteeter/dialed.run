@@ -1,0 +1,1 @@
+ALTER TABLE `account_deletions` ADD `cause` text DEFAULT 'asked' NOT NULL;

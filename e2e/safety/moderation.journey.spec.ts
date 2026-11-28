@@ -1,5 +1,6 @@
 /**
- * Covers: D8 (Desk · Runners: Rename and Close account), the review
+ * Covers: D8 (Desk · Runners: Rename and Close account, and a closed
+ * account's deletion link and its page, round 64 #372–374), the review
  * queue's Remove that deletes, and round 28 #8's review row (the row
  * opens itself), then the author's run after a Remove (round 27 #20,
  * R-140: the band in place of the entry, naming the rule, C8), and the
@@ -23,6 +24,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 
 import {
+  accountDeletions,
   moderationActions,
   notifications,
   outfitEntries,
@@ -37,6 +39,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { userIdOf } from "../conformance/logging-fixtures";
 import { signInAsOperator } from "../desk/operator";
 import { expect, hydrated, scene, test } from "../support/demo";
+import { deletionLinkFor } from "../support/email-links";
 import { withLocalDb } from "../support/local-db";
 import {
   openRow,
@@ -284,6 +287,46 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       "A moderator removed this entry from the feed: it's an ad or spam.",
     );
     expect(left.profile[0]?.bannedAt).toEqual(expect.any(Number));
+
+    // Round 64 #372: the closed account's deletion link, sent from the
+    // Desk, then spent on its page with no session.
+    await scene(page, "A closed account: Send deletion link, asked in place");
+    await page.getByRole("button", { name: "Send deletion link" }).click();
+    await expect(
+      page.getByText(/^Send a deletion link to .+\? It works once, until /u),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Send link" }).click();
+    await expect(page.getByText(/^\[SENT /iu)).toBeVisible();
+    await expect(page.getByText(/Reopening cancels it\.$/u)).toBeVisible();
+
+    await scene(page, "The link's page asks first, and spends nothing");
+    await page.goto(await deletionLinkFor(`${handle}@example.com`));
+    await hydrated(page);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Delete your account?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Delete my account" }).click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: /^Your account goes on / }),
+    ).toBeVisible();
+    const scheduled = await withLocalDb(({ core }) =>
+      core
+        .select({ cause: accountDeletions.cause })
+        .from(accountDeletions)
+        .where(eq(accountDeletions.userId, runnerId)),
+    );
+    expect(scheduled).toStrictEqual([{ cause: "asked" }]);
+
+    await scene(page, "D8: the runner chose, so the panel has no pills");
+    await page.goto("/desk/runners");
+    await hydrated(page);
+    await page.getByRole("searchbox").fill(`${handle}@example.com`);
+    await page.getByRole("searchbox").press("Enter");
+    await page.getByRole("button", { name: /^@runner_\d{6}$/u }).click();
+    await expect(page.getByText(/^\[DELETES /iu)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Reopen account" }),
+    ).toHaveCount(0);
 
     // R-140: the author's side of a Remove. The demo runner above has no
     // login, so the band is shown on the safety account's own run: a run

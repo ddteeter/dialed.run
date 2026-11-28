@@ -35,6 +35,10 @@ import { withLocalDb } from "./local-db";
  * - **an access request's confirm link** is a fresh token whose SHA-256
  *   replaces the address's newest ask's, as the app's own ask makes it;
  *   everything from opening it on (`/account/confirm-access`, its one
+ *   button) is the app's own;
+ * - **the Desk's deletion link** (round 64) is a fresh secret whose
+ *   SHA-256 replaces the one the Desk's Send wrote, keeping that row's
+ *   expiry; everything from opening it on (`/account/deletion`, its one
  *   button) is the app's own.
  */
 
@@ -142,4 +146,28 @@ export async function unsubscribeLinkFor(email: string): Promise<string> {
   );
   const parsed = new URL(url);
   return `${parsed.pathname}${parsed.search}`;
+}
+
+/**
+ * The deletion link the Desk just sent this closed account (round 64
+ * #372), re-keyed to a secret the spec knows: the row the app wrote stays,
+ * with its expiry, and only its hash is replaced.
+ */
+export async function deletionLinkFor(email: string): Promise<string> {
+  const userId = await userIdOf(email);
+  const secret = randomBytes(32).toString("base64url");
+  await withLocalDb(async ({ core }) => {
+    const sent = await core
+      .update(emailVerifications)
+      .set({
+        tokenHash: createHash("sha256").update(secret).digest("base64url"),
+      })
+      .where(
+        sql`${emailVerifications.userId} = ${userId} AND ${emailVerifications.purpose} = 'delete'`,
+      )
+      .returning({ userId: emailVerifications.userId });
+    expect(sent, "the Desk sent no deletion link").toHaveLength(1);
+  });
+  const token = `delete.${userId}.${secret}`;
+  return `/account/deletion?token=${encodeURIComponent(token)}`;
 }

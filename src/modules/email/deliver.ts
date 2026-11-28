@@ -45,6 +45,9 @@ const REPLY_TO: Partial<Record<EmailKind, string>> = {
   content_removed: APPEAL_ADDRESS,
   account_closed: APPEAL_ADDRESS,
   account_reopened: APPEAL_ADDRESS,
+  // Round 64: a reply asks the Desk for a new link, or says the age was wrong.
+  deletion_link: APPEAL_ADDRESS,
+  account_closed_age: APPEAL_ADDRESS,
 };
 
 /**

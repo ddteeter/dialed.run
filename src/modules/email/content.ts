@@ -247,10 +247,7 @@ function receiptBody(
  * link the app builds, for a kit of ours or a photo on one, and otherwise
  * that it is not ours, never the link as typed.
  */
-function aboutSentence(
-  about: RemovalReceipt["about"],
-  origin: string,
-): string {
+function aboutSentence(about: RemovalReceipt["about"], origin: string): string {
   if (about === undefined) return "";
   if (about.kind === "elsewhere") {
     return ` This email is about a request for something that isn't on ${new URL(origin).host}. Only confirm it if you sent us that request.`;
@@ -264,6 +261,22 @@ function aboutSentence(
 function utcMinute(epochSeconds: number): string {
   const iso = new Date(epochSeconds * 1000).toISOString();
   return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
+}
+
+/**
+ * The deletion link's closed account (round 64 #374.1): named by its
+ * handle, or — for a runner closed before they picked one — as theirs
+ * (owner, 2026-11-27).
+ */
+function closedAccount(handle: string | undefined): string {
+  return handle === undefined ? "Your account" : `Your account @${handle}`;
+}
+
+/**
+The runner's handle as an email names it, or `instead` when they have none.
+*/
+function handleOr(handle: string | undefined, instead: string): string {
+  return handle === undefined ? instead : `@${handle}`;
 }
 
 function reopened(handle: string | undefined): string {
@@ -461,11 +474,38 @@ const CONTENT: {
     };
   },
   deletion_scheduled: (template, { origin }) => {
-    return {
+    const said = {
       subject: `Your dialed.run account goes on ${template.day}`,
       body: `You asked to delete your account. Everything in it goes on ${template.day}.`,
-      button: { label: "Keep my account", href: `${origin}/auth/login` },
-      foot: "Didn't ask? Log in and keep it, then change your password.",
+    };
+    // A closed account can't log in to keep it (round 64 #374.4; owner,
+    // 2026-11-27): no button, and a reply instead.
+    return template.closed === true
+      ? {
+          ...said,
+          foot: `If this wasn't you, reply to this email before ${template.day}.`,
+        }
+      : {
+          ...said,
+          button: { label: "Keep my account", href: `${origin}/auth/login` },
+          foot: "Didn't ask? Log in and keep it, then change your password.",
+        };
+  },
+  deletion_link: (template) => {
+    // Round 64 #374.1. It doesn't say "you asked": the Desk sends it.
+    return {
+      subject: "Delete your closed dialed.run account",
+      body: `${closedAccount(template.handle)} is closed. If you want it deleted too, use this link. Your runs, closet, entries and photos go 7 days after you confirm.`,
+      button: { label: "Delete my account", href: template.url },
+      foot: `The link works once, until ${template.until}. If you'd rather keep the account closed, ignore this email and nothing happens.`,
+    };
+  },
+  account_closed_age: (template) => {
+    // Round 64 #374.2: no rule, no reason and no link.
+    return {
+      subject: "Your dialed.run account is closed",
+      body: `We closed ${handleOr(template.handle, "your account")} because dialed.run is for runners 18 and over. Your runs, closet, entries and photos will be deleted on ${template.day}.`,
+      foot: "If we got your age wrong, reply to this email before then.",
     };
   },
   export_ready: (template, { origin }) => {

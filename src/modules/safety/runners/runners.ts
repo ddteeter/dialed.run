@@ -24,6 +24,7 @@ import {
   userProfiles,
 } from "../../../db/schema-core";
 import { readInChunks } from "../../../lib/chunked";
+import { maskedAddress } from "../../email";
 import { runCountsOf } from "../../runs";
 
 import { flaggedAtOf, flaggedWhere } from "./account-flags";
@@ -49,15 +50,38 @@ export interface ListedAccount {
   joinedAt: number;
 }
 
+/**
+ * A deletion waiting on the account, whatever its state: when it was
+ * asked for, when the purge comes, and who scheduled it (round 64 #373:
+ * `under_18` is the Desk's age closure).
+ */
+export interface DeskDeletion {
+  requestedAt: number;
+  purgeAfter: number;
+  cause: "asked" | "under_18";
+}
+
+/**
+ * A closed account's deletion link (round 64 #372): when it runs out, and
+ * whether it was used. Account reads it (`deletionLinksOf`), and the
+ * route's server function hands it in, as it does the accounts.
+ */
+export interface DeskDeletionLink {
+  expiresAt: number;
+  isUsed: boolean;
+}
+
 export interface DeskRunner extends ListedAccount {
   runs: number;
   reports: number;
   state: RunnerState;
-  /**
-  A deletion request waits on the account, whatever its state.
-  */
-  isLeaving: boolean;
+  deletion: DeskDeletion | undefined;
   banReason: string | undefined;
+  /**
+  The address as the Desk's deletion-link ask names it (round 64 #372).
+  */
+  maskedEmail: string;
+  deletionLink: DeskDeletionLink | undefined;
   /**
    * When an intimate-image removal of theirs last flagged the account
    * for a decision (D-161 1); absent when no flag is open.
@@ -127,10 +151,13 @@ export async function runnerCounts(
 export async function deskRunners(
   db: Db,
   accounts: readonly ListedAccount[],
+  linksOf: (
+    userIds: readonly string[],
+  ) => Promise<[string, DeskDeletionLink][]>,
 ): Promise<DeskRunner[]> {
   const ids = accounts.map((account) => account.userId);
-  const [runCounts, reportCounts, profiles, leaving, flags] = await Promise.all(
-    [
+  const [runCounts, reportCounts, profiles, leaving, flags, links] =
+    await Promise.all([
       readInChunks(ids, async (chunk) => runCountsOf(db, chunk)),
       readInChunks(ids, async (chunk) =>
         db
@@ -149,34 +176,49 @@ export async function deskRunners(
           .from(userProfiles)
           .where(inArray(userProfiles.userId, chunk)),
       ),
+      // The whole claim: a primary-key seek, at most one row a runner.
       readInChunks(ids, async (chunk) =>
         db
-          .select({ userId: accountDeletions.userId })
+          .select()
           .from(accountDeletions)
           .where(inArray(accountDeletions.userId, chunk)),
       ),
       readInChunks(ids, async (chunk) => [...(await flaggedAtOf(db, chunk))]),
-    ],
+      readInChunks(ids, linksOf),
+    ]);
+  const runsOf = new Map<string, number>();
+  for (const row of runCounts) runsOf.set(row.userId, row.runs);
+  const reportsOf = new Map<string, number>();
+  for (const row of reportCounts) reportsOf.set(row.userId, row.reports);
+  const profileOf = new Map<string, (typeof profiles)[number]>();
+  for (const row of profiles) profileOf.set(row.userId, row);
+  const deletionOf = new Map(
+    leaving.map((row) => [
+      row.userId,
+      {
+        requestedAt: row.requestedAt,
+        purgeAfter: row.purgeAfter,
+        cause: row.cause,
+      },
+    ]),
   );
-  const runsOf = new Map(runCounts.map((row) => [row.userId, row.runs]));
-  const reportsOf = new Map(
-    reportCounts.map((row) => [row.userId, row.reports]),
-  );
-  const profileOf = new Map(profiles.map((row) => [row.userId, row]));
-  const leavingIds = new Set(leaving.map((row) => row.userId));
   const flaggedAt = new Map(flags);
+  const linkOf = new Map(links);
   return accounts.map((account) => {
     const profile = profileOf.get(account.userId);
+    const deletion = deletionOf.get(account.userId);
     return {
       ...account,
       runs: runsOf.get(account.userId) ?? 0,
       reports: reportsOf.get(account.userId) ?? 0,
       state: stateOf(
         typeof profile?.bannedAt === "number",
-        leavingIds.has(account.userId),
+        deletion !== undefined,
       ),
-      isLeaving: leavingIds.has(account.userId),
+      deletion,
       banReason: profile?.banReason ?? undefined,
+      maskedEmail: maskedAddress(account.email),
+      deletionLink: linkOf.get(account.userId),
       flaggedAt: flaggedAt.get(account.userId),
     };
   });

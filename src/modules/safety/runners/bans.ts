@@ -20,7 +20,11 @@ import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { session } from "../../../db/schema-auth";
-import { notifications, userProfiles } from "../../../db/schema-core";
+import {
+  moderationActions,
+  notifications,
+  userProfiles,
+} from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { runnerCacheTag, type PurgeTags } from "../../../lib/cache-tags";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
@@ -67,9 +71,10 @@ export async function banUser(
 ): Promise<void> {
   const bannedAt = nowSeconds();
   // The runner's reporters are told it went (C8, D-132), read before the
-  // batch — unless it is suspected CSAM, which tells nobody (D-70).
+  // batch — unless it is suspected CSAM, which tells nobody (D-70). An
+  // age closure tells them too (owner, 2026-11-27).
   const told =
-    closureRuleOf(input.rule) === undefined
+    input.rule === "suspected_csam"
       ? []
       : await reporterNotices(db(), "profile", input.userId, "removed");
   // The follow rows on others' bells that name them go with the ban: the
@@ -168,6 +173,22 @@ export interface Reopening {
 }
 
 /**
+ * What a Reopen does about a deletion (round 64 #372–373; owner,
+ * 2026-11-27), handed in by the server function because safety cannot
+ * reach account: `heldBy`, a deletion that keeps the account closed — one
+ * the runner chose, or a purge under way — and `writes`, what a reopen
+ * also undoes (an age closure's deletion, a deletion link), in the lift's
+ * batch and on its condition.
+ */
+export interface ReopenDeletion {
+  readonly heldBy: SQL;
+  readonly writes: (
+    database: ReturnType<typeof db>,
+    stillBanned: StillBanned,
+  ) => BatchItem<"sqlite">[];
+}
+
+/**
  * Lifts a ban. No appeal flow exists (packet §4), so the only caller is a
  * person who decided directly — but the path has to exist, because a ban
  * applied by mistake with no way back is worse than no ban mechanism.
@@ -183,17 +204,25 @@ export interface Reopening {
  * `banned_at` is still set, and the fast path runs only when the lift
  * found a ban to lift. Two presses racing each other are ordered by D1:
  * the second batch finds the ban already gone.
+ *
+ * **A deletion can hold it** (`deletion.heldBy`): then nothing lifts, and
+ * nothing is recorded, owed or undone. `isReopened` says which.
  */
 export async function unbanUser(
   userId: string,
   unbannedBy: string,
   reopening?: Reopening,
-): Promise<void> {
-  // This runner, while still banned: what the lift changes, and what
-  // the email's insert, ahead of it in the batch, reads.
+  deletion?: ReopenDeletion,
+): Promise<{ readonly isReopened: boolean }> {
+  // This runner, while still banned and nothing holds it: what the lift
+  // changes, and what every statement ahead of it in the batch reads.
+  const banned = sql`${userProfiles.userId} = ${userId} AND ${userProfiles.bannedAt} IS NOT NULL`;
   const stillBanned: StillBanned = {
     table: userProfiles,
-    where: sql`${userProfiles.userId} = ${userId} AND ${userProfiles.bannedAt} IS NOT NULL`,
+    where:
+      deletion === undefined
+        ? banned
+        : sql`${banned} AND NOT ${deletion.heldBy}`,
   };
   const lift = db()
     .update(userProfiles)
@@ -203,12 +232,12 @@ export async function unbanUser(
     // This is the exact failure lib/sql/sql-null.ts was written to prevent, and
     // it still got written once before the docblock was taken seriously.
     .set({ bannedAt: orSqlNull(undefined), banReason: orSqlNull(undefined) })
-    .where(stillBanned.where)
-    .returning({ userId: userProfiles.userId });
+    .where(stillBanned.where);
   // The lift is recorded beside the ban it undoes, and only where there
   // is one: ahead of the lift, while `banned_at` is still set, so a
   // Reopen of an account that is not closed records nothing (an `unban`
-  // row is a decision on the account, and clears its flag).
+  // row is a decision on the account, and clears its flag). First in the
+  // batch, so whether it was written says whether the lift happened.
   const record = moderationActionInsertWhere(
     db(),
     {
@@ -220,17 +249,16 @@ export async function unbanUser(
       reason: "Reopened from the Desk",
     },
     sql`EXISTS (SELECT 1 FROM ${stillBanned.table} WHERE ${stillBanned.where})`,
-  );
-  if (reopening === undefined) {
-    await db().batch([record, lift]);
-    return;
-  }
-  const written = await db().batch([
-    reopening.owe(db(), stillBanned),
+  ).returning({ id: moderationActions.id });
+  const [recorded] = await db().batch([
     record,
+    ...(reopening === undefined ? [] : [reopening.owe(db(), stillBanned)]),
+    ...(deletion?.writes(db(), stillBanned) ?? []),
     lift,
   ]);
-  if (written[2].length > 0) await reopening.settle();
+  const isReopened = recorded.length > 0;
+  if (isReopened) await reopening?.settle();
+  return { isReopened };
 }
 
 /**

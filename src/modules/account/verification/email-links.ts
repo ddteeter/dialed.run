@@ -1,7 +1,8 @@
 /**
  * The links that confirm an address (ACC-3, ACC-8; round 26 #11): one per
  * runner and purpose, single use, for 24 hours, and replaced — not joined —
- * by the next one sent.
+ * by the next one sent. The Desk's deletion link for a closed account
+ * (design 289) is the same kind of link, for 7 days.
  *
  * Our own rather than Better Auth's `emailVerification`, whose tokens are
  * signed and stateless: they cannot be withdrawn, so "the old one no longer
@@ -9,12 +10,13 @@
  * A row per runner and purpose gives both. Only the token's SHA-256 is
  * stored.
  */
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, lte, sql } from "drizzle-orm";
 import type { DrizzleD1Database, drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { user } from "../../../db/schema-auth";
 import { emailVerifications } from "../../../db/schema-core";
+import { DELETION_LINK_TTL_S } from "../../../lib/contracts";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
 
@@ -27,10 +29,28 @@ export const EMAIL_LINK_TTL_S = 24 * 60 * 60;
 
 /**
  * `verify` confirms the address the account was made with; `change`
- * moves the account to a new one.
+ * moves the account to a new one; `delete` lets a closed account schedule
+ * its own deletion (design 289).
  */
-const linkPurposeSchema = z.enum(["verify", "change"]);
+const linkPurposeSchema = z.enum(["verify", "change", "delete"]);
 export type LinkPurpose = z.infer<typeof linkPurposeSchema>;
+
+/**
+ * The purposes `/account/verify` spends. Each landing reads only its own
+ * links, so a deletion link is never spent as a confirmation, nor a
+ * confirmation as a deletion.
+ */
+export const CONFIRM_PURPOSES = ["verify", "change"] as const;
+export type ConfirmPurpose = (typeof CONFIRM_PURPOSES)[number];
+
+/**
+How long each purpose's link works.
+*/
+const LINK_TTL_S: Readonly<Record<LinkPurpose, number>> = {
+  verify: EMAIL_LINK_TTL_S,
+  change: EMAIL_LINK_TTL_S,
+  delete: DELETION_LINK_TTL_S,
+};
 
 /**
  * A token as it arrives in a link's search: untrusted, so parsed. Exactly
@@ -82,14 +102,9 @@ export async function emailLinkWrite(
   link: Readonly<{ userId: string; purpose: LinkPurpose; email: string }>,
   now = nowSeconds(),
 ) {
-  const secret = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
-  const values = {
-    email: link.email,
-    tokenHash: await sha256(secret),
-    expiresAt: now + EMAIL_LINK_TTL_S,
-  };
+  const { token, values } = await freshLink(link, now);
   return {
-    token: `${link.purpose}.${link.userId}.${secret}`,
+    token,
     write: db
       .insert(emailVerifications)
       .values({ userId: link.userId, purpose: link.purpose, ...values })
@@ -99,6 +114,50 @@ export async function emailLinkWrite(
         set: { ...values, usedAt: sql`NULL` },
       }),
   };
+}
+
+/**
+ * A new secret, its token and the row's values: the hash, never the secret.
+ */
+async function freshLink(
+  link: Readonly<{ userId: string; purpose: LinkPurpose; email: string }>,
+  now: number,
+) {
+  const secret = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+  return {
+    token: `${link.purpose}.${link.userId}.${secret}`,
+    values: {
+      email: link.email,
+      tokenHash: await sha256(secret),
+      expiresAt: now + LINK_TTL_S[link.purpose],
+    },
+  };
+}
+
+/**
+ * A fresh link only where none is live (law 2, claim then work): written
+ * when the runner has no link for this purpose, or over one that ran out
+ * unspent, and never over a live or a spent one. The token when this
+ * claim wrote the row, `undefined` when it did not — so a second press
+ * sends nothing. The Desk's deletion link is one at a time (round 64
+ * #372).
+ */
+export async function claimFreshEmailLink(
+  db: Db,
+  link: Readonly<{ userId: string; purpose: LinkPurpose; email: string }>,
+  now = nowSeconds(),
+): Promise<string | undefined> {
+  const { token, values } = await freshLink(link, now);
+  const written = await db
+    .insert(emailVerifications)
+    .values({ userId: link.userId, purpose: link.purpose, ...values })
+    .onConflictDoUpdate({
+      target: [emailVerifications.userId, emailVerifications.purpose],
+      set: values,
+      setWhere: sql`${lte(emailVerifications.expiresAt, now)} AND ${isNull(emailVerifications.usedAt)}`,
+    })
+    .returning({ userId: emailVerifications.userId });
+  return written.length === 0 ? undefined : token;
 }
 
 /**
@@ -124,9 +183,9 @@ export function changeLinkWithdrawal(db: Db, userId: string) {
  * no link, a link replaced by a newer one — is `undefined`, which the
  * landing calls "run out".
  */
-export interface ReadLink {
+export interface ReadLink<Purpose extends LinkPurpose = LinkPurpose> {
   readonly userId: string;
-  readonly purpose: LinkPurpose;
+  readonly purpose: Purpose;
   /**
   The address the link confirms.
   */
@@ -139,13 +198,17 @@ export interface ReadLink {
   readonly tokenHash: string;
 }
 
-export async function readEmailLink(
+export async function readEmailLink<Purpose extends LinkPurpose>(
   db: Db,
   token: unknown,
-): Promise<ReadLink | undefined> {
+  purposes: readonly Purpose[],
+): Promise<ReadLink<Purpose> | undefined> {
   const parsed = linkTokenSchema.safeParse(token);
   if (!parsed.success) return undefined;
-  const [purpose, userId, secret] = parsed.data;
+  const [named, userId, secret] = parsed.data;
+  const purpose = purposes.find((each) => each === named);
+  // A link for another landing reads here as one that ran out.
+  if (purpose === undefined) return undefined;
   const row = await firstRowWhere(
     db,
     emailVerifications,

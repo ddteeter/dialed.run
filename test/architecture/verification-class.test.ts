@@ -121,6 +121,10 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "account/functions.ts resendConfirmationFn": "sessionless",
   "account/functions.ts confirmEmailFn": "sessionless",
   "account/functions.ts readEmailLinkFn": "sessionless",
+  // Round 64 #374.3: a closed account can't sign in; the link's token is
+  // the authority, single use and withdrawn by Reopen.
+  "account/functions.ts readDeletionLinkFn": "sessionless",
+  "account/functions.ts confirmDeletionLinkFn": "sessionless",
   // Q8: trusts the address.
   "account/functions.ts requestEmailChangeFn": "verified",
   "account/functions.ts turnstileSiteKeyQuery": "sessionless",
@@ -311,6 +315,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts banUserAction": "admin",
   "safety/functions.ts denyDomainAction": "admin",
   "safety/functions.ts unbanUserAction": "admin",
+  // Round 64 #372: the Desk's deletion link for a closed account.
+  "safety/functions.ts sendDeletionLinkAction": "admin",
   "safety/functions.ts keepAccountAction": "admin",
   "safety/functions.ts reviewHandleAction": "admin",
   "safety/functions.ts forceRenameAction": "admin",

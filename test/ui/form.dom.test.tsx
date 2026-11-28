@@ -1761,7 +1761,7 @@ describe("ChoiceField", () => {
     );
   });
 
-  it("rules the list off before the option it names, and only there (round 39 #76)", () => {
+  it("rules the list off before each option it names, and only there (round 39 #76, round 64 #373)", () => {
     const { container } = render(
       <ChoiceField
         name="layer"
@@ -1771,7 +1771,7 @@ describe("ChoiceField", () => {
         options={LAYERS}
         optionLabels={LAYER_LABELS}
         onChange={vi.fn()}
-        hairlineBefore="outer"
+        hairlinesBefore={["mid", "outer"]}
       />,
     );
     const select = screen.getByLabelText("Layer");
@@ -1779,8 +1779,8 @@ describe("ChoiceField", () => {
       [...select.children].map((child) =>
         child.tagName === "HR" ? "—" : child.textContent,
       ),
-    ).toStrictEqual(["Not set", "Base", "Mid", "—", "Outer"]);
-    expect(container.querySelectorAll("hr")).toHaveLength(1);
+    ).toStrictEqual(["Not set", "Base", "—", "Mid", "—", "Outer"]);
+    expect(container.querySelectorAll("hr")).toHaveLength(2);
   });
 
   it("draws no hairline unless asked", () => {

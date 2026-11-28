@@ -643,6 +643,71 @@ describe("emailContent", () => {
         footer: LEGAL,
       },
     ],
+    // Round 64 #374.4: a closed account's, through the Desk's link.
+    [
+      { kind: "deletion_scheduled", day: "Fri, Dec 4", closed: true },
+      {
+        subject: "Your dialed.run account goes on Fri, Dec 4",
+        body: "You asked to delete your account. Everything in it goes on Fri, Dec 4.",
+        foot: "If this wasn't you, reply to this email before Fri, Dec 4.",
+        footer: LEGAL,
+      },
+    ],
+    // Round 64 #374.1, and a runner closed before they picked a handle.
+    [
+      {
+        kind: "deletion_link",
+        url: `${ORIGIN}/account/deletion?token=t`,
+        until: "Fri, Dec 4",
+        handle: "runner_1290",
+      },
+      {
+        subject: "Delete your closed dialed.run account",
+        body: "Your account @runner_1290 is closed. If you want it deleted too, use this link. Your runs, closet, entries and photos go 7 days after you confirm.",
+        button: {
+          label: "Delete my account",
+          href: `${ORIGIN}/account/deletion?token=t`,
+        },
+        foot: "The link works once, until Fri, Dec 4. If you'd rather keep the account closed, ignore this email and nothing happens.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      {
+        kind: "deletion_link",
+        url: `${ORIGIN}/account/deletion?token=t`,
+        until: "Fri, Dec 4",
+      },
+      {
+        subject: "Delete your closed dialed.run account",
+        body: "Your account is closed. If you want it deleted too, use this link. Your runs, closet, entries and photos go 7 days after you confirm.",
+        button: {
+          label: "Delete my account",
+          href: `${ORIGIN}/account/deletion?token=t`,
+        },
+        foot: "The link works once, until Fri, Dec 4. If you'd rather keep the account closed, ignore this email and nothing happens.",
+        footer: LEGAL,
+      },
+    ],
+    // Round 64 #374.2.
+    [
+      { kind: "account_closed_age", day: "Fri, Dec 4", handle: "runner_1290" },
+      {
+        subject: "Your dialed.run account is closed",
+        body: "We closed @runner_1290 because dialed.run is for runners 18 and over. Your runs, closet, entries and photos will be deleted on Fri, Dec 4.",
+        foot: "If we got your age wrong, reply to this email before then.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      { kind: "account_closed_age", day: "Fri, Dec 4" },
+      {
+        subject: "Your dialed.run account is closed",
+        body: "We closed your account because dialed.run is for runners 18 and over. Your runs, closet, entries and photos will be deleted on Fri, Dec 4.",
+        foot: "If we got your age wrong, reply to this email before then.",
+        footer: LEGAL,
+      },
+    ],
     [
       { kind: "export_ready", token: "0123456789abcdef0123456789abcdef" },
       {

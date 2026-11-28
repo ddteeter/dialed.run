@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 import {
   FailureBand,
@@ -123,8 +123,8 @@ function LandingAction({
  * failed. The words are the owner's; the composition is the unsubscribe
  * landing's until Design draws it (design deltas).
  */
-interface AskCopy {
-  readonly kicker: string;
+export interface AskCopy {
+  readonly kicker?: string;
   readonly heading: string;
   readonly body: string;
   readonly label: string;
@@ -152,7 +152,11 @@ export function askCopy(landing: AskLanding): AskCopy {
       };
 }
 
-function AskPanel({
+/**
+ * The ask, for any link that asks first: the kicker is optional (the
+ * Desk's deletion link has none).
+ */
+export function AskPanel({
   copy,
   form,
   submit,
@@ -165,9 +169,11 @@ function AskPanel({
     <SignedOutPanel
       heading={copy.heading}
       notice={
-        <Mono step="xs" className="text-quiet">
-          {copy.kicker}
-        </Mono>
+        copy.kicker === undefined ? undefined : (
+          <Mono step="xs" className="text-quiet">
+            {copy.kicker}
+          </Mono>
+        )
       }
     >
       <form
@@ -204,6 +210,52 @@ function AskPanel({
 }
 
 /**
+ * A landing's end, for any link that lands on one (the confirm links and
+ * the Desk's deletion link, round 64 #374.3): its kicker in its tone, the
+ * heading, a sentence and the way on, if there is one. `said` is what the
+ * status region says: the heading, when the button led here, since the
+ * question it answered is gone; nothing when the page opened onto it.
+ */
+export function LandingEnd({
+  kicker,
+  toneClass,
+  heading,
+  body,
+  state,
+  said,
+  children,
+}: Readonly<{
+  kicker: string;
+  toneClass: string;
+  heading: string;
+  body: string;
+  state: string;
+  said: string;
+  children?: ReactNode;
+}>): JSX.Element {
+  return (
+    <SignedOutPanel
+      heading={heading}
+      notice={
+        <Mono step="xs" className={toneClass}>
+          {kicker}
+        </Mono>
+      }
+    >
+      <div
+        data-part="landing"
+        data-state={state}
+        className="flex flex-col gap-6"
+      >
+        <FormStatus>{said}</FormStatus>
+        <p className="m-0 text-lead">{body}</p>
+        {children}
+      </div>
+    </SignedOutPanel>
+  );
+}
+
+/**
  * `pressed` when the button led here: the status region says the heading,
  * since the question it answered is gone. Opened straight onto a landing,
  * it says nothing — the heading is the page's.
@@ -214,25 +266,45 @@ function EndPanel({
 }: Readonly<{ landing: EndLanding; pressed: boolean }>): JSX.Element {
   const copy = landingCopy(landing);
   return (
-    <SignedOutPanel
+    <LandingEnd
+      kicker={copy.kicker}
+      toneClass={TONE_CLASS[copy.tone]}
       heading={copy.heading}
-      notice={
-        <Mono step="xs" className={TONE_CLASS[copy.tone]}>
-          {copy.kicker}
-        </Mono>
-      }
+      body={copy.body}
+      state={landing.state}
+      said={pressed ? `${copy.heading}.` : ""}
     >
-      <div
-        data-part="landing"
-        data-state={landing.state}
-        className="flex flex-col gap-6"
-      >
-        <FormStatus>{pressed ? `${copy.heading}.` : ""}</FormStatus>
-        <p className="m-0 text-lead">{copy.body}</p>
-        <LandingAction action={copy.action} />
-      </div>
-    </SignedOutPanel>
+      <LandingAction action={copy.action} />
+    </LandingEnd>
   );
+}
+
+/**
+ * The state every link landing keeps: the landing on show, and the one
+ * button that spends the link through `confirm`, a POST, whose answer
+ * replaces it. `pressed` is true once the button led here.
+ */
+export function useConfirmLink<L>(
+  landing: L,
+  confirm: () => Promise<L>,
+): { current: L; form: FormShell; submit: () => void; pressed: boolean } {
+  const [current, setCurrent] = useState(landing);
+  const form = useFormSubmit({
+    schema: confirmLinkForm,
+    action: () => confirm(),
+    onSuccess: setCurrent,
+    // The landing it answers with says what happened (`EndPanel`): a link
+    // spent in another tab meanwhile is not "confirmed".
+    successMessage: "",
+  });
+  return {
+    current,
+    form,
+    submit: () => {
+      void form.submit({});
+    },
+    pressed: current !== landing,
+  };
 }
 
 /**
@@ -247,25 +319,10 @@ export function LinkLanding({
   landing: Landing;
   confirm: () => Promise<Landing>;
 }>): JSX.Element {
-  const [current, setCurrent] = useState(landing);
-  const form = useFormSubmit({
-    schema: confirmLinkForm,
-    action: () => confirm(),
-    onSuccess: setCurrent,
-    // The landing it answers with says what happened (`EndPanel`): a link
-    // spent in another tab meanwhile is not "confirmed".
-    successMessage: "",
-  });
-  if (current.state === "ask") {
-    return (
-      <AskPanel
-        copy={askCopy(current)}
-        form={form}
-        submit={() => {
-          void form.submit({});
-        }}
-      />
-    );
-  }
-  return <EndPanel landing={current} pressed={current !== landing} />;
+  const { current, form, submit, pressed } = useConfirmLink(landing, confirm);
+  return current.state === "ask" ? (
+    <AskPanel copy={askCopy(current)} form={form} submit={submit} />
+  ) : (
+    <EndPanel landing={current} pressed={pressed} />
+  );
 }

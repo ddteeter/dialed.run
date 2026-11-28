@@ -8,6 +8,8 @@ import {
 } from "./helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { deletionLinksOf } from "../../src/modules/account/data/deletion-link";
+import { maskedAddress } from "../../src/modules/email";
 
 import { z } from "zod";
 
@@ -257,7 +259,9 @@ async function deskList(filter: {
     query: filter.query,
     only: runnersWhere(filter.filter),
   });
-  return deskRunners(core(), accounts);
+  return deskRunners(core(), accounts, async (chunk) =>
+    deletionLinksOf(core(), chunk),
+  );
 }
 
 async function idsFor(filter: {
@@ -2280,8 +2284,10 @@ describe("deskRunners, D8 (round 27 #22)", () => {
         runs: 0,
         reports: 0,
         state: "CLOSED",
-        isLeaving: false,
+        deletion: undefined,
         banReason: "Spam",
+        maskedEmail: maskedAddress("bo@example.com"),
+        deletionLink: undefined,
         flaggedAt: undefined,
       },
       {
@@ -2292,8 +2298,10 @@ describe("deskRunners, D8 (round 27 #22)", () => {
         runs: 2,
         reports: 1,
         state: "ACTIVE",
-        isLeaving: false,
+        deletion: undefined,
         banReason: undefined,
+        maskedEmail: maskedAddress("Ada@Example.com"),
+        deletionLink: undefined,
         flaggedAt: undefined,
       },
     ]);
@@ -2399,15 +2407,21 @@ describe("deskRunners, D8 (round 27 #22)", () => {
         runs: 0,
         reports: 0,
         state: "ACTIVE",
-        isLeaving: false,
+        deletion: undefined,
         banReason: undefined,
+        maskedEmail: maskedAddress("bare@example.com"),
+        deletionLink: undefined,
         flaggedAt: undefined,
       },
     ]);
   });
 
   it("adds nothing, and reads nothing, for no accounts", async () => {
-    expect(await deskRunners(core(), [])).toStrictEqual([]);
+    expect(
+      await deskRunners(core(), [], async (chunk) =>
+        deletionLinksOf(core(), chunk),
+      ),
+    ).toStrictEqual([]);
   });
 
   it("stops at a page", async () => {

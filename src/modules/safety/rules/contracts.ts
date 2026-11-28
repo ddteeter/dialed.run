@@ -259,9 +259,15 @@ export function removalRuleLine(
 
 /**
  * What Close account asks for beside the reason (C8, D-145): the rule it
- * breaks, or that it is suspected CSAM, whose closure names no rule.
+ * breaks; that the runner is under 18, which also schedules the account's
+ * deletion (round 64 #373); or that it is suspected CSAM. Neither of the
+ * last two names a rule.
  */
-export const closureRules = [...communityRuleKeys, "suspected_csam"] as const;
+export const closureRules = [
+  ...communityRuleKeys,
+  "under_18",
+  "suspected_csam",
+] as const;
 
 export type ClosureRule = (typeof closureRules)[number];
 
@@ -270,18 +276,36 @@ export const closureRuleSchema = z.enum(closureRules, {
 });
 
 /**
-The pick's labels: each rule's name, and the CSAM option saying what it does.
+The pick's labels: each rule's name, "Under 18", and the CSAM option saying what it does.
 */
 export const closureRuleLabels: Readonly<Record<ClosureRule, string>> = {
   ...communityRules,
+  under_18: "Under 18",
   suspected_csam: "Suspected CSAM (the notice names no rule)",
 };
 
 /**
-The rule a closure's email names: none for suspected CSAM.
+ * The options the pick is ruled off before (round 64 #373): the terms'
+ * rules, a hairline, Under 18, a hairline, then suspected CSAM.
+ */
+export const CLOSURE_HAIRLINES: readonly ClosureRule[] = [
+  "under_18",
+  "suspected_csam",
+];
+
+/**
+The rule a closure's email names: none for an age closure or suspected CSAM.
 */
 export function closureRuleOf(rule: ClosureRule): CommunityRule | undefined {
-  return rule === "suspected_csam" ? undefined : rule;
+  return rule === "suspected_csam" || rule === "under_18" ? undefined : rule;
+}
+
+/**
+ * Whether a closure is for age (round 64 #373): it schedules the
+ * account's deletion, with no link, and sends the age email instead.
+ */
+export function isAgeClosure(rule: ClosureRule): boolean {
+  return rule === "under_18";
 }
 
 /**
