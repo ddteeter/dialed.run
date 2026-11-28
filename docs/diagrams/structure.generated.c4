@@ -139,6 +139,7 @@ model {
   cf.app.account -[wiring]-> cf.app.email
   cf.app.account -[wiring]-> cf.app.ops.edge
   cf.app.account -[wiring]-> cf.app.ops.owedEmail
+  cf.app.account -[wiring]-> cf.app.ops.publicWeb
   cf.app.account -[wiring]-> cf.app.ops.sentry
   cf.app.account -[wiring]-> cf.app.safety.rules
   cf.app.account.access -[imports]-> cf.app.account.terms
@@ -180,6 +181,7 @@ model {
   cf.app.account.purge -[imports]-> cf.app.notifications
   cf.app.account.purge -[imports]-> cf.app.ops.limits
   cf.app.account.purge -[imports]-> cf.app.ops.outbox
+  cf.app.account.purge -[imports]-> cf.app.ops.publicWeb
   cf.app.account.purge -[imports]-> cf.app.ops.sentry
   cf.app.account.purge -[imports]-> cf.app.runs
   cf.app.account.purge -[imports]-> cf.app.safety.reports
@@ -358,6 +360,7 @@ model {
   cf.app.runs -[imports]-> cf.app.ops.gaveUp
   cf.app.runs -[imports]-> cf.app.ops.limits
   cf.app.runs -[wiring]-> cf.app.ops.outbox
+  cf.app.runs -[wiring]-> cf.app.ops.publicWeb
   cf.app.runs -[wiring]-> cf.app.ops.sentry
   cf.app.runs -[imports]-> cf.app.weather
   cf.app.runs.garmin -[imports]-> cf.app.runs.imports
