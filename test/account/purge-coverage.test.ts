@@ -13,6 +13,7 @@ import { newUlid } from "../../src/lib/ids";
 import { purgeAccount } from "../../src/modules/account/purge/purge";
 import { forgetMaker } from "../../src/modules/products";
 import { forgetManualBands } from "../../src/modules/weather";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * Design 264 (design 261 ruling 7): every column in the schema that holds
@@ -325,6 +326,9 @@ function purge(runner: string) {
       },
       now: NOW,
       forgetMaker,
+      // The live purge: its photo reconcile is what deletes the runner's
+      // `public_photos` rows.
+      purgePages: purgePublicPages,
     },
     runner,
   );
