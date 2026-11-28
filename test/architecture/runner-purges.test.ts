@@ -41,10 +41,8 @@ const PURGES_HOME = "src/modules/ops/public-web/";
 const UNCOUNTED: Readonly<Record<string, string>> = {
   "account/handles/username.ts forceRename":
     "its default: the Desk's rename of a runner's handle",
-  "account/purge/purge.ts purgeAccount":
-    "account deletion's purge, a cron: every page of the account goes, whatever the runner's share",
-  "account/purge/purge.ts didDeleteEveryRun":
-    "account deletion's purge, a cron, a page of runs at a time",
+  "account/purge/purge.ts livePurgeDeps":
+    "account deletion's purge, a cron: every page of the account goes, once, after its last run",
   "dispatch/scheduled.ts reconcileReportHides":
     "a cron that finishes the hide a report owed",
   "feed/moderation/moderation.ts moderateContent":
