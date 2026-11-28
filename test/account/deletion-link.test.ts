@@ -211,8 +211,17 @@ describe("sendDeletionLink (round 64 #372)", () => {
       requestedAt: NOW - 10,
       purgeAfter: NOW + 100,
     });
+    // A closed profile whose sign-in row is gone has no address to send to.
+    await db
+      .insert(userProfiles)
+      .values({ userId: "gone-runner", bannedAt: NOW - 60 });
     const mail = fakeMail();
-    for (const userId of [open.userId, "no-such-runner", leaving.userId]) {
+    for (const userId of [
+      open.userId,
+      "no-such-runner",
+      "gone-runner",
+      leaving.userId,
+    ]) {
       expect(
         await sendDeletionLink(db, userId, mail, NOW),
         userId,
@@ -297,6 +306,18 @@ describe("readDeletionLanding (opening the link spends nothing)", () => {
       state: "expired",
     });
   });
+
+  it("says a used link with no deletion pending doesn't work", async () => {
+    const { userId } = await closedRunner();
+    const token = await sentToken(userId);
+    await db
+      .update(emailVerifications)
+      .set({ usedAt: NOW })
+      .where(eq(emailVerifications.userId, userId));
+    expect(await readDeletionLanding(db, token, NOW + 10)).toStrictEqual({
+      state: "expired",
+    });
+  });
 });
 
 describe("confirmDeletionLink (round 64 #374.3–374.4)", () => {
@@ -316,9 +337,17 @@ describe("confirmDeletionLink (round 64 #374.3–374.4)", () => {
       { userId, requestedAt: at, purgeAfter, cause: "asked" },
     ]);
     expect(await usedAtOfLink()).toBe(at);
-    // Owed in the deletion's batch, then sent after the answer.
-    expect(await db.select({ kind: outbox.kind }).from(outbox)).toStrictEqual([
-      { kind: "email" },
+    // Owed in the deletion's batch, then sent after the answer, under the
+    // key a runner's own request owes it by.
+    expect(
+      await db
+        .select({ kind: outbox.kind, key: outbox.dedupeKey })
+        .from(outbox),
+    ).toStrictEqual([
+      {
+        kind: "email",
+        key: `deletion_scheduled:${userId}:${String(purgeAfter)}`,
+      },
     ]);
     await settled();
     expect(mail.sent).toHaveLength(1);

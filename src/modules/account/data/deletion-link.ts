@@ -130,7 +130,7 @@ export async function sendDeletionLink(
           kind: "deletion_link",
           url: deletionLinkUrl(deps.origin, token),
           until,
-          ...(account.handle !== undefined && { handle: account.handle }),
+          handle: account.handle,
         },
       },
       deps,
@@ -185,9 +185,9 @@ async function spendableOrEnd(
   now: number,
 ): Promise<Spendable | DeletionLanding> {
   const link = await readEmailLink(db, token, DELETE);
-  const account =
-    link === undefined ? undefined : await closedAccountOf(db, link.userId);
-  if (link === undefined || account === undefined) return EXPIRED;
+  if (link === undefined) return EXPIRED;
+  const account = await closedAccountOf(db, link.userId);
+  if (account === undefined) return EXPIRED;
   const zone = await viewerZone(db, link.userId);
   if (link.usedAt !== undefined) {
     return usedEnd(await pendingDeletionOf(db, link.userId), zone);

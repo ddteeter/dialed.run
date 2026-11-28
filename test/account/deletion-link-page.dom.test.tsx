@@ -87,9 +87,13 @@ describe("DeletionLinkLanding", () => {
     const confirm = vi.fn<() => Promise<DeletionLanding>>();
     await renderPage(<DeletionLinkLanding landing={ASK} confirm={confirm} />);
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Delete your account?" }),
-    ).toBeVisible();
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Delete your account?",
+    });
+    expect(heading).toBeVisible();
+    // No kicker over this ask's heading.
+    expect(heading.previousElementSibling).toBeNull();
     expect(screen.getByText(askBody(ASK))).toBeVisible();
     expect(
       screen.getByText(askBody(ASK)).closest("[data-part=landing]"),
@@ -149,6 +153,24 @@ describe("DeletionLinkLanding", () => {
       expect(confirm).not.toHaveBeenCalled();
     },
   );
+
+  it("says Deleting on the button while the press is in flight", async () => {
+    const confirm = vi
+      .fn<() => Promise<DeletionLanding>>()
+      .mockReturnValue(
+        new Promise<DeletionLanding>(() => {
+          // Never settles.
+        }),
+      );
+    const user = userEvent.setup();
+    await renderPage(<DeletionLinkLanding landing={ASK} confirm={confirm} />);
+
+    await user.click(screen.getByRole("button", { name: "Delete my account" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Deleting" }),
+    ).toHaveAttribute("aria-busy", "true");
+  });
 
   it("says NOT DELETED when the press fails, and keeps the question", async () => {
     const confirm = vi
