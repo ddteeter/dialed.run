@@ -7,3 +7,4 @@ export { receiveAccessRequest } from "./access-endpoint";
 export { accountCount, listAccounts } from "./accounts";
 export { forgetAnsweredRequests } from "./answered-requests";
 export { closedAddressRows, forgetClosedAddresses } from "./closed-addresses";
+export { forgetDeadClaims } from "./invites";

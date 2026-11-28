@@ -34,6 +34,7 @@ import {
   confirmRedemption,
   createInviteCode,
   declineRequest,
+  forgetDeadClaims,
   inviteFromRequest,
   inviteStanding,
   redeemInvite,
@@ -309,6 +310,69 @@ describe("confirmRedemption", () => {
     expect(await inviteStanding(db, "DIAL-FREE", now + CLAIM_HOLD_S)).toBe(
       "open",
     );
+  });
+});
+
+/**
+The claims left, by the id each was made for.
+*/
+async function claimsLeft(): Promise<string[]> {
+  const rows = await db
+    .select({ userId: inviteRedemptions.userId })
+    .from(inviteRedemptions);
+  return rows.map((row) => row.userId).toSorted(byId);
+}
+
+describe("forgetDeadClaims", () => {
+  it("forgets a claim no account came from once its hold is over", async () => {
+    await seedCode("DIAL-DEAD", { maxUses: 2 });
+    const now = 1_000_000;
+    const dead = claim("DIAL-DEAD");
+    await redeemInvite(db, dead, now);
+
+    await forgetDeadClaims(db, now + CLAIM_HOLD_S - 1);
+    expect(await claimsLeft()).toStrictEqual([dead.userId]);
+
+    await forgetDeadClaims(db, now + CLAIM_HOLD_S);
+    expect(await claimsLeft()).toStrictEqual([]);
+  });
+
+  it("keeps a claim its account came from, confirmed or not, and a confirmed one whose account is gone", async () => {
+    await seedCode("DIAL-LIVE", { maxUses: 3 });
+    const now = 1_000_000;
+    const unconfirmed = claim("DIAL-LIVE");
+    const confirmed = claim("DIAL-LIVE");
+    const deleted = claim("DIAL-LIVE");
+    for (const mine of [unconfirmed, confirmed, deleted]) {
+      await redeemInvite(db, mine, now);
+    }
+    await account(unconfirmed.userId, unconfirmed.email);
+    await account(confirmed.userId, confirmed.email);
+    await confirmRedemption(db, confirmed.userId, now);
+    await confirmRedemption(db, deleted.userId, now);
+
+    await forgetDeadClaims(db, now + CLAIM_HOLD_S);
+
+    expect(await claimsLeft()).toStrictEqual(
+      [unconfirmed.userId, confirmed.userId, deleted.userId].toSorted(byId),
+    );
+  });
+
+  it("keeps a retried sign-up's code spent once the attempt that lost is forgotten", async () => {
+    await seedCode("DIAL-LOST");
+    const email = `${newUlid().toLowerCase()}@lost.test`;
+    const now = 1_000_000;
+    const won = claim("DIAL-LOST", email);
+    const lost = claim("DIAL-LOST", email);
+    await redeemInvite(db, won, now);
+    await redeemInvite(db, lost, now + 1);
+    await account(won.userId, email);
+    const later = now + 1 + CLAIM_HOLD_S;
+
+    await forgetDeadClaims(db, later);
+
+    expect(await claimsLeft()).toStrictEqual([won.userId]);
+    expect(await inviteStanding(db, "DIAL-LOST", later)).toBe("used");
   });
 });
 

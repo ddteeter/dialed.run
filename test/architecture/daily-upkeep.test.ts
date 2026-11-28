@@ -10,7 +10,8 @@ import { withoutComments } from "./source-text";
  * (design 253): account deletion's purge (task 126, ACC-9), the data
  * export's sweep (ACC-10), the handle re-ask (task 126 PR B), the product
  * link a confirmation owes (design 133), the auth rows' and the answered
- * access requests' sweeps, and the copyright holds' (D-130).
+ * access requests' sweeps, and the copyright holds' (D-130). The dead
+ * invite claims' sweep is called straight from the daily firing.
  * `handleScheduled` spreads what a test hands it over them, so every test
  * of a firing can replace one. What no test of a firing can see is the
  * wiring of the real ones, so it is read from the source here. Without it,
@@ -25,7 +26,7 @@ describe("the firings and the queue get their jobs from the dispatch", () => {
   it("imports each module's job through its door and runs it unless a test replaces it", () => {
     const code = withoutComments(scheduledSource);
     for (const line of [
-      'import { forgetAnsweredRequests } from "../account/access";',
+      'import { forgetAnsweredRequests, forgetDeadClaims } from "../account/access";',
       'import { checkTooLargeExports, sweepExports } from "../account/export-build";',
       'import { rescreenHandlesFromEnv } from "../account/handles";',
       'import { livePurgeDeps, purgeDueAccounts } from "../account/purge";',
