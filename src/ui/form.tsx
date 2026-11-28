@@ -1318,7 +1318,7 @@ export function ChoiceField<TOption extends string>({
   optionLabels,
   onChange,
   placeholder = NOT_SET,
-  hairlinesBefore = [],
+  hairlinesBefore,
 }: Readonly<
   Omit<ChoosableProps<TOption>, "field"> & {
     /**
@@ -1361,7 +1361,7 @@ export function ChoiceField<TOption extends string>({
         <option value={NO_CHOICE}>{placeholder}</option>
         {options.map((option) => (
           <Fragment key={option}>
-            {hairlinesBefore.includes(option) ? <hr /> : undefined}
+            {hairlinesBefore?.includes(option) ? <hr /> : undefined}
             <option value={option}>{optionLabels[option]}</option>
           </Fragment>
         ))}
