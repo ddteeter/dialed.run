@@ -418,7 +418,8 @@ export const REPORTS_PER_DAY = 20;
 /**
  * Reports a day, of a reason that hides at once, that may hide at once
  * (design 232). Past it such a report is filed and queued and hides
- * nothing until a person looks. GUESS pending the owner's answer: 3.
+ * nothing until a person looks. The owner's number (2026-11-27), which
+ * the privacy policy and the terms state.
  */
 export const AT_ONCE_HIDES_PER_DAY = 3;
 

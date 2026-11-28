@@ -200,8 +200,9 @@ covers the quarantine; this keeps the ban from tipping off the uploader.
   request under 18 U.S.C. §2703(f)), move `retain_until` on by hand with
   `wrangler d1 execute` before it passes, and note why in the evidence
   store. [CHECK: §2703(f)'s 90-day period and renewal.]
-- The `moderation_actions` row stays after the purge (D-70). Its own 3-year
-  clock (D-131) comes with C7.
+- The `moderation_actions` row stays after the purge (D-70), and is
+  deleted 3 years after it was written, once no record names it (D-131;
+  `safety/reports/retention.ts` `sweepModerationRecords`, daily).
 - `quarantine/` is not in the photo backup (#530). A 365-day R2 bucket
   lock on that prefix is what keeps the year's preservation: an owner's
   dashboard step before friends (`docs/deployment.md` §10).
@@ -284,35 +285,36 @@ the same 48-hour clock. Keep doing so.
 
 The Act asks for reasonable efforts on **known identical copies**.
 
-**Today (before C16):**
+Since C16 (D-142, design 146):
 
 1. The Review row for an intimate report, or a request whose link is ours,
-   lists the same runner's 12 most recent other photos
+   shows **Matching photos**: up to 12 photos from any runner, private ones
+   included, whose fingerprint is within `FINGERPRINT_MATCH_DISTANCE` (8)
+   bits of the reported one (`safety/review/photo-matches.ts`
+   `photoMatchesOf`, `PHOTO_MATCHES_LIMIT = 12`; `lib/photo-fingerprint.ts`).
+   Beside it are the same runner's 12 most recent other photos
    (`safety/review/other-photos.ts` `otherPhotosOf`, `OTHER_PHOTOS_LIMIT = 12`).
-   Look through them, and take down any copy from the row's form.
+   Take down every match that is a copy, from its tile, and look through
+   the runner's other photos.
 2. If the requester gave other links on [dialed.run], each is its own
    subject: take each down.
-3. There is **no search across other runners' photos**, and no hashing.
-   Blur and re-encoding change every upload's bytes, so an exact hash
-   would rarely match (`other-photos.ts` header). A copy posted by another
-   runner is found only if someone reports it or the requester names it.
-   Record this limit in the request's notes.
-
-**What changes when C16 lands (D-142):** each upload's perceptual hash,
-taken from the original bytes before re-encoding, is stored with the photo,
-and Review searches by it across all photos, private ones included. Step 2
-becomes "run the fingerprint search and take down every match", the terms
-may then say "identical copies we find", and this section is rewritten.
+3. A new upload that matches a removed intimate image is held for review
+   (D-147, design 164), for a fixed number of runners an hour. Past that
+   ceiling the check stops holding and falls back to what the app does when
+   it is degraded (`safety/limits/breakers.ts`).
+4. A copy changed beyond the match distance, or past the first 12 matches,
+   is found only if someone reports it or the requester names it. Record
+   in the request's notes which matches you took down.
 
 ### Step 3: the record
 
-| Record                            | Kept                                                                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `takedown_requests` row           | Requester email, signature, location, statement, `dueAt`, decision, reason, `resolvedAt`         |
-| `moderation_actions` row          | Who removed what, when, and the request id                                                       |
-| `takedown_blocks`                 | A blocked requester's keys (D-118)                                                               |
-| How long                          | **Until deleted today.** D-131's 3 years after the decision arrives with C7 (before public).     |
-| The copies search, and its limits | A note in the evidence store under `takedown/<request id>/` (D-148); the app has no field for it |
+| Record                            | Kept                                                                                                                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `takedown_requests` row           | Requester email, signature, location, statement, `dueAt`, decision, reason, `resolvedAt`                                                                                       |
+| `moderation_actions` row          | Who removed what, when, and the request id                                                                                                                                     |
+| `takedown_blocks`                 | A blocked requester's keys (D-118)                                                                                                                                             |
+| How long                          | The request and its `moderation_actions` row: 3 years after the decision (D-131; `safety/reports/retention.ts` `sweepModerationRecords`). A block: until the operator lifts it |
+| The copies search, and its limits | A note in the evidence store under `takedown/<request id>/` (D-148); the app has no field for it                                                                               |
 
 ## When the owner is away
 
@@ -344,4 +346,5 @@ suspected CSAM on its Matching photos tile
 (`feed/moderation/garment-moderation.ts` `moderateGarmentPhoto`).
 
 1. **No automated CSAM detection** until C11.
-2. **Copy search covers only the same runner's 12 newest photos** until C16.
+2. **Copy search finds at most 12 matches per subject**, within the
+   fingerprint distance; a copy changed beyond it is found only by a report.

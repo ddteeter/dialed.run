@@ -245,11 +245,14 @@ owing you anything.
 - **Reports.** Any signed-in runner with a confirmed email can report a kit,
   a photo, a profile or a product name. A kit you report leaves your feed
   straight away, and a runner you report leaves your search. When three different runners report the same kit or photo,
-  it is hidden from everyone but its owner until a person reviews it.
-- **Intimate images shared without consent** are the exception. One report
-  that a kit or photo is an intimate image shared without consent hides it
-  from everyone but its owner at once, and a person reviews it within 48
-  hours. If it is what the report says, we remove it, and identical copies
+  it is hidden from everyone but its owner until a person reviews it,
+  unless an unusual number of reports have already hidden things in the
+  past hour; then it goes to a person for review instead of being hidden.
+- **Intimate images shared without consent** are the exception. The first
+  three reports a runner files in a day that a kit or photo is an intimate
+  image shared without consent each hide it from everyone but its owner at
+  once; a later one that day waits for a person. Either way a person
+  reviews it within 48 hours. If it is what the report says, we remove it, and identical copies
   we find. Reporting something as this when you know it is not breaks
   these rules.
 - **A person decides.** Removing content and closing accounts are decisions
@@ -263,14 +266,16 @@ owing you anything.
   kit or photo, we tell you in the app and by email what was removed and
   which rule it broke, and the email says whether our automatic screening
   flagged it before a person decided. When we close your account, we email
-  you the reason and the rule it broke, and the app shows it when you try
-  to sign in. The one exception is suspected child sexual abuse material,
+  you the reason and the rule it broke, and the app tells you the account
+  is closed when you try to sign in. The one exception is suspected child sexual abuse material,
   below.
 - **We tell you what we decided about your report.** When a person decides
   on something you reported, we tell you in the app whether we removed it
   or left it up, except for suspected child sexual abuse material.
 - **A closed account** cannot sign in, and its kits, photos and profile are
-  hidden from everyone else. We may close an account without warning when
+  hidden from everyone else. It can still be deleted: we may email its
+  address a link that deletes it, and an account we close because its
+  runner is under 18 is deleted 7 days after we close it. We may close an account without warning when
   the breach is serious, or when the law or someone's safety requires it.
 
 ### Appeals
