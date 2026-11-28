@@ -2,6 +2,22 @@ import { describe, expect, it } from "vitest";
 
 import guardrailsWorkflow from "../../.github/workflows/guardrails.yml?raw";
 import prePush from "../../.githooks/pre-push?raw";
+import guardrailsConfigText from "../../guardrails.config.json?raw";
+
+const guardrailsConfig: unknown = JSON.parse(guardrailsConfigText);
+
+/**
+ * `ship.preflight` from a parsed guardrails.config.json, or `undefined`.
+ */
+function preflightOf(config: unknown): unknown {
+  const ship: unknown =
+    typeof config === "object" && config !== null && "ship" in config
+      ? config.ship
+      : undefined;
+  return typeof ship === "object" && ship !== null && "preflight" in ship
+    ? ship.preflight
+    : undefined;
+}
 
 /**
  * The repo's additions to two files `guardrails init` scaffolds, pinned.
@@ -23,34 +39,23 @@ describe("what a forced guardrails init would remove", () => {
     expect(sanctions).toBeGreaterThan(gate);
   });
 
-  it("runs build, test and diagrams:check in the pre-push hook, before the gate", () => {
+  it("runs the preflight in the pre-push hook, before the gate", () => {
     const gate = prePush.indexOf('node "$cli" gate --mode=push');
-    const steps = prePush.indexOf(
-      'for step in "npm run build" "npm test" "npm run diagrams:check"; do',
+    const preflight = prePush.indexOf(
+      'node "$cli" preflight --mode=hook || exit 1',
     );
-    expect(steps).toBeGreaterThan(-1);
-    expect(steps).toBeLessThan(gate);
-  });
-
-  it("runs the preflight steps without git's hook variables", () => {
-    expect(prePush).toContain(
-      'unset_git="env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_PREFIX -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY GUARDRAILS_PREFLIGHT=1"',
-    );
-  });
-
-  it("runs the preflight steps under the gate lock, released before the gate", () => {
-    const gate = prePush.indexOf('node "$cli" gate --mode=push');
-    const locked = prePush.indexOf(
-      'node "$cli" lock -- $unset_git sh "$0" </dev/null || exit 1',
-    );
-    expect(locked).toBeGreaterThan(-1);
-    expect(locked).toBeLessThan(gate);
+    expect(preflight).toBeGreaterThan(-1);
+    expect(preflight).toBeLessThan(gate);
     expect(prePush).not.toMatch(/\b(lockf|flock) /);
   });
 
-  it("runs none of them for a push that only deletes refs", () => {
-    expect(prePush).toContain("*[!0]*) pushes_commits=yes ;;");
-    expect(prePush).toContain('if [ "$pushes_commits" = yes ]; then');
+  it("preflights build, test and diagrams:check under one hold of the gate lock", () => {
+    // `ship.preflight` takes no lock of its own (guardrails-core 0.19), so
+    // the one entry takes it, and two full suites never run side by side
+    // (owner, 2026-11-24).
+    expect(preflightOf(guardrailsConfig)).toStrictEqual([
+      "node ./node_modules/guardrails-core/dist/cli.mjs lock -- sh -c 'npm run build && npm test && npm run diagrams:check'",
+    ]);
   });
 
   it("names a full version tag on every action in guardrails.yml, not the template's floating major", () => {

@@ -53,13 +53,14 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    **"Diagrams"**. It needs ffmpeg and macOS, as the demo does. When it says no
    view changed (a comment or formatting edit), there is nothing to
    attach.
-8. **The push runs CI's first job for you.** `.githooks/pre-push` runs
-   `npm run build`, `npm test` and `npm run diagrams:check` (owner,
-   2026-11-23), and the gate runs lint, typecheck and the other analyzers
-   over the branch. Since guardrails-core 0.18.0 `ship` runs the gate
-   itself before `git push`, so under `ship` the hook's three steps run
-   after the gate, and the hook's own gate finds ship's pass and returns
-   at once. Together that is what CI's "Lint,
+8. **The push runs CI's first job for you.** `ship.preflight` in
+   `guardrails.config.json` runs `npm run build`, `npm test` and
+   `npm run diagrams:check` under one hold of the gate lock (owner,
+   2026-11-23 and 2026-11-24), and the gate runs lint, typecheck and the
+   other analyzers over the branch. Since guardrails-core 0.19 `ship`
+   runs the preflight before its gate, so a red build stops the ship in
+   minutes, and the pre-push hook that ship's push fires finds the
+   preflight's pass and the gate's and returns at once. Together that is what CI's "Lint,
    typecheck, test, build" job runs, so don't run them again by hand
    before shipping; run one only to work a failure. `build` is a gate
    too: `postbuild` runs `check:bundle`. A lane dispatched by a
@@ -108,8 +109,8 @@ Ship with `npm run ship -- --body-file=<pr-body.md>` under
 `run_in_background`, then end the turn. It runs the push gate, then pushes the branch
 (`git push -u origin HEAD`, so it lands on the branch's own name even when
 it tracks `origin/main`), finds or opens its PR, waits for CI, and writes one
-status: `green`, `gate-blocked`, `lock-timeout`, `ci-red`, `behind`,
-`conflicting` or `error`. You are woken once. The machine-wide gate lock
+status: `green`, `preflight-failed`, `gate-blocked`, `lock-timeout`,
+`ci-red`, `behind`, `conflicting` or `error`. You are woken once. The machine-wide gate lock
 queues pushes; you never wait for another lane yourself.
 
 - `ship` fetches `origin/main` and refuses a branch that is behind it,
@@ -144,7 +145,10 @@ queues pushes; you never wait for another lane yourself.
     --attach=test-results/<dir>/demo.mp4 --attach=diagrams.demo.mp4
   ```
 
-- On `gate-blocked`, fix it and ship again. On `ci-red`, the summary line
+- On `preflight-failed` or `gate-blocked`, fix it and ship again.
+  `preflight-failed` names the whole preflight entry in `failing`; its
+  `tail` shows which of the three steps failed, or that the lock wait ran
+  out. On `ci-red`, the summary line
   ends with `next: …`, from the status file's `diagnosis.advice`: `fix`
   means fix it and ship again; `rebase` means `origin/main` moved since
   the commit was tested, so rebase and ship with `--force-with-lease`;

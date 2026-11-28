@@ -23,18 +23,6 @@
 # below apart from a block, because waiting is not a violation.
 cli="./node_modules/guardrails-core/dist/cli.mjs"
 
-# The preflight below re-enters this hook under the gate lock, with this set.
-# It runs CI's first job and exits; git's refs on stdin are not read here.
-if [ "${GUARDRAILS_PREFLIGHT:-}" = 1 ]; then
-  for step in "npm run build" "npm test" "npm run diagrams:check"; do
-    echo "guardrails: preflight: $step" >&2
-    $step >&2 || {
-      echo "guardrails: push blocked — '$step' failed. CI's first job runs it too." >&2
-      exit 1
-    }
-  done
-  exit 0
-fi
 # See .githooks/pre-commit: an uninstalled checkout is said as such, and still
 # blocks.
 [ -f "$cli" ] || {
@@ -42,35 +30,13 @@ fi
   exit 1
 }
 
-# CI parity, before the gate (owner, 2026-11-23). These are the checks CI's
-# "Lint, typecheck, test, build" job runs that the gate does not; a lane that
-# skipped one spent a two-hour CI lap finding out. They run under the
-# machine-wide gate lock, released before the gate takes it again (owner,
-# 2026-11-24): two full test suites side by side timed out DOM tests and
-# blocked pushes for nothing. A push that only
-# deletes refs (every local sha zero) runs none of them. `pr-ready` tells
-# lanes not to run them again by hand before shipping. Git exports GIT_DIR
-# and GIT_INDEX_FILE to hooks, and a test that runs git in a temp repo with
-# the inherited env would otherwise write to this repo (core.bare, the index).
-refs=$(cat)
-pushes_commits=no
-while read -r _local_ref local_sha _remote_ref _remote_sha; do
-  case "$local_sha" in
-    *[!0]*) pushes_commits=yes ;;
-  esac
-done <<EOF
-$refs
-EOF
-if [ "$pushes_commits" = yes ]; then
-  lock="$HOME/.guardrails-gate.lock"
-  unset_git="env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_PREFIX -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY GUARDRAILS_PREFLIGHT=1"
-  echo "guardrails: preflight: waiting for the gate lock ($lock)" >&2
-  # `guardrails lock` (0.18.0, owner, 2026-11-26, #1054), not a raw lockf:
-  # a gate queued behind the preflight names it rather than "another
-  # checkout holds it", and the hold is logged. It exits 75 when the wait
-  # (mutationLock.pushWaitSeconds) runs out, which blocks the push.
-  node "$cli" lock -- $unset_git sh "$0" </dev/null || exit 1
-fi
+# CI parity, before the gate (owner, 2026-11-23): the checks CI's "Lint,
+# typecheck, test, build" job runs that the gate does not, from
+# `ship.preflight` in guardrails.config.json, under one hold of the
+# machine-wide gate lock (owner, 2026-11-24). A pass is remembered by the
+# tree, so a push `guardrails ship` already checked skips them, and the
+# preflight drops GIT_* from the commands' environment itself.
+node "$cli" preflight --mode=hook || exit 1
 
 node "$cli" gate --mode=push
 status=$?

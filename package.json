@@ -136,7 +136,7 @@
     "eslint-plugin-sonarjs": "^4.2.2",
     "eslint-plugin-unicorn": "^79.0.0",
     "fallow": "^3.43.2",
-    "guardrails-core": "https://github.com/ddteeter/agentic-guardrails-scaffolding/releases/download/v0.18.2/guardrails-core-0.18.2.tgz",
+    "guardrails-core": "https://github.com/ddteeter/agentic-guardrails-scaffolding/releases/download/v0.19.1/guardrails-core-0.19.1.tgz",
     "happy-dom": "^21.0.4",
     "knip": "^6.45.1",
     "likec4": "1.61.0",
