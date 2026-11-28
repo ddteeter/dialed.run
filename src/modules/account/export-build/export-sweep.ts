@@ -14,6 +14,7 @@ import { dataExports } from "../../../db/schema-core";
 import { coreDb, env } from "../../../env";
 import { EXPORT_LINK_TTL_S } from "../../../lib/contracts/data-export";
 import { nowSeconds } from "../../../lib/now";
+import { deleteKeys } from "../../../lib/sql/r2-delete";
 import { captureException } from "../../ops/sentry";
 import { exportKeyFor, type ExportQueue } from "../data";
 
@@ -108,7 +109,7 @@ async function forgetFailures(
   // Both statuses are final — nothing moves a row out of them — so the
   // ids read are still unbuilt when their rows go.
   try {
-    await deps.bucket.delete(failed.flatMap((row) => exportKeyFor(row) ?? []));
+    await deleteKeys(deps.bucket, zipKeysOf(failed));
     await db.delete(dataExports).where(
       inArray(
         dataExports.id,
@@ -121,6 +122,16 @@ async function forgetFailures(
       `${String(failed.length)} failed data export(s) could not be deleted and are retried next hour`,
     );
   }
+}
+
+/**
+ * The ZIP each row's build staged. A row no build claimed staged none,
+ * and names no key.
+ */
+function zipKeysOf(
+  rows: readonly Parameters<typeof exportKeyFor>[0][],
+): string[] {
+  return rows.flatMap((row) => exportKeyFor(row) ?? []);
 }
 
 /**
@@ -158,7 +169,7 @@ async function expireExports(
   let failed = 0;
   for (const row of claimed) {
     try {
-      await deps.bucket.delete(exportKeyFor(row) ?? []);
+      await deleteKeys(deps.bucket, zipKeysOf([row]));
       await db
         .delete(dataExports)
         .where(

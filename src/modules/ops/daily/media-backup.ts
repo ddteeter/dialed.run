@@ -33,6 +33,7 @@
 import { env } from "../../../env";
 import { ENTRY_PHOTO_ROOT } from "../../../lib/entry-photo-key";
 import { GARMENT_PHOTO_ROOT } from "../../../lib/garment-photo-key";
+import { deleteKeys } from "../../../lib/sql/r2-delete";
 
 type Source = Pick<R2Bucket, "list" | "get">;
 type Backup = Pick<R2Bucket, "list" | "get" | "put" | "delete">;
@@ -62,11 +63,6 @@ export const GONE_RETENTION_S = 30 * 24 * 60 * 60;
  * is the next firing's, and the digest says how much.
  */
 export const MAX_COPIES_PER_FIRING = 1000;
-
-/**
-The most keys one R2 delete takes.
-*/
-const DELETE_BATCH = 1000;
 
 const SOURCE_ETAG = "sourceEtag";
 
@@ -106,19 +102,6 @@ The key a `gone/` object was set aside from.
 */
 function setAsideFrom(goneKey: string): string {
   return goneKey.slice(GONE_PREFIX.length);
-}
-
-/**
- * Deletes these keys from the backup, a call per `DELETE_BATCH`. Throws
- * what R2 throws.
- */
-async function deleteKeys(
-  backup: Pick<R2Bucket, "delete">,
-  keys: readonly string[],
-): Promise<void> {
-  for (let start = 0; start < keys.length; start += DELETE_BATCH) {
-    await backup.delete(keys.slice(start, start + DELETE_BATCH));
-  }
 }
 
 /**

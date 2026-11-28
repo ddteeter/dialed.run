@@ -10,6 +10,7 @@ import {
 } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
+import { deleteKeys } from "../../src/lib/sql/r2-delete";
 import { handleScheduled } from "../../src/modules/dispatch";
 import {
   claimQuarantine,
@@ -40,7 +41,10 @@ function core() {
 async function emptyQuarantine(): Promise<void> {
   await core().delete(quarantinedContent);
   const listed = await env.MEDIA.list({ prefix: "quarantine/" });
-  await env.MEDIA.delete(listed.objects.map((object) => object.key));
+  await deleteKeys(
+    env.MEDIA,
+    listed.objects.map((object) => object.key),
+  );
 }
 
 /**
