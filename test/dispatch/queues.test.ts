@@ -13,10 +13,8 @@ import { clockLabel } from "../../src/lib/dates";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleQueueBatch } from "../../src/modules/dispatch";
-import {
-  createOrGetBrand,
-  createOrGetProduct,
-} from "../../src/modules/products";
+import { createOrGetBrand } from "../../src/modules/products";
+import { createOrGetProduct } from "../../src/modules/products/service";
 import { reminderSubject } from "../../src/modules/runs/queue-messages";
 import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage } from "../queue-fakes";

@@ -3,40 +3,38 @@ import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { ZodType } from "zod";
 
-import type { GaveUpKind } from "../lib/contracts/gave-up";
-import { newUlid } from "../lib/ids";
-import { nowSeconds } from "../lib/now";
+import type { GaveUpKind } from "../../../lib/contracts/gave-up";
+import { newUlid } from "../../../lib/ids";
+import { nowSeconds } from "../../../lib/now";
 import {
   DEAD_LETTER_REASON,
   type GaveUpFact,
   type GiveUpHandlers,
-} from "../lib/sql/gave-up";
-import { deadLetterEach, type Reporter } from "../lib/sql/queue-batch";
-import { orSqlNull } from "../lib/sql/sql-null";
-import { gaveUp } from "./schema-core";
+} from "../../../lib/sql/gave-up";
+import { deadLetterEach, type Reporter } from "../../../lib/sql/queue-batch";
+import { orSqlNull } from "../../../lib/sql/sql-null";
+import { gaveUp } from "../../../db/schema-core";
 
 export {
   DEAD_LETTER_REASON,
   type GaveUpFact,
   type GaveUpWrites,
-} from "../lib/sql/gave-up";
+} from "../../../lib/sql/gave-up";
 
 /**
  * The two writes every job that can give up makes to `gave_up` (Operator
  * Screens D6; register R-119): record that it gave up, and forget it once
  * a later try succeeds.
  *
- * **Here in `src/db/`, not `lib/sql/`.** `lib/` is foundation and may not
- * import `src/db/` (`foundation-stays-foundation`), but a writer of a
- * concrete table has to import its schema from somewhere — so the
+ * **Here in `ops/gave-up`, not `lib/sql/`.** `lib/` is foundation and may
+ * not import `src/db/` (`foundation-stays-foundation`), but a writer of a
+ * concrete table has to import its schema from somewhere, so the
  * table-specific half of this (the writers, and `giveUpEach`'s
- * orchestration of them) lives beside the schema it writes, where every
- * module that needs it can import it directly (`db` is foundation too,
- * and importable by any module — `modules/weather`, `modules/runs`,
- * `modules/enrichment`, `modules/ops/desk/gave-up.ts` all already do). What
- * stays genuinely table-agnostic (`GaveUpFact`, the DLQ wiring shapes,
- * `DEAD_LETTER_REASON`) stays in `lib/sql/gave-up.ts`, and this file
- * imports from there rather than the reverse.
+ * orchestration of them) lives in a floor unit of `ops`, the module that
+ * owns `gave_up` and shows it on the Desk (design 261, B12). Any module may
+ * import a floor unit. What stays genuinely table-agnostic (`GaveUpFact`,
+ * the DLQ wiring shapes, `DEAD_LETTER_REASON`) stays in `lib/sql/gave-up.ts`,
+ * and this file imports from there rather than the reverse.
  */
 
 /**

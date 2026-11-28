@@ -62,7 +62,6 @@ import {
 import {
   followingFeed,
   follow,
-  isFollowing,
   unfollow,
   ownProfile,
   profileAtHandle,
@@ -80,14 +79,15 @@ import {
   copyrightHoldInput,
   garmentMatchActionInput,
   removalDecisionInput,
-  requireAdmin,
   reviewActionInput,
   takedownInput,
 } from "../safety";
+import { requireAdmin } from "../safety/rules";
 import { unitsFor } from "./conditions";
 import { publicKitForPage, publicProfileForPage } from "./public-web";
 import { nowSeconds } from "../../lib/now";
-import { captureException, purgePublicPagesFor } from "../ops";
+import { purgePublicPagesFor } from "../ops/public-web";
+import { captureException } from "../ops/sentry";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))
@@ -248,13 +248,6 @@ export const unfollowAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     await unfollow(userId, data.userId);
-  });
-
-export const isFollowingQuery = createServerFn({ method: "GET" })
-  .validator((input: unknown) => userIdInput.parse(input))
-  .handler(async ({ data }) => {
-    const userId = await requireUserId();
-    return isFollowing(userId, data.userId);
   });
 
 // ---- Following feed (E1) -----------------------------------------------------

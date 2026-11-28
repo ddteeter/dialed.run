@@ -15,7 +15,7 @@ import {
   outboxInsert,
   outboxInsertWhere,
   oweOutbox,
-} from "../../src/modules/ops";
+} from "../../src/modules/ops/outbox";
 import {
   banEmail,
   reopenEmail,

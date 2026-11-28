@@ -27,7 +27,7 @@ import {
   enqueueForReview,
   openSubject,
   resolveReview,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/review";
 import { quarantineKeyFor } from "../../src/lib/entry-photo-key";
 import { preservedKeysOf } from "../../src/modules/safety/takedowns/quarantine";
 import type { Report } from "../../src/modules/feed/entries/retract";

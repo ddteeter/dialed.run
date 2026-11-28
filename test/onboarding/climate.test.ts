@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ClimatePlace } from "../../src/lib/contracts";
 
-import { climateBands } from "../../src/modules/closet";
+import { climateBands } from "../../src/modules/closet/tap-list";
 import {
   BAND_WITHOUT_LOCATION,
   bandFromNormals,

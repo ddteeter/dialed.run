@@ -28,7 +28,7 @@ import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { emailDebt } from "../../email";
-import { outboxInsert, oweOutbox, type OutboxDebt } from "../../ops";
+import { type OutboxDebt, outboxInsert, oweOutbox } from "../../ops/outbox";
 import type { OwedMail } from "../verification";
 
 type Db = ReturnType<typeof drizzle>;

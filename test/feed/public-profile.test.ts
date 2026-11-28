@@ -19,7 +19,7 @@ import type { Audience } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
 import { PUBLIC_PHOTOS_ORIGIN } from "../../src/lib/public-photos";
 import { publicRotation } from "../../src/modules/closet";
-import { worldVisibleEntry } from "../../src/modules/safety";
+import { worldVisibleEntry } from "../../src/modules/safety/rules";
 import {
   publicProfileForPage,
   publicProfileHeaders,

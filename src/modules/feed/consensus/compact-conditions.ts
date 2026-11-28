@@ -14,7 +14,7 @@
  * `entries_shared_created` (`test/feed/consensus.test.ts` holds the
  * profile's plan and the entries').
  */
-import { captureException } from "../../ops";
+import { captureException } from "../../ops/sentry";
 import { consensusAt, type ConsensusResult } from "./consensus";
 import { conditionsHome, type ConditionsHome } from "./home";
 

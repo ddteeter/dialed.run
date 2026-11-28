@@ -23,7 +23,7 @@ import {
 } from "../../../../ui";
 import type { FormShell } from "../../../../ui";
 import { blockRequesterInput } from "../../inputs";
-import type { HoldState } from "../../limits/takedown-limits";
+import type { HoldState } from "../takedown-limits";
 import type { BlockResult, PendingTakedownRequest } from "../takedown-requests";
 import { DueClock } from "../../components/DueClock";
 import { StatutoryLine } from "../../components/StatutoryLine";

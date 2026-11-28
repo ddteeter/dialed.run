@@ -42,7 +42,8 @@ import {
 } from "./service";
 import { env, waitUntil } from "../../env";
 import { noInput } from "../../lib/no-input";
-import { captureException, oweInCore } from "../ops";
+import { oweInCore } from "../ops/outbox";
+import { captureException } from "../ops/sentry";
 import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava";
 import { garminConfigFor } from "./garmin";
 import { garminPicker, importGarminActivity } from "./garmin";

@@ -77,23 +77,13 @@ function keysOf(keys: RequesterKeys): string[] {
 /**
 A requester's rows, by either key.
 */
-export function requesterMatches(keys: RequesterKeys) {
+function requesterMatches(keys: RequesterKeys) {
   return keys.ipKey === undefined
     ? eq(takedownRequests.requesterKey, keys.requesterKey)
     : or(
         eq(takedownRequests.requesterKey, keys.requesterKey),
         eq(takedownRequests.ipKey, keys.ipKey),
       );
-}
-
-/**
- * What a `count()` answered. It always answers with one row; summing the
- * rows says that without indexing `[0]`, whose fallback no input reaches.
- * A grouped count with no groups answers none, which sums to zero (the
- * hold breakers' baseline, design 164).
- */
-export function counted(rows: readonly { n: number }[]): number {
-  return rows.reduce((total, row) => total + row.n, 0);
 }
 
 /**
@@ -174,18 +164,3 @@ export function valveHour(now: number): number {
 }
 
 export { confirmTokenHash, newConfirmToken } from "../../../lib/confirm-token";
-
-/**
- * A pending request holds its subject: one that held it at
- * filing or at its confirm (`held_at`), whether it hid it then or it was
- * already out of public view. A request that was blocked, past the valve
- * or unconfirmed held nothing. True where some such request meets
- * `names`, a condition on `takedown_requests` with its columns
- * `qualified`, so it may be correlated with an outer read: what pins an
- * Approve, and what makes an owner's delete keep (design 232).
- */
-export function requestHolds(names: SQL): SQL {
-  const pending = sql`${qualified(takedownRequests, takedownRequests.status)} = 'pending'`;
-  const held = sql`${qualified(takedownRequests, takedownRequests.heldAt)} is not null`;
-  return sql`exists (select 1 from ${takedownRequests} where ${pending} and ${held} and ${names})`;
-}

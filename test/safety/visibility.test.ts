@@ -30,7 +30,7 @@ import {
   isUnderReviewForAuthor,
   publiclyVisibleEntry,
   worldVisibleEntry,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/rules";
 import { banUser, unbanUser } from "../../src/modules/safety/runners/bans";
 import {
   blockRunner,

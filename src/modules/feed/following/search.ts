@@ -21,7 +21,7 @@ import { follows, outfitEntries, userProfiles } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
 import { normalizeUsername } from "../../../lib/contracts";
 import { columnWhere } from "../../../lib/sql/keyed-read";
-import { publiclyVisibleEntry } from "../../safety";
+import { publiclyVisibleEntry } from "../../safety/rules";
 import { runnersVisibleTo } from "../conditions";
 
 const RESULT_LIMIT = 20;

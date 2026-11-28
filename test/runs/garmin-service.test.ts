@@ -13,7 +13,7 @@ import {
   importGarminActivity,
 } from "../../src/modules/runs/garmin/service";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
-import { oweInCore } from "../../src/modules/ops";
+import { oweInCore } from "../../src/modules/ops/outbox";
 import { oweImportFileDeleteInCore } from "../queue-fakes";
 import {
   batchOf,

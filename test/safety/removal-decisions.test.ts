@@ -19,7 +19,8 @@ import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { removalRequestNotice } from "../../src/lib/contracts/takedown";
 import { moderateContent } from "../../src/modules/feed/moderation/moderation";
 import { decideRemovalRequest } from "../../src/modules/feed/moderation/removal-requests";
-import { declineLapsedRequests, resolveReview } from "../../src/modules/safety";
+import { resolveReview } from "../../src/modules/safety/review";
+import { declineLapsedRequests } from "../../src/modules/safety/takedowns";
 import {
   fileTakedownRequest,
   pendingTakedownRequests,
@@ -722,9 +723,7 @@ describe("the author's notice of a request's hold (R-163)", () => {
  * `db`, with `before` run once just ahead of its first batch: the other
  * operator's decision landing between this one's read and its writes.
  */
-function landingFirst(
-  before: () => Promise<unknown>,
-): ReturnType<typeof core> {
+function landingFirst(before: () => Promise<unknown>): ReturnType<typeof core> {
   const db = core();
   let isFirst = true;
   return new Proxy(db, {
@@ -891,7 +890,10 @@ describe("two opposite decisions sent together", () => {
     "passes on a takedown's failure that is not the request's hold: %s",
     async (message) => {
       const entryId = await sharedEntry();
-      const id = await seedRequest({ subjectType: "entry", subjectId: entryId });
+      const id = await seedRequest({
+        subjectType: "entry",
+        subjectId: entryId,
+      });
       const failing = landingFirst(() => Promise.reject(new Error(message)));
 
       await expect(

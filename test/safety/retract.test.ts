@@ -22,19 +22,18 @@ import {
 } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { NotFoundError } from "../../src/lib/errors";
+import { deleteRun, deleteRuns } from "../../src/modules/feed";
+// A deep import on purpose: `photoIdInput` is a trust-boundary schema, and
+// the other three left feed's door because no source file imports them
+// through it (design 258 proposal 14), so the test imports their file.
 import {
   deleteEntryPhoto,
-  deleteRun,
-  deleteRuns,
+  photoIdInput,
   retractEntries,
   retractEntry,
-} from "../../src/modules/feed";
-// A deep import on purpose: `photoIdInput` is a trust-boundary schema, not
-// part of the feed barrel's public surface (its only other consumer is
-// `functions.ts`, which no test can import at all).
-import { photoIdInput } from "../../src/modules/feed/entries/retract";
+} from "../../src/modules/feed/entries/retract";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
-import { reconcileUnhiddenReports } from "../../src/modules/safety";
+import { reconcileUnhiddenReports } from "../../src/modules/safety/reports";
 import { fileReport } from "../../src/modules/safety/reports/reports";
 
 import { noPurge } from "../purge-spy";

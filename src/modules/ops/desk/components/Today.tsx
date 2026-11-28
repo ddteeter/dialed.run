@@ -19,7 +19,7 @@ import {
   inFlight,
   useControlAction,
 } from "../../../../ui";
-import type { CeilingReading, HoldCause } from "../../../safety";
+import type { CeilingReading, HoldCause } from "../../../safety/limits";
 import type { DeskToday, SkippedOperator } from "../desk";
 import { DeskShell } from "./DeskShell";
 import type { GaveUpJob } from "../gave-up";

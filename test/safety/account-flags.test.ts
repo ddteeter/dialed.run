@@ -12,7 +12,7 @@ import { env } from "../../src/env";
 import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { listAccounts } from "../../src/modules/account";
+import { listAccounts } from "../../src/modules/account/access";
 import { moderateContent } from "../../src/modules/feed/moderation/moderation";
 import {
   flaggedAtOf,

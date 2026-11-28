@@ -11,7 +11,7 @@ import {
   uploadItemPhoto,
 } from "../../src/modules/closet/photos";
 import { createItem, deleteItem } from "../../src/modules/closet/service";
-import type { Classify } from "../../src/modules/safety";
+import type { Classify } from "../../src/modules/safety/screening";
 import { fingerprintOfBytes, quiet, sceneJpeg } from "../fixtures/scenes";
 
 /**

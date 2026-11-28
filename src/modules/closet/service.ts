@@ -48,30 +48,28 @@ import { newUlid } from "../../lib/ids";
 import { topByCount } from "../../lib/top-by-count";
 import type { TempRange } from "../../lib/contracts/thermal";
 import { estimateTempRange } from "../../lib/contracts/thermal";
-import { isUnconfirmed } from "../account";
+import { isUnconfirmed } from "../account/verification";
 import { enqueueEnrichment } from "../enrichment";
 import {
-  captureException,
-  oweOutbox,
   outboxInsert,
+  oweOutbox,
   settleOutbox,
   storageHandlers,
-} from "../ops";
+} from "../ops/outbox";
+import { captureException } from "../ops/sentry";
 import {
   getProductAttributeDefaultsBulk,
   getProductForDetail,
   newRowsFor,
   resolveProduct,
 } from "../products";
-import { claimLimit, type SendClaim } from "../email";
+import { claimLimit, type SendClaim } from "../ops/limits";
 import { normalizeIdentity } from "../../lib/normalize";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
-import {
-  garmentPhotoForgotten,
-  isDeniedLink,
-  withdrawnGarmentUnderReview,
-} from "../safety";
+import { withdrawnGarmentUnderReview } from "../safety/review";
+import { isDeniedLink } from "../safety/rules";
+import { garmentPhotoForgotten } from "../safety/screening";
 import { shouldIncludeByTempFilter } from "./filters";
 import { linkDetailOf, type LinkDetail } from "./garment-link";
 import { DENIED_LINK } from "./link-copy";

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
 import { env, waitUntil } from "../../src/env";
-import { captureException } from "../../src/modules/ops";
+import { captureException } from "../../src/modules/ops/sentry";
 import { newUlid } from "../../src/lib/ids";
 import { scopedDb } from "../../src/lib/sql/d1-session";
 import {

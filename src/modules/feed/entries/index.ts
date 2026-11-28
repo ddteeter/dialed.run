@@ -17,7 +17,6 @@ export {
 export { photoUploadFrom, uploadPhotoAnswer } from "./photos";
 export { countedUsefulOf, setUsefulReaction } from "./reactions";
 export {
-  LIVE_HOLD,
   commit,
   deleteEntryPhoto,
   deleteRun,
@@ -29,10 +28,8 @@ export {
   owned,
   photoDeletion,
   photoIdInput,
-  retractEntries,
   retractEntry,
   type Report,
-  type Scope,
   type Statements,
 } from "./retract";
 export { photoResponse, reviewerPhotoResponse } from "./photos";

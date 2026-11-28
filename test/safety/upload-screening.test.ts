@@ -20,7 +20,7 @@ import {
   uploadPhoto,
 } from "../../src/modules/feed/entries/photos";
 import { putSnapshot } from "../../src/modules/enrichment/snapshot";
-import { type Classify } from "../../src/modules/safety";
+import { type Classify } from "../../src/modules/safety/screening";
 import {
   imageCategories,
   type CategoryScores,

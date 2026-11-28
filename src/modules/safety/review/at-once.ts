@@ -1,7 +1,7 @@
 /**
  * A queue row on the removal clock, as SQL (SA-L12): read by the burst
- * release and the reports breaker. Its own file because both import it,
- * and the breakers sit below `review.ts` in the import graph.
+ * release, the review queue and the reports. Its own file because
+ * `review.ts`, `release.ts` and `withdrawn.ts` all read it.
  */
 import { and, inArray, sql, type SQL } from "drizzle-orm";
 

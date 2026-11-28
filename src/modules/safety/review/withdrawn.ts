@@ -30,7 +30,8 @@ import {
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { qualified } from "../../../lib/sql/qualified";
-import { reportHidingAtOnce, requestHolds } from "../limits";
+import { reportHidingAtOnce } from "./at-once";
+import { requestHolds } from "./request-holds";
 import { removalStatements } from "../rules";
 import { moderationActionInsertWhere } from "../rules";
 import {

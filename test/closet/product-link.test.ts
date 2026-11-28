@@ -7,13 +7,13 @@ import { brands, products, wardrobeItems } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
-  addFromTapList,
-  getOwnedItem,
   isTapListPlaceholder,
-  LINK_BATCH,
   linkTypedGarments,
   nameItem,
 } from "../../src/modules/closet";
+import { LINK_BATCH } from "../../src/modules/closet/product-link";
+import { getOwnedItem } from "../../src/modules/closet/service";
+import { addFromTapList } from "../../src/modules/closet/tap-list";
 import {
   createItem,
   DeniedLinkError,

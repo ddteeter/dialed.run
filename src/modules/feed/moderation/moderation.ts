@@ -59,33 +59,38 @@ import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { emailDebt } from "../../email";
 import { notificationInsert } from "../../notifications";
-import { captureException, oweOutbox, purgePublicPages } from "../../ops";
+import { oweOutbox } from "../../ops/outbox";
+import { purgePublicPages } from "../../ops/public-web";
+import { captureException } from "../../ops/sentry";
+import { type ReviewActionValues } from "../../safety";
+import { photoReporterNotices, reporterNotices } from "../../safety/notices";
+import {
+  openSubject,
+  keptFingerprints,
+  resolveReview,
+  wasFlaggedAutomatically,
+  type ResolveOutcome,
+} from "../../safety/review";
 import {
   moderationActionInsert,
+  isCopyrightTakedown,
+  removalNotice,
+  removalRuleOf,
+  removalStatements,
+  wasModerated,
+  type RemovalReason,
+} from "../../safety/rules";
+import {
   claimPurgeAfterCase,
-  openSubject,
   purgedWrite,
   restoreDueHolds,
   sweepClaims,
   takeDownHoldOf,
-  isCopyrightTakedown,
-  keptFingerprints,
-  photoReporterNotices,
   quarantineInsert,
-  removalNotice,
-  removalRuleOf,
-  removalStatements,
-  reporterNotices,
-  resolveReview,
   uploaderContextOf,
-  wasFlaggedAutomatically,
-  wasModerated,
   type CaseOverOutcome,
   type ClaimedPurge,
-  type RemovalReason,
-  type ResolveOutcome,
-  type ReviewActionValues,
-} from "../../safety";
+} from "../../safety/takedowns";
 
 import {
   moderateGarmentPhoto,

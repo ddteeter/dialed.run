@@ -7,7 +7,7 @@ import {
   imageDimensions,
   pixelBudgetRefusal,
 } from "../../src/lib/photo-pipeline";
-import { createItem } from "../../src/modules/closet";
+import { createItem } from "../../src/modules/closet/service";
 import {
   PhotoValidationError,
   uploadItemPhoto,
@@ -16,7 +16,7 @@ import {
   photoResponse,
   uploadPhoto,
 } from "../../src/modules/feed/entries/photos";
-import { type Classify } from "../../src/modules/safety";
+import { type Classify } from "../../src/modules/safety/screening";
 import {
   imageCategories,
   type CategoryScores,

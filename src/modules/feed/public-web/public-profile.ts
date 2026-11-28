@@ -26,16 +26,15 @@ import { handleCacheTag } from "../../../lib/cache-tags";
 import { usernameSchema } from "../../../lib/contracts/garments";
 import { distanceNumber } from "../../../lib/contracts/measures";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
-import { lookUpHandle } from "../../account";
+import { lookUpHandle } from "../../account/handles";
 import { publicRotation } from "../../closet";
-import { firstPublishedPhotos, publicPageHeaders } from "../../ops";
-import { worldVisibleEntry } from "../../safety";
+import { firstPublishedPhotos, publicPageHeaders } from "../../ops/public-web";
+import { runnerInStanding, worldVisibleEntry } from "../../safety/rules";
 
 import {
   observationsForRuns,
   type Conditions,
   countWhere,
-  runnerInStanding,
   unitsFor,
 } from "../conditions";
 import { runDayOf } from "../../../lib/dates";

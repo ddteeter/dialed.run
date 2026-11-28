@@ -21,7 +21,7 @@
  * `vite dev`; then there is nothing to purge and the call does nothing.
  */
 import { cache, coreDb, waitUntil } from "../../../env";
-import { isWithinRateLimit } from "../../email";
+import { isWithinRateLimit } from "../limits";
 import {
   scopeOfTags,
   type PurgeTags,

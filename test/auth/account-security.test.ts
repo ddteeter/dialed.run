@@ -11,7 +11,7 @@ import { outbox, passwordAttempts, rateLimits } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { createAuth } from "../../src/modules/auth/create-auth";
-import { confirmEmail } from "../../src/modules/account";
+import { confirmEmail } from "../../src/modules/account/verification/verification";
 import { issueEmailLink } from "../../src/modules/account/verification/email-links";
 import { changeOwnPassword } from "../../src/modules/auth/change-password";
 import {

@@ -4,7 +4,7 @@ import {
   moderationThresholds,
   screenPhoto,
   thresholdsAnomaly,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening";
 import { imageCategories } from "../../src/modules/safety/screening/classifier/moderation";
 import {
   parseThresholds,

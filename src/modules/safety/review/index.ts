@@ -17,11 +17,11 @@ export {
   type ResolveOutcome,
   resolveReview,
   reviewResolution,
-  type ReviewSource,
   type ReviewSubjectType,
   settledHere,
   settleOpenReviews,
   stuckSources,
   wasFlaggedAutomatically,
 } from "./review";
+export { requestHolds } from "./request-holds";
 export { withdrawnGarmentUnderReview, withdrawnUnderReview } from "./withdrawn";

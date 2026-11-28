@@ -27,18 +27,12 @@ import { nowSeconds } from "../../lib/now";
 import { noInput } from "../../lib/no-input";
 import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
 import { emailDepsFromEnv } from "../email";
-import {
-  captureException,
-  turnstileSiteKey,
-  verifyTurnstileToken,
-} from "../ops";
+import { turnstileSiteKey, verifyTurnstileToken } from "../ops/edge";
+import { captureException } from "../ops/sentry";
+import { turnstileAttempt } from "../ops/edge";
 import { settleOwedEmail } from "../ops/owed-email";
-import { requireAdmin } from "../safety";
-import {
-  confirmAccessAsk,
-  requestAccess,
-  turnstileAttempt,
-} from "./access/access";
+import { requireAdmin } from "../safety/rules";
+import { confirmAccessAsk, requestAccess } from "./access/access";
 import { accountPage, accountView, ownAddressView } from "./data/account-view";
 import { requestExport } from "./data/data-exports";
 import {

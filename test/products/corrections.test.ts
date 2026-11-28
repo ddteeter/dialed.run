@@ -27,11 +27,11 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { NotFoundError } from "../../src/lib/errors";
 import { FIELD_REFUSAL_CODE } from "../../src/lib/field-refusal";
+import { waitingCorrectionsCountOf } from "../../src/modules/products";
 import {
   correctionContext,
   fileCorrection,
-  waitingCorrectionsCountOf,
-} from "../../src/modules/products";
+} from "../../src/modules/products/corrections";
 import {
   applyCorrection,
   correctionsQueue,

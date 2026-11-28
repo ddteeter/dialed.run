@@ -29,8 +29,8 @@ import { accountDeletions, userProfiles } from "../../../db/schema-core";
 import { coreDb, env } from "../../../env";
 import { nowSeconds } from "../../../lib/now";
 import { guarded, runGuarded } from "../../../lib/sql/batch-guard";
-import { captureException } from "../../ops";
-import { enqueueForReview } from "../../safety";
+import { captureException } from "../../ops/sentry";
+import { enqueueForReview } from "../../safety/review";
 import { screenHandle, type HandleScreenVerdict } from "./handle-screen";
 
 /**

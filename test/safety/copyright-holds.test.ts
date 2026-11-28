@@ -36,8 +36,8 @@ import {
   retractEntry,
 } from "../../src/modules/feed/entries/retract";
 import { ControlRefusal } from "../../src/lib/control-refusal";
-import { oweInCore } from "../../src/modules/ops";
-import { resolveReview } from "../../src/modules/safety";
+import { oweInCore } from "../../src/modules/ops/outbox";
+import { resolveReview } from "../../src/modules/safety/review";
 import { releaseReview } from "../../src/modules/safety/review/review";
 import { fileTakedownRequest } from "../../src/modules/safety/takedowns/takedown-requests";
 import { oweInCoreWhere } from "../../src/modules/ops/outbox/owe-in-core";

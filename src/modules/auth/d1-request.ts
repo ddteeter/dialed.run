@@ -1,7 +1,7 @@
 import type { drizzle } from "drizzle-orm/d1";
 
 import { primaryCoreDb, isQueryTallyEnabled, waitUntil } from "../../env";
-import { captureException } from "../ops";
+import { captureException } from "../ops/sentry";
 import {
   deviceBookmarkCookie,
   deviceBookmarkFrom,

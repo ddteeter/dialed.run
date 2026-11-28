@@ -41,13 +41,13 @@ import {
   retractEntry,
 } from "../../src/modules/feed/entries/retract";
 import { garmentLineOf } from "../../src/modules/safety/review/review";
+import { enqueueForReview } from "../../src/modules/safety/review";
 import {
-  enqueueForReview,
   garmentPhotoForgotten,
-  purgeExpiredQuarantine,
   screenPhoto,
   type Classify,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening";
+import { purgeExpiredQuarantine } from "../../src/modules/safety/takedowns";
 import { banUser } from "../../src/modules/safety/runners/bans";
 import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 import {

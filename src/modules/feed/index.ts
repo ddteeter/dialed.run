@@ -19,17 +19,7 @@
  * this barrel remains loadable in the vitest workers pool — the same split
  * `modules/auth` and `modules/closet` make.
  */
-export { runnerVisibleToViewer } from "./conditions";
 
 // Task 128 · SAF-3: the delete primitives account deletion (126 · ACC-9)
 // and run deletion call, rather than writing a second delete.
-export {
-  deleteEntryPhoto,
-  deleteRun,
-  deleteRuns,
-  deleteRunsThrough,
-  LIVE_HOLD,
-  retractEntries,
-  retractEntry,
-  type Scope,
-} from "./entries";
+export { deleteRun, deleteRuns, deleteRunsThrough } from "./entries";

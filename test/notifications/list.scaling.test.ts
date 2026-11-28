@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { newUlid } from "../../src/lib/ids";
+import { bellState } from "../../src/modules/notifications";
 import {
-  bellState,
   createNotification,
   listNotifications,
-} from "../../src/modules/notifications";
-import { runnerVisibleToViewer } from "../../src/modules/feed";
+} from "../../src/modules/notifications/service";
+import { runnerVisibleToViewer } from "../../src/modules/safety/rules";
 import { notificationsDb } from "../../src/modules/notifications/db";
 import { runsAwaitingVerdict } from "../../src/modules/runs";
 import { queryCounts } from "../d1-spy";
@@ -49,14 +49,22 @@ describe("listNotifications", () => {
     const small = await runnerOwing(1);
     let listed = 0;
     const one = await queryCounts(async () => {
-      const result = await listNotifications(notificationsDb(), small, runnerVisibleToViewer(small));
+      const result = await listNotifications(
+        notificationsDb(),
+        small,
+        runnerVisibleToViewer(small),
+      );
       listed = result.length;
     });
     expect(listed).toBe(1);
 
     const large = await runnerOwing(25);
     const twentyFive = await queryCounts(async () => {
-      const result = await listNotifications(notificationsDb(), large, runnerVisibleToViewer(large));
+      const result = await listNotifications(
+        notificationsDb(),
+        large,
+        runnerVisibleToViewer(large),
+      );
       listed = result.length;
     });
     expect(listed).toBe(25);

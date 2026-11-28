@@ -13,9 +13,8 @@ import { newUlid } from "../../src/lib/ids";
 import {
   enqueueForReview,
   resolveReview,
-  screenPhoto,
-  type Classify,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/review";
+import { screenPhoto, type Classify } from "../../src/modules/safety/screening";
 import {
   imageCategories,
   type CategoryScores,
@@ -24,7 +23,7 @@ import {
   SCREENING_HIDDEN_NOTICE,
   SCREENING_KEPT_NOTICE,
 } from "../../src/modules/safety/notices/notice-copy";
-import { moderationThresholds } from "../../src/modules/safety";
+import { moderationThresholds } from "../../src/modules/safety/screening";
 import { photoThresholds } from "../../src/modules/safety/screening/thresholds";
 import { reviewFloorsOf } from "../../src/modules/safety/screening/classifier/moderation";
 

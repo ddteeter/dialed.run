@@ -26,7 +26,7 @@ import {
   userProfiles,
   worldAudience,
 } from "../../../db/schema-core";
-import { runnerNotLeaving } from "../../../db/runner-standing";
+import { runnerInStanding, runnerNotLeaving } from "./runner-standing";
 
 /**
  * The entry is shared by its author, nothing is pending or settled against
@@ -118,9 +118,6 @@ function authorNotBanned(): SQL {
   return sql`not exists (select 1 from ${userProfiles} where ${userProfiles.userId} = ${outfitEntries.userId} and (${userProfiles.bannedAt} is not null or ${userProfiles.systemAccount} = 1))`;
 }
 
-// A runner leaving is everyone's rule, in `db/runner-standing` (seam 6).
-export { runnerNotLeaving } from "../../../db/runner-standing";
-
 /**
  * W2 promises both directions: "They can't see your entries" and "You
  * won't see them in the feed" — and, for a runner, "They can't … find you
@@ -165,11 +162,31 @@ function notReportedBy(viewerId: string): SQL[] {
  * subject) is exactly this probe. A profile report's subject is the
  * runner's user id.
  */
-export function profileNotReportedBy(
-  viewerId: string,
-  runnerId: SQLiteColumn,
-): SQL {
+function profileNotReportedBy(viewerId: string, runnerId: SQLiteColumn): SQL {
   return sql`not exists (select 1 from ${reports} where ${reports.reporterId} = ${viewerId} and ${reports.subjectType} = 'profile' and ${reports.subjectId} = ${runnerId})`;
+}
+
+/**
+ * Whether `viewerId` may see a runner at all: not banned, not in a block
+ * pair with the viewer either way, not a profile the viewer has reported
+ * (D-68), and with a confirmed address (D-113 Q2: a handle may be claimed
+ * unconfirmed, but nobody finds it until the address is confirmed). Shared
+ * by runner search (W2, FEED-7), H's `visibleRunnerStatement`, a follow
+ * and the notifications list — each a `WHERE` over `user_profiles` that
+ * answers the same question, so a future exclusion (a new report reason, a
+ * new kind of hide) belongs here once, not in clauses that have to be kept
+ * in step by hand.
+ *
+ * Callers still add their own predicate (a prefix match, `eq(userId, …)`)
+ * alongside this one — it is only the visibility floor, not the whole
+ * `WHERE`.
+ */
+export function runnerVisibleToViewer(viewerId: string) {
+  return and(
+    runnerInStanding(),
+    notBlockedEitherWay(viewerId, userProfiles.userId),
+    profileNotReportedBy(viewerId, userProfiles.userId),
+  );
 }
 
 /**

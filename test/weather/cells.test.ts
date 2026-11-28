@@ -8,9 +8,9 @@ import { newUlid } from "../../src/lib/ids";
 import {
   forgetManualBands,
   newestObservationAt,
-  observationsAtCells,
 } from "../../src/modules/weather";
-import type { CacheKey } from "../../src/modules/weather";
+import { observationsAtCells } from "../../src/modules/weather/read";
+import type { CacheKey } from "../../src/modules/weather/store";
 import { upsertRealObservation } from "../../src/modules/weather/store";
 
 /**

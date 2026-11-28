@@ -181,8 +181,8 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
     others: {
       account: { delete: true, why: purge },
       feed: {
-        update: ["photoKey", "photoFingerprint", "visibility"],
-        why: "a Desk Remove takes a garment's photo off; C1 moves it behind closet's door",
+        update: ["visibility"],
+        why: "a Desk Remove's version hold refuses its batch through the garment's visibility (garment-moderation.ts); closet's clearedPhoto takes the photo off",
       },
       safety: { update: ["visibility"], why: statusColumn },
     },
@@ -191,10 +191,6 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
   products: {
     owner: "products",
     others: {
-      dispatch: {
-        update: ["extractionStatus"],
-        why: "the enrichment sweep; B5 moves it out of dispatch",
-      },
       enrichment: {
         update: [
           "extractionStatus",
@@ -301,10 +297,6 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
     },
   },
   notification_preferences: forgottenBy("email"),
-  rate_limits: {
-    // B12 moves the counters to `ops/limits`.
-    owner: "email",
-  },
 
   // Safety.
   blocks: forgottenBy("safety"),
@@ -328,15 +320,7 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
     },
   },
   takedown_blocks: { owner: "safety" },
-  takedown_requests: {
-    owner: "safety",
-    others: {
-      feed: {
-        update: ["status", "declineReason", "resolvedAt", "resolvedBy"],
-        why: "a removal request answered; B9 moves it behind safety's door",
-      },
-    },
-  },
+  takedown_requests: { owner: "safety" },
 
   // Operations.
   outbox: {
@@ -351,15 +335,9 @@ export const tableOwners: { readonly [N in TableName]: Owners<N> } = {
   },
   gave_up: {
     owner: "ops",
-    others: {
-      "src/db": {
-        insert: true,
-        delete: true,
-        why: "the gave-up writer; B12 moves it to `ops/gave-up`",
-      },
-      weather: { delete: true, why: "a run's weather settled" },
-    },
+    others: { weather: { delete: true, why: "a run's weather settled" } },
   },
+  rate_limits: { owner: "ops" },
   cron_checkpoints: {
     owner: "ops",
     others: { dispatch: { insert: true, why: "the scheduled upkeep's steps" } },

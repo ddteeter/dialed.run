@@ -21,7 +21,7 @@ import {
   claimUsername,
   renameNoticeOf,
 } from "../../src/modules/account/handles/username";
-import { enqueueForReview } from "../../src/modules/safety";
+import { enqueueForReview } from "../../src/modules/safety/review";
 import { pendingReviewQueue } from "../../src/modules/safety/review/review";
 
 /**

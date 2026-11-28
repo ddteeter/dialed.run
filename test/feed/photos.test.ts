@@ -41,7 +41,7 @@ import {
   uploadPhoto,
   uploadPhotoAnswer,
 } from "../../src/modules/feed/entries/photos";
-import { type Classify } from "../../src/modules/safety";
+import { type Classify } from "../../src/modules/safety/screening";
 import {
   imageCategories,
   type CategoryScores,

@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, lt } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { gaveUpUpsert } from "../../src/db/gave-up";
+import { gaveUpUpsert } from "../../src/modules/ops/gave-up/gave-up";
 import {
   gaveUp,
   notifications,

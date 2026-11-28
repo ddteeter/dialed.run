@@ -54,11 +54,11 @@ import {
   isUnderReviewForAuthor,
   publicPhotoStatus,
   publiclyVisibleEntry,
-} from "../../safety";
+} from "../../safety/rules";
 import { requireOwned, requireOwner } from "../../../lib/sql/owned";
 import { allowedLinksOf, typeWordOf } from "../../closet";
 import { runEffortStatement } from "../../runs/writes";
-import { purgePublicPages } from "../../ops";
+import { purgePublicPages } from "../../ops/public-web";
 import { newUlid } from "../../../lib/ids";
 import { bandFloorC } from "../../../lib/contracts/temperature";
 import {

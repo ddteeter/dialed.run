@@ -174,8 +174,8 @@ schema change)
 
 1. **R-142**: delete `gave_up` rows whose subject starts with the athlete
    id, inside the existing deauthorize and purge batches (one batch, no
-   split). Add a prefix delete beside `db/gave-up.ts`'s exact-match one.
-   `src/db/gave-up.ts` is not `schema*`; the lane confirms that before
+   split). Add a prefix delete beside `modules/ops/gave-up/gave-up.ts`'s exact-match one.
+   `src/modules/ops/gave-up/gave-up.ts` is not `schema*`; the lane confirms that before
    editing.
    _Test:_ worker tests showing a deauthorize and a purge leave no matching
    row and leave other athletes' rows alone.

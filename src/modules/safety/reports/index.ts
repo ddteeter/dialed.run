@@ -3,5 +3,5 @@ export {
   undecidedRemovalsDue,
 } from "./removal-reminders";
 export { forgetReportCounts } from "./reportable";
-export { type OweEmail, reconcileUnhiddenReports } from "./reports";
+export { reconcileUnhiddenReports } from "./reports";
 export { sweepModerationRecords } from "./retention";

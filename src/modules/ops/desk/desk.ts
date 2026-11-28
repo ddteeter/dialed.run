@@ -21,14 +21,10 @@ import { calendarDay } from "../../../lib/dates";
 import { nowSeconds } from "../../../lib/now";
 import { maskedAddress } from "../../email";
 import { waitingCorrectionsCountOf } from "../../products";
-import {
-  adminUserIds,
-  flaggedCountOf,
-  overCeilings,
-  pendingReviewCount,
-  type CeilingReading,
-  waitingBySource,
-} from "../../safety";
+import { overCeilings, type CeilingReading } from "../../safety/limits";
+import { pendingReviewCount, waitingBySource } from "../../safety/review";
+import { adminUserIds } from "../../safety/rules";
+import { flaggedCountOf } from "../../safety/runners";
 import type { CronName } from "./crons";
 import { DIGEST_UNCONFIRMED } from "./digest-marks";
 import { stillDueOf } from "../outbox";

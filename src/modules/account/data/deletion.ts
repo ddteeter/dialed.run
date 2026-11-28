@@ -25,14 +25,12 @@ import { homeZoneOf, proseDayLabel } from "../../../lib/dates";
 import type { ViewerZone } from "../../../lib/dates";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
-import { countLimit, emailDebt, limitAllowed, limitClaimOf } from "../../email";
+import { emailDebt } from "../../email";
+import { countLimit, limitAllowed, limitClaimOf } from "../../ops/limits";
 import { viewerZone } from "../../notifications";
-import {
-  captureException,
-  outboxInsertWhere,
-  oweOutbox,
-  purgePublicPagesFor,
-} from "../../ops";
+import { outboxInsertWhere, oweOutbox } from "../../ops/outbox";
+import { purgePublicPagesFor } from "../../ops/public-web";
+import { captureException } from "../../ops/sentry";
 import { settleOwedEmail } from "../../ops/owed-email";
 import { disconnectStrava } from "../../runs";
 import { ownAccountView } from "./account-view";

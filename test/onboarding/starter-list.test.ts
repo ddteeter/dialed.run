@@ -5,7 +5,8 @@ import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import type { ClimateNormals, ClimatePlace } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
-import { tapList, TAP_LIST_FOLD } from "../../src/modules/closet";
+import { TAP_LIST_FOLD } from "../../src/modules/closet";
+import { tapList } from "../../src/modules/closet/tap-list";
 import { saveCalibration } from "../../src/modules/onboarding/profile";
 import {
   normalsForRequest,

@@ -10,7 +10,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { PHOTOS_HELD_AT_ONCE } from "../../src/lib/photo-constraints";
 import { doesConditionHold } from "../../src/lib/sql/condition";
-import { photosHeldBelowLimit } from "../../src/modules/safety";
+import { photosHeldBelowLimit } from "../../src/modules/safety/review";
 import { heldGarmentPhotos } from "../held-photo-rows";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 

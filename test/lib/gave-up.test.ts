@@ -10,7 +10,7 @@ import {
   giveUpEach,
   MAX_RAW_ERROR_LENGTH,
   type GaveUpWrites,
-} from "../../src/db/gave-up";
+} from "../../src/modules/ops/gave-up/gave-up";
 import { gaveUp, imports } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";

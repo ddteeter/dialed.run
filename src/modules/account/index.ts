@@ -1,54 +1,10 @@
 /**
- * The account module's public API (task 126): the handle today; email,
- * verification, invites, export and deletion as they land.
+ * The account module's door (task 126). It exports nothing: every name
+ * another module uses lives on a sub-module door (`./handles`,
+ * `./access`, `./verification`, `./terms`, …), and an importer reads it
+ * there (design 261 C6, design 258 proposal 13). The file stays because a
+ * folder under `src/modules` is a module by having its own `index.ts`.
  *
- * Server-fn glue lives in ./functions, imported directly by route files,
- * so this barrel stays importable in the vitest workers pool.
+ * Server-fn glue lives in ./functions, imported directly by route files.
  */
-export {
-  claimUsername,
-  forceRename,
-  lookUpHandle,
-  usernameOf,
-} from "./handles";
-export { reviewFlaggedHandle } from "./handles";
-export type {
-  ForcedRename,
-  ForceRenameRequest,
-  HandleClaim,
-  HandleLookup,
-} from "./handles";
-export {
-  accountCount,
-  ACCOUNTS_PAGE,
-  listAccounts,
-  prefixPattern,
-} from "./access";
-export type { AccountRow, AccountsQuery } from "./access";
-export {
-  changeLinkWithdrawal,
-  emailConfirmationRead,
-  runnerConfirmed,
-  isUnconfirmed,
-  isVerified,
-} from "./verification";
-export { accessGate, turnstileAttempt } from "./access";
-export { receiveAccessRequest } from "./access";
-export {
-  currentTermsVersion,
-  latestAcceptanceOf,
-  termsStandingOf,
-} from "./terms";
-export {
-  authMail,
-  confirmEmail,
-  readEmailLanding,
-  requestEmailChange,
-  resendConfirmation,
-} from "./verification";
-export type {
-  AuthMail,
-  ChangeResult,
-  Landing,
-  ResendAnswer,
-} from "./verification";
+export {};

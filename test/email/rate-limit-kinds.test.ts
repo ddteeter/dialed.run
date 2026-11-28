@@ -16,7 +16,7 @@ import {
   countLimit,
   isWithinRateLimit,
   countSend,
-} from "../../src/modules/email";
+} from "../../src/modules/ops/limits";
 import {
   canSpendModelCall,
   canSpendPageFetch,

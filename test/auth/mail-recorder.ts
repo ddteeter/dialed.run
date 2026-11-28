@@ -1,4 +1,4 @@
-import type { AuthMail } from "../../src/modules/account";
+import type { AuthMail } from "../../src/modules/account/verification";
 
 /**
  * `createAuth`'s `mail`, replaced by a recorder: which email auth asked

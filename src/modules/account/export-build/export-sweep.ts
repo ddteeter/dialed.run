@@ -14,7 +14,7 @@ import { dataExports } from "../../../db/schema-core";
 import { coreDb, env } from "../../../env";
 import { EXPORT_LINK_TTL_S } from "../../../lib/contracts/data-export";
 import { nowSeconds } from "../../../lib/now";
-import { captureException } from "../../ops";
+import { captureException } from "../../ops/sentry";
 import { exportKeyFor, type ExportQueue } from "../data";
 
 type Db = ReturnType<typeof drizzle>;

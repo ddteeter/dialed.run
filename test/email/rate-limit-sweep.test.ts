@@ -17,9 +17,9 @@ import {
   SEND_WINDOW_S,
   SENDS_PER_WINDOW,
   SHORT_KEPT_S,
-} from "../../src/modules/email/rate-limit";
+} from "../../src/modules/ops/limits/rate-limit";
 import { queriesDuring } from "../d1-spy";
-import { sweepRateLimits } from "../../src/modules/email";
+import { sweepRateLimits } from "../../src/modules/ops/limits";
 
 /**
  * The daily sweep of rate-limit counts (per address, and per visitor IP

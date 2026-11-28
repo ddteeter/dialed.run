@@ -24,7 +24,7 @@ import { removalRequestNotice } from "../../src/lib/contracts/takedown";
 import {
   mintReceiptConfirmToken,
   requestSubjectOf,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/takedowns";
 import {
   blockAndDeclineAll,
   confirmTakedownRequest,
@@ -43,7 +43,7 @@ import {
   TAKEDOWN_CAP,
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
-} from "../../src/modules/safety/limits/takedown-limits";
+} from "../../src/modules/safety/takedowns/takedown-limits";
 import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
 import { queriesDuring } from "../d1-spy";
 import { fakeMail } from "../email/helpers";

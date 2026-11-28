@@ -25,7 +25,7 @@ import {
 } from "../../src/lib/contracts/access";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { accessGate } from "../../src/modules/account";
+import { accessGate } from "../../src/modules/account/access";
 import { closedAddressRows } from "../../src/modules/account/access/closed-addresses";
 import {
   admitSignUp,
@@ -35,7 +35,7 @@ import {
   type AccessGate,
 } from "../../src/modules/auth/access-hook";
 import { createAuth } from "../../src/modules/auth/create-auth";
-import type { TurnstileAttempt } from "../../src/modules/ops";
+import type { TurnstileAttempt } from "../../src/modules/ops/edge";
 import { recordingMail } from "./mail-recorder";
 import { OPEN_ACCESS } from "./open-access";
 

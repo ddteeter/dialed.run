@@ -5,23 +5,12 @@
 export {
   changeLinkWithdrawal,
   emailConfirmationRead,
-  runnerConfirmed,
   isUnconfirmed,
-  isVerified,
 } from "./email-links";
-export {
-  authMail,
-  confirmEmail,
-  readEmailLanding,
-  requestEmailChange,
-  resendConfirmation,
-} from "./verification";
+export { authMail } from "./verification";
 export type {
   AuthMail,
   Background,
-  ChangeResult,
-  Landing,
   OwedMail,
   PasswordCheck,
-  ResendAnswer,
 } from "./verification";

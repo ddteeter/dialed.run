@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { extensionFromKey, sourceFor } from "../../src/modules/runs/parsers";
 import {
-  extensionFromKey,
   importExtensionOf,
-  sourceFor,
   IMPORT_EXTENSIONS,
-} from "../../src/modules/runs/parsers";
+} from "../../src/modules/runs/upload-limits";
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 
 /**

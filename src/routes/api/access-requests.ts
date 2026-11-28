@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { env, primaryCoreDb, waitUntil } from "../../env";
-import { receiveAccessRequest } from "../../modules/account";
+import { receiveAccessRequest } from "../../modules/account/access";
 import { deploymentPosture } from "../../modules/auth";
 import { emailDepsFromEnv } from "../../modules/email";
-import { captureException, verifyTurnstileToken } from "../../modules/ops";
+import { verifyTurnstileToken } from "../../modules/ops/edge";
+import { captureException } from "../../modules/ops/sentry";
 
 /**
  * The marketing site's request-access form (round 31, design 187). The

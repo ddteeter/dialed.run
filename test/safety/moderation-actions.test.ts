@@ -47,25 +47,26 @@ import {
   photoResponse,
   reviewerPhotoResponse,
 } from "../../src/modules/feed/entries/photos";
+import { accountCount, listAccounts } from "../../src/modules/account/access";
+import { forceRename } from "../../src/modules/account/handles";
 import {
-  accountCount,
   ACCOUNTS_PAGE,
-  claimUsername,
-  forceRename,
-  listAccounts,
   prefixPattern,
-} from "../../src/modules/account";
+} from "../../src/modules/account/access/accounts";
+import { claimUsername } from "../../src/modules/account/handles/username";
 import type { ScreenHandle } from "../../src/modules/account/handles/handle-screen";
+import { takedownInput } from "../../src/modules/safety";
+import { openSubject } from "../../src/modules/safety/review";
 import {
-  openSubject,
-  isPlaceholderHandle,
-  placeholderHandle,
   isCopyrightTakedown,
   removalNotice,
   removalStatements,
+} from "../../src/modules/safety/rules";
+import {
+  isPlaceholderHandle,
+  placeholderHandle,
   renameRecord,
-  takedownInput,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/runners";
 import { AdminRequiredError } from "../../src/modules/safety/rules/admin";
 import { banUser, unbanUser } from "../../src/modules/safety/runners/bans";
 import {

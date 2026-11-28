@@ -142,7 +142,6 @@ export async function searchBrands(
     : db
         .select()
         .from(brands)
-        // fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument
         .where(matches)
         // The curated brands first (design 232): a typed brand that sorts
         // ahead of a seeded one cannot push it off the list.
@@ -213,34 +212,6 @@ export async function createOrGetProduct(
   );
 }
 
-/**
- * Prefix autocomplete scoped to one brand's active products (retired/hidden
- * products from 106 moderation never surface here), each as its id and
- * name.
- */
-export async function searchProducts(
-  db: Db,
-  brandId: string,
-  prefix: string,
-  limit = AUTOCOMPLETE_LIMIT,
-): Promise<{ id: string; name: string }[]> {
-  const matches = prefixMatch(products.normalizedName, prefix);
-  return matches === undefined
-    ? []
-    : db
-        .select({ id: products.id, name: products.name })
-        .from(products)
-        .where(
-          and(
-            eq(products.brandId, brandId),
-            eq(products.status, "active"),
-            matches,
-          ),
-        )
-        .orderBy(products.name)
-        .limit(limit);
-}
-
 export interface ResolveProductInput {
   brandName: string;
   productName: string;
@@ -257,11 +228,9 @@ export interface ResolveProductInput {
 /**
  * A brand's known products, for P2.5's model suggestions.
  *
- * **Distinct from `searchProducts`, which needs a prefix.** Design §AC
- * asks for "a suggestion chip row from that brand's known products, typed
- * only if none fit" — chips a runner reads *before* typing, so there is no
- * prefix to match on. `searchProducts` with an empty one returns nothing
- * by design, because a blank autocomplete should not dump a table.
+ * **Not a prefix search.** Design §AC asks for "a suggestion chip row
+ * from that brand's known products, typed only if none fit" — chips a
+ * runner reads *before* typing, so there is no prefix to match on.
  *
  * Resolves the brand by its normalized name and **does not create it**:
  * this runs while someone is still typing, and a lookup that created a
@@ -361,20 +330,6 @@ export interface ProductAttributeDefaults {
 }
 
 /**
- * Read-side default source (docs/contracts.md: "Garments inherit product
- * attributes as defaults where their own columns are NULL"). Closet's
- * service calls this — never the other way — to fill gaps in a linked
- * garment's attributes; the garment's own columns always win when present.
- */
-export async function getProductAttributeDefaults(
-  db: Db,
-  productId: string,
-): Promise<ProductAttributeDefaults | undefined> {
-  const defaults = await getProductAttributeDefaultsBulk(db, [productId]);
-  return defaults.get(productId);
-}
-
-/**
  * What a product is made of, for garment detail and nowhere else.
  *
  * Deliberately **not** folded into `ProductAttributeDefaults`: that shape
@@ -392,22 +347,6 @@ export interface ProductComposition {
    * In the brand's order, never re-sorted by percentage.
    */
   readonly parts: readonly FabricPart[];
-}
-
-/**
- * `firstRowWhere` rather than a two-column projection, which is the trade
- * its own docstring already argues: there is no covering index to answer a
- * primary-key lookup from, and one row by primary key is one row read
- * whichever way it is written. What the projection bought was a smaller
- * payload; what it cost was an eleventh copy of a shape `src/modules`
- * already holds twenty of.
- */
-export async function getProductComposition(
-  db: Db,
-  productId: string,
-): Promise<ProductComposition | undefined> {
-  const product = await getProductForDetail(db, productId);
-  return product?.composition;
 }
 
 /**

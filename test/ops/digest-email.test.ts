@@ -18,7 +18,7 @@ import {
   settleOutbox,
   type OutboxDebt,
 } from "../../src/modules/ops/outbox/outbox";
-import { emailHandler } from "../../src/modules/ops/owed-email";
+import { emailHandler } from "../../src/modules/ops/owed-email/owed-email";
 import { beforeNextWriteBatch } from "../before-write-batch";
 import { fakeMail, seedUser } from "../email/helpers";
 

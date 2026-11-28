@@ -12,7 +12,7 @@ import {
   stravaConnections,
   userProfiles,
 } from "../../src/db/schema-core";
-import { gaveUpUpsert } from "../../src/db/gave-up";
+import { gaveUpUpsert } from "../../src/modules/ops/gave-up/gave-up";
 import { env } from "../../src/env";
 import type { GaveUpKind } from "../../src/lib/contracts/gave-up";
 import { newUlid } from "../../src/lib/ids";
@@ -27,10 +27,8 @@ import {
   type RetryDeps,
 } from "../../src/modules/ops/desk/gave-up";
 import { todayCounts } from "../../src/modules/ops/desk/desk";
-import {
-  createOrGetBrand,
-  createOrGetProduct,
-} from "../../src/modules/products";
+import { createOrGetBrand } from "../../src/modules/products";
+import { createOrGetProduct } from "../../src/modules/products/service";
 import { reminderSubject } from "../../src/modules/runs/queue-messages";
 import { gaveUpRow } from "../gave-up-rows";
 import { importMessageFor } from "../queue-fakes";

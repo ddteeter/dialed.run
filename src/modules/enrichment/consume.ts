@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, exists, gt, gte, or, sql, type SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
@@ -6,8 +6,9 @@ import {
   gaveUpClear,
   gaveUpUpsert,
   shortRawError,
-} from "../../db/gave-up";
+} from "../ops/gave-up";
 import { products, productSnapshots } from "../../db/schema-core";
+import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { withoutBoundValues } from "../../lib/statement-error";
 import { consumeEach } from "../../lib/sql/queue-batch";
@@ -132,7 +133,7 @@ async function markFailed(
   product: { id: string; createdAt: number },
   error: PageFetchError | UnreadableAnswerError,
 ): Promise<void> {
-  const failed = eq(products.id, product.id);
+  const failed = stillPending(product.id);
   if (product.createdAt > abandonedBefore()) {
     await db
       .update(products)
@@ -144,16 +145,48 @@ async function markFailed(
       .where(failed);
     return;
   }
+  // The row first, so its condition reads the product before the update
+  // fails it.
   await db.batch([
+    gaveUpUpsert(
+      db,
+      {
+        kind: "enrichment",
+        subjectId: product.id,
+        reason: pageFailureReason(error.message),
+        rawError: error.message,
+        tries: 1,
+      },
+      nowSeconds(),
+      whilePending(db, product.id),
+    ),
     db.update(products).set({ extractionStatus: "failed" }).where(failed),
-    gaveUpUpsert(db, {
-      kind: "enrichment",
-      subjectId: product.id,
-      reason: pageFailureReason(error.message),
-      rawError: error.message,
-      tries: 1,
-    }),
   ]);
+}
+
+/**
+ * The product, while it is still `pending`: a failure decided from a read
+ * lands only if no other message for it finished in between.
+ */
+function stillPending(productId: string): SQL | undefined {
+  return and(
+    eq(products.id, productId),
+    eq(products.extractionStatus, "pending"),
+  );
+}
+
+/**
+ * Whether the product is still `pending` as the statement runs: the
+ * condition a Gave-up row for it is written under, so the Desk never lists
+ * a product another message finished (`giveUpEach`).
+ */
+function whilePending(db: Db, productId: string): SQL {
+  return exists(
+    db
+      .select({ one: sql`1` })
+      .from(products)
+      .where(stillPending(productId)),
+  );
 }
 
 /**
@@ -517,10 +550,6 @@ export async function handleEnrichmentDlqBatch(
         eq(products.id, productId),
       );
       if (row?.extractionStatus !== "pending") return;
-      const stillPending = and(
-        eq(products.id, productId),
-        eq(products.extractionStatus, "pending"),
-      );
       // Parked here and nothing returned: one statement, so no batch to
       // join, and no row to write yet.
       if (row.createdAt > abandonedBefore()) {
@@ -531,16 +560,17 @@ export async function handleEnrichmentDlqBatch(
             extractionError: sql`NULL`,
             extractionTries: sql`coalesce(${products.extractionTries}, 0) + ${tries}`,
           })
-          .where(stillPending);
+          .where(stillPending(productId));
         return;
       }
       return {
         subject: { kind: "enrichment", subjectId: productId },
+        onlyIf: whilePending(deps.db, productId),
         writes: [
           deps.db
             .update(products)
             .set({ extractionStatus: "failed" })
-            .where(stillPending),
+            .where(stillPending(productId)),
         ],
       };
     },

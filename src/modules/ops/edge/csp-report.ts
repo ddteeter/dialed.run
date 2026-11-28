@@ -14,7 +14,7 @@ import { z } from "zod";
 
 import { coreDb } from "../../../env";
 import { readCappedText } from "../../../lib/read-capped";
-import { isWithinRateLimit } from "../../email";
+import { isWithinRateLimit } from "../limits";
 import { captureException } from "../sentry";
 
 /**

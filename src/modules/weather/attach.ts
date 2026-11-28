@@ -8,7 +8,7 @@
 import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 
-import { gaveUpClear, gaveUpUpsert } from "../../db/gave-up";
+import { gaveUpClear, gaveUpUpsert } from "../ops/gave-up";
 import { gaveUp, imports, runs } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { pinPrimary } from "../../lib/sql/d1-session";

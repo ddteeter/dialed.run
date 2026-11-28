@@ -7,10 +7,8 @@ import type {
 } from "@garmin/fitsdk";
 import { describe, expect, it } from "vitest";
 
-import {
-  NO_TRACK_MESSAGE,
-  PARSE_FAILURE_MESSAGE,
-} from "../../src/modules/runs/parsers";
+import { PARSE_FAILURE_MESSAGE } from "../../src/modules/runs/parsers";
+import { NO_TRACK_MESSAGE } from "../../src/modules/runs/parsers/shared";
 import { fitSource } from "../../src/modules/runs/parsers/fit";
 import { gpxSource } from "../../src/modules/runs/parsers/gpx";
 import { tcxSource } from "../../src/modules/runs/parsers/tcx";

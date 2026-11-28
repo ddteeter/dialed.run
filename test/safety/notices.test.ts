@@ -17,10 +17,8 @@ import { newUlid, ulidSchema, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideReview } from "../../src/modules/feed/moderation/moderation";
-import {
-  moderationThresholds,
-  reconcileUnhiddenReports,
-} from "../../src/modules/safety";
+import { reconcileUnhiddenReports } from "../../src/modules/safety/reports";
+import { moderationThresholds } from "../../src/modules/safety/screening";
 import { fileReport } from "../../src/modules/safety/reports/reports";
 import { reportersToHide } from "../../src/modules/safety/screening/thresholds";
 import {

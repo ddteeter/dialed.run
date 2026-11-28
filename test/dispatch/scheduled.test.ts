@@ -24,7 +24,7 @@ import { configuredDeployment } from "../ops/configured-deployment";
 import type { RateLimitKind } from "../../src/lib/contracts/rate-limits";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment";
+import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment/abandon";
 import { enrichJobSchema } from "../../src/modules/enrichment/queue-messages";
 import { handleScheduled } from "../../src/modules/dispatch";
 import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/reports/retention";
@@ -48,10 +48,8 @@ import type {
   CronReporter,
   SentryReport,
 } from "../../src/modules/ops/sentry/sentry";
-import {
-  createOrGetBrand,
-  createOrGetProduct,
-} from "../../src/modules/products";
+import { createOrGetBrand } from "../../src/modules/products";
+import { createOrGetProduct } from "../../src/modules/products/service";
 import { importMessageFor } from "../queue-fakes";
 
 /**

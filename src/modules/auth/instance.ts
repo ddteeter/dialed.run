@@ -1,10 +1,12 @@
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
 import { env, primaryCoreDb, waitUntil } from "../../env";
-import { accessGate, authMail } from "../account";
+import { accessGate } from "../account/access";
+import { authMail } from "../account/verification";
 import { emailDepsFromEnv } from "../email";
-import { captureException, verifyTurnstileToken } from "../ops";
-import { banGate } from "../safety";
+import { verifyTurnstileToken } from "../ops/edge";
+import { captureException } from "../ops/sentry";
+import { banGate } from "../safety/runners";
 import { breachVerdict } from "./breached-password";
 import { createAuth, googleCredentials } from "./create-auth";
 import { deletionGate } from "./leaving-gate";

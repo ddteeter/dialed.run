@@ -7,14 +7,11 @@ import { newUlid } from "../../src/lib/ids";
 import {
   createOrGetBrand,
   createOrGetProduct,
-  getProductAttributeDefaults,
   getProductAttributeDefaultsBulk,
-  getProductComposition,
   getProductForDetail,
   productsForBrand,
   resolveProduct,
   searchBrands,
-  searchProducts,
 } from "../../src/modules/products/service";
 import { brands, products, wardrobeItems } from "../../src/db/schema-core";
 import { CURATED_BRANDS } from "../../src/modules/products/seed-brands";
@@ -81,26 +78,6 @@ describe("products: product create-if-missing", () => {
       createdBy: userB,
     });
     expect(second.id).toBe(first.id);
-  });
-
-  it("scopes autocomplete to one brand and active status", async () => {
-    const client = db();
-    const brandA = await createOrGetBrand(client, "Brand Alpha");
-    const brandB = await createOrGetBrand(client, "Brand Beta");
-    const userId = newUlid();
-    const ofBrandA = await createOrGetProduct(client, {
-      brandId: brandA.id,
-      name: "Speed Short",
-      createdBy: userId,
-    });
-    await createOrGetProduct(client, {
-      brandId: brandB.id,
-      name: "Speed Short",
-      createdBy: userId,
-    });
-    const results = await searchProducts(client, brandA.id, "speed");
-    // Each product as its id and name, and nothing else.
-    expect(results).toStrictEqual([{ id: ofBrandA.id, name: "Speed Short" }]);
   });
 
   it("resolveProduct resolves brand + product together", async () => {
@@ -192,7 +169,8 @@ describe("products: attribute defaults", () => {
       productName: "Blank Product",
       createdBy: userId,
     });
-    const defaults = await getProductAttributeDefaults(client, product.id);
+    const bulk = await getProductAttributeDefaultsBulk(client, [product.id]);
+    const defaults = bulk.get(product.id);
     expect(defaults).toBeDefined();
     expect(defaults?.weight).toBeNull();
   });
@@ -265,17 +243,6 @@ describe("prefix autocomplete refuses to guess", () => {
     expect(await searchBrands(client, "!!!")).toStrictEqual([]);
     expect(await searchBrands(client, "")).toStrictEqual([]);
     expect(await searchBrands(client, " ".repeat(3))).toStrictEqual([]);
-  });
-
-  it("returns nothing for a product prefix that normalises away", async () => {
-    const client = db();
-    const brand = await createOrGetBrand(client, "Empty Prefix Brand");
-    await createOrGetProduct(client, {
-      brandId: brand.id,
-      name: "Something",
-      createdBy: newUlid(),
-    });
-    expect(await searchProducts(client, brand.id, "###")).toStrictEqual([]);
   });
 
   it("treats a LIKE metacharacter the user typed as punctuation", async () => {
@@ -357,7 +324,8 @@ describe("attribute defaults distinguish false from not-stated", () => {
       .set({ windResistant: true, waterResistant: false })
       .where(eq(products.id, id));
 
-    const defaults = await getProductAttributeDefaults(client, id);
+    const bulk = await getProductAttributeDefaultsBulk(client, [id]);
+    const defaults = bulk.get(id);
 
     expect(defaults?.windResistant).toBe(true);
     expect(defaults?.waterResistant).toBe(false);
@@ -371,7 +339,8 @@ describe("attribute defaults distinguish false from not-stated", () => {
       createdBy: newUlid(),
     });
 
-    const defaults = await getProductAttributeDefaults(client, product.id);
+    const bulk = await getProductAttributeDefaultsBulk(client, [product.id]);
+    const defaults = bulk.get(product.id);
 
     expect(defaults?.windResistant).toBeUndefined();
     expect(defaults?.waterResistant).toBeUndefined();
@@ -481,7 +450,8 @@ async function productWith(
       fabricComposition: orSqlNull(verbatim),
     })
     .where(eq(products.id, product.id));
-  return getProductComposition(client, product.id);
+  const detail = await getProductForDetail(client, product.id);
+  return detail?.composition;
 }
 
 describe("products: composition, on the way back out", () => {
@@ -535,10 +505,6 @@ describe("products: composition, on the way back out", () => {
   it("gives undefined verbatim rather than null, so the component has one absent", async () => {
     const composition = await productWith(undefined, undefined);
     expect(composition?.verbatim).toBeUndefined();
-  });
-
-  it("answers undefined for a product that does not exist", async () => {
-    expect(await getProductComposition(db(), newUlid())).toBeUndefined();
   });
 });
 
@@ -696,15 +662,6 @@ describe("prefix autocomplete is an index range", () => {
     );
   });
 
-  it("searches products through products_brand_name", async () => {
-    const { client, last } = recordingDb();
-    await searchProducts(client, newUlid(), "speed");
-    const plan = await planOf(last());
-    expect(plan).toContain(
-      "USING INDEX products_brand_name (brand_id=? AND normalized_name>? AND normalized_name<?)",
-    );
-  });
-
   it("finds a key whose next character is outside the BMP", async () => {
     // The upper bound has to sort after every UTF-8 continuation. U+FFFF
     // would not: 𠀋 (U+2000B) encodes from byte F0, after U+FFFF's EF.
@@ -725,25 +682,6 @@ describe("prefix autocomplete is an index range", () => {
     expect(ids).toStrictEqual([inside.id]);
     expect(ids).not.toContain(after.id);
     expect(ids).not.toContain(before.id);
-  });
-
-  it("finds products by prefix and not past it", async () => {
-    const client = db();
-    const brand = await createOrGetBrand(client, "Range Product Brand");
-    const createdBy = newUlid();
-    const inside = await createOrGetProduct(client, {
-      brandId: brand.id,
-      name: "Glide 9",
-      createdBy,
-    });
-    await createOrGetProduct(client, {
-      brandId: brand.id,
-      name: "Glidf",
-      createdBy,
-    });
-    const found = await searchProducts(client, brand.id, "glide");
-    const ids = found.map((row) => row.id);
-    expect(ids).toStrictEqual([inside.id]);
   });
 });
 

@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-import type { SaveZoneDeps } from "../../src/modules/onboarding";
+import type { SaveZoneDeps } from "../../src/modules/onboarding/time-zone";
 
 /**
  * The place writer's zone lookup, answering `zone` for every place and

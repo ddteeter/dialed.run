@@ -51,21 +51,22 @@ import {
 } from "../../../lib/cache-tags";
 import { columnWhere } from "../../../lib/sql/keyed-read";
 import {
-  captureException,
+  type OutboxDebtOf,
   outboxInsert,
   oweOutbox,
-  purgePublicPages,
   settleOutbox,
   storageHandlers,
-  type OutboxDebtOf,
-} from "../../ops";
+} from "../../ops/outbox";
+import { purgePublicPages } from "../../ops/public-web";
+import { captureException } from "../../ops/sentry";
 import { owedEmailHandlers } from "../../ops/owed-email";
+import { settleOpenReviews, withdrawnUnderReview } from "../../safety/review";
+import { screeningDeletes } from "../../safety/screening";
 import {
-  screeningDeletes,
-  settleOpenReviews,
-  withdrawnUnderReview,
-} from "../../safety";
-import { failsWhileHeld, isHeldRefusal } from "../../safety/takedowns";
+  LIVE_HOLD,
+  failsWhileHeld,
+  isHeldRefusal,
+} from "../../safety/takedowns";
 import { manualConditionsHandler } from "../../weather";
 import { clearEntryHalves, deleteRunCopies } from "../conditions";
 
@@ -352,12 +353,6 @@ export interface HeldCheck {
   entries: SQL;
   noun: "kit" | "run" | "photo";
 }
-
-/**
- * A hold's statuses while it is live: the material is hidden, or its purge
- * has started. The account purge waits on the same set.
- */
-export const LIVE_HOLD = ["hidden", "purging"] as const;
 
 /**
  * `statements` in one batch that a live hold on `check`'s kits refuses,

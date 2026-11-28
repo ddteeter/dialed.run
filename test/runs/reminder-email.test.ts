@@ -14,7 +14,7 @@ import { calendarDay, clockLabel } from "../../src/lib/dates";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
-import { setEmailPreference } from "../../src/modules/email";
+import { setEmailPreference } from "../../src/modules/email/preferences";
 import {
   drainOutbox,
   outboxInsert,

@@ -6,19 +6,7 @@ import { gpxSource } from "./gpx";
 import { tcxSource } from "./tcx";
 import { RunParseError } from "./shared";
 
-export {
-  NO_TRACK_MESSAGE,
-  PARSE_FAILURE_MESSAGE,
-  RunParseError,
-} from "./shared";
-
-/**
- * The extension rule lives beside the upload limits now, where A1's well
- * can reach it without the parsers; re-exported so this module's callers
- * keep one import.
- */
-export { IMPORT_EXTENSIONS, importExtensionOf } from "../upload-limits";
-export type { ImportExtension } from "../upload-limits";
+export { PARSE_FAILURE_MESSAGE, RunParseError } from "./shared";
 
 // Quoted keys (not bareword `fit:`) — the guardrails diff-auditor's
 // skipped-test signature false-positives on the bare identifier `fit` as

@@ -44,14 +44,14 @@ import { runDayOf } from "../../../lib/dates";
 import { ulidSchema } from "../../../lib/ids";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import {
+  type EntryCardData,
   kitCardResponse,
   publicPageHeaders,
   publicPageTags,
   publishedPhotoUrls,
-  type EntryCardData,
-} from "../../ops";
+} from "../../ops/public-web";
 import { allowedLinksOf, typeWordOf } from "../../closet";
-import { kitPiecesSelect, worldVisibleEntry } from "../../safety";
+import { kitPiecesSelect, worldVisibleEntry } from "../../safety/rules";
 
 import {
   observationsForRuns,

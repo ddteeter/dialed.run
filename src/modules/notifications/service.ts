@@ -231,9 +231,9 @@ export async function listNotifications(
 ) {
   const markable = and(eq(notifications.read, false), notOwed(db, userId));
   // SA-M9: a follow row names its follower only while the viewer may see
-  // them. The floor is the feed's `runnerVisibleToViewer`, handed in by the
-  // server function (feed imports this module), so a row links exactly
-  // when H would open. A row it hides keeps its id and reads no handle.
+  // them. The floor is safety's `runnerVisibleToViewer`, handed in by the
+  // server function (safety and feed import this module), so a row links
+  // exactly when H would open. A row it hides keeps its id and reads no handle.
   const followerProfile = and(
     eq(notifications.kind, "followed"),
     eq(userProfiles.userId, notifications.linkId),

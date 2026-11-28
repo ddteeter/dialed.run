@@ -24,7 +24,7 @@ import { guarded, runGuarded } from "../../../lib/sql/batch-guard";
 import { columnWhere } from "../../../lib/sql/keyed-read";
 import { nowSeconds } from "../../../lib/now";
 import { operatorEmailMessage } from "../../../lib/sql/outbox";
-import { adminUserIds } from "../../safety";
+import { adminUserIds } from "../../safety/rules";
 import {
   claimDayStatement,
   DIGEST_OWED,

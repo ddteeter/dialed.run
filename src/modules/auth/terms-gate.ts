@@ -41,10 +41,10 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import {
   currentTermsVersion,
-  emailConfirmationRead,
   latestAcceptanceOf,
   termsStandingOf,
-} from "../account";
+} from "../account/terms";
+import { emailConfirmationRead } from "../account/verification";
 import { offerRunnerBookmark, pinPrimary } from "../../lib/sql/d1-session";
 import {
   AccountLeavingError,
@@ -115,10 +115,9 @@ export async function agreedUserId(
  * What the verification gate refuses this runner with, or `undefined`
  * when it lets them through: leaving, behind on the terms, then an
  * address not confirmed — or no account row, which is a runner who is
- * gone (`account`'s `isVerified` reads it the same way) — and last a
- * system account (design 193), which never writes what others see. Five
- * seeks, one batch: the fourth is the runner's stored D1 bookmark
- * (design 143).
+ * gone — and last a system account (design 193), which never writes
+ * what others see. Five seeks, one batch: the fourth is the runner's
+ * stored D1 bookmark (design 143).
  */
 async function confirmationRefusal(
   db: Db,

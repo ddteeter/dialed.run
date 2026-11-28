@@ -1,6 +1,6 @@
 import { coreDb, env } from "../../../env";
 import { extractionModelFromEnv } from "../../enrichment";
-import { isDeniedOnLanding } from "../../safety";
+import { isDeniedOnLanding } from "../../safety/rules";
 import { captureException } from "../sentry";
 
 /**

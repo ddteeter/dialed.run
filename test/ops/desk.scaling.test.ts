@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { gaveUpUpsert } from "../../src/db/gave-up";
+import { gaveUpUpsert } from "../../src/modules/ops/gave-up/gave-up";
 import { user } from "../../src/db/schema-auth";
 import {
   cronCheckpoints,

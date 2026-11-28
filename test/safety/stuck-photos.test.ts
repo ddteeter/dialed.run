@@ -33,7 +33,7 @@ import { nowSeconds } from "../../src/lib/now";
 import {
   retryPendingScreenings,
   type Classify,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/screening";
 import {
   imageCategories,
   type CategoryScores,

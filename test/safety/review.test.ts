@@ -21,8 +21,8 @@ import {
   pendingReviewCount,
   resolveReview,
   reviewResolution,
-  moderationThresholds,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/review";
+import { moderationThresholds } from "../../src/modules/safety/screening";
 import {
   claimForReview,
   openSubject,
@@ -1614,9 +1614,9 @@ describe("the copies search, on its own", () => {
       read: () => Promise.reject(new Error("D1 took too long")),
     });
 
-    expect(
-      rows.find((row) => row.id === reportedRow)?.copiesUnchecked,
-    ).toBe(true);
+    expect(rows.find((row) => row.id === reportedRow)?.copiesUnchecked).toBe(
+      true,
+    );
   });
 
   it("marks no row when it answers", async () => {

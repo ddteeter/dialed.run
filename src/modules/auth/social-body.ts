@@ -14,7 +14,7 @@ import { z } from "zod";
 
 import { GLOBAL_SUBJECT } from "../../lib/contracts/rate-limits";
 import { MAX_RETURN_PATH } from "../../lib/return-path";
-import { claimLimit } from "../email";
+import { claimLimit } from "../ops/limits";
 import { GOOGLE_BUSY } from "./auth-copy";
 
 /**

@@ -25,16 +25,16 @@ import { garmentVersionId } from "../../../lib/garment-photo-key";
 import { ulidSeconds } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 import { notificationRaise } from "../../notifications";
-import { captureException, oweOutbox } from "../../ops";
+import { clearedPhoto } from "../../closet";
+import { oweOutbox } from "../../ops/outbox";
+import { captureException } from "../../ops/sentry";
 import {
-  garmentPhotoForgotten,
-  isStuck,
-  openReviewRow,
+  openRow as openReviewRow,
   type ResolveOutcome,
   type ReviewSubjectType,
-} from "../../safety";
+} from "../../safety/review";
+import { garmentPhotoForgotten, isStuck } from "../../safety/screening";
 
-import { clearedPhoto } from "./garment-moderation";
 import {
   commit,
   entryPhotoWhere,
@@ -168,7 +168,7 @@ async function wasGarmentPhotoCleared({
   await commit(
     db,
     [
-      clearedPhoto(db, { item: { id: subjectId }, photoKey }),
+      clearedPhoto(db, { itemId: subjectId, photoKey }),
       ...garmentPhotoForgotten(db, reviewerId, subjectId),
       reuploadNotice(db, userId, "garment", subjectId),
     ],

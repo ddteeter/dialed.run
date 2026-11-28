@@ -17,7 +17,8 @@ import {
   reviewQueue,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { moderationThresholds, resolveReview } from "../../src/modules/safety";
+import { resolveReview } from "../../src/modules/safety/review";
+import { moderationThresholds } from "../../src/modules/safety/screening";
 import {
   claimForReview,
   pendingReviewQueue,

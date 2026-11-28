@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
-import { isEmailWanted } from "../../src/modules/email";
+import { isEmailWanted } from "../../src/modules/email/preferences";
 import { oneClickUnsubscribeResponse } from "../../src/modules/email/one-click";
 import { unsubscribeUrl } from "../../src/modules/email/unsubscribe";
 import { core, ORIGIN, seedUser } from "./helpers";

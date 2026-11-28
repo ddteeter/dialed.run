@@ -319,12 +319,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/dispatch/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call",
-      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both callers of redispatchEach -- the shared body is already extracted, and what rhymes now is the call.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/dispatch/scheduled.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence",
+      "key": "src/modules/enrichment/sweep.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- the third caller of redispatchEach, beside imports and revocations: the loop is extracted, and what rhymes is the call, which names a different table, queue and sentence",
       "reason": "The enrichment sweep is the third stalled-marker reconciliation beside imports and Strava revocations, and the third caller of redispatchEach. The loop body and the stalled-row query (stalledPending) are both extracted; what remains at each site is the 13-line call naming a queue, a message shape, a Sentry context and a sentence, which fallow's identifier matching reads as a clone of the imports call. This is the well-factored-pair case CLAUDE.md records: extraction leaves call sites that are skeletally identical, and the price of the flip is a suppression per caller. Three other shapes were tried (a query helper alone, sweeps as data run by one function, a call-site helper) and each moved the clone rather than removed it. Owner's call, 2026-09-13.",
       "count": 1
     },
@@ -361,11 +356,6 @@
     {
       "key": "src/modules/feed/entries/photos.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: both are law 8b's idempotency check through firstColumnWhere; the scope column and the UNIQUE index behind it differ.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/products/service.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument",
-      "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument.",
       "count": 1
     },
     {

@@ -34,7 +34,7 @@ views {
         **This row is the recovery marker.** From here on, `pending` means the work is still owed, whatever happens to the request, the queue or the Worker.
       '''
     }
-    // source: src/modules/runs/imports/imports.ts startImport, startFileUpload, repeatOf; src/modules/runs/queue-messages.ts importJob; src/modules/dispatch/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
+    // source: src/modules/runs/imports/imports.ts startImport, startFileUpload, repeatOf; src/modules/runs/queue-messages.ts importJob; src/modules/runs/imports/stalled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S
     cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob' {
       notes '''
         **Not atomic with the row.** The send can fail, or the Worker can die first.
@@ -136,7 +136,7 @@ views {
         **Guard: the idempotency key.** A repeat returns the first import here. It is not counted again, and nothing is stored or enqueued.
       '''
     }
-    // source: src/modules/runs/imports/imports.ts startFileUpload, isWithinUploadCap; src/modules/runs/upload-limits.ts UPLOADS_PER_DAY, UPLOAD_REFUSALS; src/modules/email/rate-limit.ts isWithinRateLimit
+    // source: src/modules/runs/imports/imports.ts startFileUpload, isWithinUploadCap; src/modules/runs/upload-limits.ts UPLOADS_PER_DAY, UPLOAD_REFUSALS; src/modules/ops/limits/rate-limit.ts isWithinRateLimit
     cf.app.runs.upload -> cf.coreDb 'counts the upload against the runner\'s day' {
       notes '''
         **Guard: 30 uploads a runner a day.** The count is a write. Past 30, the runner reads that they can upload more tomorrow, and nothing is stored.
@@ -164,11 +164,11 @@ views {
       }
 
     try {
-      // source: src/modules/runs/imports/imports.ts startImport (queue.send); src/modules/dispatch/scheduled.ts redispatchStalledImports
+      // source: src/modules/runs/imports/imports.ts startImport (queue.send); src/modules/runs/imports/stalled.ts redispatchStalledImports
       cf.app.runs.upload -[async]-> cf.importsQueue 'enqueues ImportJob'
     }
     catch 'the send fails, or the Worker dies first' {
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S, stalledPending
+      // source: src/modules/runs/imports/stalled.ts redispatchStalledImports, IMPORT_STALL_GRACE_S; src/lib/sql/keyed-read.ts stalledPending
       cf.app.cronDaily1200 -[recovery]-> cf.coreDb 'finds imports pending for 15+ minutes' {
         notes '''
           Fifteen minutes of grace, so the sweep never races a dispatch still in flight.
@@ -176,7 +176,7 @@ views {
           **Bounded.** At most 100 imports a day, oldest first.
         '''
       }
-      // source: src/modules/dispatch/scheduled.ts redispatchStalledImports, redispatchEach; src/modules/runs/queue-messages.ts importJob; src/modules/runs/consumer.ts didClaimImport
+      // source: src/modules/runs/imports/stalled.ts redispatchStalledImports; src/lib/sql/queue-batch.ts redispatchEach; src/modules/runs/queue-messages.ts importJob; src/modules/runs/consumer.ts didClaimImport
       cf.app.cronDaily1200 -[recovery]-> cf.importsQueue 'enqueues them again' {
         notes '''
           **Guard: each message is its own claimant.** The sweep\'s message carries a claim id of its own. It claims the row only if it is `pending`, so it never works beside another message, and a copy of an import that already ended stops.
@@ -212,7 +212,7 @@ views {
       cf.importsQueue -[recovery]-> cf.importsDlq 'dead-letters the job'
       // source: src/modules/dispatch/queues.ts handleQueueBatch, deliveries (dialed-imports-dlq)
       cf.importsDlq -[async]-> cf.app.runs.deadLetter 'delivers it'
-      // source: src/modules/runs/consumer.ts handleImportsDlqBatch, deadImportWrites, isHolder, failImportWrites; src/db/gave-up.ts giveUpEach, gaveUpUpsert; wrangler.jsonc queues.consumers, max_retries (1 for dialed-imports-dlq, and no dead_letter_queue)
+      // source: src/modules/runs/consumer.ts handleImportsDlqBatch, deadImportWrites, isHolder, failImportWrites; src/modules/ops/gave-up/gave-up.ts giveUpEach, gaveUpUpsert; wrangler.jsonc queues.consumers, max_retries (1 for dialed-imports-dlq, and no dead_letter_queue)
       cf.app.runs.deadLetter -[recovery]-> cf.coreDb 'fails the import, tells the runner, lists it on the Desk' {
         notes '''
           **Guard: only a row that is its own to fail.** An import that already ended is left alone, and so is a `processing` row another message holds: that message finishes it, or is dead-lettered for it.
@@ -277,7 +277,7 @@ views {
       cf.app.weather -> provider 'asks for the hours settled since'
       // source: src/modules/weather/attach.ts resolveAndAttach, setStatus
       cf.app.weather -> cf.coreDb 'the run is settled'
-      // source: src/modules/weather/attach.ts retryPendingWeather, attachEach, windowOpensAt, FAIL_AFTER_SECONDS; src/db/gave-up.ts gaveUpUpsert
+      // source: src/modules/weather/attach.ts retryPendingWeather, attachEach, windowOpensAt, FAIL_AFTER_SECONDS; src/modules/ops/gave-up/gave-up.ts gaveUpUpsert
       cf.app.weather -[recovery]-> cf.coreDb 'gives up on a run after five hours of tries' {
         notes '''
           The five hours count from the later of two moments: when the run entered (its import\'s creation, or else its start), and when its last sampled hour settles. The give-up comes on the first hourly pass after them.

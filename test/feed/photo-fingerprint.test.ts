@@ -13,7 +13,7 @@ import {
   deleteRuns,
   retractEntry,
 } from "../../src/modules/feed/entries/retract";
-import type { Classify } from "../../src/modules/safety";
+import type { Classify } from "../../src/modules/safety/screening";
 import {
   bitsApart,
   copyOf,

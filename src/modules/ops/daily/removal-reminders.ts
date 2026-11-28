@@ -34,10 +34,10 @@ import { cronCheckpoints } from "../../../db/schema-core";
 import { nowSeconds } from "../../../lib/now";
 import { operatorEmailMessage } from "../../../lib/sql/outbox";
 import {
-  adminUserIds,
   REMOVAL_REMINDER_LEAD_SECONDS,
   undecidedRemovalsDue,
-} from "../../safety";
+} from "../../safety/reports";
+import { adminUserIds } from "../../safety/rules";
 import { markedAt, REMOVAL_REMINDERS } from "../desk";
 import { outboxInsertWhere, oweOutbox } from "../outbox";
 

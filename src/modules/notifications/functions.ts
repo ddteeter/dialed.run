@@ -7,7 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { noInput } from "../../lib/no-input";
 import { requireUserId, requireUserIdBeforeTerms } from "../auth";
-import { runnerVisibleToViewer } from "../feed";
+import { runnerVisibleToViewer } from "../safety/rules";
 import { runsAwaitingVerdict } from "../runs";
 import { notificationsDb } from "./db";
 import {

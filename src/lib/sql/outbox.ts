@@ -11,6 +11,7 @@
  * the drainer reports failures with context read from it. Anything a kind
  * needs that is sensitive stays where it lives and is looked up by id.
  */
+import type { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { emailPayloadSchema, type EmailPayload } from "../contracts/email";
@@ -311,3 +312,51 @@ export function operatorEmailMessage(
 ): OutboxMessageOf<"operator_email"> {
   return { kind: "operator_email", payload: { dedupeKey, email } };
 }
+
+/**
+ * What a handler's work is handed: the binding's drizzle handle.
+ */
+type Db = ReturnType<typeof drizzle>;
+
+/**
+ * One kind's payload, as its handler receives it.
+ */
+export type PayloadOf<K extends OutboxKind> = OutboxMessageOf<K>["payload"];
+
+/**
+ * Declared here, beside the kinds, rather than with the drain in
+ * `ops/outbox` (design 261, B12): a handler lives with what it touches
+ * (design 256), so a module that only writes one (weather's manual
+ * conditions) takes the type from `lib` and never imports `ops`.
+ */
+/**
+ * Every kind's handler: what a drain is handed. A mapped type, compared
+ * by shape, so one handler can serve two kinds whose payloads it fits
+ * (the email handler, for `email` and `operator_email`).
+ */
+export type OutboxHandlers = {
+  readonly [K in OutboxKind]: {
+    /**
+     * Does the work; throws when it could not, and the row stays owed.
+     * `rowId` is the row being worked, for a handler that must mark it
+     * before the delete (an email, once sent). `OWED_AGAIN` (ops/outbox) says the work is
+     * done in part and the rest is owed to the next drain (design 232): the
+     * row stays, with its attempts back at none, since nothing failed.
+     * A `Refused` (ops/outbox) says the far side will not take this row's work.
+     */
+    readonly run: (
+      db: Db,
+      payload: PayloadOf<K>,
+      rowId: string,
+    ) => Promise<unknown>;
+    /**
+    Sentry context for a failure (law 7): ids to act on, never secrets.
+    */
+    readonly context: (payload: PayloadOf<K>) => Record<string, string>;
+  };
+};
+
+/**
+One kind's handler.
+*/
+export type OutboxHandler<K extends OutboxKind> = OutboxHandlers[K];

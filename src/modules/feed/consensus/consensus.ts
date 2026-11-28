@@ -59,7 +59,7 @@ import type { GarmentType } from "../../../lib/contracts/garment-fields";
 import type { DialedType } from "./bar-share";
 import type { UiGroup } from "../groups";
 import { uiGroupFor, uiGroups } from "../groups";
-import { publiclyVisibleEntry } from "../../safety";
+import { publiclyVisibleEntry } from "../../safety/rules";
 
 const DAY_S = 24 * 3600;
 

@@ -9,18 +9,18 @@ import { garmentSchema } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
-  addFromTapList,
-  getOwnedItem,
   linkTypedGarments,
   nameItem,
   NotFoundError,
 } from "../../src/modules/closet";
+import { getOwnedItem } from "../../src/modules/closet/service";
+import { addFromTapList } from "../../src/modules/closet/tap-list";
 import {
   createItem,
   updateItemWithProduct,
   withResolvedProduct,
 } from "../../src/modules/closet/service";
-import { NEW_SHARED_ROWS_PER_RUNNER_PER_DAY } from "../../src/modules/email/rate-limit";
+import { NEW_SHARED_ROWS_PER_RUNNER_PER_DAY } from "../../src/modules/ops/limits/rate-limit";
 import { newRowsFor, resolveProduct } from "../../src/modules/products/service";
 import { addAccount } from "../feed/helpers";
 import { uniqueName } from "../unique-name";

@@ -510,7 +510,7 @@ words.
 - **Gave up** (R-119; Operator Screens D6, a section of the Desk's Today):
   every job the system stops retrying writes a `gave_up` row in the batch
   that marks its own status — the imports and enrichment DLQs through
-  `giveUpEach` (`src/db/gave-up.ts`), enrichment's terminal page
+  `giveUpEach` (`src/modules/ops/gave-up/gave-up.ts`), enrichment's terminal page
   refusal, and the weather cron's five-hour cap. Enrichment is listed only
   once the hourly sweep stops re-driving a product (its first day): a
   failure inside the day is parked on the product (`extraction_error`,

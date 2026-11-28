@@ -6,7 +6,8 @@ import {
   stravaConnections,
   userProfiles,
 } from "../../src/db/schema-core";
-import { isEmailWanted, notificationSettings } from "../../src/modules/email";
+import { notificationSettings } from "../../src/modules/email";
+import { isEmailWanted } from "../../src/modules/email/preferences";
 import {
   maskedAddress,
   oneClickUnsubscribe,

@@ -6,27 +6,24 @@ import { session, user, verification } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
 import { EMAIL_SENDS_PER_HOUR } from "../../src/lib/contracts/email";
 import { newUlid } from "../../src/lib/ids";
-import { RESENDS_PER_VISITOR_PER_HOUR } from "../../src/modules/email/rate-limit";
+import { RESENDS_PER_VISITOR_PER_HOUR } from "../../src/modules/ops/limits/rate-limit";
 import {
   rateLimits,
   emailVerifications,
   outbox,
 } from "../../src/db/schema-core";
-import {
-  authMail,
-  confirmEmail,
-  isVerified,
-  readEmailLanding,
-  requestEmailChange,
-  resendConfirmation,
-} from "../../src/modules/account";
+import { authMail } from "../../src/modules/account/verification";
 import {
   EMAIL_LINK_TTL_S,
   issueEmailLink,
   readEmailLink,
 } from "../../src/modules/account/verification/email-links";
 import {
+  confirmEmail,
   confirmLinkUrl,
+  readEmailLanding,
+  requestEmailChange,
+  resendConfirmation,
   type Background,
   type EmailChangeRequest,
 } from "../../src/modules/account/verification/verification";
@@ -177,14 +174,14 @@ describe("confirmEmail", () => {
       { userId, purpose: "verify", email },
       NOW,
     );
-    expect(await isVerified(db, userId)).toBe(false);
+    expect(await emailOf(userId)).toMatchObject({ isVerified: false });
 
     expect(await confirmEmail(db, token, undefined, NOW + 60)).toStrictEqual({
       state: "confirmed",
       purpose: "verify",
       email,
     });
-    expect(await isVerified(db, userId)).toBe(true);
+    expect(await emailOf(userId)).toMatchObject({ isVerified: true });
     // `now` is epoch seconds, and `updatedAt` is stamped from it — wrong
     // arithmetic here lands the account's own `updatedAt` near 1970 instead
     // of the moment it was confirmed.
@@ -252,7 +249,7 @@ describe("confirmEmail", () => {
     expect(
       await confirmEmail(db, token, undefined, NOW + EMAIL_LINK_TTL_S),
     ).toStrictEqual({ state: "expired" });
-    expect(await isVerified(db, userId)).toBe(false);
+    expect(await emailOf(userId)).toMatchObject({ isVerified: false });
     // A second before, it works.
     expect(
       await confirmEmail(db, token, undefined, NOW + EMAIL_LINK_TTL_S - 1),
@@ -273,7 +270,7 @@ describe("confirmEmail", () => {
     expect(await confirmEmail(db, token, undefined, NOW)).toStrictEqual({
       state: "expired",
     });
-    expect(await isVerified(db, moved.userId)).toBe(false);
+    expect(await emailOf(moved.userId)).toMatchObject({ isVerified: false });
 
     const ghost = await issueEmailLink(
       db,
@@ -406,7 +403,7 @@ describe("readEmailLanding (opening a link changes nothing)", () => {
     expect(await readEmailLanding(db, token, NOW + 61)).toMatchObject({
       state: "ask",
     });
-    expect(await isVerified(db, userId)).toBe(false);
+    expect(await emailOf(userId)).toMatchObject({ isVerified: false });
     expect(await usedAtOf(userId)).toStrictEqual([undefined]);
     const [owed] = await db.select({ id: outbox.id }).from(outbox);
     expect(owed).toBeUndefined();
@@ -530,7 +527,7 @@ describe("confirmEmail, when two open one link (law 2)", () => {
         .map((landing) => landing.state)
         .toSorted((a, b) => a.localeCompare(b)),
     ).toStrictEqual(["confirmed", "used"]);
-    expect(await isVerified(db, userId)).toBe(true);
+    expect(await emailOf(userId)).toMatchObject({ isVerified: true });
   });
 
   it("moves the account once and tells the old address once", async () => {
@@ -611,7 +608,7 @@ describe("confirmEmail, when two open one link (law 2)", () => {
     );
     vi.restoreAllMocks();
 
-    expect(await isVerified(db, userId)).toBe(false);
+    expect(await emailOf(userId)).toMatchObject({ isVerified: false });
     expect(await readEmailLink(db, token)).toMatchObject({
       usedAt: undefined,
     });

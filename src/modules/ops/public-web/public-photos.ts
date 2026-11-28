@@ -60,7 +60,7 @@ import {
   PUBLIC_PHOTO_CACHE_CONTROL,
   publicPhotoUrl,
 } from "../../../lib/public-photos";
-import { publicPhotoStatus, worldVisibleEntry } from "../../safety";
+import { publicPhotoStatus, worldVisibleEntry } from "../../safety/rules";
 
 import { captureException, type KeepAlive } from "../sentry";
 

@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { domainDenylist } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { deniedLinksOf } from "../../src/modules/safety";
+import { deniedLinksOf } from "../../src/modules/safety/rules";
 
 /**
  * The denylist's seed (R-176, core's `0001_seed.sql`): link shorteners and

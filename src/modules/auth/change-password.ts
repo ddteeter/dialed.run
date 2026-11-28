@@ -23,7 +23,7 @@
 import { APIError } from "better-auth/api";
 
 import { nowSeconds } from "../../lib/now";
-import { changeLinkWithdrawal } from "../account";
+import { changeLinkWithdrawal } from "../account/verification";
 import { BREACHED_CODE } from "./breached-password";
 import { checkOwnPassword } from "./password-check";
 import type { PasswordAuth } from "./password-check";

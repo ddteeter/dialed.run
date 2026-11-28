@@ -11,7 +11,7 @@ import { desc, eq, getTableColumns, inArray, lte } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { sql } from "drizzle-orm";
 
-import { gaveUpClear } from "../../../db/gave-up";
+import { gaveUpClear } from "../gave-up";
 import {
   brands,
   gaveUp,

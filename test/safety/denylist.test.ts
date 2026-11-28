@@ -14,7 +14,7 @@ import {
   deniedLinksOf,
   isDeniedLink,
   isDeniedOnLanding,
-} from "../../src/modules/safety";
+} from "../../src/modules/safety/rules";
 import { denyDomain } from "../../src/modules/safety/rules/denylist";
 
 import { makeUser, resetSafetyTables } from "./helpers";

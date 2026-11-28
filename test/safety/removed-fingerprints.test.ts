@@ -30,7 +30,7 @@ import {
 import { fileReport } from "../../src/modules/safety/reports/reports";
 import { flaggedAtOf } from "../../src/modules/safety/runners/account-flags";
 import { oweInCore } from "../queue-fakes";
-import type { Classify } from "../../src/modules/safety";
+import type { Classify } from "../../src/modules/safety/screening";
 import {
   isHeldAsRemovedCopy,
   removedMatchOf,

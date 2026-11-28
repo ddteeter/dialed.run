@@ -17,9 +17,10 @@ import { requestAccessSchema } from "../../../lib/contracts";
 import { blockedRegionOf } from "../../../lib/contracts/access";
 import { MARKETING_HOST, MARKETING_INVITE_URL } from "../../../lib/marketing";
 import type { EmailDeps } from "../../email";
-import type { TurnstileAttempt, TurnstileVerdict } from "../../ops";
+import type { TurnstileAttempt, TurnstileVerdict } from "../../ops/edge";
+import { turnstileAttempt } from "../../ops/edge";
 import type { Background } from "../verification";
-import { requestAccess, turnstileAttempt } from "./access";
+import { requestAccess } from "./access";
 
 type Db = ReturnType<typeof drizzle>;
 

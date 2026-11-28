@@ -1,6 +1,8 @@
-import { and, inArray } from "drizzle-orm";
+import { and, inArray, lt } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
+
+import { nowSeconds } from "../now";
 
 /**
  * Wider than `DrizzleD1Database`'s default so both handle spellings the
@@ -11,7 +13,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
  * drizzle>`, which is `Record<string, unknown>`. Nothing chose that
  * difference — they are two ways of writing "a handle on dialed-core with
  * no schema attached" — but it made these helpers callable from one and
- * not the other, which is how `getProductComposition` came to hand-roll a
+ * not the other, which is how a products read once came to hand-roll a
  * primary-key lookup the file next door already had.
  *
  * The narrower type is assignable to this, so every existing caller still
@@ -179,4 +181,38 @@ export async function columnSetAmong<TColumn extends SQLiteColumn>(
     and(inArray(membershipColumn, [...candidateIds]), extraWhere),
   );
   return new Set(matches);
+}
+
+/**
+ * Rows that have sat `pending` past a grace window, by id — the
+ * reconciliation query (law 8c), written once for every table that carries
+ * the marker: `imports` (`runs/imports`) and `products` (`enrichment`).
+ * The table is handed in, with its columns, rather than written out once
+ * per module, because each names them differently and the query is the
+ * same. The marker comes as a predicate rather than a status column
+ * because the two tables state it differently: `products` reads it through
+ * the partial index `products_extraction_pending`, which the planner
+ * matches only against the index's own literal (`extractionPending`),
+ * where `imports` has no index on `status` and a bound `eq` does. `order`
+ * is which hundred a firing takes when more are waiting.
+ */
+export async function stalledPending<TId extends SQLiteColumn>(
+  database: Handle,
+  marker: Readonly<{
+    table: SQLiteTable;
+    id: TId;
+    pending: SQL;
+    createdAt: SQLiteColumn;
+    order: SQL | SQLiteColumn;
+  }>,
+  graceSeconds: number,
+): Promise<{ id: TId["_"]["data"] }[]> {
+  const staleBefore = nowSeconds() - graceSeconds;
+  const rows = await database
+    .select({ value: marker.id })
+    .from(marker.table)
+    .where(and(marker.pending, lt(marker.createdAt, staleBefore)))
+    .orderBy(marker.order)
+    .limit(100);
+  return rows.map((row) => ({ id: row.value }));
 }

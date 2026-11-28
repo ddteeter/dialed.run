@@ -43,7 +43,13 @@ The lists the ratchet reads (design 261 ruling 4). The owner's to change.
 */
 export const DIRECTION_LISTS: DirectionLists = {
   composers: ["account/purge", "dispatch"],
-  floor: ["ops/outbox", "ops/sentry", "safety/rules"],
+  floor: [
+    "ops/gave-up",
+    "ops/limits",
+    "ops/outbox",
+    "ops/sentry",
+    "safety/rules",
+  ],
 };
 
 /**

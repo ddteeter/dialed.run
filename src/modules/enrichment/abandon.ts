@@ -1,11 +1,11 @@
-import { and, eq, gt, isNotNull, lt, sql, type SQL } from "drizzle-orm";
+import { and, eq, exists, gt, isNotNull, lt, sql, type SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
   DEAD_LETTER_REASON,
   gaveUpUpsert,
   type GaveUpFact,
-} from "../../db/gave-up";
+} from "../ops/gave-up";
 import { products } from "../../db/schema-core";
 import { nowSeconds } from "../../lib/now";
 import { pageFailureReason } from "./bounds";
@@ -15,7 +15,7 @@ import { pageFailureReason } from "./bounds";
  * (PR #72 review). Past it the product is *abandoned* — the sweep stops,
  * the digest reports it, and the Desk's Gave up lists it.
  *
- * Here rather than in `ops`, which owns the sweep, because the consumer
+ * Here, beside the sweep (`sweep.ts`), and not in it, because the consumer
  * reads it too: a failure inside the window is a try the sweep will make
  * again, not a job the system stopped retrying, and the Desk lists only
  * the second (Operator Screens D6; R-119).
@@ -155,8 +155,10 @@ export async function listAbandonedEnrichments(
 
 /**
  * One abandoned product onto the Desk's Gave up, and its parked facts
- * cleared, in one batch. The clear re-checks the listing's guard, so a
- * product that changed since the read keeps what it has.
+ * cleared, in one batch. Both re-check the listing's guard, so a product
+ * that changed since the read (a late retry finished it) keeps what it
+ * has and is not listed. The row goes first, so its condition reads the
+ * product before the clear empties what it is checked by.
  */
 async function listOne(
   db: DrizzleD1Database,
@@ -173,8 +175,14 @@ async function listOne(
     tries: Number(product.tries),
   };
   const stillParked = and(eq(products.id, product.id), parked);
+  const whileParked = exists(
+    db
+      .select({ one: sql`1` })
+      .from(products)
+      .where(stillParked),
+  );
   await db.batch([
-    gaveUpUpsert(db, fact, now),
+    gaveUpUpsert(db, fact, now, whileParked),
     db
       .update(products)
       .set({ extractionError: sql`NULL`, extractionTries: sql`NULL` })
