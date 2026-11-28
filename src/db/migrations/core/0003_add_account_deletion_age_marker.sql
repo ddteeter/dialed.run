@@ -1,0 +1,1 @@
+ALTER TABLE `account_deletions` ADD `closed_under_18_at` integer;

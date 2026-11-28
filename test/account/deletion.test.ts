@@ -97,6 +97,7 @@ async function claimOf(userId: string) {
   return rows.map((row) => ({
     ...row,
     purgeStartedAt: row.purgeStartedAt ?? undefined,
+    closedUnder18At: row.closedUnder18At ?? undefined,
   }));
 }
 
@@ -184,6 +185,7 @@ describe("requestAccountDeletion", () => {
         purgeStartedAt: undefined,
         // A runner's own request (design 289): Reopen never cancels it.
         cause: "asked",
+        closedUnder18At: undefined,
       },
     ]);
     expect(await sessionsOf(userId)).toStrictEqual([]);
@@ -375,6 +377,7 @@ describe("requestAccountDeletion", () => {
         purgeStartedAt: undefined,
         // A runner's own request (design 289): Reopen never cancels it.
         cause: "asked",
+        closedUnder18At: undefined,
       },
     ]);
     const subject = `Your dialed.run account goes on ${proseDayLabel(purgeAfter)}`;
@@ -526,7 +529,9 @@ describe("keepAccount", () => {
     await db.insert(accountDeletions).values(claim);
 
     expect(await keepAccount(db, userId)).toBe("too-late");
-    expect(await claimOf(userId)).toStrictEqual([{ ...claim, cause: "asked" }]);
+    expect(await claimOf(userId)).toStrictEqual([
+      { ...claim, cause: "asked", closedUnder18At: undefined },
+    ]);
   });
 
   it("calls an account with no deletion pending kept already", async () => {

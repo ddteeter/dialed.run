@@ -76,6 +76,12 @@ import {
   forgetMaker,
 } from "../../src/modules/products/service";
 import { forgetManualBands } from "../../src/modules/weather";
+import {
+  ageClosure,
+  reopenDeletionWrites,
+  reopenHeldBy,
+} from "../../src/modules/account/data/deletion-link";
+import { unbanUser } from "../../src/modules/safety/runners/bans";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
 import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
@@ -661,10 +667,14 @@ async function claim(
 }
 
 async function claimOf(userId: string) {
-  return core
+  const rows = await core
     .select()
     .from(accountDeletions)
     .where(eq(accountDeletions.userId, userId));
+  return rows.map((row) => ({
+    ...row,
+    closedUnder18At: row.closedUnder18At ?? undefined,
+  }));
 }
 
 /**
@@ -1345,6 +1355,7 @@ describe("purgeDueAccounts — which claims a firing takes", () => {
         purgeAfter: NOW - 86_400,
         purgeStartedAt: NOW - 600,
         cause: "asked",
+        closedUnder18At: undefined,
       },
     ]);
   });
@@ -2467,6 +2478,28 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
     expect(anomalies).toStrictEqual([
       "1 closed account(s) were purged with their addresses unremembered: CLOSED_ADDRESS_SECRET is not set",
     ]);
+  });
+
+  it("keeps no fingerprints of a runner who asked first and was then closed for age, whom Reopen cannot reopen, on the runner's own date", async () => {
+    const runner = await dueRunner(true);
+    const closure = await ageClosure(core, runner.userId, true, NOW - 600);
+    const [write, ...more] = closure.writes(core);
+    expect(write).toBeDefined();
+    if (write !== undefined) await core.batch([write, ...more]);
+    const reopen = await unbanUser(runner.userId, "desk-operator", undefined, {
+      heldBy: reopenHeldBy(runner.userId),
+      writes: (database, stillBanned) =>
+        reopenDeletionWrites(database, runner.userId, stillBanned),
+    });
+    expect(reopen).toStrictEqual({ isReopened: false });
+    expect(await claimOf(runner.userId)).toMatchObject([
+      { cause: "asked", purgeAfter: NOW - 1, closedUnder18At: NOW - 600 },
+    ]);
+
+    await purge([], { ...depsAt(NOW).deps, closedAddressSecret: CLOSED_KEY });
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    expect(await closedKept()).toStrictEqual([]);
   });
 
   it("purges a closed account without a key, and the digest says nothing was kept", async () => {

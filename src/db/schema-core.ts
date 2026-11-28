@@ -391,6 +391,11 @@ export const accountDeletions = /*#__PURE__*/ sqliteTable(
     cause: text("cause", { enum: ["asked", "under_18"] })
       .notNull()
       .default("asked"),
+    // When the Desk closed the account for age, whatever the cause: a
+    // runner who had asked first keeps `asked` and their own date, and
+    // this says the closure was for age all the same. The purge keeps no
+    // address fingerprints when it is set, or when the cause is `under_18`.
+    closedUnder18At: integer("closed_under_18_at"),
   },
   (t) => [
     // The purge's read: rows past their date, oldest first.
