@@ -442,7 +442,7 @@ export async function claimUsername(
   userId: string,
   typed: string,
   screen: ScreenHandle,
-  purge: PurgeTags = purgePublicPages,
+  purge: PurgeTags,
 ): Promise<HandleClaim> {
   const refused: HandleClaim = {
     kind: "taken",

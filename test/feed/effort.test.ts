@@ -9,6 +9,7 @@ import {
   submitVerdict,
 } from "../../src/modules/feed/entries/entries";
 import { makeRun, makeUser, resetTables } from "./helpers";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * A3's effort (design G5): the watch's prefill is the run's until the
@@ -62,7 +63,7 @@ describe("submitVerdict and the run's effort", () => {
   it("leaves the watch's effort alone when the runner did not tap", async () => {
     const { userId, runId, entryId } = await watchRatedEntry();
 
-    await submitVerdict({ userId, entryId, ...verdict });
+    await submitVerdict({ userId, entryId, ...verdict }, purgePublicPages);
 
     expect(await storedEffort(runId)).toEqual({
       rpe: 6,
@@ -74,7 +75,10 @@ describe("submitVerdict and the run's effort", () => {
   it("stores a tap as the runner's own pick, and keeps the watch's rating", async () => {
     const { userId, runId, entryId } = await watchRatedEntry();
 
-    await submitVerdict({ userId, entryId, ...verdict, effort: "race" });
+    await submitVerdict(
+      { userId, entryId, ...verdict, effort: "race" },
+      purgePublicPages,
+    );
 
     expect(await storedEffort(runId)).toEqual({
       rpe: 6,
@@ -96,7 +100,10 @@ describe("the entry detail's effort", () => {
 
   it("drops the rating once the pick is the runner's", async () => {
     const { userId, entryId } = await watchRatedEntry();
-    await submitVerdict({ userId, entryId, ...verdict, effort: "easy" });
+    await submitVerdict(
+      { userId, entryId, ...verdict, effort: "easy" },
+      purgePublicPages,
+    );
 
     expect(await effortOf(entryId, userId)).toEqual({
       chosen: "easy",
@@ -117,12 +124,15 @@ describe("the entry detail's effort", () => {
 
   it("is the author's only", async () => {
     const { userId, entryId } = await watchRatedEntry();
-    await submitVerdict({
-      userId,
-      entryId,
-      ...verdict,
-      audience: "runners",
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        ...verdict,
+        audience: "runners",
+      },
+      purgePublicPages,
+    );
 
     const viewer = await makeUser();
     const detail = await getEntryDetail(entryId, viewer);

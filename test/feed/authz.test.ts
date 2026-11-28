@@ -25,6 +25,7 @@ import {
   makeVerifiedUser,
   NOW,
 } from "./helpers";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 describe("authorization", () => {
   it("refuses to attach a kit to another user's run", async () => {
@@ -184,14 +185,17 @@ describe("authorization", () => {
       audience: "runners",
       itemIds: [item],
     });
-    await submitVerdict({
-      userId: owner,
-      entryId,
-      verdict: 1,
-      audience: "runners",
-      tags: [],
-      itemFlags: [{ itemId: item, flag: "too_much" }],
-    });
+    await submitVerdict(
+      {
+        userId: owner,
+        entryId,
+        verdict: 1,
+        audience: "runners",
+        tags: [],
+        itemFlags: [{ itemId: item, flag: "too_much" }],
+      },
+      purgePublicPages,
+    );
 
     const asOwner = await getEntryDetail(entryId, owner);
     expect(asOwner?.items[0]?.flag).toBe("too_much");

@@ -95,6 +95,7 @@ import {
   settleOutbox,
   storageHandlers,
 } from "../../ops/outbox";
+import { purgePublicPages } from "../../ops/public-web";
 import { captureException } from "../../ops/sentry";
 import { disconnectStrava } from "../../runs";
 import { followRowsNaming } from "../../notifications";
@@ -415,7 +416,14 @@ export async function purgeAccount(
   if (!(await didDeleteEveryRun(deps, userId, budget))) return undefined;
   // 128's SAF-3 primitive (seam 4): every entry left — with their items,
   // tags, reactions, photos and notifications — and the media prefix owed.
-  await deleteRuns(core, userId, "all", report, undefined, heldBy(userId));
+  await deleteRuns(
+    core,
+    userId,
+    "all",
+    report,
+    purgePublicPages,
+    heldBy(userId),
+  );
   await deleteCloset(core, userId, report);
   await deleteStoredFiles(deps.importsBucket, userId);
   return deleteAccountRows(core, userId, deps);
@@ -477,7 +485,7 @@ async function didDeleteEveryRun(
       userId,
       last.id,
       deps.report,
-      undefined,
+      purgePublicPages,
       heldBy(userId),
     );
   }

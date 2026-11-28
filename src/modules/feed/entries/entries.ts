@@ -58,7 +58,6 @@ import {
 import { requireOwned, requireOwner } from "../../../lib/sql/owned";
 import { allowedLinksOf, typeWordOf } from "../../closet";
 import { runEffortStatement } from "../../runs/writes";
-import { purgePublicPages } from "../../ops/public-web";
 import { newUlid } from "../../../lib/ids";
 import { bandFloorC } from "../../../lib/contracts/temperature";
 import {
@@ -332,7 +331,7 @@ async function assertOwnsEntry(
  */
 export async function submitVerdict(
   input: SubmitVerdictInput,
-  purge: PurgeTags = purgePublicPages,
+  purge: PurgeTags,
 ): Promise<void> {
   const database = db();
   const owned = await assertOwnsEntry(input.entryId, input.userId);

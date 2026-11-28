@@ -27,6 +27,7 @@ import {
   claimUsername,
   forceRename,
 } from "../../src/modules/account/handles/username";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * The handle re-ask (task 126 PR B): a claim moderation could not answer
@@ -66,7 +67,13 @@ A runner whose claim of `handle` moderation could not answer.
 */
 async function claimedDuringOutage(handle: string): Promise<string> {
   const userId = newUlid();
-  const claim = await claimUsername(db, userId, handle, UNKNOWN);
+  const claim = await claimUsername(
+    db,
+    userId,
+    handle,
+    UNKNOWN,
+    purgePublicPages,
+  );
   expect(claim).toStrictEqual({ kind: "claimed", username: handle });
   return userId;
 }
@@ -114,8 +121,12 @@ describe("the claim records what moderation said", () => {
 
   it("records clear when it answered", async () => {
     const userId = newUlid();
-    await claimUsername(db, userId, "quiet_mile", () =>
-      Promise.resolve("clear"),
+    await claimUsername(
+      db,
+      userId,
+      "quiet_mile",
+      () => Promise.resolve("clear"),
+      purgePublicPages,
     );
     expect(await stateOf(userId)).toBe("clear");
   });
@@ -305,8 +316,12 @@ describe("rescreenHandles", () => {
 
   it("never asks about a handle that was answered, or never asked", async () => {
     const answered = newUlid();
-    await claimUsername(db, answered, "answered", () =>
-      Promise.resolve("clear"),
+    await claimUsername(
+      db,
+      answered,
+      "answered",
+      () => Promise.resolve("clear"),
+      purgePublicPages,
     );
     await db
       .insert(userProfiles)
@@ -323,7 +338,13 @@ describe("rescreenHandles", () => {
       const userId = await claimedDuringOutage("first_pick");
       const rescreen: Rescreen = async () => {
         // The runner picks again while the old handle is being asked about.
-        await claimUsername(db, userId, "second_pick", UNKNOWN);
+        await claimUsername(
+          db,
+          userId,
+          "second_pick",
+          UNKNOWN,
+          purgePublicPages,
+        );
         return verdict;
       };
 

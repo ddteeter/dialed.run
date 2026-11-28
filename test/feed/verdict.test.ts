@@ -15,6 +15,7 @@ import {
   makeUser,
   resetTables,
 } from "./helpers";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 describe("verdict flow (A3)", () => {
   beforeEach(resetTables);
@@ -47,14 +48,17 @@ describe("verdict flow (A3)", () => {
     const runId = await makeRun({ userId });
     const entryId = await attachKit({ userId, runId, itemIds: [] });
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
 
     expect(await shouldPromptForVerdict(userId, entryId)).toBe(false);
   });
@@ -78,14 +82,17 @@ describe("verdict flow (A3)", () => {
         feelsLikeC: 6,
       });
       const entryId = await attachKit({ userId, runId, itemIds: [] });
-      await submitVerdict({
-        userId,
-        entryId,
-        verdict,
-        audience: "runners",
-        tags: [],
-        itemFlags: [],
-      });
+      await submitVerdict(
+        {
+          userId,
+          entryId,
+          verdict,
+          audience: "runners",
+          tags: [],
+          itemFlags: [],
+        },
+        purgePublicPages,
+      );
     };
 
     await makeVerdictedEntry(0, 0);

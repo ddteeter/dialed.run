@@ -23,6 +23,7 @@ import {
 } from "../../src/modules/account/handles/username";
 import { enqueueForReview } from "../../src/modules/safety/review";
 import { pendingReviewQueue } from "../../src/modules/safety/review/review";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * D-97: a handle the re-ask flagged gets Keep or Rename on its Desk
@@ -52,7 +53,7 @@ const UNKNOWN: ScreenHandle = () => Promise.resolve("unknown");
  */
 async function flaggedRunner() {
   const userId = newUlid();
-  await claimUsername(db, userId, "quadzilla_69", UNKNOWN);
+  await claimUsername(db, userId, "quadzilla_69", UNKNOWN, purgePublicPages);
   await rescreenHandles(db, () => Promise.resolve("flagged"), [], 5000);
   const [row] = await pendingReviewQueue();
   if (row === undefined) throw new Error("nothing queued");
@@ -92,7 +93,13 @@ describe("the review row", () => {
 
   it("does not mark a reported profile whose handle nobody flagged", async () => {
     const userId = newUlid();
-    await claimUsername(db, userId, "dee_runs", () => Promise.resolve("clear"));
+    await claimUsername(
+      db,
+      userId,
+      "dee_runs",
+      () => Promise.resolve("clear"),
+      purgePublicPages,
+    );
     await db.batch([
       enqueueForReview(db, {
         subjectType: "profile",
@@ -130,7 +137,7 @@ describe("Keep", () => {
 
   it("leaves a newer verdict alone when the runner renamed since", async () => {
     const { userId, queueId } = await flaggedRunner();
-    await claimUsername(db, userId, "second_pick", UNKNOWN);
+    await claimUsername(db, userId, "second_pick", UNKNOWN, purgePublicPages);
 
     await reviewFlaggedHandle(db, REVIEWER, {
       queueId,
@@ -253,8 +260,12 @@ describe("Rename racing the runner's own pick (R-121)", () => {
     const batch: typeof db.batch = async (items) => {
       counter.batches += 1;
       if (counter.batches === 2) {
-        await claimUsername(db, userId, "fresh_pick", () =>
-          Promise.resolve("clear"),
+        await claimUsername(
+          db,
+          userId,
+          "fresh_pick",
+          () => Promise.resolve("clear"),
+          purgePublicPages,
         );
       }
       return db.batch(items);
@@ -517,7 +528,7 @@ describe("a decision on the row as the page showed it", () => {
 
   it("takes away only the handle shown: one the runner left since is locked, and nothing is renamed", async () => {
     const { userId, queueId } = await flaggedRunner();
-    await claimUsername(db, userId, "fine_one", UNKNOWN);
+    await claimUsername(db, userId, "fine_one", UNKNOWN, purgePublicPages);
 
     expect(
       await reviewFlaggedHandle(db, REVIEWER, {
@@ -556,7 +567,13 @@ describe("a decision on the row as the page showed it", () => {
           "Advertising (locked @quadzilla_69; the runner had already changed to @fine_one)",
       },
     ]);
-    const back = await claimUsername(db, userId, "quadzilla_69", UNKNOWN);
+    const back = await claimUsername(
+      db,
+      userId,
+      "quadzilla_69",
+      UNKNOWN,
+      purgePublicPages,
+    );
     expect(back).not.toMatchObject({ kind: "claimed" });
     expect(await profileOf(userId)).toMatchObject({ username: "fine_one" });
   });
@@ -564,8 +581,8 @@ describe("a decision on the row as the page showed it", () => {
   it("locks no handle another runner gave up", async () => {
     const { userId, queueId } = await flaggedRunner();
     const other = newUlid();
-    await claimUsername(db, other, "old_name", UNKNOWN);
-    await claimUsername(db, other, "new_name", UNKNOWN);
+    await claimUsername(db, other, "old_name", UNKNOWN, purgePublicPages);
+    await claimUsername(db, other, "new_name", UNKNOWN, purgePublicPages);
 
     await reviewFlaggedHandle(db, REVIEWER, {
       queueId,

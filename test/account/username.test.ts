@@ -25,6 +25,7 @@ import {
 } from "../../src/modules/account/handles/username";
 import type { ScreenHandle } from "../../src/modules/account/handles/handle-screen";
 import { acceptanceOf } from "../../src/modules/account/terms/terms-acceptance";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * The handle (task 126, ACC-1; round 26 #7), through the one writer on
@@ -133,7 +134,9 @@ async function historyOf(userId: string) {
 describe("claimUsername", () => {
   it("claims a free handle, creating the profile row when O0 is the first write", async () => {
     const userId = newUlid();
-    expect(await claimUsername(db, userId, "maya_runs", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, userId, "maya_runs", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "claimed",
       username: "maya_runs",
     });
@@ -144,11 +147,11 @@ describe("claimUsername", () => {
   it("changes a handle, keeping the old one in the history", async () => {
     const userId = await runner({ username: "maya_runs" });
     const before = nowSeconds();
-    expect(await claimUsername(db, userId, "maya_trails", CLEAR)).toMatchObject(
-      {
-        kind: "claimed",
-      },
-    );
+    expect(
+      await claimUsername(db, userId, "maya_trails", CLEAR, purgePublicPages),
+    ).toMatchObject({
+      kind: "claimed",
+    });
     expect(await handleOf(userId)).toBe("maya_trails");
     const [retired] = await db
       .select()
@@ -161,7 +164,7 @@ describe("claimUsername", () => {
 
   it("keeps the rest of the profile when the handle changes", async () => {
     const userId = await runner({ username: "dee_k", cityLabel: "Duluth, MN" });
-    await claimUsername(db, userId, "dee_runs", CLEAR);
+    await claimUsername(db, userId, "dee_runs", CLEAR, purgePublicPages);
     const [row] = await db
       .select({ cityLabel: userProfiles.cityLabel })
       .from(userProfiles)
@@ -172,7 +175,9 @@ describe("claimUsername", () => {
   it("claiming the handle you have is a success that writes nothing new", async () => {
     const userId = await runner({ username: "dee_k" });
     const { db: tracked, sizes } = trackBatches();
-    expect(await claimUsername(tracked, userId, "dee_k", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(tracked, userId, "dee_k", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "claimed",
       username: "dee_k",
     });
@@ -189,7 +194,13 @@ describe("claimUsername", () => {
     const userId = await runner({ cityLabel: "Portland, OR" });
     const { db: tracked, sizes } = trackBatches();
     expect(
-      await claimUsername(tracked, userId, "maya_runs", CLEAR),
+      await claimUsername(
+        tracked,
+        userId,
+        "maya_runs",
+        CLEAR,
+        purgePublicPages,
+      ),
     ).toStrictEqual({
       kind: "taken",
       username: "maya_runs",
@@ -207,11 +218,17 @@ describe("claimUsername", () => {
 
   it("refuses a handle another runner gave up, before any write is tried (D-56)", async () => {
     const previous = await runner({ username: "maya_runs" });
-    await claimUsername(db, previous, "maya_trails", CLEAR);
+    await claimUsername(db, previous, "maya_trails", CLEAR, purgePublicPages);
     const userId = await runner();
     const { db: tracked, sizes } = trackBatches();
     expect(
-      await claimUsername(tracked, userId, "maya_runs", CLEAR),
+      await claimUsername(
+        tracked,
+        userId,
+        "maya_runs",
+        CLEAR,
+        purgePublicPages,
+      ),
     ).toMatchObject({
       kind: "taken",
       username: "maya_runs",
@@ -228,7 +245,9 @@ describe("claimUsername", () => {
     // A writer that forgot to lowercase: NOCASE still finds it.
     await runner({ username: "Maya" });
     const userId = await runner();
-    expect(await claimUsername(db, userId, "maya", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "maya", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "taken",
     });
   });
@@ -236,7 +255,9 @@ describe("claimUsername", () => {
   it("suggests a running word first", async () => {
     await runner({ username: "dee" });
     const userId = await runner();
-    expect(await claimUsername(db, userId, "dee", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, userId, "dee", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "taken",
       username: "dee",
       suggestion: "dee_runs",
@@ -245,7 +266,9 @@ describe("claimUsername", () => {
 
   it("answers taken for a runner who has no profile row yet", async () => {
     await runner({ username: "dee" });
-    expect(await claimUsername(db, newUlid(), "dee", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, newUlid(), "dee", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "taken",
       username: "dee",
       suggestion: "dee_runs",
@@ -255,7 +278,13 @@ describe("claimUsername", () => {
   it("never suggests the city (owner, 2026-09-27)", async () => {
     await runner({ username: "dee" });
     const duluth = await runner({ cityLabel: "Duluth" });
-    const result = await claimUsername(db, duluth, "dee", CLEAR);
+    const result = await claimUsername(
+      db,
+      duluth,
+      "dee",
+      CLEAR,
+      purgePublicPages,
+    );
     expect(result).toMatchObject({ suggestion: "dee_runs" });
     expect(JSON.stringify(result)).not.toContain("duluth");
   });
@@ -264,11 +293,15 @@ describe("claimUsername", () => {
     await runner({ username: "dee" });
     await runner({ username: "dee_runs" });
     const userId = await runner();
-    expect(await claimUsername(db, userId, "dee", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "dee", CLEAR, purgePublicPages),
+    ).toMatchObject({
       suggestion: "dee_miles",
     });
     await runner({ username: "dee_miles" });
-    expect(await claimUsername(db, userId, "dee", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "dee", CLEAR, purgePublicPages),
+    ).toMatchObject({
       suggestion: "dee2",
     });
   });
@@ -281,11 +314,15 @@ describe("claimUsername", () => {
       await runner({ username: `ana${digit}` });
     }
     const userId = await runner();
-    expect(await claimUsername(db, userId, "ana", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "ana", CLEAR, purgePublicPages),
+    ).toMatchObject({
       suggestion: "ana9",
     });
     await runner({ username: "ana9" });
-    expect(await claimUsername(db, userId, "ana", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, userId, "ana", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "taken",
       username: "ana",
       suggestion: undefined,
@@ -296,12 +333,20 @@ describe("claimUsername", () => {
     const long = "abcdefghijklmnopqrst";
     await runner({ username: long });
     const userId = await runner();
-    const result = await claimUsername(db, userId, long, CLEAR);
+    const result = await claimUsername(
+      db,
+      userId,
+      long,
+      CLEAR,
+      purgePublicPages,
+    );
     expect(result).toMatchObject({ suggestion: "abcdefghijklmno_runs" });
 
     await runner({ username: "abcdefghijklmno_runs" });
     await runner({ username: "abcdefghijklmn_miles" });
-    expect(await claimUsername(db, userId, long, CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, long, CLEAR, purgePublicPages),
+    ).toMatchObject({
       suggestion: "abcdefghijklmnopqrs2",
     });
   });
@@ -309,7 +354,9 @@ describe("claimUsername", () => {
   it("refuses every reserved name in any case, and suggests nothing built on one", async () => {
     const userId = await runner();
     for (const reserved of ["admin", "dialed", "strava", "moderator"]) {
-      expect(await claimUsername(db, userId, reserved, CLEAR)).toStrictEqual({
+      expect(
+        await claimUsername(db, userId, reserved, CLEAR, purgePublicPages),
+      ).toStrictEqual({
         kind: "taken",
         username: reserved,
         suggestion: undefined,
@@ -323,17 +370,23 @@ describe("claimUsername", () => {
     // `support2` is free — and offering it would say `support` is on the
     // list rather than merely held.
     const userId = await runner({ cityLabel: "Portland, OR" });
-    expect(await claimUsername(db, userId, "support2", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "support2", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "claimed",
     });
     const other = await runner({ cityLabel: "Portland, OR" });
-    expect(await claimUsername(db, other, "support", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, other, "support", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "taken",
       username: "support",
       suggestion: undefined,
     });
     const third = await runner();
-    expect(await claimUsername(db, third, "team", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, third, "team", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "taken",
       username: "team",
       suggestion: undefined,
@@ -352,7 +405,9 @@ describe("claimUsername", () => {
       await runner({ username: `suppor${digit}` });
     }
     const userId = await runner();
-    expect(await claimUsername(db, userId, "suppor", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, userId, "suppor", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "taken",
       username: "suppor",
       suggestion: "suppor8",
@@ -366,7 +421,9 @@ describe("claimUsername", () => {
       screened.push(handle);
       return Promise.resolve("clear");
     };
-    expect(await claimUsername(db, userId, "big_shit", screen)).toStrictEqual({
+    expect(
+      await claimUsername(db, userId, "big_shit", screen, purgePublicPages),
+    ).toStrictEqual({
       kind: "taken",
       username: "big_shit",
       suggestion: undefined,
@@ -381,7 +438,13 @@ describe("claimUsername", () => {
     const userId = await runner();
     const { db: tracked, sizes } = trackBatches();
     expect(
-      await claimUsername(tracked, userId, "quiet_menace", FLAGGED),
+      await claimUsername(
+        tracked,
+        userId,
+        "quiet_menace",
+        FLAGGED,
+        purgePublicPages,
+      ),
     ).toStrictEqual({
       kind: "taken",
       username: "quiet_menace",
@@ -393,9 +456,9 @@ describe("claimUsername", () => {
 
   it("claims the handle when moderation cannot answer (fails open)", async () => {
     const userId = await runner();
-    expect(await claimUsername(db, userId, "maya_runs", UNKNOWN)).toStrictEqual(
-      { kind: "claimed", username: "maya_runs" },
-    );
+    expect(
+      await claimUsername(db, userId, "maya_runs", UNKNOWN, purgePublicPages),
+    ).toStrictEqual({ kind: "claimed", username: "maya_runs" });
   });
 
   it("asks moderation about the handle as typed, and not about the one already held", async () => {
@@ -405,25 +468,29 @@ describe("claimUsername", () => {
       screened.push(handle);
       return Promise.resolve("clear");
     };
-    await claimUsername(db, userId, "dee_k", screen);
+    await claimUsername(db, userId, "dee_k", screen, purgePublicPages);
     expect(screened).toStrictEqual([]);
-    await claimUsername(db, userId, "dee_runs", screen);
+    await claimUsername(db, userId, "dee_runs", screen, purgePublicPages);
     expect(screened).toStrictEqual(["dee_runs"]);
   });
 
   it("never lets another runner take a handle someone gave up", async () => {
     const maya = await runner({ username: "maya_runs" });
-    await claimUsername(db, maya, "maya_trails", CLEAR);
+    await claimUsername(db, maya, "maya_trails", CLEAR, purgePublicPages);
     const other = await runner();
-    expect(await claimUsername(db, other, "maya_runs", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, other, "maya_runs", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "taken",
     });
   });
 
   it("lets a runner take their own old handle back, and forgets it was retired", async () => {
     const maya = await runner({ username: "maya_runs" });
-    await claimUsername(db, maya, "maya_trails", CLEAR);
-    expect(await claimUsername(db, maya, "maya_runs", CLEAR)).toMatchObject({
+    await claimUsername(db, maya, "maya_trails", CLEAR, purgePublicPages);
+    expect(
+      await claimUsername(db, maya, "maya_runs", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "claimed",
     });
     expect(await handleOf(maya)).toBe("maya_runs");
@@ -433,10 +500,10 @@ describe("claimUsername", () => {
 
   it("does not touch another runner's history when taking a handle back", async () => {
     const maya = await runner({ username: "maya_runs" });
-    await claimUsername(db, maya, "maya_trails", CLEAR);
+    await claimUsername(db, maya, "maya_trails", CLEAR, purgePublicPages);
     const dee = await runner({ username: "dee" });
-    await claimUsername(db, dee, "dee_k", CLEAR);
-    await claimUsername(db, maya, "maya_runs", CLEAR);
+    await claimUsername(db, dee, "dee_k", CLEAR, purgePublicPages);
+    await claimUsername(db, maya, "maya_runs", CLEAR, purgePublicPages);
     const history = await historyOf(dee);
     expect(history.map((row) => row.username)).toStrictEqual(["dee"]);
   });
@@ -449,7 +516,7 @@ describe("claimUsername", () => {
       await runner({ username: "sam_runs" });
     });
     expect(
-      await claimUsername(racing, userId, "sam_runs", CLEAR),
+      await claimUsername(racing, userId, "sam_runs", CLEAR, purgePublicPages),
     ).toStrictEqual({
       kind: "taken",
       username: "sam_runs",
@@ -464,10 +531,10 @@ describe("claimUsername", () => {
     // before our write: the read said free, the batch must still refuse.
     const racing = beforeBatch(async () => {
       const rival = await runner({ username: "sam_runs" });
-      await claimUsername(db, rival, "sam_trails", CLEAR);
+      await claimUsername(db, rival, "sam_trails", CLEAR, purgePublicPages);
     });
     expect(
-      await claimUsername(racing, userId, "sam_runs", CLEAR),
+      await claimUsername(racing, userId, "sam_runs", CLEAR, purgePublicPages),
     ).toStrictEqual({
       kind: "taken",
       username: "sam_runs",
@@ -483,10 +550,10 @@ describe("claimUsername", () => {
     const userId = newUlid();
     const racing = beforeBatch(async () => {
       const rival = await runner({ username: "sam_runs" });
-      await claimUsername(db, rival, "sam_trails", CLEAR);
+      await claimUsername(db, rival, "sam_trails", CLEAR, purgePublicPages);
     });
     expect(
-      await claimUsername(racing, userId, "sam_runs", CLEAR),
+      await claimUsername(racing, userId, "sam_runs", CLEAR, purgePublicPages),
     ).toMatchObject({
       kind: "taken",
     });
@@ -497,10 +564,16 @@ describe("claimUsername", () => {
     const userId = await runner({ username: "maya_runs" });
     // The first submit lands between the second's read and its write.
     const doubled = beforeBatch(async () => {
-      await claimUsername(db, userId, "maya_trails", CLEAR);
+      await claimUsername(db, userId, "maya_trails", CLEAR, purgePublicPages);
     });
     expect(
-      await claimUsername(doubled, userId, "maya_trails", CLEAR),
+      await claimUsername(
+        doubled,
+        userId,
+        "maya_trails",
+        CLEAR,
+        purgePublicPages,
+      ),
     ).toStrictEqual({
       kind: "claimed",
       username: "maya_trails",
@@ -515,10 +588,16 @@ describe("claimUsername", () => {
     // Two different changes racing: the first lands between the second's
     // read (which saw maya_runs) and its write.
     const racing = beforeBatch(async () => {
-      await claimUsername(db, userId, "maya_trails", CLEAR);
+      await claimUsername(db, userId, "maya_trails", CLEAR, purgePublicPages);
     });
     expect(
-      await claimUsername(racing, userId, "maya_roads", CLEAR),
+      await claimUsername(
+        racing,
+        userId,
+        "maya_roads",
+        CLEAR,
+        purgePublicPages,
+      ),
     ).toMatchObject({
       kind: "claimed",
     });
@@ -537,7 +616,7 @@ describe("claimUsername", () => {
       );
     });
     await expect(
-      claimUsername(failing, userId, "fine_handle", CLEAR),
+      claimUsername(failing, userId, "fine_handle", CLEAR, purgePublicPages),
     ).rejects.toThrow("username_history.username");
   });
 
@@ -547,7 +626,7 @@ describe("claimUsername", () => {
       throw new Error("D1_ERROR: the database is unavailable");
     });
     await expect(
-      claimUsername(failing, userId, "fine_handle", CLEAR),
+      claimUsername(failing, userId, "fine_handle", CLEAR, purgePublicPages),
     ).rejects.toThrow("the database is unavailable");
   });
 });
@@ -630,7 +709,7 @@ describe("lookUpHandle", () => {
 
   it("says an old handle changed, and never who it became", async () => {
     const userId = await runner({ username: "maya_runs" });
-    await claimUsername(db, userId, "maya_trails", CLEAR);
+    await claimUsername(db, userId, "maya_trails", CLEAR, purgePublicPages);
     expect(await lookUpHandle(db, "maya_runs")).toStrictEqual({
       kind: "changed",
     });
@@ -638,7 +717,7 @@ describe("lookUpHandle", () => {
 
   it("says a deleted account's handle, and the one it gave up before, is nobody's — never that it changed", async () => {
     const userId = await runner({ username: "maya_runs" });
-    await claimUsername(db, userId, "maya_trails", CLEAR);
+    await claimUsername(db, userId, "maya_trails", CLEAR, purgePublicPages);
     // What the purge leaves (ACC-9): both handles in the history, no
     // profile.
     await db.batch([
@@ -807,7 +886,9 @@ describe("the moderator's placeholder shape (SA-L12)", () => {
     "is not a runner's to claim: %s",
     async (handle) => {
       const squatter = await runner();
-      expect(await claimUsername(db, squatter, handle, CLEAR)).toStrictEqual({
+      expect(
+        await claimUsername(db, squatter, handle, CLEAR, purgePublicPages),
+      ).toStrictEqual({
         kind: "taken",
         username: handle,
         suggestion: undefined,
@@ -819,17 +900,23 @@ describe("the moderator's placeholder shape (SA-L12)", () => {
   it("is refused before the handle is screened", async () => {
     const squatter = await runner();
     let screened = 0;
-    await claimUsername(db, squatter, "runner_4821", () => {
-      screened += 1;
-      return Promise.resolve("clear");
-    });
+    await claimUsername(
+      db,
+      squatter,
+      "runner_4821",
+      () => {
+        screened += 1;
+        return Promise.resolve("clear");
+      },
+      purgePublicPages,
+    );
     expect(screened).toBe(0);
   });
 
   it("is kept by the runner a moderator gave it to", async () => {
     const userId = await renamedFrom("quadzilla_69", "runner_482105");
     expect(
-      await claimUsername(db, userId, "runner_482105", CLEAR),
+      await claimUsername(db, userId, "runner_482105", CLEAR, purgePublicPages),
     ).toStrictEqual({ kind: "claimed", username: "runner_482105" });
   });
 
@@ -838,7 +925,9 @@ describe("the moderator's placeholder shape (SA-L12)", () => {
     await runner({ username: "runner__runs" });
     await runner({ username: "runner__miles" });
     const userId = await runner();
-    expect(await claimUsername(db, userId, "runner_", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, userId, "runner_", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "taken",
       username: "runner_",
       suggestion: undefined,
@@ -858,7 +947,7 @@ describe("the rename notice (ACC-12; round 27 #16)", () => {
 
   it("names the latest handle taken away, not an older one", async () => {
     const userId = await runner({ username: "first_pick" });
-    await claimUsername(db, userId, "second_pick", CLEAR);
+    await claimUsername(db, userId, "second_pick", CLEAR, purgePublicPages);
     await db
       .update(usernameHistory)
       .set({ lockedAt: 10 })
@@ -915,7 +1004,9 @@ describe("the rename notice (ACC-12; round 27 #16)", () => {
 
   it("is settled by Save: a claim clears the reason", async () => {
     const userId = await renamedFrom("quadzilla_69");
-    expect(await claimUsername(db, userId, "quiet_mile", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "quiet_mile", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "claimed",
     });
     expect(await renameNoticeOf(db, userId)).toBeUndefined();
@@ -925,7 +1016,7 @@ describe("the rename notice (ACC-12; round 27 #16)", () => {
     const userId = await renamedFrom("quadzilla_69");
     const screen = vi.fn(CLEAR);
     expect(
-      await claimUsername(db, userId, "runner_4821", screen),
+      await claimUsername(db, userId, "runner_4821", screen, purgePublicPages),
     ).toStrictEqual({ kind: "claimed", username: "runner_4821" });
     expect(screen).not.toHaveBeenCalled();
     expect(await renameNoticeOf(db, userId)).toBeUndefined();
@@ -935,7 +1026,7 @@ describe("the rename notice (ACC-12; round 27 #16)", () => {
   it("settles only the runner who saved", async () => {
     const userId = await renamedFrom("quadzilla_69");
     const other = await renamedFrom("other_name", "runner_7777");
-    await claimUsername(db, userId, "runner_4821", CLEAR);
+    await claimUsername(db, userId, "runner_4821", CLEAR, purgePublicPages);
     expect(await renameNoticeOf(db, other)).toBeDefined();
   });
 
@@ -950,13 +1041,17 @@ describe("the rename cap (SA-L02)", () => {
   it("retires at most three new handles in thirty days, then refuses", async () => {
     const userId = await runner({ username: "walk_start" });
     for (const handle of ["walk_one", "walk_two", "walk_three"]) {
-      expect(await claimUsername(db, userId, handle, CLEAR)).toStrictEqual({
+      expect(
+        await claimUsername(db, userId, handle, CLEAR, purgePublicPages),
+      ).toStrictEqual({
         kind: "claimed",
         username: handle,
       });
     }
 
-    expect(await claimUsername(db, userId, "walk_four", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "walk_four", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "too_often",
     });
     expect(await handleOf(userId)).toBe("walk_three");
@@ -990,7 +1085,9 @@ describe("the rename cap (SA-L02)", () => {
       { username: "when_back", userId, retiredAt: now - 4 },
     ]);
 
-    expect(await claimUsername(db, userId, "when_back", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, userId, "when_back", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "too_often",
       until: now - 5 * DAY + RENAME_WINDOW_S,
       viewer: { homeZone: "America/Chicago" },
@@ -1001,7 +1098,13 @@ describe("the rename cap (SA-L02)", () => {
     const userId = await runner({ username: "race_start" });
     const claims = await Promise.all(
       Array.from({ length: 8 }, (_, index) =>
-        claimUsername(db, userId, `race_${String(index)}`, CLEAR),
+        claimUsername(
+          db,
+          userId,
+          `race_${String(index)}`,
+          CLEAR,
+          purgePublicPages,
+        ),
       ),
     );
 
@@ -1020,10 +1123,14 @@ describe("the rename cap (SA-L02)", () => {
       { username: "locked_one", userId, retiredAt: now - 60, lockedAt: now },
     ]);
 
-    expect(await claimUsername(db, userId, "fresh_one", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "fresh_one", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "claimed",
     });
-    expect(await claimUsername(db, userId, "fresh_two", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "fresh_two", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "too_often",
     });
   });
@@ -1040,7 +1147,9 @@ describe("the rename cap (SA-L02)", () => {
       })),
     );
 
-    expect(await claimUsername(db, userId, "window_new", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "window_new", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "too_often",
     });
   });
@@ -1058,7 +1167,13 @@ describe("the rename cap (SA-L02)", () => {
     const tracked = trackBatches();
 
     expect(
-      await claimUsername(tracked.db, userId, "gate_new", CLEAR),
+      await claimUsername(
+        tracked.db,
+        userId,
+        "gate_new",
+        CLEAR,
+        purgePublicPages,
+      ),
     ).toMatchObject({ kind: "too_often" });
     // The write batch is five statements; a refusal ahead of it makes none.
     expect(tracked.sizes()).not.toContain(5);
@@ -1083,7 +1198,7 @@ describe("the rename cap (SA-L02)", () => {
     // The newest three now are late_c, late_a and late_b: late_a's expiry
     // frees the next change. No home zone yet, so no zone.
     expect(
-      await claimUsername(racing, userId, "late_new", CLEAR),
+      await claimUsername(racing, userId, "late_new", CLEAR, purgePublicPages),
     ).toStrictEqual({
       kind: "too_often",
       until: now - 60 + RENAME_WINDOW_S,
@@ -1104,13 +1219,15 @@ describe("the rename cap (SA-L02)", () => {
     // Another change of the runner's own lands just before the take-back's
     // write, and spends the last rename.
     const landing = beforeBatch(async () => {
-      expect(await claimUsername(db, userId, "back_new", CLEAR)).toMatchObject({
+      expect(
+        await claimUsername(db, userId, "back_new", CLEAR, purgePublicPages),
+      ).toMatchObject({
         kind: "claimed",
       });
     });
 
     expect(
-      await claimUsername(landing, userId, "back_old", CLEAR),
+      await claimUsername(landing, userId, "back_old", CLEAR, purgePublicPages),
     ).toMatchObject({ kind: "too_often" });
     expect(await handleOf(userId)).toBe("back_new");
     const history = await historyOf(userId);
@@ -1127,7 +1244,13 @@ describe("the rename cap (SA-L02)", () => {
     };
 
     const before = nowSeconds();
-    const claim = await claimUsername(db, userId, "gone_new", vanishing);
+    const claim = await claimUsername(
+      db,
+      userId,
+      "gone_new",
+      vanishing,
+      purgePublicPages,
+    );
     // Nothing counts without a profile, so the answer is now.
     expect(claim).toMatchObject({ kind: "too_often" });
     expect(claim.kind === "too_often" && claim.until).toBeGreaterThanOrEqual(
@@ -1149,7 +1272,9 @@ describe("the rename cap (SA-L02)", () => {
     // cap, so only the count stops these.
     for (let attempt = 0; attempt < HANDLE_CLAIMS_PER_HOUR; attempt += 1) {
       const handle = attempt % 2 === 0 ? "side_b" : "side_a";
-      expect(await claimUsername(db, userId, handle, screen)).toMatchObject({
+      expect(
+        await claimUsername(db, userId, handle, screen, purgePublicPages),
+      ).toMatchObject({
         kind: "claimed",
       });
     }
@@ -1157,7 +1282,13 @@ describe("the rename cap (SA-L02)", () => {
     screen.mockClear();
     const before = nowSeconds();
 
-    const claim = await claimUsername(db, userId, "side_c", screen);
+    const claim = await claimUsername(
+      db,
+      userId,
+      "side_c",
+      screen,
+      purgePublicPages,
+    );
 
     expect(claim).toStrictEqual({
       kind: "busy",
@@ -1181,16 +1312,20 @@ describe("the rename cap (SA-L02)", () => {
     const userId = await runner();
     const flagged = vi.fn(FLAGGED);
     for (let attempt = 0; attempt < HANDLE_CLAIMS_PER_HOUR; attempt += 1) {
-      await claimUsername(db, userId, "rude_one", flagged);
+      await claimUsername(db, userId, "rude_one", flagged, purgePublicPages);
     }
     expect(flagged).toHaveBeenCalledTimes(HANDLE_CLAIMS_PER_HOUR);
-    expect(await claimUsername(db, userId, "rude_one", flagged)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "rude_one", flagged, purgePublicPages),
+    ).toMatchObject({
       kind: "busy",
     });
     expect(flagged).toHaveBeenCalledTimes(HANDLE_CLAIMS_PER_HOUR);
 
     const other = await runner();
-    expect(await claimUsername(db, other, "kind_one", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(db, other, "kind_one", CLEAR, purgePublicPages),
+    ).toMatchObject({
       kind: "claimed",
     });
   });
@@ -1199,9 +1334,11 @@ describe("the rename cap (SA-L02)", () => {
     // No profile row: refused claims write none, so the count still runs.
     const userId = newUlid();
     for (let attempt = 0; attempt < HANDLE_CLAIMS_PER_HOUR; attempt += 1) {
-      await claimUsername(db, userId, "rude_one", FLAGGED);
+      await claimUsername(db, userId, "rude_one", FLAGGED, purgePublicPages);
     }
-    expect(await claimUsername(db, userId, "kind_one", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, userId, "kind_one", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "busy",
       until: expect.any(Number) as unknown,
       viewer: { homeZone: undefined },
@@ -1212,11 +1349,13 @@ describe("the rename cap (SA-L02)", () => {
     const userId = await runner({ username: "side_a" });
     const screen = vi.fn(CLEAR);
     for (let attempt = 0; attempt < HANDLE_CLAIMS_PER_HOUR + 1; attempt += 1) {
-      await claimUsername(db, userId, "side_a", screen);
-      await claimUsername(db, userId, "admin", screen);
+      await claimUsername(db, userId, "side_a", screen, purgePublicPages);
+      await claimUsername(db, userId, "admin", screen, purgePublicPages);
     }
     expect(screen).not.toHaveBeenCalled();
-    expect(await claimUsername(db, userId, "side_b", screen)).toMatchObject({
+    expect(
+      await claimUsername(db, userId, "side_b", screen, purgePublicPages),
+    ).toMatchObject({
       kind: "claimed",
     });
   });
@@ -1224,7 +1363,9 @@ describe("the rename cap (SA-L02)", () => {
   it("lets a runner switch back and forth between two handles", async () => {
     const userId = await runner({ username: "side_a" });
     for (const handle of ["side_b", "side_a", "side_b", "side_a", "side_b"]) {
-      expect(await claimUsername(db, userId, handle, CLEAR)).toMatchObject({
+      expect(
+        await claimUsername(db, userId, handle, CLEAR, purgePublicPages),
+      ).toMatchObject({
         kind: "claimed",
       });
     }
@@ -1242,7 +1383,9 @@ describe("the rename cap (SA-L02)", () => {
       })),
     );
 
-    expect(await claimUsername(db, userId, "first_pick", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(db, userId, "first_pick", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "claimed",
       username: "first_pick",
     });

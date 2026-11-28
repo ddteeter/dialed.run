@@ -57,7 +57,6 @@ import {
   settleOutbox,
   storageHandlers,
 } from "../../ops/outbox";
-import { purgePublicPages } from "../../ops/public-web";
 import { captureException } from "../../ops/sentry";
 import { owedEmailHandlers } from "../../ops/owed-email";
 import { settleOpenReviews, withdrawnUnderReview } from "../../safety/review";
@@ -278,8 +277,8 @@ export async function retractEntries(
   db: Db,
   userId: string,
   scope: Scope,
-  report: Report = captureException,
-  purge: PurgeTags = purgePublicPages,
+  report: Report,
+  purge: PurgeTags,
   held?: HeldCheck,
 ): Promise<void> {
   await retractScoped(
@@ -375,8 +374,13 @@ async function batchUnlessHeld(
 }
 
 /**
-`retractEntries` or `deleteRuns`: a runner's rows in a scope, deleted.
-*/
+ * `retractEntries` or `deleteRuns`: a runner's rows in a scope, deleted.
+ *
+ * Every delete here takes its purge from the caller, with no default: a
+ * runner's own delete hands in the purge counted against them
+ * (`purgePublicPagesFor`), and only a system path, such as the account
+ * purge, hands in the uncounted one (`test/architecture/runner-purges.test.ts`).
+ */
 type ScopedDelete = (
   db: Db,
   userId: string,
@@ -403,16 +407,10 @@ function retractOneOf(
   db: Db,
   userId: string,
   id: string,
-  report?: Report,
-  purge?: PurgeTags,
+  report: Report,
+  purge: PurgeTags,
 ) => Promise<void> {
-  return (
-    db,
-    userId,
-    id,
-    report = captureException,
-    purge = purgePublicPages,
-  ) =>
+  return (db, userId, id, report, purge) =>
     retractOne(
       db,
       table,
@@ -467,8 +465,8 @@ export async function deleteEntryPhoto(
   db: Db,
   userId: string,
   photoId: string,
-  report: Report = captureException,
-  purge: PurgeTags = purgePublicPages,
+  report: Report,
+  purge: PurgeTags,
 ): Promise<void> {
   const photo = await entryPhotoWhere(
     db,
@@ -569,8 +567,8 @@ export async function deleteRuns(
   db: Db,
   userId: string,
   scope: Scope,
-  report: Report = captureException,
-  purge: PurgeTags = purgePublicPages,
+  report: Report,
+  purge: PurgeTags,
   held?: HeldCheck,
 ): Promise<void> {
   const effects = { report, purge, held };
@@ -634,8 +632,8 @@ export async function deleteRunsThrough(
   db: Db,
   userId: string,
   lastRunId: string,
-  report: Report = captureException,
-  purge: PurgeTags = purgePublicPages,
+  report: Report,
+  purge: PurgeTags,
   held?: HeldCheck,
 ): Promise<void> {
   const ownedRuns = owned(db, runs, userId, "all", lte(runs.id, lastRunId));

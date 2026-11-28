@@ -47,6 +47,8 @@ import {
 } from "./helpers";
 import { oweInCore } from "../queue-fakes";
 import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
+import { captureException } from "../../src/modules/ops/sentry";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
 The drains' registry, as production assembles it (no linker).
@@ -186,7 +188,13 @@ describe("deleting an entry", () => {
     const userId = await makeUser();
     const { entryId, runId } = await fullEntry(userId);
 
-    await retractEntry(core(), userId, entryId);
+    await retractEntry(
+      core(),
+      userId,
+      entryId,
+      captureException,
+      purgePublicPages,
+    );
 
     expect(await rowsFor(entryId)).toStrictEqual(NOTHING);
     expect(await stored(entryPhotoPrefix(userId, entryId))).toStrictEqual([]);
@@ -201,14 +209,26 @@ describe("deleting an entry", () => {
     const { entryId, photos } = await fullEntry(owner);
     const stranger = await makeUser();
 
-    await expect(retractEntry(core(), stranger, entryId)).rejects.toThrow(
-      NotFoundError,
-    );
+    await expect(
+      retractEntry(
+        core(),
+        stranger,
+        entryId,
+        captureException,
+        purgePublicPages,
+      ),
+    ).rejects.toThrow(NotFoundError);
     // The message itself, not just the type — `retractOneOf`'s message is
     // fixed per entry point, and a blank one would still be a NotFoundError.
-    await expect(retractEntry(core(), stranger, entryId)).rejects.toThrow(
-      "entry not found",
-    );
+    await expect(
+      retractEntry(
+        core(),
+        stranger,
+        entryId,
+        captureException,
+        purgePublicPages,
+      ),
+    ).rejects.toThrow("entry not found");
     const left = await rowsFor(entryId);
     expect(left.entry).toHaveLength(1);
     expect(left.photos).toHaveLength(2);
@@ -223,7 +243,7 @@ describe("deleting an entry", () => {
     const report = vi.fn(quiet);
     vi.spyOn(env.MEDIA, "delete").mockRejectedValueOnce(new Error("R2 down"));
 
-    await retractEntry(core(), userId, entryId, report);
+    await retractEntry(core(), userId, entryId, report, purgePublicPages);
 
     // The runner's delete happened: the rows are gone at once.
     expect(await rowsFor(entryId)).toStrictEqual(NOTHING);
@@ -256,7 +276,13 @@ describe("deleting an entry", () => {
       );
     }
 
-    await retractEntry(core(), userId, entryId);
+    await retractEntry(
+      core(),
+      userId,
+      entryId,
+      captureException,
+      purgePublicPages,
+    );
 
     const [queued] = await core()
       .select()
@@ -276,7 +302,13 @@ describe("deleting an entry", () => {
     const other = await makeUser();
     const theirs = await fullEntry(other);
 
-    await retractEntries(core(), userId, "all");
+    await retractEntries(
+      core(),
+      userId,
+      "all",
+      captureException,
+      purgePublicPages,
+    );
 
     expect(await rowsFor(first.entryId)).toStrictEqual(NOTHING);
     expect(await rowsFor(second.entryId)).toStrictEqual(NOTHING);
@@ -294,7 +326,13 @@ describe("deleting an entry", () => {
     const first = await fullEntry(userId);
     const second = await fullEntry(userId);
 
-    await retractEntries(core(), userId, [first.entryId]);
+    await retractEntries(
+      core(),
+      userId,
+      [first.entryId],
+      captureException,
+      purgePublicPages,
+    );
 
     expect(await rowsFor(first.entryId)).toStrictEqual(NOTHING);
     const secondLeft = await rowsFor(second.entryId);
@@ -320,7 +358,13 @@ describe("deleting an entry", () => {
       );
     }
 
-    await retractEntry(core(), userId, entryId);
+    await retractEntry(
+      core(),
+      userId,
+      entryId,
+      captureException,
+      purgePublicPages,
+    );
 
     const [queued] = await core()
       .select()
@@ -341,7 +385,13 @@ describe("deleting an entry", () => {
       createdAt: NOW,
     });
 
-    await retractEntry(core(), userId, entryId);
+    await retractEntry(
+      core(),
+      userId,
+      entryId,
+      captureException,
+      purgePublicPages,
+    );
 
     const [queued] = await core()
       .select()
@@ -358,7 +408,13 @@ describe("deleting one photo", () => {
     const [gone, kept] = photos;
     if (gone === undefined || kept === undefined) throw new Error("fixture");
 
-    await deleteEntryPhoto(core(), userId, gone.id);
+    await deleteEntryPhoto(
+      core(),
+      userId,
+      gone.id,
+      captureException,
+      purgePublicPages,
+    );
 
     const left = await rowsFor(entryId);
     expect(left.photos.map((photo) => photo.id)).toStrictEqual([kept.id]);
@@ -375,7 +431,13 @@ describe("deleting one photo", () => {
     if (photo === undefined) throw new Error("fixture");
 
     await expect(
-      deleteEntryPhoto(core(), await makeUser(), photo.id),
+      deleteEntryPhoto(
+        core(),
+        await makeUser(),
+        photo.id,
+        captureException,
+        purgePublicPages,
+      ),
     ).rejects.toThrow("photo not found");
     expect(await stored(photo.key)).toStrictEqual([photo.key]);
   });
@@ -393,7 +455,13 @@ describe("deleting one photo", () => {
       createdAt: NOW,
     });
 
-    await deleteEntryPhoto(core(), userId, photo.id);
+    await deleteEntryPhoto(
+      core(),
+      userId,
+      photo.id,
+      captureException,
+      purgePublicPages,
+    );
 
     const [queued] = await core()
       .select()
@@ -426,7 +494,7 @@ describe("deleting a run", () => {
     const userId = await makeUser();
     const { runId, entryId, key } = await importedRun(userId);
 
-    await deleteRun(core(), userId, runId);
+    await deleteRun(core(), userId, runId, captureException, purgePublicPages);
 
     expect(
       await core().select().from(runs).where(eq(runs.id, runId)),
@@ -449,7 +517,7 @@ describe("deleting a run", () => {
   it("deletes a run with no entry", async () => {
     const userId = await makeUser();
     const runId = await makeRun({ userId });
-    await deleteRun(core(), userId, runId);
+    await deleteRun(core(), userId, runId, captureException, purgePublicPages);
     expect(
       await core().select().from(runs).where(eq(runs.id, runId)),
     ).toStrictEqual([]);
@@ -463,7 +531,7 @@ describe("deleting a run", () => {
     const report = vi.fn(quiet);
     vi.spyOn(env.IMPORTS, "delete").mockRejectedValueOnce(new Error("R2 down"));
 
-    await deleteRun(core(), userId, runId, report);
+    await deleteRun(core(), userId, runId, report, purgePublicPages);
 
     // The runner's delete happened: the run and its upload's row are gone.
     expect(
@@ -497,7 +565,7 @@ describe("deleting a run", () => {
     await env.IMPORTS.delete(key);
     const report = vi.fn(quiet);
 
-    await deleteRun(core(), userId, runId, report);
+    await deleteRun(core(), userId, runId, report, purgePublicPages);
 
     expect(
       await core().select().from(runs).where(eq(runs.id, runId)),
@@ -510,9 +578,15 @@ describe("deleting a run", () => {
     const owner = await makeUser();
     const { runId, key } = await importedRun(owner);
 
-    await expect(deleteRun(core(), await makeUser(), runId)).rejects.toThrow(
-      "run not found",
-    );
+    await expect(
+      deleteRun(
+        core(),
+        await makeUser(),
+        runId,
+        captureException,
+        purgePublicPages,
+      ),
+    ).rejects.toThrow("run not found");
     expect(
       await core().select().from(runs).where(eq(runs.id, runId)),
     ).toHaveLength(1);
@@ -528,7 +602,7 @@ describe("deleting a run", () => {
 
     const deletes = vi.spyOn(env.IMPORTS, "delete");
 
-    await deleteRuns(core(), userId, "all");
+    await deleteRuns(core(), userId, "all", captureException, purgePublicPages);
 
     expect(
       await core().select().from(runs).where(eq(runs.userId, userId)),
@@ -565,7 +639,7 @@ describe("deleting a run", () => {
     await makeRun({ userId });
     const orphanEntryId = await makeEntry({ userId, runId: newUlid() });
 
-    await deleteRuns(core(), userId, "all");
+    await deleteRuns(core(), userId, "all", captureException, purgePublicPages);
 
     expect(await rowsFor(orphanEntryId)).toStrictEqual(NOTHING);
   });
@@ -579,7 +653,13 @@ describe("deleting a run", () => {
     const named = await fullEntry(userId);
     const sibling = await fullEntry(userId);
 
-    await deleteRuns(core(), userId, [named.runId]);
+    await deleteRuns(
+      core(),
+      userId,
+      [named.runId],
+      captureException,
+      purgePublicPages,
+    );
 
     expect(await rowsFor(named.entryId)).toStrictEqual(NOTHING);
     expect(
@@ -628,7 +708,7 @@ describe("a deleted run's band (C1)", () => {
     await bandOn(runId);
     await bandOn(kept);
 
-    await deleteRun(core(), userId, runId);
+    await deleteRun(core(), userId, runId, captureException, purgePublicPages);
 
     expect(await bandsOf(runId)).toStrictEqual([]);
     // The runner's other run keeps its band: one run's delete is that run's.
@@ -645,7 +725,7 @@ describe("a deleted run's band (C1)", () => {
       throw new Error("weather down");
     });
 
-    await deleteRun(core(), userId, runId, report);
+    await deleteRun(core(), userId, runId, report, purgePublicPages);
 
     // The runner's delete happened; the band is what is owed.
     expect(
@@ -713,7 +793,7 @@ describe("a deleted run's band (C1)", () => {
       throw new Error("weather down");
     });
 
-    await deleteRuns(core(), userId, [mine, theirs], report);
+    await deleteRuns(core(), userId, [mine, theirs], report, purgePublicPages);
 
     expect(
       await core().select({ dedupeKey: outbox.dedupeKey }).from(outbox),
@@ -730,7 +810,7 @@ describe("a deleted run's band (C1)", () => {
     const runId = await makeRun({ userId });
     await bandOn(runId);
 
-    await deleteRuns(core(), userId, "all");
+    await deleteRuns(core(), userId, "all", captureException, purgePublicPages);
 
     expect(await bandsOf(runId)).toStrictEqual([{ runId }]);
     expect(await core().select().from(outbox)).toStrictEqual([]);

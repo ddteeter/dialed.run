@@ -23,6 +23,7 @@ import {
 } from "../fixtures/scenes";
 
 import { makeEntry, makeRun, makeUser, resetTables } from "./helpers";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * D-142 on the kit-photo path (design 146): the upload's fingerprint is
@@ -105,7 +106,7 @@ describe("kit photo fingerprints (D-142)", () => {
   it("is deleted with the photo", async () => {
     const { userId, photoId } = await posted(await sceneJpeg(1));
 
-    await deleteEntryPhoto(core(), userId, photoId, quiet);
+    await deleteEntryPhoto(core(), userId, photoId, quiet, purgePublicPages);
 
     expect(await fingerprintOfRow(photoId)).toStrictEqual([]);
   });
@@ -113,7 +114,7 @@ describe("kit photo fingerprints (D-142)", () => {
   it("is deleted with the kit", async () => {
     const { userId, entryId, photoId } = await posted(await sceneJpeg(1));
 
-    await retractEntry(core(), userId, entryId, quiet);
+    await retractEntry(core(), userId, entryId, quiet, purgePublicPages);
 
     expect(await fingerprintOfRow(photoId)).toStrictEqual([]);
   });
@@ -140,7 +141,7 @@ describe("kit photo fingerprints (D-142)", () => {
   it("is deleted by the account purge's sweep of every run and kit", async () => {
     const { userId, photoId } = await posted(await sceneJpeg(1));
 
-    await deleteRuns(core(), userId, "all", quiet);
+    await deleteRuns(core(), userId, "all", quiet, purgePublicPages);
 
     expect(await fingerprintOfRow(photoId)).toStrictEqual([]);
   });

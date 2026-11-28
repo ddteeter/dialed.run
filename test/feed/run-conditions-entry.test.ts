@@ -18,6 +18,7 @@ import {
   retractEntries,
 } from "../../src/modules/feed/entries/retract";
 import { makeRun, makeVerifiedUser, resetTables } from "./helpers";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * Feed's half of `run_conditions` (D-175, design 189): the entry's
@@ -123,12 +124,18 @@ describe("the entry half, written with the entry", () => {
       tags: [],
       itemFlags: [],
     };
-    await submitVerdict({ ...save, verdict: 1, audience: "private" });
+    await submitVerdict(
+      { ...save, verdict: 1, audience: "private" },
+      purgePublicPages,
+    );
     expect(await expectCopiesEntry(runId)).toMatchObject({
       verdict: 1,
       entryShared: false,
     });
-    await submitVerdict({ ...save, verdict: -2, audience: "runners" });
+    await submitVerdict(
+      { ...save, verdict: -2, audience: "runners" },
+      purgePublicPages,
+    );
     expect(await expectCopiesEntry(runId)).toMatchObject({
       verdict: -2,
       entryShared: true,
