@@ -16,6 +16,7 @@ import {
 import { core } from "../email/helpers";
 import { makeRun, makeUser, resetTables } from "../feed/helpers";
 import type { Audience } from "../../src/lib/contracts";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * Decision D-50: an unconfirmed account's entries save private, and
@@ -122,25 +123,31 @@ describe("an unconfirmed runner's entries (D-50)", () => {
       itemIds: [],
     });
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
     expect(await storedAudience(entryId)).toEqual(PRIVATE);
 
     await confirm(userId);
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
     expect(await storedAudience(entryId)).toEqual(SHARED);
   });
 
@@ -160,11 +167,11 @@ describe("an unconfirmed runner's entries (D-50)", () => {
       itemFlags: [],
     } as const;
 
-    await submitVerdict(publicVerdict);
+    await submitVerdict(publicVerdict, purgePublicPages);
     expect(await storedAudience(entryId)).toEqual(PRIVATE);
 
     await confirm(userId);
-    await submitVerdict(publicVerdict);
+    await submitVerdict(publicVerdict, purgePublicPages);
     expect(await storedAudience(entryId)).toEqual({ audience: "world" });
   });
 

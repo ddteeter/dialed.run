@@ -39,6 +39,7 @@ import {
 } from "./helpers";
 
 import { nowSeconds } from "../../src/lib/now";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 /**
  * The write path's refusals and the detail read's fallbacks.
  *
@@ -234,24 +235,30 @@ describe("submitVerdict stores the chosen audience", () => {
       return entry;
     };
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "private",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "private",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
     expect(await stored()).toEqual({ audience: "private" });
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
     expect(await stored()).toEqual({ audience: "runners" });
   });
 });
@@ -259,14 +266,17 @@ describe("submitVerdict stores the chosen audience", () => {
 describe("submitVerdict refuses what is not the caller's", () => {
   it("says the entry was not found", async () => {
     await expect(
-      submitVerdict({
-        userId: await makeUser(),
-        entryId: newUlid(),
-        verdict: 0,
-        audience: "runners",
-        tags: [],
-        itemFlags: [],
-      }),
+      submitVerdict(
+        {
+          userId: await makeUser(),
+          entryId: newUlid(),
+          verdict: 0,
+          audience: "runners",
+          tags: [],
+          itemFlags: [],
+        },
+        purgePublicPages,
+      ),
     ).rejects.toThrow(/entry not found/);
   });
 
@@ -277,14 +287,17 @@ describe("submitVerdict refuses what is not the caller's", () => {
     const entryId = await attachKit({ userId: owner, runId, itemIds: [] });
 
     await expect(
-      submitVerdict({
-        userId: other,
-        entryId,
-        verdict: 0,
-        audience: "runners",
-        tags: [],
-        itemFlags: [],
-      }),
+      submitVerdict(
+        {
+          userId: other,
+          entryId,
+          verdict: 0,
+          audience: "runners",
+          tags: [],
+          itemFlags: [],
+        },
+        purgePublicPages,
+      ),
     ).rejects.toThrow(/another user's entry/);
   });
 });
@@ -305,48 +318,60 @@ describe("submitVerdict writes the whole submission or none of it", () => {
   it("records the tags it was given, replacing the previous ones", async () => {
     const { userId, entryId } = await ownEntry();
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: -1,
-      audience: "runners",
-      tags: ["cold_first_mile"],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: -1,
+        audience: "runners",
+        tags: ["cold_first_mile"],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
     const first = await getEntryDetail(entryId, userId);
     expect(first?.tags).toStrictEqual(["cold_first_mile"]);
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 1,
-      audience: "runners",
-      tags: ["hands_sweaty"],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 1,
+        audience: "runners",
+        tags: ["hands_sweaty"],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
     const second = await getEntryDetail(entryId, userId);
     expect(second?.tags).toStrictEqual(["hands_sweaty"]);
   });
 
   it("clears the tags when none are given", async () => {
     const { userId, entryId } = await ownEntry();
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: ["cold_first_mile"],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: ["cold_first_mile"],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
 
     const detail = await getEntryDetail(entryId, userId);
     expect(detail?.tags).toStrictEqual([]);
@@ -355,25 +380,31 @@ describe("submitVerdict writes the whole submission or none of it", () => {
   it("records a per-item flag, and clears it again", async () => {
     const { userId, entryId, itemId } = await ownEntry();
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [{ itemId, flag: "too_much" }],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [{ itemId, flag: "too_much" }],
+      },
+      purgePublicPages,
+    );
     const flagged = await getEntryDetail(entryId, userId);
     expect(flagged?.items[0]?.flag).toBe("too_much");
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [{ itemId }],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [{ itemId }],
+      },
+      purgePublicPages,
+    );
     const cleared = await getEntryDetail(entryId, userId);
     expect(cleared?.items[0]?.flag).toBeUndefined();
   });
@@ -393,7 +424,9 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       ],
     };
 
-    const sent = await queriesDuring(() => submitVerdict(verdict));
+    const sent = await queriesDuring(() =>
+      submitVerdict(verdict, purgePublicPages),
+    );
 
     const updates = sent.prepared.filter((query) =>
       /^update "outfit_entry_items"/iu.test(query),
@@ -410,14 +443,17 @@ describe("submitVerdict writes the whole submission or none of it", () => {
     const { userId, entryId } = await ownEntry();
     const notInKit = await makeItem({ userId, name: "Not worn" });
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [{ itemId: notInKit, flag: "not_enough" }],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [{ itemId: notInKit, flag: "not_enough" }],
+      },
+      purgePublicPages,
+    );
 
     const rows = await db()
       .select()
@@ -433,14 +469,17 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       .set({ caption: "Windy" })
       .where(eq(outfitEntries.id, entryId));
 
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
 
     // The save leaves the column as it was, and the detail does not read it.
     const [row] = await db()
@@ -502,14 +541,17 @@ describe("getEntryDetail copes with what is missing", () => {
     const runId = await makeRun({ userId });
     const itemId = await makeItem({ userId });
     const entryId = await attachKit({ userId, runId, itemIds: [itemId] });
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [{ itemId, flag: "too_much" }],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [{ itemId, flag: "too_much" }],
+      },
+      purgePublicPages,
+    );
 
     const asOwner = await getEntryDetail(entryId, userId);
     const asStranger = await getEntryDetail(entryId, viewer);
@@ -549,14 +591,17 @@ describe("the verdict prompt", () => {
 
   it("does not prompt once a verdict is in", async () => {
     const { userId, entryId } = await unratedEntry();
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
 
     expect(await shouldPromptForVerdict(userId, entryId)).toBe(false);
   });
@@ -605,14 +650,17 @@ describe("the verdict prompt", () => {
     const other = await makeUser();
     await recordVerdictPrompted(other, entryId);
     await recordVerdictPrompted(userId, newUlid());
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "private",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "private",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
     await recordVerdictPrompted(userId, entryId);
 
     const rows = await db()
@@ -660,14 +708,17 @@ async function ratedEntryInBand(params: {
     runId,
     itemIds: params.itemIds ?? [],
   });
-  await submitVerdict({
-    userId: params.userId,
-    entryId,
-    verdict: params.verdict,
-    audience: "runners",
-    tags: [],
-    itemFlags: [],
-  });
+  await submitVerdict(
+    {
+      userId: params.userId,
+      entryId,
+      verdict: params.verdict,
+      audience: "runners",
+      tags: [],
+      itemFlags: [],
+    },
+    purgePublicPages,
+  );
   return entryId;
 }
 
@@ -817,14 +868,17 @@ describe("getEntryDetail says what the card shows", () => {
       .set({ brand: "Janji" })
       .where(eq(wardrobeItems.id, itemId));
     const entryId = await attachKit({ userId, runId, itemIds: [itemId] });
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: -2,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: -2,
+        audience: "runners",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
 
     const detail = await getEntryDetail(entryId, userId);
 
@@ -865,14 +919,17 @@ describe("the band windows leave out what they cannot place", () => {
     const userId = await makeUser();
     const runId = await makeRun({ userId, lat: 67.11, lng: -93.27 });
     const entryId = await attachKit({ userId, runId, itemIds: [] });
-    await submitVerdict({
-      userId,
-      entryId,
-      verdict: 0,
-      audience: "runners",
-      tags: [],
-      itemFlags: [],
-    });
+    await submitVerdict(
+      {
+        userId,
+        entryId,
+        verdict: 0,
+        audience: "runners",
+        tags: [],
+        itemFlags: [],
+      },
+      purgePublicPages,
+    );
 
     const counts = await verdictBandCounts(userId, 0);
     const stat = await itemBandWearStat(userId, newUlid(), 0);

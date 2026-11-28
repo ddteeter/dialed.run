@@ -70,6 +70,7 @@ import {
   opened,
   resetSafetyTables,
 } from "./helpers";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * Design 157 (C17): what a quarantine keeps of its uploader, garment
@@ -948,8 +949,14 @@ describe("screenings go with their photo (design 157)", () => {
     await screened("entry", one.photoId);
     await screened("entry", two.photoId);
 
-    await deleteEntryPhoto(core(), author, one.photoId, quiet);
-    await retractEntry(core(), author, two.entryId, quiet);
+    await deleteEntryPhoto(
+      core(),
+      author,
+      one.photoId,
+      quiet,
+      purgePublicPages,
+    );
+    await retractEntry(core(), author, two.entryId, quiet, purgePublicPages);
 
     expect(await allScreenings()).toStrictEqual([]);
   });

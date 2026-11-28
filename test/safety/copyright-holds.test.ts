@@ -62,6 +62,7 @@ import {
   makeUser,
   resetSafetyTables,
 } from "./helpers";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 /**
  * D-130, design 149: a copyright takedown hides for 30 days; a counter-
@@ -916,8 +917,12 @@ describe("the runner's own delete of what a hold names (SA-L09)", () => {
       const { author, runId, entryId, photoId, key } = await posted();
       await takeDown(subject, subject === "entry" ? entryId : photoId);
 
-      const kit = await refusalOf(retractEntry(core(), author, entryId, quiet));
-      const run = await refusalOf(deleteRun(core(), author, runId, quiet));
+      const kit = await refusalOf(
+        retractEntry(core(), author, entryId, quiet, purgePublicPages),
+      );
+      const run = await refusalOf(
+        deleteRun(core(), author, runId, quiet, purgePublicPages),
+      );
       const photo = await refusalOf(
         deleteEntryPhoto(core(), author, photoId, quiet, noPurge),
       );
@@ -941,8 +946,9 @@ describe("the runner's own delete of what a hold names (SA-L09)", () => {
       // just before its batch.
       const landing = firstBatchAfter(() => takeDown("entry", entryId));
       const attempts = {
-        kit: () => retractEntry(landing, author, entryId, quiet),
-        run: () => deleteRun(landing, author, runId, quiet),
+        kit: () =>
+          retractEntry(landing, author, entryId, quiet, purgePublicPages),
+        run: () => deleteRun(landing, author, runId, quiet, purgePublicPages),
         photo: () => deleteEntryPhoto(landing, author, photoId, quiet, noPurge),
       };
 
@@ -966,7 +972,13 @@ describe("the runner's own delete of what a hold names (SA-L09)", () => {
         throw new Error(text);
       });
 
-      const attempt = retractEntry(failing, author, entryId, quiet);
+      const attempt = retractEntry(
+        failing,
+        author,
+        entryId,
+        quiet,
+        purgePublicPages,
+      );
       await expect(attempt).rejects.toThrow(text);
       await expect(attempt).rejects.not.toBeInstanceOf(ControlRefusal);
       expect(await entryStatus(entryId)).toBeDefined();
@@ -978,7 +990,9 @@ describe("the runner's own delete of what a hold names (SA-L09)", () => {
     await takeDown("photo", photoId);
     await inCourt(photoId);
 
-    const kit = await refusalOf(retractEntry(core(), author, entryId, quiet));
+    const kit = await refusalOf(
+      retractEntry(core(), author, entryId, quiet, purgePublicPages),
+    );
     expect(kit).toBe(heldSentence("kit"));
   });
 
@@ -990,7 +1004,7 @@ describe("the runner's own delete of what a hold names (SA-L09)", () => {
       .set({ status: "restored" })
       .where(eq(copyrightHolds.subjectId, entryId));
 
-    await retractEntry(core(), author, entryId, quiet);
+    await retractEntry(core(), author, entryId, quiet, purgePublicPages);
 
     expect(await entryStatus(entryId)).toBeUndefined();
   });
@@ -1000,7 +1014,7 @@ describe("the runner's own delete of what a hold names (SA-L09)", () => {
     const other = await posted();
     await takeDown("entry", other.entryId);
 
-    await retractEntry(core(), author, entryId, quiet);
+    await retractEntry(core(), author, entryId, quiet, purgePublicPages);
     expect(await entryStatus(entryId)).toBeUndefined();
   });
 });

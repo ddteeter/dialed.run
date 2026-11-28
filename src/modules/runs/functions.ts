@@ -17,6 +17,7 @@ import { deleteCookie, getCookie } from "@tanstack/react-start/server";
 
 import { requireUserId } from "../auth";
 import { deleteRun } from "../feed";
+import { purgePublicPagesFor } from "../ops/public-web";
 import { attachObservation, recordManualObservation } from "../weather";
 import { coreDb } from "./core-db";
 import { getImportOutcome, startFileUpload } from "./imports";
@@ -237,5 +238,11 @@ export const deleteRunFn = createServerFn({ method: "POST" })
   .validator(runIdInput)
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await deleteRun(coreDb(), userId, data.runId);
+    await deleteRun(
+      coreDb(),
+      userId,
+      data.runId,
+      captureException,
+      purgePublicPagesFor(userId),
+    );
   });

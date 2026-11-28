@@ -99,6 +99,7 @@ import { moderationActionInsertWhere } from "../../src/modules/safety/rules/mode
 import { noPurge } from "../purge-spy";
 import { makeObservation, NOW } from "../feed/helpers";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 
 // The handle screen (D-72) answers "clear": these tests are about retirement.
 const CLEAR: ScreenHandle = () => Promise.resolve("clear");
@@ -2001,26 +2002,32 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     await rename(runner, "runner_0100");
 
     expect(
-      await claimUsername(core(), runner, "rudename", CLEAR),
+      await claimUsername(core(), runner, "rudename", CLEAR, purgePublicPages),
     ).toMatchObject({
       kind: "taken",
     });
-    expect(await claimUsername(core(), other, "rudename", CLEAR)).toMatchObject(
-      {
-        kind: "taken",
-      },
-    );
+    expect(
+      await claimUsername(core(), other, "rudename", CLEAR, purgePublicPages),
+    ).toMatchObject({
+      kind: "taken",
+    });
     const renamed = await profileOf(runner);
     expect(renamed?.username).toBe("runner_0100");
     // The lock outlives the runner's later changes of their own.
     expect(
-      await claimUsername(core(), runner, "fresh_pick", CLEAR),
+      await claimUsername(
+        core(),
+        runner,
+        "fresh_pick",
+        CLEAR,
+        purgePublicPages,
+      ),
     ).toStrictEqual({
       kind: "claimed",
       username: "fresh_pick",
     });
     expect(
-      await claimUsername(core(), runner, "rudename", CLEAR),
+      await claimUsername(core(), runner, "rudename", CLEAR, purgePublicPages),
     ).toMatchObject({
       kind: "taken",
     });
@@ -2029,9 +2036,11 @@ describe("forceRename (round 27 #16), through account's rules", () => {
 
   it("still lets a runner take back a handle they gave up themselves", async () => {
     const runner = await makeUser({ username: "first" });
-    await claimUsername(core(), runner, "second", CLEAR);
+    await claimUsername(core(), runner, "second", CLEAR, purgePublicPages);
 
-    expect(await claimUsername(core(), runner, "first", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(core(), runner, "first", CLEAR, purgePublicPages),
+    ).toStrictEqual({
       kind: "claimed",
       username: "first",
     });
@@ -2040,7 +2049,7 @@ describe("forceRename (round 27 #16), through account's rules", () => {
 
   it("can hand the runner one of their own unlocked old handles", async () => {
     const runner = await makeUser({ username: "first" });
-    await claimUsername(core(), runner, "rudename", CLEAR);
+    await claimUsername(core(), runner, "rudename", CLEAR, purgePublicPages);
 
     expect(await rename(runner, "first")).toStrictEqual({
       kind: "renamed",
@@ -2127,7 +2136,7 @@ describe("forceRename (round 27 #16), through account's rules", () => {
 
   it("lets a rename that lost a race write nothing, and say so rather than renamed (R-121)", async () => {
     const runner = await makeUser({ username: "first" });
-    await claimUsername(core(), runner, "rudename", CLEAR);
+    await claimUsername(core(), runner, "rudename", CLEAR, purgePublicPages);
     // Both moderators read "rudename". The other's rename lands between
     // this one's read and its write.
     const real = core();
