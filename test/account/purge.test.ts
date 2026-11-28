@@ -77,7 +77,9 @@ import {
 } from "../../src/modules/products/service";
 import { forgetManualBands } from "../../src/modules/weather";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
+import { purgePublicPages } from "../../src/modules/ops/public-web";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
+import { noPurge } from "../purge-spy";
 import { outboxHandlers as registryWith } from "../../src/modules/dispatch/outbox-handlers";
 
 /**
@@ -137,6 +139,7 @@ function depsAt(
         reported.push({ error, context });
       },
       forgetMaker,
+      purgePages: noPurge,
     },
   };
 }
@@ -2001,6 +2004,10 @@ describe("purgeDueAccounts — nobody signs in behind the purge", () => {
 });
 
 describe("purgeDueAccounts — the Worker's own wiring", () => {
+  it("purges the runner's pages from the Worker's own edge cache", () => {
+    expect(livePurgeDeps({ forgetMaker }).purgePages).toBe(purgePublicPages);
+  });
+
   it("revokes the Strava grant through the runs module, owed and queued", async () => {
     const runner = await seedAccount();
     await claim(runner.userId, nowSeconds() - 1);

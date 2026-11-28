@@ -86,6 +86,7 @@ import { listedPages } from "../../../lib/sql/r2-pages";
 import { rowWhere } from "../../../lib/sql/row-where";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import { nowSeconds } from "../../../lib/now";
+import type { PurgeTags } from "../../../lib/cache-tags";
 import type { RateLimitKind } from "../../../lib/contracts/rate-limits";
 import { forgetRateLimit, forgetSendLimits } from "../../ops/limits";
 import { deleteRuns, deleteRunsThrough } from "../../feed";
@@ -177,6 +178,11 @@ export interface PurgeDeps {
    * imports no more modules (design 271).
    */
   readonly forgetMaker: (db: Db, userId: string) => BatchItem<"sqlite">;
+  /**
+   * The edge purge of the runner's pages, made once, after their last
+   * run is deleted: `purgePublicPages`, live.
+   */
+  readonly purgePages: PurgeTags;
 }
 
 /**
@@ -209,6 +215,7 @@ export function livePurgeDeps(
     report: captureException,
     now: nowSeconds(),
     closedAddressSecret: env.CLOSED_ADDRESS_SECRET,
+    purgePages: purgePublicPages,
     ...handedIn,
   };
 }
@@ -421,7 +428,7 @@ export async function purgeAccount(
     userId,
     "all",
     report,
-    purgePublicPages,
+    deps.purgePages,
     heldBy(userId),
   );
   await deleteCloset(core, userId, report);
@@ -485,11 +492,23 @@ async function didDeleteEveryRun(
       userId,
       last.id,
       deps.report,
-      purgePublicPages,
+      purgeNothing,
       heldBy(userId),
     );
   }
   return false;
+}
+
+/**
+ * The purge a page of runs makes: none. Every page's delete names the
+ * same tag, the runner's, so the purge is made once, by the closing
+ * `deleteRuns(…, "all")` after the last page (`purgeAccount`). An account
+ * a firing leaves part way is purged by the firing that finishes it:
+ * nothing of a leaving runner's is public meanwhile (`runnerNotLeaving`),
+ * and the edge keeps a page or a photo's copy a minute at most.
+ */
+function purgeNothing(): void {
+  // The runner's pages are purged once, after their last page of runs.
 }
 
 /**

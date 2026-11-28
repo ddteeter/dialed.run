@@ -1023,6 +1023,7 @@ describe("screenings go with their photo (design 157)", () => {
         importsBucket: env.IMPORTS,
         report: quiet,
         forgetMaker,
+        purgePages: noPurge,
       },
       owner,
     );

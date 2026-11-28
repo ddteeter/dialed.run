@@ -21,6 +21,8 @@ import {
 } from "../../src/modules/account/purge/purge";
 import type { PurgeDeps } from "../../src/modules/account/purge/purge";
 import { forgetManualBands } from "../../src/modules/weather";
+import { runnerCacheTag } from "../../src/lib/cache-tags";
+import { purgeSpy } from "../purge-spy";
 
 /**
  * The purge deletes a runner's runs a page at a time, under one bound
@@ -35,6 +37,7 @@ interface Firing {
   readonly deps: PurgeDeps;
   readonly handed: number[];
   readonly reported: unknown[];
+  readonly purged: string[][];
 }
 
 function firingAt(
@@ -43,9 +46,11 @@ function firingAt(
 ): Firing {
   const handed: number[] = [];
   const reported: unknown[] = [];
+  const { purge, calls } = purgeSpy();
   return {
     handed,
     reported,
+    purged: calls,
     deps: {
       core,
       forgetBands: async (runIds) => {
@@ -60,6 +65,7 @@ function firingAt(
       now,
       runPages,
       forgetMaker,
+      purgePages: purge,
     },
   };
 }
@@ -244,5 +250,31 @@ describe("the purge's run pages", () => {
 
     expect(next.handed).toStrictEqual([]);
     expect(await core.select().from(accountDeletions)).toStrictEqual([]);
+  });
+
+  it("purge the runner's pages once, after their last page", async () => {
+    const userId = await dueAccount(5);
+    const firing = firingAt(NOW, { page: 2, perFiring: 10 });
+
+    await purgeDueAccounts([], firing.deps);
+
+    expect(firing.handed).toStrictEqual([2, 2, 1]);
+    expect(firing.purged).toStrictEqual([[runnerCacheTag(userId)]]);
+  });
+
+  it("purge an account a firing leaves part way once, on the firing that finishes it", async () => {
+    const userId = await dueAccount(5);
+    const first = firingAt(NOW, { page: 2, perFiring: 3 });
+
+    await purgeDueAccounts([], first.deps);
+
+    expect(first.handed).toStrictEqual([2, 1]);
+    expect(first.purged).toStrictEqual([]);
+
+    const next = firingAt(NOW + PURGE_LEASE_S + 1, { page: 2, perFiring: 10 });
+    await purgeDueAccounts([], next.deps);
+
+    expect(next.handed).toStrictEqual([2]);
+    expect(next.purged).toStrictEqual([[runnerCacheTag(userId)]]);
   });
 });

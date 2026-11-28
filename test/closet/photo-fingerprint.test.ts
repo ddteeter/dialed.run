@@ -14,6 +14,7 @@ import {
 import { createItem, deleteItem } from "../../src/modules/closet/service";
 import type { Classify } from "../../src/modules/safety/screening";
 import { fingerprintOfBytes, quiet, sceneJpeg } from "../fixtures/scenes";
+import { noPurge } from "../purge-spy";
 
 /**
  * D-142 on the garment-photo path (design 146): the fingerprint is
@@ -111,6 +112,7 @@ describe("garment photo fingerprints (D-142)", () => {
         importsBucket: env.IMPORTS,
         report: quiet,
         forgetMaker,
+        purgePages: noPurge,
       },
       userId,
     );
