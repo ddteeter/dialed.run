@@ -15,8 +15,9 @@
  * removal; then one batch clears the photo from the garment, settles its
  * review, deletes its screenings and writes the audit row — with the
  * locked record for a quarantine, or the owner's bell row and email debt
- * for a Remove — and the photo's prefix is owed a delete (law 8c). The
- * garment itself stays: the photo was the content.
+ * for a Remove — and the photo's prefix is owed a delete (law 8c). Once a
+ * quarantine's record lands, the photo backup's copies of the version
+ * are deleted. The garment itself stays: the photo was the content.
  *
  * In feed beside the kit's, not in closet or safety: it shares
  * `moderation.ts`'s outbox commit, and safety may not import ops.
@@ -38,6 +39,11 @@ import { hasRowWhere } from "../../../lib/sql/keyed-read";
 import { clearedPhoto } from "../../closet";
 import { emailDebt } from "../../email";
 import { notificationRaise } from "../../notifications";
+import {
+  backedUpCopyOf,
+  backedUpKeysUnder,
+  dropBackupCopies,
+} from "../../ops/daily";
 import { oweOutbox } from "../../ops/outbox";
 import { captureException } from "../../ops/sentry";
 import {
@@ -150,12 +156,22 @@ export type GarmentModerationOutcome =
  * The one copy a quarantine makes, shared with a kit's (`moderation.ts`) so
  * the two cannot drift on what is preserved: one object under the
  * quarantine prefix, and where it went and when R2 says it was uploaded.
- * Nothing when the object is already gone. A copy already at its key is
- * kept as it is, and nothing is written over it.
+ * Nothing when the object is gone from `MEDIA` and from the photo backup.
+ * A copy already at its key is kept as it is, and nothing is written over
+ * it.
+ *
+ * **From the backup when `MEDIA` has none.** A photo whose file went
+ * missing, or whose owner deleted it as the quarantine began, is
+ * preserved from the photo backup's copy (`backedUpCopyOf`, its key and
+ * then `gone/`). `fromBackup` then says which copy it was, and
+ * `uploadedAt` is when that copy was written. Once the record lands,
+ * the backup's copies go (`dropFromBackup`), so the quarantine's is the
+ * one that stays.
  */
 export async function preserveObject(key: string) {
-  const object = await env.MEDIA.get(key);
-  if (object === null) return;
+  const found = await bytesOf(key);
+  if (found === undefined) return;
+  const { object } = found;
   const preservedKey = quarantineKeyFor(key);
   const kept = await env.MEDIA.head(preservedKey);
   await (kept === null
@@ -166,25 +182,76 @@ export async function preserveObject(key: string) {
   return {
     preservedKey,
     uploadedAt: Math.floor(object.uploaded.getTime() / 1000),
+    fromBackup: found.fromBackup,
   };
+}
+
+/**
+ * The photo's bytes: from `MEDIA`, or else from the photo backup, with
+ * the backup key they came from. Nothing when neither has them.
+ */
+async function bytesOf(
+  key: string,
+): Promise<{ object: R2ObjectBody; fromBackup?: string } | undefined> {
+  const object = await env.MEDIA.get(key);
+  if (object !== null) return { object };
+  const copy = await backedUpCopyOf(key);
+  return copy && { object: copy.object, fromBackup: copy.at };
 }
 
 /**
  * Copies every object of the photo's version — the re-encoded original and
  * its sizes — under the quarantine prefix, and says for each where it went
  * and when R2 says it was uploaded. Listed rather than named, because an
- * original kept the extension it arrived with before it was re-encoded.
- * An object gone between the list and the copy is recorded by its key
- * alone, as a kit photo with no bytes is: the purge reads only the keys
- * that were preserved (`preservedKeysOf`).
+ * original kept the extension it arrived with before it was re-encoded:
+ * listed in `MEDIA` and in the photo backup, so a size `MEDIA` no longer
+ * has is preserved from its backup copy (`preserveObject`). An object gone
+ * between the list and the copy is recorded by its key alone, as a kit
+ * photo with no bytes is: the purge reads only the keys that were
+ * preserved (`preservedKeysOf`).
  */
 async function copyVersion(photoKey: string) {
-  const listed = await env.MEDIA.list({ prefix: `${photoKey}/` });
+  const prefix = `${photoKey}/`;
+  const [listed, backedUp] = await Promise.all([
+    env.MEDIA.list({ prefix }),
+    backedUpKeysUnder(prefix),
+  ]);
+  const keys = new Set([
+    ...listed.objects.map((object) => object.key),
+    ...backedUp,
+  ]);
   const copies = [];
-  for (const { key } of listed.objects) {
+  for (const key of keys) {
     copies.push({ key, ...(await preserveObject(key)) });
   }
   return copies;
+}
+
+/**
+ * Once a quarantine's record has landed, the photo backup's copies of
+ * what it took are deleted (`dropBackupCopies`): under `scope`, the kit
+ * photo's key, the kit's prefix or the garment photo's version, and under
+ * `gone/`. A failure is reported and never fails the quarantine (law 5):
+ * the next daily backup deletes them (`backUpMedia`), and makes none
+ * while the record lasts. Shared with a kit's (`moderation.ts`).
+ */
+export async function dropFromBackup(
+  scope: string,
+  subject: {
+    readonly subjectType: QuarantineLanding["subjectType"];
+    readonly subjectId: string;
+  },
+  report: Report,
+): Promise<void> {
+  try {
+    await dropBackupCopies(scope);
+  } catch (error: unknown) {
+    report(error, {
+      surface: "quarantine-backup",
+      subjectType: subject.subjectType,
+      subjectId: subject.subjectId,
+    });
+  }
 }
 
 /**
@@ -393,6 +460,14 @@ export async function moderateGarmentPhoto(
     await (isVersionRefusal(error)
       ? commit(db, kept, [], report)
       : passedOn(db, error, heldTo, landing, report));
+  }
+  // Here only once the record has landed: a failure passed on threw.
+  if (input.action === "quarantine") {
+    await dropFromBackup(
+      found.photoKey,
+      { subjectType: "garment", subjectId: itemId },
+      report,
+    );
   }
   return "removed";
 }

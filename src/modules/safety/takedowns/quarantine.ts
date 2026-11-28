@@ -14,9 +14,17 @@ import type { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { session, user } from "../../../db/schema-auth";
-import { quarantinedContent, userProfiles } from "../../../db/schema-core";
+import {
+  moderationActions,
+  quarantinedContent,
+  userProfiles,
+} from "../../../db/schema-core";
 import { env, primaryCoreDb } from "../../../env";
-import { quarantineKeyFor } from "../../../lib/entry-photo-key";
+import {
+  entryPhotoPrefix,
+  quarantineKeyFor,
+} from "../../../lib/entry-photo-key";
+import { garmentPhotoPrefix } from "../../../lib/garment-photo-key";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
 
@@ -270,6 +278,46 @@ function ncmecReportAudit(
     },
     sql`exists (select 1 from ${quarantinedContent} where ${eq(quarantinedContent.id, report.recordId)})`,
   );
+}
+
+/**
+ * What the quarantine records keep out of the photo backup
+ * (`backUpMedia`): for each record, the photo's key, the kit's prefix or
+ * the garment photo's version. That is what its audit row's
+ * `preserved_key` names, without the quarantine prefix, since the photos
+ * were copied there under the keys they had. An audit row stays while
+ * its record does (`retention.ts`).
+ *
+ * A key that is not under its uploader's own photos, with the quarantine
+ * prefix in front, names nothing: the key is a column, and a backup
+ * delete that trusted it could be pointed at another runner's copies.
+ * Read from the primary, so a record that has just landed is in it.
+ */
+export async function quarantinedScopes(): Promise<string[]> {
+  const rows = await primaryCoreDb()
+    .select({
+      preservedKey: moderationActions.preservedKey,
+      uploaderId: quarantinedContent.uploaderId,
+    })
+    .from(quarantinedContent)
+    .innerJoin(
+      moderationActions,
+      eq(moderationActions.id, quarantinedContent.moderationActionId),
+    );
+  const root = quarantineKeyFor("");
+  const scopes: string[] = [];
+  for (const { preservedKey, uploaderId } of rows) {
+    const ownRoots = [
+      entryPhotoPrefix(uploaderId),
+      garmentPhotoPrefix(uploaderId),
+    ].map((prefix) => quarantineKeyFor(prefix));
+    const isOwn = (key: string) =>
+      ownRoots.some((ownRoot) => key.startsWith(ownRoot));
+    if (preservedKey !== null && isOwn(preservedKey)) {
+      scopes.push(preservedKey.slice(root.length));
+    }
+  }
+  return scopes;
 }
 
 /**

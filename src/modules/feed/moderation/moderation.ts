@@ -31,7 +31,11 @@
  * `quarantined_content`, a locked table only an admin reads, kept a year
  * for the owner's report to NCMEC. **Nothing tells the uploader**: no bell
  * row, no email. The copy goes first because a failed copy must stop the
- * delete — losing the evidence is the one outcome worse than a retry.
+ * delete — losing the evidence is the one outcome worse than a retry. A
+ * photo `MEDIA` no longer has is copied from the photo backup instead
+ * (`preserveObject`). Once the record has landed, the backup's copies of
+ * what it took are deleted (`dropFromBackup`), and the daily backup makes
+ * none while the record lasts.
  *
  * **It lives in feed, not safety**, because the arrow runs feed → safety
  * (`docs/architecture.md`): the deletion statements are feed's, and safety
@@ -93,6 +97,7 @@ import {
 } from "../../safety/takedowns";
 
 import {
+  dropFromBackup,
   moderateGarmentPhoto,
   passedOn,
   type QuarantineLanding,
@@ -305,19 +310,21 @@ async function preservation(
   input: ModerateInput,
   actionId: string,
 ): Promise<{
+  scope: string;
   preservedKey: string;
   record: BatchItem<"sqlite">;
 }> {
   const copyOf = await copyBytes(target.photoKeys);
   const rows = await rowsOf(db, target, input);
   const photos = photosSnapshotOf(copyOf, rows.photos);
-  const preservedKey = quarantineKeyFor(
+  // What it took: the photo's key, or the prefix of every photo on the kit.
+  const scope =
     input.subjectType === "photo"
       ? entryPhotoKeyFor(target.ownerId, target.entryId, input.subjectId)
-      : entryPhotoPrefix(target.ownerId, target.entryId),
-  );
+      : entryPhotoPrefix(target.ownerId, target.entryId);
   return {
-    preservedKey,
+    scope,
+    preservedKey: quarantineKeyFor(scope),
     record: quarantineInsert(db, {
       moderationActionId: actionId,
       subjectType: input.subjectType,
@@ -558,8 +565,24 @@ export async function moderateContent(
       report,
     );
   }
+  // Here only once the record has landed: a failure passed on threw.
+  await dropKeptFromBackup(input, kept, report);
   purgeTakenDown(target, purge);
   return "removed";
+}
+
+/**
+ * A quarantine's record has landed: the photo backup's copies of what it
+ * took go now (`dropFromBackup`). Nothing for a Remove or a takedown.
+ */
+async function dropKeptFromBackup(
+  input: Pick<ModerateInput, "subjectType" | "subjectId">,
+  kept: { readonly scope: string } | undefined,
+  report: Report,
+): Promise<void> {
+  if (kept === undefined) return;
+  const { subjectType, subjectId } = input;
+  await dropFromBackup(kept.scope, { subjectType, subjectId }, report);
 }
 
 /**

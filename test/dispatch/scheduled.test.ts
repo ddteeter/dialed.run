@@ -9,9 +9,11 @@ import {
   entryPhotos,
   photoScreenings,
   imports,
+  moderationActions,
   outbox,
   outfitEntries,
   products,
+  quarantinedContent,
   reports,
   reviewQueue,
   runs,
@@ -28,6 +30,8 @@ import { ENRICHMENT_SWEEP_TRIES } from "../../src/modules/enrichment/abandon";
 import { enrichJobSchema } from "../../src/modules/enrichment/queue-messages";
 import { handleScheduled } from "../../src/modules/dispatch";
 import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/reports/retention";
+import { quarantineInsert } from "../../src/modules/safety/takedowns";
+import { quarantineKeyFor } from "../../src/lib/entry-photo-key";
 import { gaveUpRow } from "../gave-up-rows";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
 import {
@@ -1011,6 +1015,45 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       await handleScheduled(DIGEST, recordingReporter().reporter, {});
     } finally {
       vi.useRealTimers();
+    }
+
+    expect(await env.MEDIA_BACKUP.head(key)).toBeNull();
+  });
+
+  it("copies no photo a quarantine record covers on the daily firing (D-70)", async () => {
+    const uploader = newUlid();
+    const version = `items/${uploader}/${newUlid()}/${newUlid()}`;
+    const key = `${version}/original.jpg`;
+    await env.MEDIA.put(key, "photo bytes");
+    const actionId = newUlid();
+    await coreDb()
+      .insert(moderationActions)
+      .values({
+        id: actionId,
+        actorId: "rev",
+        action: "quarantine",
+        subjectType: "garment",
+        subjectId: newUlid(),
+        reason: "explicit",
+        preservedKey: quarantineKeyFor(version),
+        createdAt: nowSeconds(),
+      });
+    await quarantineInsert(coreDb(), {
+      moderationActionId: actionId,
+      subjectType: "garment",
+      subjectId: newUlid(),
+      uploaderId: uploader,
+      entrySnapshot: "{}",
+      photosSnapshot: "[]",
+      quarantinedAt: nowSeconds(),
+    });
+
+    try {
+      await handleScheduled(DIGEST, recordingReporter().reporter, {});
+    } finally {
+      await coreDb()
+        .delete(quarantinedContent)
+        .where(eq(quarantinedContent.moderationActionId, actionId));
     }
 
     expect(await env.MEDIA_BACKUP.head(key)).toBeNull();

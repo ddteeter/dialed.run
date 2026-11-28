@@ -73,6 +73,7 @@ import {
 import {
   declineLapsedRequests,
   purgeExpiredQuarantine,
+  quarantinedScopes,
 } from "../safety/takedowns";
 
 import { nowSeconds } from "../../lib/now";
@@ -810,7 +811,11 @@ async function runDailyDigest(
     // deletes is set aside by the next day's backup.
     "media-backup": async (anomalies) => {
       await backUpMedia(
-        { source: env.MEDIA, backup: env.MEDIA_BACKUP },
+        {
+          source: env.MEDIA,
+          backup: env.MEDIA_BACKUP,
+          quarantined: quarantinedScopes,
+        },
         anomalies,
         { now: nowSeconds() },
       );
