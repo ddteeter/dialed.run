@@ -1,7 +1,7 @@
 /**
  * Wrangler configuration — bindings are human-managed (CLAUDE.md forbidden
- * zones). D1 database_ids are placeholders until `wrangler d1 create` runs
- * against the real account. Queue consumers + cron triggers land with the
+ * zones). The D1 database_ids are the production account's
+ * (docs/deployment.md §1). Queue consumers + cron triggers land with the
  * custom server entry (docs/tasks/000 §10).
  */
 {
@@ -70,23 +70,23 @@
   "vars": {
     "BETTER_AUTH_URL": "https://app.dialed.run",
     "PUBLIC_PHOTOS_ORIGIN": "https://photos.dialed.run",
-    "TURNSTILE_SITE_KEY": "",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAGWkdo6Zz7f0F_fG",
     // Design 165: the account the speed rollup queries Analytics Engine's
-    // SQL API in. Not a secret; set in the deployment sweep. Empty, the
-    // rollup reports itself unconfigured in the daily digest.
-    "CF_ACCOUNT_ID": "",
+    // SQL API in. Not a secret. Empty, the rollup reports itself
+    // unconfigured in the daily digest.
+    "CF_ACCOUNT_ID": "66fcda715e7190263bed7b43f587e073",
   },
   "d1_databases": [
     {
       "binding": "DIALED_CORE",
       "database_name": "dialed-core",
-      "database_id": "00000000-0000-0000-0000-000000000001",
+      "database_id": "3ef5f771-e716-4619-a931-f2870b497ab0",
       "migrations_dir": "src/db/migrations/core",
     },
     {
       "binding": "DIALED_WEATHER",
       "database_name": "dialed-weather",
-      "database_id": "00000000-0000-0000-0000-000000000002",
+      "database_id": "74336575-4a85-4959-ab4c-102174a3780d",
       "migrations_dir": "src/db/migrations/weather",
     },
     // Design 165: the ops database. No personal data, and nothing that
@@ -95,7 +95,7 @@
     {
       "binding": "DIALED_OPS",
       "database_name": "dialed-ops",
-      "database_id": "00000000-0000-0000-0000-000000000003",
+      "database_id": "5984c5b2-7e60-4984-a647-0d8ab41825fe",
       "migrations_dir": "src/db/migrations/ops",
     },
   ],
