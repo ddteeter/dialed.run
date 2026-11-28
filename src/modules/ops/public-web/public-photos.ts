@@ -54,6 +54,7 @@ import {
 import { env, primaryCoreDb, waitUntil } from "../../../env";
 import type { TaggedScope } from "../../../lib/cache-tags";
 import { chunked, IN_LIST_CHUNK, readInChunks } from "../../../lib/chunked";
+import { deleteKeys } from "../../../lib/sql/r2-delete";
 import { nowSeconds } from "../../../lib/now";
 import {
   newPublicPhotoKey,
@@ -209,7 +210,7 @@ async function didWithdraw(
   keys: readonly string[],
 ): Promise<boolean> {
   try {
-    await deps.bucket.delete([...keys]);
+    await deleteKeys(deps.bucket, keys);
     await deps.db.delete(publicPhotos).where(inArray(publicPhotos.key, keys));
     return true;
   } catch (error: unknown) {
@@ -389,7 +390,7 @@ async function deleteUnnamedOf(
   );
   const named = new Set(rows.map((row) => row.key));
   const unnamed = keys.filter((key) => !named.has(key));
-  await deps.bucket.delete(unnamed);
+  await deleteKeys(deps.bucket, unnamed);
   return unnamed.length;
 }
 

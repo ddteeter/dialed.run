@@ -82,6 +82,7 @@ import {
 import { coreDb, env } from "../../../env";
 import { importFilePrefix } from "../../../lib/import-file-key";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
+import { deleteKeys } from "../../../lib/sql/r2-delete";
 import { listedPages } from "../../../lib/sql/r2-pages";
 import { rowWhere } from "../../../lib/sql/row-where";
 import { orSqlNull } from "../../../lib/sql/sql-null";
@@ -441,7 +442,10 @@ async function deleteStoredFiles(
 ): Promise<void> {
   for (const prefix of [importFilePrefix(userId), exportPrefixFor(userId)]) {
     for await (const objects of listedPages(bucket, prefix)) {
-      await bucket.delete(objects.map((object) => object.key));
+      await deleteKeys(
+        bucket,
+        objects.map((object) => object.key),
+      );
     }
   }
 }

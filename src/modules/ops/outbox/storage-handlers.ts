@@ -10,6 +10,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import { entryPhotos, wardrobeItems } from "../../../db/schema-core";
 import { env } from "../../../env";
 import { readInChunks } from "../../../lib/chunked";
+import { deleteKeys } from "../../../lib/sql/r2-delete";
 import { entryPhotoIdOf, entryPhotoPrefix } from "../../../lib/entry-photo-key";
 import {
   garmentPhotoPrefix,
@@ -127,7 +128,8 @@ export async function reconcileItemPhotos(
       : `${photoKeyFor(userId, itemId)}/`;
   await forEachPage({ prefix, limit: pageSize }, maxPages, async (page) => {
     const live = await livePhotoKeys(db, userId, itemId);
-    await env.MEDIA.delete(
+    await deleteKeys(
+      env.MEDIA,
       page.objects
         .map((object) => object.key)
         .filter((key) => live.every((photo) => !isLiveObject(key, photo))),
@@ -180,7 +182,10 @@ export async function reconcileEntryPhotos(
   await forEachPage({ prefix, limit: pageSize }, maxPages, async (page) => {
     const keys = page.objects.map((object) => object.key);
     const live = await liveEntryPhotoKeys(db, keys);
-    await env.MEDIA.delete(keys.filter((key) => !live.has(key)));
+    await deleteKeys(
+      env.MEDIA,
+      keys.filter((key) => !live.has(key)),
+    );
   });
 }
 
