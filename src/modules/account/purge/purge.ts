@@ -37,6 +37,7 @@ import {
   isNull,
   lt,
   lte,
+  notExists,
   or,
   sql,
 } from "drizzle-orm";
@@ -676,9 +677,11 @@ const RUNNER_COUNTS = [
 
 /**
  * One closed address's fingerprint, written only while the runner's
- * profile carries a ban: `INSERT … SELECT … WHERE EXISTS (the profile
- * with banned_at set)`, so the ban is the one in place when the statement
- * runs, not when the profile was read.
+ * profile carries a ban and their deletion is not an age closure's:
+ * `INSERT … SELECT … WHERE EXISTS (the profile with banned_at set) AND
+ * NOT EXISTS (the deletion with cause under_18)`, so the ban and the
+ * cause are the ones in place when the statement runs, not when the
+ * profile was read. An age closure's purge keeps no address fingerprints.
  */
 function keptIfClosed(
   db: Db,
@@ -695,10 +698,28 @@ function keptIfClosed(
       .from(userProfiles)
       .where(ifClosed),
   );
+  const notForAge = notExists(
+    db
+      .select({ one: sql`1` })
+      .from(accountDeletions)
+      .where(ageClosureOf(userId)),
+  );
   return db
     .insert(closedAddresses)
-    .select(rowWhere(closedAddresses, row, whileBanned))
+    .select(
+      rowWhere(closedAddresses, row, sql`${whileBanned} AND ${notForAge}`),
+    )
     .onConflictDoNothing();
+}
+
+/**
+ * The runner's deletion, when the Desk scheduled it closing them for age.
+ */
+function ageClosureOf(userId: string): SQL | undefined {
+  return and(
+    eq(accountDeletions.userId, userId),
+    eq(accountDeletions.cause, "under_18"),
+  );
 }
 
 /**
@@ -718,7 +739,13 @@ async function deleteAccountRows(
     eq(userProfiles.userId, userId),
   );
   const handle = profile?.username ?? undefined;
-  const isClosed = profile !== undefined && profile.bannedAt !== null;
+  // An age closure keeps none of its addresses by design, so it is never
+  // counted as one that could not keep them.
+  const isForAge =
+    (await firstRowWhere(db, accountDeletions, ageClosureOf(userId))) !==
+    undefined;
+  const isBanned = profile !== undefined && profile.bannedAt !== null;
+  const isClosed = isBanned && !isForAge;
   // Hashed whatever the profile said when read: whether they are kept is
   // decided by the batch itself, from the ban as it stands then
   // (`keptIfClosed`).

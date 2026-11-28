@@ -649,12 +649,14 @@ async function claim(
   userId: string,
   purgeAfter: number,
   purgeStartedAt?: number,
+  cause: "asked" | "under_18" = "asked",
 ): Promise<void> {
   await core.insert(accountDeletions).values({
     userId,
     requestedAt: purgeAfter - 7 * 86_400,
     purgeAfter,
     purgeStartedAt,
+    cause,
   });
 }
 
@@ -2161,7 +2163,10 @@ describe("purgeAccount", () => {
 
 const CLOSED_KEY = "closed-address-test-key";
 
-async function dueRunner(isClosed: boolean): Promise<Seeded> {
+async function dueRunner(
+  isClosed: boolean,
+  cause: "asked" | "under_18" = "asked",
+): Promise<Seeded> {
   const runner = await seedAccount();
   if (isClosed) {
     await core
@@ -2169,7 +2174,7 @@ async function dueRunner(isClosed: boolean): Promise<Seeded> {
       .set({ bannedAt: NOW - 3600 })
       .where(eq(userProfiles.userId, runner.userId));
   }
-  await claim(runner.userId, NOW - 1);
+  await claim(runner.userId, NOW - 1, undefined, cause);
   return runner;
 }
 
@@ -2424,6 +2429,44 @@ describe("purgeDueAccounts — a closed account's addresses", () => {
     expect(await footprint(runner)).toStrictEqual(GONE);
     expect(await closedKept()).toStrictEqual([]);
     expect(anomalies).toStrictEqual([]);
+  });
+
+  it("keeps no fingerprints of an age closure, and still keeps a ban closure's in the same firing", async () => {
+    const forAge = await dueRunner(true, "under_18");
+    const banned = await dueRunner(true);
+    const anomalies: string[] = [];
+
+    await purge(anomalies, {
+      ...depsAt(NOW).deps,
+      closedAddressSecret: CLOSED_KEY,
+    });
+
+    expect(await footprint(forAge)).toStrictEqual(GONE);
+    expect(await footprint(banned)).toStrictEqual(GONE);
+    const hashes = await Promise.all(
+      provedOf(banned.email).map((address) =>
+        closedAddressHash(CLOSED_KEY, address),
+      ),
+    );
+    expect(await closedKept()).toStrictEqual(
+      hashes.toSorted(byText).map((hash) => ({ hash, closedAt: NOW })),
+    );
+    expect(anomalies).toStrictEqual([]);
+  });
+
+  it("does not count an age closure purged without a key as unremembered", async () => {
+    const forAge = await dueRunner(true, "under_18");
+    const banned = await dueRunner(true);
+    const anomalies: string[] = [];
+
+    await purge(anomalies, depsAt(NOW).deps);
+
+    expect(await footprint(forAge)).toStrictEqual(GONE);
+    expect(await footprint(banned)).toStrictEqual(GONE);
+    expect(await closedKept()).toStrictEqual([]);
+    expect(anomalies).toStrictEqual([
+      "1 closed account(s) were purged with their addresses unremembered: CLOSED_ADDRESS_SECRET is not set",
+    ]);
   });
 
   it("purges a closed account without a key, and the digest says nothing was kept", async () => {
