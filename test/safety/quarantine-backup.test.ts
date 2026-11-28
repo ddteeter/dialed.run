@@ -28,10 +28,7 @@ import {
   backUpMedia,
   GONE_PREFIX,
 } from "../../src/modules/ops/daily/media-backup";
-import {
-  enqueueForReview,
-  openSubject,
-} from "../../src/modules/safety/review";
+import { enqueueForReview, openSubject } from "../../src/modules/safety/review";
 import {
   quarantinedScopes,
   quarantineInsert,
@@ -148,11 +145,11 @@ async function quarantine(
   );
 }
 
-async function quarantineGarment(itemId: string) {
+async function quarantineGarment(itemId: string, report: Report = quiet) {
   return moderateGarmentPhoto(
     core(),
     { actorId: "rev", itemId, action: "quarantine", reason: "explicit" },
-    quiet,
+    report,
   );
 }
 
@@ -315,6 +312,29 @@ describe("a quarantine deletes the backup's copies of what it took", () => {
 
     expect(await dailyBackup(author)).toStrictEqual([]);
     expect(await heldInBackup([key])).toStrictEqual([]);
+  });
+
+  it("reports a garment photo's failed backup delete by its garment, and still quarantines it", async () => {
+    const owner = await makeUser();
+    const { itemId, keys } = await garmentPhoto(owner);
+    const failure = new Error("R2 is down");
+    vi.spyOn(env.MEDIA_BACKUP, "delete").mockRejectedValueOnce(failure);
+    const report = vi.fn<Report>();
+
+    expect(await quarantineGarment(itemId, report)).toBe("removed");
+
+    expect(await recordCount()).toBe(1);
+    expect(report.mock.calls).toStrictEqual([
+      [
+        failure,
+        {
+          surface: "quarantine-backup",
+          subjectType: "garment",
+          subjectId: itemId,
+        },
+      ],
+    ]);
+    expect(await heldInBackup(keys)).toStrictEqual(keys);
   });
 
   it("deletes nothing of a photo whose quarantine was refused", async () => {

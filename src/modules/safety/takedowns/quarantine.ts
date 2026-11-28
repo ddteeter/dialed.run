@@ -305,13 +305,19 @@ export async function quarantinedScopes(): Promise<string[]> {
       eq(moderationActions.id, quarantinedContent.moderationActionId),
     );
   const root = quarantineKeyFor("");
-  return rows
-    .filter(({ preservedKey, uploaderId }) =>
-      [entryPhotoPrefix(uploaderId), garmentPhotoPrefix(uploaderId)].some(
-        (prefix) => (preservedKey ?? "").startsWith(quarantineKeyFor(prefix)),
-      ),
-    )
-    .map(({ preservedKey }) => (preservedKey ?? "").slice(root.length));
+  const scopes: string[] = [];
+  for (const { preservedKey, uploaderId } of rows) {
+    const ownRoots = [
+      entryPhotoPrefix(uploaderId),
+      garmentPhotoPrefix(uploaderId),
+    ].map((prefix) => quarantineKeyFor(prefix));
+    const isOwn = (key: string) =>
+      ownRoots.some((ownRoot) => key.startsWith(ownRoot));
+    if (preservedKey !== null && isOwn(preservedKey)) {
+      scopes.push(preservedKey.slice(root.length));
+    }
+  }
+  return scopes;
 }
 
 /**
