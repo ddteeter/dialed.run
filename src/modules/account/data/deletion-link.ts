@@ -33,6 +33,7 @@ import { DELETION_GRACE_S, DELETION_LINK_TTL_S } from "../../../lib/contracts";
 import type { ViewerZone } from "../../../lib/dates";
 import { firstColumnWhere, firstRowWhere } from "../../../lib/sql/keyed-read";
 import type { OutboxMessageOf } from "../../../lib/sql/outbox";
+import { rowWhere } from "../../../lib/sql/row-where";
 import { nowSeconds } from "../../../lib/now";
 import { deliverEmail, emailDebt, type EmailDeps } from "../../email";
 import { viewerZone } from "../../notifications";
@@ -313,17 +314,16 @@ async function landedOrReleased<T>(
 
 /**
  * The deletion's claim, written only while the account is still closed:
- * the columns in the table's order, from the profile's row.
+ * the runner's own request (`asked`), every other column its default.
  */
 function deletionWhileClosed(
   db: Db,
   row: Readonly<{ userId: string; requestedAt: number; purgeAfter: number }>,
 ) {
+  const stillClosed = sql`exists (select 1 from ${userProfiles} where ${eq(userProfiles.userId, row.userId)} and ${userProfiles.bannedAt} is not null)`;
   return db
     .insert(accountDeletions)
-    .select(
-      sql`select ${row.userId}, ${row.requestedAt}, ${row.purgeAfter}, null, ${"asked"} from ${userProfiles} where ${eq(userProfiles.userId, row.userId)} and ${userProfiles.bannedAt} is not null`,
-    )
+    .select(rowWhere(accountDeletions, { ...row, cause: "asked" }, stillClosed))
     .onConflictDoNothing()
     .returning({ userId: accountDeletions.userId });
 }
@@ -332,7 +332,8 @@ function deletionWhileClosed(
  * An "Under 18" closure (round 64 #373): the deletion scheduled in the
  * closure's own batch, with no link, and the age email (#374.2) in place
  * of the closure email. A runner who had asked already keeps their own
- * date and cause, and the email says that date. `isForAge` false is
+ * date and cause, and the email says that date; their deletion is marked
+ * as an age closure's all the same (`closedUnder18At`). `isForAge` false is
  * every other closure, which schedules nothing and leaves the email to
  * the ban's.
  */
@@ -360,10 +361,21 @@ export async function ageClosure(
   const day = deletionDay(purgeAfter, await viewerZone(db, userId));
   return {
     writes: (database) => [
+      // A runner who had asked keeps their cause and date: only the
+      // marker is set, so the purge still knows the closure was for age.
       database
         .insert(accountDeletions)
-        .values({ userId, requestedAt: now, purgeAfter, cause: "under_18" })
-        .onConflictDoNothing(),
+        .values({
+          userId,
+          requestedAt: now,
+          purgeAfter,
+          cause: "under_18",
+          closedUnder18At: now,
+        })
+        .onConflictDoUpdate({
+          target: accountDeletions.userId,
+          set: { closedUnder18At: now },
+        }),
     ],
     email: emailDebt(
       {

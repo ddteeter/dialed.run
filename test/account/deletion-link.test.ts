@@ -100,14 +100,19 @@ async function run(writes: readonly BatchItem<"sqlite">[]): Promise<void> {
 }
 
 async function deletionRows() {
-  return db
+  const rows = await db
     .select({
       userId: accountDeletions.userId,
       requestedAt: accountDeletions.requestedAt,
       purgeAfter: accountDeletions.purgeAfter,
       cause: accountDeletions.cause,
+      closedUnder18At: accountDeletions.closedUnder18At,
     })
     .from(accountDeletions);
+  return rows.map((row) => ({
+    ...row,
+    closedUnder18At: row.closedUnder18At ?? undefined,
+  }));
 }
 
 function effectsFor(mail: ReturnType<typeof fakeMail>) {
@@ -334,7 +339,13 @@ describe("confirmDeletionLink (round 64 #374.3–374.4)", () => {
       day: DAY(purgeAfter),
     });
     expect(await deletionRows()).toStrictEqual([
-      { userId, requestedAt: at, purgeAfter, cause: "asked" },
+      {
+        userId,
+        requestedAt: at,
+        purgeAfter,
+        cause: "asked",
+        closedUnder18At: undefined,
+      },
     ]);
     expect(await usedAtOfLink()).toBe(at);
     // Owed in the deletion's batch, then sent after the answer, under the
@@ -490,6 +501,7 @@ describe("ageClosure (round 64 #373, #374.2)", () => {
         requestedAt: NOW,
         purgeAfter: NOW + DELETION_GRACE_S,
         cause: "under_18",
+        closedUnder18At: NOW,
       },
     ]);
   });
@@ -503,7 +515,7 @@ describe("ageClosure (round 64 #373, #374.2)", () => {
     });
   });
 
-  it("keeps a runner's own earlier request, its date and its cause", async () => {
+  it("keeps a runner's own earlier request, its date and its cause, and marks it as closed for age", async () => {
     const { userId } = await closedRunner();
     const own = { userId, requestedAt: NOW - 100, purgeAfter: NOW + 500 };
     await db.insert(accountDeletions).values(own);
@@ -512,7 +524,9 @@ describe("ageClosure (round 64 #373, #374.2)", () => {
       day: DAY(NOW + 500),
     });
     await run(closure.writes(db));
-    expect(await deletionRows()).toStrictEqual([{ ...own, cause: "asked" }]);
+    expect(await deletionRows()).toStrictEqual([
+      { ...own, cause: "asked", closedUnder18At: NOW },
+    ]);
   });
 
   it("schedules and owes nothing for any other closure", async () => {

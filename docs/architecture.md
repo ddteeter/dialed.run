@@ -593,7 +593,9 @@ words.
   with no session; or through an "Under 18" closure, which writes the
   claim in the ban's batch. `account_deletions.cause` says which: Reopen
   cancels an `under_18` claim, and a claim the runner chose (`asked`)
-  holds the account closed. Drawn as
+  holds the account closed. An "Under 18" closure also marks the claim
+  (`closed_under_18_at`), a runner's own earlier one included, and an age
+  closure's purge keeps no address fingerprints. Drawn as
   [`deletionStory`](https://ddteeter.github.io/dialed.run/#/view/deletionStory/),
   [`deletionLinkStory`](https://ddteeter.github.io/dialed.run/#/view/deletionLinkStory/),
   [`deletionForAge`](https://ddteeter.github.io/dialed.run/#/view/deletionForAge/),

@@ -172,7 +172,7 @@ views {
     // source: src/modules/safety/runners/bans.ts banUser (db.batch); src/modules/account/data/deletion-link.ts ageClosure; src/lib/contracts/garments.ts DELETION_GRACE_S
     cf.app.safety.closeAccount -> cf.coreDb 'closes it, signs it out, writes the claim and owes the age email, in one batch' {
       notes '''
-        **Guard: one claim a runner.** A runner who had asked already keeps their own date, and the email says it.
+        **Guard: one claim a runner.** A runner who had asked already keeps their own date and cause, and the email says that date. The claim is marked as closed for age either way.
       '''
     }
     // source: src/modules/safety/functions.ts banUserAction; src/modules/ops/owed-email/owed-email.ts settleOwedEmail

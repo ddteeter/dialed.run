@@ -679,9 +679,9 @@ const RUNNER_COUNTS = [
  * One closed address's fingerprint, written only while the runner's
  * profile carries a ban and their deletion is not an age closure's:
  * `INSERT … SELECT … WHERE EXISTS (the profile with banned_at set) AND
- * NOT EXISTS (the deletion with cause under_18)`, so the ban and the
- * cause are the ones in place when the statement runs, not when the
- * profile was read. An age closure's purge keeps no address fingerprints.
+ * NOT EXISTS (the deletion with cause under_18, or marked as closed for
+ * age)`, so the ban and the deletion are the ones in place when the
+ * statement runs, not when the profile was read. An age closure's purge keeps no address fingerprints.
  */
 function keptIfClosed(
   db: Db,
@@ -713,12 +713,16 @@ function keptIfClosed(
 }
 
 /**
- * The runner's deletion, when the Desk scheduled it closing them for age.
+ * The runner's deletion, when the Desk closed them for age: scheduled by
+ * the closure (`under_18`), or asked for first and marked by it.
  */
 function ageClosureOf(userId: string): SQL | undefined {
   return and(
     eq(accountDeletions.userId, userId),
-    eq(accountDeletions.cause, "under_18"),
+    or(
+      eq(accountDeletions.cause, "under_18"),
+      isNotNull(accountDeletions.closedUnder18At),
+    ),
   );
 }
 
