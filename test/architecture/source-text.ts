@@ -134,13 +134,12 @@ const DECLARATION_START =
   /^(?=(?:export )?(?:const|async function|function) \w)/mu;
 
 /**
- * Each server function in a set of `functions.ts` sources, by name
- * (`account/functions.ts claimUsernameFn`), with its own text: from its
- * declaration to the next top-level declaration. Skips a file stryker is
- * instrumenting. Shared by `terms-exempt` and `verification-class`, which
- * classify the same functions by different gates.
+ * Each top-level declaration in a set of module sources, by name
+ * (`account/handles/username.ts claimUsername`), with its own text: from
+ * its declaration to the next top-level declaration, comments removed.
+ * Skips a file stryker is instrumenting.
  */
-export function serverFunctionsIn(
+export function declarationsIn(
   sources: Readonly<Record<string, string>>,
 ): { name: string; body: string }[] {
   return Object.entries(sources)
@@ -151,9 +150,21 @@ export function serverFunctionsIn(
       const chunks = withoutComments(source).split(DECLARATION_START);
       return chunks.flatMap((body) => {
         const name = DECLARATION.exec(body)?.[1];
-        return name !== undefined && body.includes("createServerFn(")
-          ? { name: `${file} ${name}`, body }
-          : [];
+        return name === undefined ? [] : { name: `${file} ${name}`, body };
       });
     });
+}
+
+/**
+ * Each server function in a set of `functions.ts` sources, by name
+ * (`account/functions.ts claimUsernameFn`), with its own text. Shared by
+ * `terms-exempt`, `verification-class` and `runner-purges`, which ask
+ * different questions of the same functions.
+ */
+export function serverFunctionsIn(
+  sources: Readonly<Record<string, string>>,
+): { name: string; body: string }[] {
+  return declarationsIn(sources).filter(({ body }) =>
+    body.includes("createServerFn("),
+  );
 }
