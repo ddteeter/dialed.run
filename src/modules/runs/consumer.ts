@@ -545,6 +545,7 @@ async function processReminderJob(
 
   // A run whose file is already in the log (round 25: one reminder per
   // run, one upload per reminder): pair them, write no reminder, and stop.
+  // The match reads Strava's time here; the pairing stores our own clock.
   const uploaded = await unpairedUploadFor(
     deps.db,
     connected.userId,
@@ -557,10 +558,11 @@ async function processReminderJob(
   // The pairing is guarded, so a lost one writes nothing, and the job is
   // decided again from what is there now: another upload, or its reminder.
   if (uploaded !== undefined) {
+    const pairedAt = nowSeconds();
     await runGuarded(deps.db, [
       ...guarded(
         deps.db,
-        pairRunWith(deps.db, uploaded, job.eventTime),
+        pairRunWith(deps.db, uploaded, pairedAt),
         "reminder-pairing",
       ),
       claim,

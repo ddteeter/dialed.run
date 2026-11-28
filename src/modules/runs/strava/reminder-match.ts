@@ -134,12 +134,13 @@ export async function unpairedUploadFor(
 
 /**
  * Pair a file run with a reminder that arrived after it — the statement,
- * for the reminder's claim batch. Guarded on the run still being unpaired,
- * so two reminders racing for one run pair it once.
+ * for the reminder's claim batch. `pairedAt` is our own clock. Guarded on
+ * the run still being unpaired, so two reminders racing for one run pair
+ * it once.
  */
-export function pairRunWith(db: CoreDb, runId: string, landedAt: number) {
+export function pairRunWith(db: CoreDb, runId: string, pairedAt: number) {
   return db
     .update(runs)
-    .set({ reminderMatchedAt: landedAt })
+    .set({ reminderMatchedAt: pairedAt })
     .where(and(eq(runs.id, runId), isNull(runs.reminderMatchedAt)));
 }
