@@ -13,8 +13,9 @@
  *
  * **Never fails or delays the write** (law 5). The purge runs in
  * `waitUntil`, after the write's own batch, and a refusal or a throw is
- * reported to Sentry (law 7) with the tags it named (ids and a handle,
- * never a body) and nothing else happens.
+ * reported to Sentry (law 7) with the tags it named, as ids: a handle's
+ * tag goes as its prefix alone, never the handle, and never a body. Then
+ * nothing else happens.
  *
  * **Degrades where there is no cache.** The runtime exports `cache` with
  * no `purge` when Workers Caching is not on, as under vitest's workerd and
@@ -23,6 +24,7 @@
 import { cache, coreDb, waitUntil } from "../../../env";
 import { isWithinRateLimit } from "../limits";
 import {
+  handleCacheTag,
   scopeOfTags,
   type PurgeTags,
   type TaggedScope,
@@ -70,7 +72,7 @@ async function settle(
   tags: readonly string[],
   report: PurgeDeps["report"],
 ): Promise<void> {
-  const context = { tags: tags.join(",") };
+  const context = { tags: tags.map((tag) => reportedTag(tag)).join(",") };
   try {
     const result = await run();
     if (result.success) return;
@@ -84,6 +86,17 @@ async function settle(
     report(error, context);
   }
 }
+
+/**
+ * A tag as a report names it: a handle's tag as its prefix alone, since
+ * the runner's tag in the same purge says whose page it was. Every other
+ * tag is an id and goes as built.
+ */
+function reportedTag(tag: string): string {
+  return tag.startsWith(HANDLE_TAG) ? HANDLE_TAG : tag;
+}
+
+const HANDLE_TAG = handleCacheTag("");
 
 /**
  * What the Worker's purges run on: its own cache, kept alive past the
