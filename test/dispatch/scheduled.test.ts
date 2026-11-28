@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  accountDeletions,
   cronCheckpoints,
   dataExports,
   rateLimits,
@@ -1241,6 +1242,37 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
     expect(events.map((event) => event.report.tags)).toStrictEqual([
       { digest: "daily", digest_kind: "account-deletion" },
     ]);
+  });
+
+  it("purges with products' step: a due account's products name a placeholder maker", async () => {
+    const userId = newUlid();
+    const brand = await createOrGetBrand(coreDb(), `Purged ${newUlid()}`);
+    const product = await createOrGetProduct(coreDb(), {
+      brandId: brand.id,
+      name: "Rover Half-Zip",
+      createdBy: userId,
+    });
+    await coreDb()
+      .insert(accountDeletions)
+      .values({
+        userId,
+        requestedAt: nowSeconds() - 8 * 86_400,
+        purgeAfter: nowSeconds() - 86_400,
+      });
+
+    await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    const [kept] = await coreDb()
+      .select({ createdBy: products.createdBy })
+      .from(products)
+      .where(eq(products.id, product.id));
+    expect(kept).toStrictEqual({ createdBy: `deleted:${product.id}` });
+    expect(
+      await coreDb()
+        .select()
+        .from(accountDeletions)
+        .where(eq(accountDeletions.userId, userId)),
+    ).toStrictEqual([]);
   });
 
   it("purges only on the daily firing", async () => {

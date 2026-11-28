@@ -49,6 +49,7 @@ import {
   stravaRevocations,
   userProfiles,
   usernameHistory,
+  products,
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { manualConditions } from "../../src/db/schema-weather";
@@ -60,6 +61,7 @@ import {
   PURGE_BUDGET_MS,
   PURGE_LEASE_S,
   PURGE_PER_ROUND,
+  livePurgeDeps,
   purgeAccount,
   purgeDueAccounts,
 } from "../../src/modules/account/purge/purge";
@@ -68,6 +70,11 @@ import {
   CLOSED_ADDRESS_KEPT_S,
   closedAddressHash,
 } from "../../src/modules/account/access/closed-addresses";
+import {
+  createOrGetBrand,
+  createOrGetProduct,
+  forgetMaker,
+} from "../../src/modules/products/service";
 import { forgetManualBands } from "../../src/modules/weather";
 import { drainOutbox } from "../../src/modules/ops/outbox/outbox";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
@@ -129,6 +136,7 @@ function depsAt(
       report: (error, context) => {
         reported.push({ error, context });
       },
+      forgetMaker,
     },
   };
 }
@@ -1998,7 +2006,7 @@ describe("purgeDueAccounts — the Worker's own wiring", () => {
     const send = vi.spyOn(env.IMPORTS_QUEUE, "send");
     const anomalies: string[] = [];
 
-    await purgeDueAccounts(anomalies);
+    await purgeDueAccounts(anomalies, livePurgeDeps({ forgetMaker }));
 
     expect(await footprint(runner)).toStrictEqual(GONE);
     const owed = await core
@@ -2022,13 +2030,47 @@ describe("purgeDueAccounts — the Worker's own wiring", () => {
     const left = await seedAthleteGaveUp(connection?.athleteId ?? "");
     await claim(runner.userId, nowSeconds() - 1);
 
-    await purgeDueAccounts([]);
+    await purgeDueAccounts([], livePurgeDeps({ forgetMaker }));
 
     expect(await left()).toStrictEqual(ONLY_THEIRS_GONE);
   });
 });
 
+/**
+A product of a fresh brand, added by `createdBy`.
+*/
+async function productBy(createdBy: string, name: string) {
+  const brand = await createOrGetBrand(core, `Brand ${newUlid()}`);
+  return createOrGetProduct(core, { brandId: brand.id, name, createdBy });
+}
+
 describe("purgeAccount", () => {
+  it("keeps the products they added, each naming its own placeholder as maker", async () => {
+    const runner = await seedAccount();
+    const other = newUlid();
+    const [first, second, theirs] = [
+      await productBy(runner.userId, "Rover Half-Zip"),
+      await productBy(runner.userId, "Tempo Short"),
+      await productBy(other, "Base Tee"),
+    ];
+    await claim(runner.userId, NOW - 1);
+
+    await purgeAccount(depsAt(NOW).deps, runner.userId);
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    const kept = await core
+      .select({ id: products.id, createdBy: products.createdBy })
+      .from(products)
+      .where(inArray(products.id, [first.id, second.id, theirs.id]));
+    expect(kept.toSorted((a, b) => a.id.localeCompare(b.id))).toStrictEqual(
+      [
+        { id: first.id, createdBy: `deleted:${first.id}` },
+        { id: second.id, createdBy: `deleted:${second.id}` },
+        { id: theirs.id, createdBy: other },
+      ].toSorted((a, b) => a.id.localeCompare(b.id)),
+    );
+  });
+
   it("keeps a retired handle's first owner when the handle is already history", async () => {
     const runner = await seedAccount();
     const firstOwner = newUlid();

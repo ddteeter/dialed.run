@@ -1,4 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
+import { forgetMaker } from "../../src/modules/products";
 import { shownRowOf } from "./helpers";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -1014,6 +1015,7 @@ describe("screenings go with their photo (design 157)", () => {
         revokeStrava: () => Promise.resolve(),
         importsBucket: env.IMPORTS,
         report: quiet,
+        forgetMaker,
       },
       owner,
     );

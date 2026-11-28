@@ -9,7 +9,7 @@ import {
 import { forgetAnsweredRequests } from "../account/access";
 import { checkTooLargeExports, sweepExports } from "../account/export-build";
 import { rescreenHandlesFromEnv } from "../account/handles";
-import { purgeDueAccounts } from "../account/purge";
+import { livePurgeDeps, purgeDueAccounts } from "../account/purge";
 import {
   sweepExpiredAuthRows,
   sweepExpiredCounts,
@@ -19,6 +19,7 @@ import { linkTypedGarments } from "../closet";
 import { sweepRateLimits } from "../ops/limits";
 import { sweepCopyrightHolds } from "../feed/moderation";
 import { fillMissingTimeZones } from "../onboarding";
+import { forgetMaker } from "../products";
 import { pruneStravaIds } from "../runs";
 import { redispatchStalledImports } from "../runs/imports";
 import { redispatchStrandedRevocations } from "../runs/strava";
@@ -226,7 +227,9 @@ export type DailyUpkeep = Partial<Upkeep>;
 The jobs a firing runs when a test does not replace them.
 */
 const liveUpkeep: Upkeep = {
-  purgeAccounts: purgeDueAccounts,
+  // With products' step for the last batch (design 271's seam).
+  purgeAccounts: (anomalies) =>
+    purgeDueAccounts(anomalies, livePurgeDeps({ forgetMaker })),
   sweepExports,
   rescreenHandles: rescreenHandlesFromEnv,
   linkProducts: linkTypedGarments,

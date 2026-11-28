@@ -12,6 +12,7 @@ export type {
 } from "./service";
 export {
   createOrGetBrand,
+  forgetMaker,
   newRowsFor,
   productsForBrand,
   getProductAttributeDefaultsBulk,

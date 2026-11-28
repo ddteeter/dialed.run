@@ -3,4 +3,4 @@
  * (design 240). Its own door, never re-exported by `account/index.ts`: the
  * purge imports `feed`, which imports `account`.
  */
-export { purgeDueAccounts } from "./purge";
+export { livePurgeDeps, purgeDueAccounts } from "./purge";
