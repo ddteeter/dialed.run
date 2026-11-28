@@ -31,6 +31,7 @@ import {
 } from "../../../db/schema-core";
 import { DELETION_GRACE_S, DELETION_LINK_TTL_S } from "../../../lib/contracts";
 import type { ViewerZone } from "../../../lib/dates";
+import { guarded, runGuarded } from "../../../lib/sql/batch-guard";
 import { firstColumnWhere, firstRowWhere } from "../../../lib/sql/keyed-read";
 import type { OutboxMessageOf } from "../../../lib/sql/outbox";
 import { nowSeconds } from "../../../lib/now";
@@ -39,9 +40,8 @@ import { viewerZone } from "../../notifications";
 import { outboxInsertWhere, oweOutbox } from "../../ops/outbox";
 import {
   claimFreshEmailLink,
-  didClaimEmailLink,
+  emailLinkSpend,
   readEmailLink,
-  releaseEmailLink,
   type ReadLink,
 } from "../verification";
 import {
@@ -165,6 +165,11 @@ export type DeletionLanding =
 const EXPIRED: DeletionLanding = { state: "expired" };
 
 /**
+ * The guard on the link's spend, which a press that lost the race misses.
+ */
+const SPENT = "link-spent";
+
+/**
 A link that can still be spent, with what its page says about the account.
 */
 interface Spendable {
@@ -237,12 +242,13 @@ export type DeletionLinkEffects = Pick<
 >;
 
 /**
- * "Delete my account": the link claimed (law 2), then one batch that
- * schedules the purge a week on — only while the account is still closed
- * — and owes the delete-scheduled email (law 8c, round 64 #374.4). A
- * batch that fails hands the link back, so the next press tries again.
- * Two presses at once schedule once; the other reads "already used".
- * `db` is the primary's.
+ * "Delete my account": one batch that spends the link (law 2), schedules
+ * the purge a week on — only while the account is still closed — and owes
+ * the delete-scheduled email (law 8c, round 64 #374.4). The spend and the
+ * schedule are guarded, so they land together or not at all: a batch that
+ * fails spends nothing, and the next press tries again. Two presses at
+ * once schedule once; the other reads "already used". `db` is the
+ * primary's.
  */
 export async function confirmDeletionLink(
   db: Db,
@@ -253,9 +259,6 @@ export async function confirmDeletionLink(
   const found = await spendableOrEnd(db, token, now);
   if ("state" in found) return found;
   const { link, zone } = found;
-  if (!(await didClaimEmailLink(db, link, now))) {
-    return readDeletionLanding(db, token, now);
-  }
   const { userId } = link;
   const purgeAfter = now + DELETION_GRACE_S;
   const day = deletionDay(purgeAfter, zone);
@@ -270,19 +273,27 @@ export async function confirmDeletionLink(
   );
   // The claim this batch writes, and no earlier one.
   const scheduled = sql`${eq(accountDeletions.userId, userId)} AND ${eq(accountDeletions.requestedAt, now)}`;
-  const written = await landedOrReleased(db, link, now, () =>
-    db.batch([
+  const written = await runGuarded(db, [
+    ...guarded(db, emailLinkSpend(db, link, now), SPENT),
+    ...guarded(
+      db,
       deletionWhileClosed(db, { userId, requestedAt: now, purgeAfter }),
-      outboxInsertWhere(
-        db,
-        debt,
-        { table: accountDeletions, where: scheduled },
-        now,
-      ),
-    ]),
-  );
-  // Reopened between the read and the batch: nothing was scheduled.
-  if (written[0].length === 0) return EXPIRED;
+      "still-closed",
+    ),
+    outboxInsertWhere(
+      db,
+      debt,
+      { table: accountDeletions, where: scheduled },
+      now,
+    ),
+  ]);
+  if (!written.ok) {
+    // Spent by another press since the read, which reads "already used";
+    // or reopened since the read, which scheduled nothing.
+    return written.missed === SPENT
+      ? readDeletionLanding(db, token, now)
+      : EXPIRED;
+  }
   effects.keepAlive(effects.settle(db, debt, effects.report));
   // Secondary to the deletion (law 5), as a runner's own request is.
   try {
@@ -291,24 +302,6 @@ export async function confirmDeletionLink(
     effects.report(error, { surface: "deletion-link-strava", userId });
   }
   return { state: "done", day };
-}
-
-/**
- * The work a claimed link authorised, or — when it did not land — the
- * link handed back, so the next press tries again.
- */
-async function landedOrReleased<T>(
-  db: Db,
-  link: ReadLink<"delete">,
-  now: number,
-  work: () => Promise<T>,
-): Promise<T> {
-  try {
-    return await work();
-  } catch (error) {
-    await releaseEmailLink(db, link, now);
-    throw error;
-  }
 }
 
 /**

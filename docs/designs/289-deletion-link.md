@@ -87,12 +87,17 @@ brackets), with its loader on `readDeletionLinkFn` and its button on
 | failure          | the press failed                              | NOT DELETED, "That didn't go through."                                                                                                                               |
 
 **Scheduling the purge.** `confirmDeletionLink`, on the primary: the
-standing is read again, then the link is claimed (`didClaimEmailLink`).
-Then one batch writes the `account_deletions` row (`purge_after` = now +
-`DELETION_GRACE_S`, `cause` `asked`), only while the account is still
-closed (`EXISTS` on `banned_at`), and owes the delete-scheduled email
-(374.4) through the outbox. If the batch fails, the claim is released
-(`spendClaimed`'s pattern). Strava is disconnected afterwards, as a
+standing is read again. Then one batch spends the link
+(`emailLinkSpend`), writes the `account_deletions` row (`purge_after` =
+now + `DELETION_GRACE_S`, `cause` `asked`) only while the account is
+still closed (`EXISTS` on `banned_at`), and owes the delete-scheduled
+email (374.4) through the outbox. The spend and the row are each
+`guarded()` (design 277), so a press that lost the race, or an account
+reopened since the read, writes nothing, and a batch that fails spends
+nothing. (As first built, the link was claimed before the batch and
+released if it failed; a Worker stopping between the two left a spent
+link with nothing scheduled, which the Desk could not replace, #1237.)
+Strava is disconnected afterwards, as a
 runner's own request does (law 5, reported on failure). The purge itself
 is untouched: from `purge_after` it claims the row like any other.
 

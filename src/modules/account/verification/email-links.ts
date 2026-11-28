@@ -252,12 +252,22 @@ export async function didClaimEmailLink(
   link: ReadLink,
   now = nowSeconds(),
 ): Promise<boolean> {
-  const claimed = await db
+  const claimed = await emailLinkSpend(db, link, now).returning({
+    userId: emailVerifications.userId,
+  });
+  return claimed.length > 0;
+}
+
+/**
+ * The spend itself, unsent, for a caller whose batch writes the work the
+ * link authorises: guarded there, the claim and the work land together or
+ * not at all, and nothing has to hand the link back.
+ */
+export function emailLinkSpend(db: Db, link: ReadLink, now: number) {
+  return db
     .update(emailVerifications)
     .set({ usedAt: now })
-    .where(unspent(link))
-    .returning({ userId: emailVerifications.userId });
-  return claimed.length > 0;
+    .where(unspent(link));
 }
 
 /**
