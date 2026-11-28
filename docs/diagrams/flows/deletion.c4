@@ -139,10 +139,12 @@ views {
         Once every run is gone. No run file is owed here: the listing below deletes them.
       '''
     }
-    // source: src/modules/account/purge/purge.ts deleteCloset (photo_delete)
-    cf.app.account.purge -> cf.coreDb 'deletes the closet and any upload that never became a run, and owes each garment\'s photos' {
+    // source: src/modules/account/purge/purge.ts deleteCloset (photo_delete, settleOutbox); src/modules/ops/outbox/storage-handlers.ts reconcileItemPhotos
+    cf.app.account.purge -> cf.coreDb 'deletes the closet and any upload that never became a run, and owes the closet\'s photos as one prefix' {
       notes '''
-        Retire, don\'t delete does not apply: every entry is already gone. The photos are left to the daily drain, since a closet is dozens of them.
+        Retire, don\'t delete does not apply: every entry is already gone. One listing of the runner\'s garment prefix clears every photo at once, as their entry photos are cleared.
+
+        **If it fails:** the owed row stays, and the daily drain clears the prefix.
       '''
     }
     // source: src/modules/account/purge/purge.ts deleteStoredFiles; src/lib/sql/r2-pages.ts listedPages

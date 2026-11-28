@@ -504,10 +504,6 @@ async function seedAccount(): Promise<Seeded> {
   };
 }
 
-function byKey(a: { dedupeKey: string }, b: { dedupeKey: string }): number {
-  return a.dedupeKey.localeCompare(b.dedupeKey);
-}
-
 function byText(a: string, b: string): number {
   return a.localeCompare(b);
 }
@@ -1196,22 +1192,15 @@ describe("purgeDueAccounts — a full purge", () => {
       `access:1.2.3.4-${runner.userId}`,
     );
 
-    // What R2 is owed: each garment's photos. The entries' prefix and the
-    // run's upload were settled by feed's fast path, and every other run
+    // What R2 is owed: nothing. The closet's prefix, the entries' prefix
+    // and the run's upload were settled by fast paths, and every other run
     // file (D-110) by the purge's own listing — the upload that never
     // became a run and the one no row ever named alike — before any drain.
     const owed = await core
       .select({ kind: outbox.kind, dedupeKey: outbox.dedupeKey })
       .from(outbox)
       .where(like(outbox.dedupeKey, `${runner.userId}:%`));
-    expect(owed.toSorted(byKey)).toStrictEqual(
-      runner.garmentIds
-        .map((itemId) => ({
-          kind: "photo_delete",
-          dedupeKey: `${runner.userId}:${itemId}`,
-        }))
-        .toSorted(byKey),
-    );
+    expect(owed).toStrictEqual([]);
     for (const key of runner.uploadKeys) {
       expect(await env.IMPORTS.head(key)).toBeNull();
     }
@@ -1221,11 +1210,11 @@ describe("purgeDueAccounts — a full purge", () => {
       .where(like(outbox.dedupeKey, `${other.userId}:%`));
     expect(otherOwes).toStrictEqual([]);
 
-    // And once those are paid, R2 holds nothing of theirs — and all of
-    // the other runner's.
+    // R2 holds nothing of theirs, with no drain — and all of the other
+    // runner's.
     const otherObjects = await r2Keys(other.userId);
     expect(otherObjects).toHaveLength(8);
-    expect(await r2Left(runner.userId)).toStrictEqual([]);
+    expect(await r2Keys(runner.userId)).toStrictEqual([]);
     expect(await r2Keys(other.userId)).toStrictEqual(otherObjects);
     // The codes that named them are kept, labelled by nothing.
     const codes = await core
@@ -2077,13 +2066,53 @@ describe("purgeAccount", () => {
     const owed = await core
       .select({ kind: outbox.kind })
       .from(outbox)
-      .where(
-        and(
-          like(outbox.dedupeKey, `${runner.userId}:%`),
-          eq(outbox.kind, "photo_delete"),
-        ),
-      );
-    expect(owed).toHaveLength(2);
+      .where(like(outbox.dedupeKey, `${runner.userId}:%`));
+    expect(owed).toStrictEqual([]);
+    expect(await r2Keys(runner.userId)).toStrictEqual([]);
+  });
+
+  it("owes the closet's photos as one prefix when R2 fails, and the drain clears it", async () => {
+    const runner = await seedAccount();
+    await claim(runner.userId, NOW - 1);
+    const { deps, reported } = depsAt(NOW);
+    const failure = new Error("R2 is down");
+    const remove = env.MEDIA.delete.bind(env.MEDIA);
+    const deleted = vi.spyOn(env.MEDIA, "delete");
+    deleted.mockImplementation((keys) =>
+      [keys].flat().some((key) => key.startsWith("items/"))
+        ? Promise.reject(failure)
+        : remove(keys),
+    );
+
+    await purgeAccount(deps, runner.userId);
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    const owed = await core
+      .select({ kind: outbox.kind, dedupeKey: outbox.dedupeKey })
+      .from(outbox)
+      .where(like(outbox.dedupeKey, `${runner.userId}:%`));
+    expect(owed).toStrictEqual([
+      { kind: "photo_delete", dedupeKey: `${runner.userId}:*` },
+    ]);
+    expect(
+      reported.map(({ error, context }) => ({
+        error,
+        surface: context.surface,
+        kind: context.kind,
+        userId: context.userId,
+        itemId: context.itemId,
+      })),
+    ).toStrictEqual([
+      {
+        error: failure,
+        surface: "outbox-fast-path",
+        kind: "photo_delete",
+        userId: runner.userId,
+        itemId: "*",
+      },
+    ]);
+    deleted.mockRestore();
+    expect(await r2Left(runner.userId)).toStrictEqual([]);
   });
 });
 

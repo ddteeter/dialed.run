@@ -29,13 +29,15 @@ function outboxKind<K extends string, S extends z.ZodRawShape>(
 
 /**
  * Clear what a garment's photo prefix holds beyond the photo its row names
- * (nothing, once the photo is removed or the garment deleted). The runner's
- * id is part of the payload because it is part of the prefix — a drain can
- * only ever touch that runner's own objects.
+ * (nothing, once the photo is removed or the garment deleted) — or, with no
+ * `itemId`, every garment prefix a runner has, which is the shape account
+ * deletion asks for. The runner's id is part of the payload because it is
+ * part of the prefix — a drain can only ever touch that runner's own
+ * objects.
  */
 const photoDelete = outboxKind("photo_delete", {
   userId: z.string().min(1),
-  itemId: z.string().min(1),
+  itemId: z.string().min(1).optional(),
 });
 
 /**
@@ -241,7 +243,8 @@ export const scheduledOutboxKinds: readonly OutboxKind[] = [
  *
  * Per kind, because what makes two debts one differs. One `photo_delete`
  * per garment, because what it does — reconcile the garment's prefix
- * against its row — covers every version at once. One `entry_media_delete`
+ * against its row — covers every version at once, and one `*` for "every
+ * garment of this runner's". One `entry_media_delete`
  * per entry, and one `*` for "every entry of this runner's". One
  * `import_file_delete` or `import_file_expire` per object. One
  * `product_link` per runner, because one run links all of their garments.
@@ -251,7 +254,7 @@ export const scheduledOutboxKinds: readonly OutboxKind[] = [
 export function dedupeKeyFor(message: OutboxMessage): string {
   switch (message.kind) {
     case "photo_delete": {
-      return `${message.payload.userId}:${message.payload.itemId}`;
+      return `${message.payload.userId}:${message.payload.itemId ?? "*"}`;
     }
     case "entry_media_delete": {
       return `${message.payload.userId}:${message.payload.entryId ?? "*"}`;
