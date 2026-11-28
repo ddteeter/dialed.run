@@ -28,6 +28,7 @@ import { noInput } from "../../lib/no-input";
 import { TURNSTILE_ACTIONS } from "../../lib/turnstile-actions";
 import { emailDepsFromEnv } from "../email";
 import { turnstileSiteKey, verifyTurnstileToken } from "../ops/edge";
+import { purgePublicPagesFor } from "../ops/public-web";
 import { captureException } from "../ops/sentry";
 import { turnstileAttempt } from "../ops/edge";
 import { settleOwedEmail } from "../ops/owed-email";
@@ -99,14 +100,16 @@ function db() {
  */
 export const claimUsernameFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => usernameInput.parse(data))
-  .handler(async ({ data }) =>
-    claimUsername(
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    return claimUsername(
       db(),
-      await requireUserId(),
+      userId,
       data.username,
       handleScreenFromEnv(captureException),
-    ),
-  );
+      purgePublicPagesFor(userId),
+    );
+  });
 
 /**
  * The signed-in runner's handle, or nothing before O0 — for the settings
