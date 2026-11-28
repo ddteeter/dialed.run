@@ -18,6 +18,7 @@ import {
   productLinkProblem,
   productLinkSchema,
   itemFlagSchema,
+  TRACKING_PARAMETERS,
   latitudeSchema,
   layerSchema,
   longitudeSchema,
@@ -331,6 +332,118 @@ describe("productLinkSchema (D-166)", () => {
         }),
       ]);
     }
+  });
+});
+
+/**
+A product link with this query, parsed.
+*/
+function link(query: string): string {
+  return productLinkSchema.parse(`https://shop.example/p/rover${query}`);
+}
+
+describe("productLinkSchema: the known tracking parameters removed on save", () => {
+  it("removes each class of tracking parameter, in any case", () => {
+    expect(link("?utm_source=mail&UTM_Campaign=fall")).toBe(
+      "https://shop.example/p/rover",
+    );
+    expect(link("?gclid=a&FBCLID=b&msclkid=c")).toBe(
+      "https://shop.example/p/rover",
+    );
+    expect(link("?mc_eid=a&_hsenc=b&_kx=c")).toBe(
+      "https://shop.example/p/rover",
+    );
+    expect(link("?irclickid=a&cjevent=b&ranMID=c")).toBe(
+      "https://shop.example/p/rover",
+    );
+  });
+
+  it("keeps ref, tag and every other parameter, as typed and in order", () => {
+    expect(link("?ref=Run&utm_medium=x&tag=a%20b&variant=123")).toBe(
+      "https://shop.example/p/rover?ref=Run&tag=a%20b&variant=123",
+    );
+    expect(link("?gclid=1&Color=Navy")).toBe(
+      "https://shop.example/p/rover?Color=Navy",
+    );
+    expect(link("?size=M&fbclid=1")).toBe(
+      "https://shop.example/p/rover?size=M",
+    );
+  });
+
+  it("reads a parameter's name up to its `=`, or the whole piece when it has none", () => {
+    expect(link("?gclid&size=M")).toBe("https://shop.example/p/rover?size=M");
+    expect(link("?sku")).toBe("https://shop.example/p/rover?sku");
+    expect(link("?gclidx=1")).toBe("https://shop.example/p/rover?gclidx=1");
+  });
+
+  it("keeps the fragment, and a link with no query, exactly as typed", () => {
+    expect(link("?utm_source=a&size=M#reviews")).toBe(
+      "https://shop.example/p/rover?size=M#reviews",
+    );
+    expect(link("?utm_source=a#reviews")).toBe(
+      "https://shop.example/p/rover#reviews",
+    );
+    expect(link("#utm_source=a")).toBe(
+      "https://shop.example/p/rover#utm_source=a",
+    );
+    expect(link("?")).toBe("https://shop.example/p/rover?");
+  });
+
+  it("removes them from an http link it moves to https", () => {
+    expect(productLinkSchema.parse("http://shop.example/p?utm_id=1")).toBe(
+      "https://shop.example/p",
+    );
+  });
+
+  it("is this table", () => {
+    expect(TRACKING_PARAMETERS.prefix).toBe("utm_");
+    expect([...TRACKING_PARAMETERS.names]).toStrictEqual([
+      "gclid",
+      "gclsrc",
+      "gbraid",
+      "wbraid",
+      "dclid",
+      "gad_source",
+      "srsltid",
+      "fbclid",
+      "msclkid",
+      "ttclid",
+      "twclid",
+      "li_fat_id",
+      "yclid",
+      "ysclid",
+      "igshid",
+      "epik",
+      "rdt_cid",
+      "_gl",
+      "_ga",
+      "mc_cid",
+      "mc_eid",
+      "_hsenc",
+      "_hsmi",
+      "mkt_tok",
+      "_kx",
+      "ck_subscriber_id",
+      "ml_subscriber",
+      "ml_subscriber_hash",
+      "oly_enc_id",
+      "oly_anon_id",
+      "vero_id",
+      "vero_conv",
+      "_bta_tid",
+      "_bta_c",
+      "irclickid",
+      "irgwc",
+      "cjevent",
+      "cjdata",
+      "awc",
+      "sscid",
+      "ranmid",
+      "raneaid",
+      "ransiteid",
+      "ranlinkid",
+      "clickref",
+    ]);
   });
 });
 
