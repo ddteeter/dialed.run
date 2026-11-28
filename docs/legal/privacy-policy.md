@@ -533,7 +533,8 @@ it.
   and while ten requests in the past hour have hidden something, new ones
   hide nothing (a person still reviews them). If someone abuses the form, we may
   block that email and code from it: their requests are still recorded
-  and they still get a receipt, but nothing is hidden. We keep a request for 3 years after we decide it, because
+  and they still get a receipt, but nothing is hidden. A block ends when
+  we lift it, or 3 years after we set it. We keep a request for 3 years after we decide it, because
   it is the record of why something was or was not removed.
 - Reviewers are the people who run [dialed.run], named in our
   configuration; today that is one person. They can see reported and
@@ -655,6 +656,7 @@ any differently.
 | Anonymous totals                                                              | A published report stays as published; it names no one. A guide is remade from current data each time we update it                                  |
 | Your data export                                                              | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export                   |
 | Removal requests (`/takedown`)                                                | 3 years after we decide them                                                                                                                        |
+| Blocks on the removal form                                                    | Until we lift them, or 3 years after we set them                                                                                                    |
 | Requests for access                                                           | 90 days after we answer them. An unconfirmed request: within 3 days                                                                                 |
 | Session records                                                               | Expire 7 days after you last used them, and are deleted 30 days after they expire. A copy kept with suspected child sexual abuse material: as below |
 | Strava refresh token                                                          | Until you disconnect, then until Strava confirms revocation                                                                                         |
