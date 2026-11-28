@@ -1,8 +1,9 @@
 /**
  * The 3-year sweep (D-131, plan C7, design 150): takedown requests,
- * reports, the records of moderation decisions and the fingerprints a
- * Remove kept (D-147) are kept for 3 years after the decision, then
- * deleted. Quarantined material keeps its own
+ * reports, the records of moderation decisions, the Desk's records of who
+ * opened a review's reporters, the fingerprints a Remove kept (D-147) and
+ * the blocks on `/takedown` (design 137) are kept for 3 years after the
+ * decision, then deleted. Quarantined material keeps its own
  * clock (`retain_until`, `quarantine.ts`), which this never touches.
  *
  * Run by the daily firing (`dispatch/scheduled.ts`), beside the other sweeps.
@@ -20,7 +21,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
-import type { SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import {
   copyrightHolds,
@@ -29,7 +30,9 @@ import {
   quarantinedContent,
   removedFingerprints,
   reports,
+  reviewAudit,
   reviewQueue,
+  takedownBlocks,
   takedownRequests,
 } from "../../../db/schema-core";
 import { coreDb } from "../../../env";
@@ -124,28 +127,53 @@ function expiredActions(db: Db, cutoff: number) {
 }
 
 /**
- * The six deletes, in the order they must run, for one batch. Exported so
- * each plan can be asked of SQLite (D1 bills rows scanned).
+ * Every row of `table` whose `clock` is before `cutoff`: a record with no
+ * other row keeping it.
+ */
+function deletedBefore(
+  db: Db,
+  table: SQLiteTable,
+  clock: SQLiteColumn,
+  cutoff: number,
+) {
+  return db.delete(table).where(lt(clock, cutoff));
+}
+
+/**
+ * The eight deletes, in the order they must run, for one batch. Exported
+ * so each plan can be asked of SQLite (D1 bills rows scanned).
  *
  * Order matters twice: the review rows go only once their subject has no
  * report left, so the reports go first; and an audit row goes only once no
  * hold names it, so the holds go first. In one batch, each statement sees
- * what the ones before it deleted.
+ * what the ones before it deleted. The last two read nothing the others
+ * write.
  */
 export function moderationRecordDeletes(db: Db, cutoff: number) {
   return [
     // A request's decision is its `resolved_at`, written only by Remove or
     // Decline; a pending one has none and is never swept.
-    db.delete(takedownRequests).where(lt(takedownRequests.resolvedAt, cutoff)),
+    deletedBefore(db, takedownRequests, takedownRequests.resolvedAt, cutoff),
     db.delete(reports).where(expiredReports(db, cutoff)),
     db.delete(reviewQueue).where(expiredReviews(db, cutoff)),
     db.delete(copyrightHolds).where(expiredHolds(cutoff)),
     // A removed image's kept fingerprint (D-147, design 152), on its
     // Remove's clock: kept and swept with the audit row that names it.
-    db
-      .delete(removedFingerprints)
-      .where(lt(removedFingerprints.createdAt, cutoff)),
+    deletedBefore(
+      db,
+      removedFingerprints,
+      removedFingerprints.createdAt,
+      cutoff,
+    ),
     db.delete(moderationActions).where(expiredActions(db, cutoff)),
+    // The Desk's record of an operator opening a review's reporters, on
+    // its own clock: it is the record whether or not its review is kept.
+    deletedBefore(db, reviewAudit, reviewAudit.createdAt, cutoff),
+    // A block on `/takedown` lapses 3 years after it was made. A block of
+    // a key already blocked writes nothing, so its first day is its clock.
+    // The table is written by hand on the Desk, one row a block, so this
+    // one reads it whole rather than through an index.
+    deletedBefore(db, takedownBlocks, takedownBlocks.createdAt, cutoff),
   ] as const;
 }
 

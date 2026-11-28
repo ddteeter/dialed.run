@@ -10,7 +10,9 @@ import {
   quarantinedContent,
   removedFingerprints,
   reports,
+  reviewAudit,
   reviewQueue,
+  takedownBlocks,
   takedownRequests,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -47,6 +49,8 @@ beforeEach(async () => {
     db.delete(quarantinedContent),
     db.delete(removedFingerprints),
     db.delete(heldTakeDowns),
+    db.delete(reviewAudit),
+    db.delete(takedownBlocks),
   ]);
 });
 
@@ -66,6 +70,8 @@ const kept = {
   holds: () => idsIn(copyrightHolds, copyrightHolds.id),
   actions: () => idsIn(moderationActions, moderationActions.id),
   fingerprints: () => idsIn(removedFingerprints, removedFingerprints.id),
+  audits: () => idsIn(reviewAudit, reviewAudit.id),
+  blocks: () => idsIn(takedownBlocks, takedownBlocks.key),
 };
 
 function sorted(...ids: string[]): string[] {
@@ -374,6 +380,83 @@ describe("removed images' fingerprints (D-147)", () => {
   });
 });
 
+async function anAudit(createdAt: number): Promise<string> {
+  const id = newUlid();
+  await db.insert(reviewAudit).values({
+    id,
+    actorId: newUlid(),
+    action: "opened_reporters",
+    reviewId: newUlid(),
+    subjectType: "entry",
+    subjectId: newUlid(),
+    createdAt,
+  });
+  return id;
+}
+
+describe("the Desk's records of who opened a review's reporters", () => {
+  it("go a second past 3 years after they were made, and stay on the line", async () => {
+    const past = await anAudit(LINE - 1);
+    const onLine = await anAudit(LINE);
+
+    await sweepModerationRecords(db, NOW);
+
+    expect(await kept.audits()).toStrictEqual([onLine]);
+    expect(await kept.audits()).not.toContain(past);
+  });
+
+  it("go on their own clock, even while the review they record is open", async () => {
+    const subjectId = newUlid();
+    await aReview(subjectId, undefined, "pending");
+    const audit = await anAudit(LINE - 1);
+
+    await sweepModerationRecords(db, NOW);
+
+    expect(await kept.audits()).not.toContain(audit);
+    expect(await kept.reviews()).toHaveLength(1);
+  });
+});
+
+async function aBlock(
+  kind: "email" | "ip",
+  createdAt: number,
+): Promise<string> {
+  const key =
+    kind === "email" ? `${newUlid().toLowerCase()}@example.test` : newUlid();
+  await db
+    .insert(takedownBlocks)
+    .values({ key, kind, createdAt, createdBy: newUlid() });
+  return key;
+}
+
+describe("blocks on the removal form", () => {
+  it("go a second past 3 years after they were made, and stay on the line", async () => {
+    const pastEmail = await aBlock("email", LINE - 1);
+    const pastNetwork = await aBlock("ip", LINE - 1);
+    const onLineEmail = await aBlock("email", LINE);
+    const onLineNetwork = await aBlock("ip", LINE);
+
+    await sweepModerationRecords(db, NOW);
+
+    expect(await kept.blocks()).toStrictEqual(
+      sorted(onLineEmail, onLineNetwork),
+    );
+    expect(await kept.blocks()).not.toContain(pastEmail);
+    expect(await kept.blocks()).not.toContain(pastNetwork);
+  });
+});
+
+async function everyKept() {
+  return {
+    requests: await kept.requests(),
+    reports: await kept.reports(),
+    holds: await kept.holds(),
+    actions: await kept.actions(),
+    audits: await kept.audits(),
+    blocks: await kept.blocks(),
+  };
+}
+
 describe("the sweep is re-runnable (law 1)", () => {
   it("changes nothing on a second pass", async () => {
     await aRequest(LINE - DAY);
@@ -383,14 +466,13 @@ describe("the sweep is re-runnable (law 1)", () => {
     const hold = await aHold("hidden", undefined);
     await aHold("purged", LINE - DAY);
     const action = await anAction(LINE);
+    await anAudit(LINE - DAY);
+    const audit = await anAudit(LINE);
+    await aBlock("email", LINE - DAY);
+    const block = await aBlock("ip", LINE);
 
     await sweepModerationRecords(db, NOW);
-    const afterFirst = {
-      requests: await kept.requests(),
-      reports: await kept.reports(),
-      holds: await kept.holds(),
-      actions: await kept.actions(),
-    };
+    const afterFirst = await everyKept();
     await sweepModerationRecords(db, NOW);
 
     expect(afterFirst).toStrictEqual({
@@ -398,13 +480,10 @@ describe("the sweep is re-runnable (law 1)", () => {
       reports: [report],
       holds: [hold.id],
       actions: sorted(hold.actionId, action),
+      audits: [audit],
+      blocks: [block],
     });
-    expect({
-      requests: await kept.requests(),
-      reports: await kept.reports(),
-      holds: await kept.holds(),
-      actions: await kept.actions(),
-    }).toStrictEqual(afterFirst);
+    expect(await everyKept()).toStrictEqual(afterFirst);
   });
 });
 
@@ -440,7 +519,8 @@ describe("the sweep reads by index, not by scanning (D1 bills rows scanned)", ()
       }),
     );
 
-    expect(plans).toHaveLength(6);
+    const blocks = plans.pop();
+    expect(plans).toHaveLength(7);
     const expected = [
       /takedown_requests_resolved/u,
       /reports_created[\s\S]*review_queue_subject/u,
@@ -448,10 +528,14 @@ describe("the sweep reads by index, not by scanning (D1 bills rows scanned)", ()
       /copyright_holds_status_settled/u,
       /removed_fingerprints_created/u,
       /moderation_actions_created[\s\S]*copyright_holds_action[\s\S]*quarantined_content_action[\s\S]*held_take_downs/u,
+      /review_audit_created/u,
     ];
     for (const [index, plan] of plans.entries()) {
       expect(plan).toMatch(expected[index] ?? /never/u);
       expect(plan).not.toMatch(/\bSCAN\b/u);
     }
+    // The one read of a whole table: the blocks, one row each, written by
+    // hand on the Desk.
+    expect(blocks).toBe("SCAN takedown_blocks");
   });
 });
