@@ -5,9 +5,8 @@
 export {
   changeLinkWithdrawal,
   claimFreshEmailLink,
-  didClaimEmailLink,
+  emailLinkSpend,
   readEmailLink,
-  releaseEmailLink,
   emailConfirmationRead,
   isUnconfirmed,
 } from "./email-links";

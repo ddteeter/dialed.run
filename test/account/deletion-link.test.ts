@@ -425,9 +425,27 @@ describe("confirmDeletionLink (round 64 #374.3–374.4)", () => {
     }
     expect(await deletionRows()).toStrictEqual([]);
     expect(await db.select().from(outbox)).toStrictEqual([]);
+    expect(await usedAtOfLink()).toBeUndefined();
   });
 
-  it("hands the link back when the deletion does not land", async () => {
+  it("spends nothing for an account whose deletion was scheduled since the link went out", async () => {
+    const { userId } = await closedRunner();
+    const token = await sentToken(userId);
+    const { effects, disconnectStrava } = effectsFor(fakeMail());
+    await db.insert(accountDeletions).values({
+      userId,
+      requestedAt: NOW - 10,
+      purgeAfter: NOW + 100,
+    });
+    expect(await confirmDeletionLink(db, token, effects, NOW)).toStrictEqual({
+      state: "expired",
+    });
+    expect(await usedAtOfLink()).toBeUndefined();
+    expect(await db.select().from(outbox)).toStrictEqual([]);
+    expect(disconnectStrava).not.toHaveBeenCalled();
+  });
+
+  it("spends nothing when the deletion does not land", async () => {
     const { userId } = await closedRunner();
     const token = await sentToken(userId);
     const { effects } = effectsFor(fakeMail());
@@ -442,6 +460,36 @@ describe("confirmDeletionLink (round 64 #374.3–374.4)", () => {
       spy.mockRestore();
     }
     expect(await usedAtOfLink()).toBeUndefined();
+    expect(
+      await confirmDeletionLink(db, token, effects, NOW + 1),
+    ).toMatchObject({ state: "done" });
+  });
+
+  it("leaves the link unspent when the deletion does not land and nothing can hand it back", async () => {
+    const { userId } = await closedRunner();
+    const token = await sentToken(userId);
+    const { effects } = effectsFor(fakeMail());
+    const update = db.update.bind(db);
+    const batchSpy = vi
+      .spyOn(db, "batch")
+      .mockRejectedValueOnce(new Error("D1 is down"));
+    // A Worker that stops after the batch fails: no later write runs.
+    const updateSpy = vi
+      .spyOn(db, "update")
+      .mockImplementationOnce(update)
+      .mockImplementation(() => {
+        throw new Error("the Worker stopped");
+      });
+    try {
+      await expect(
+        confirmDeletionLink(db, token, effects, NOW),
+      ).rejects.toThrow("D1 is down");
+    } finally {
+      batchSpy.mockRestore();
+      updateSpy.mockRestore();
+    }
+    expect(await usedAtOfLink()).toBeUndefined();
+    expect(await deletionRows()).toStrictEqual([]);
     expect(
       await confirmDeletionLink(db, token, effects, NOW + 1),
     ).toMatchObject({ state: "done" });

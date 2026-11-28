@@ -115,14 +115,14 @@ views {
         A link that ran out, was replaced, or was withdrawn by Reopen reads as LINK EXPIRED, whichever it was.
       '''
     }
-    // source: src/modules/account/functions.ts confirmDeletionLinkFn; src/modules/account/data/deletion-link.ts confirmDeletionLink, landedOrReleased; src/modules/account/verification/email-links.ts didClaimEmailLink
-    cf.app.account.deletionLink -> cf.coreDb 'claims the link, then writes the claim and owes the email, in one batch' {
+    // source: src/modules/account/functions.ts confirmDeletionLinkFn; src/modules/account/data/deletion-link.ts confirmDeletionLink; src/modules/account/verification/email-links.ts emailLinkSpend
+    cf.app.account.deletionLink -> cf.coreDb 'spends the link, writes the claim and owes the email, in one batch' {
       notes '''
-        **Guard: claim, then work.** Two presses at once schedule once; the other reads already used.
+        **Guard: claim, then work.** The spend is guarded, so two presses at once schedule once; the other reads already used.
 
-        **Guard: still closed.** The claim is written only while the account is closed, so a Reopen in between schedules nothing.
+        **Guard: still closed.** The claim is guarded and written only while the account is closed, so a Reopen in between schedules nothing and spends nothing.
 
-        **If it fails:** the link is handed back, and the next press tries again.
+        **If it fails:** nothing is written, the link stays unspent, and the next press tries again.
       '''
     }
     // source: src/modules/account/data/deletion-link.ts confirmDeletionLink (effects.keepAlive, effects.settle); src/modules/ops/owed-email/owed-email.ts settleOwedEmail
