@@ -177,7 +177,14 @@ describe("requestAccountDeletion", () => {
     expect(checkPassword).toHaveBeenCalledTimes(1);
     expect(checkPassword).toHaveBeenCalledWith("hunter22");
     expect(await claimOf(userId)).toStrictEqual([
-      { userId, requestedAt: NOW, purgeAfter, purgeStartedAt: undefined },
+      {
+        userId,
+        requestedAt: NOW,
+        purgeAfter,
+        purgeStartedAt: undefined,
+        // A runner's own request (design 289): Reopen never cancels it.
+        cause: "asked",
+      },
     ]);
     expect(await sessionsOf(userId)).toStrictEqual([]);
     expect(await sessionsOf(bystander.userId)).toStrictEqual([theirs]);
@@ -361,7 +368,14 @@ describe("requestAccountDeletion", () => {
     await second.settled();
 
     expect(await claimOf(userId)).toStrictEqual([
-      { userId, requestedAt: NOW, purgeAfter, purgeStartedAt: undefined },
+      {
+        userId,
+        requestedAt: NOW,
+        purgeAfter,
+        purgeStartedAt: undefined,
+        // A runner's own request (design 289): Reopen never cancels it.
+        cause: "asked",
+      },
     ]);
     const subject = `Your dialed.run account goes on ${proseDayLabel(purgeAfter)}`;
     expect(mail.sent.map((message) => message.subject)).toStrictEqual([
@@ -512,7 +526,7 @@ describe("keepAccount", () => {
     await db.insert(accountDeletions).values(claim);
 
     expect(await keepAccount(db, userId)).toBe("too-late");
-    expect(await claimOf(userId)).toStrictEqual([claim]);
+    expect(await claimOf(userId)).toStrictEqual([{ ...claim, cause: "asked" }]);
   });
 
   it("calls an account with no deletion pending kept already", async () => {

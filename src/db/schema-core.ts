@@ -296,7 +296,11 @@ export const emailVerifications = /*#__PURE__*/ sqliteTable(
   "email_verifications",
   {
     userId: text("user_id").notNull(),
-    purpose: text("purpose", { enum: ["verify", "change"] }).notNull(),
+    // `delete`: the Desk's link that lets a closed account schedule its
+    // own deletion (design 289). A text enum with no CHECK, so no migration.
+    purpose: text("purpose", {
+      enum: ["verify", "change", "delete"],
+    }).notNull(),
     // The address the link confirms: the account's own for `verify`, the
     // new one for `change`. A `verify` link for an address the account
     // has since left confirms nothing.
@@ -380,6 +384,13 @@ export const accountDeletions = /*#__PURE__*/ sqliteTable(
     requestedAt: integer("requested_at").notNull(),
     purgeAfter: integer("purge_after").notNull(),
     purgeStartedAt: integer("purge_started_at"),
+    // Who scheduled it (design 289): `asked`, the runner, from Settings or
+    // through the Desk's deletion link; `under_18`, the Desk, closing the
+    // account for age. Reopen cancels an `under_18` deletion and never an
+    // `asked` one, and the Desk's panel says which it is.
+    cause: text("cause", { enum: ["asked", "under_18"] })
+      .notNull()
+      .default("asked"),
   },
   (t) => [
     // The purge's read: rows past their date, oldest first.
