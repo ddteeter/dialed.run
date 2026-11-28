@@ -231,6 +231,10 @@ are numbered past `main` and the open PRs (law 11).
   and its owner-only token (D-148; `docs/deployment.md` §2).
 - **Cloudflare.** Turn on the free CSAM Scanning Tool, and note that it
   sees only cached responses, so it doesn't cover our photos (B6a).
+- **AI tools.** Move the agent sessions and monitors that read production
+  data to an account in the LLC's name (#1247), set Sentry's Seer and IP
+  settings (#1249), then merge the policy text that names the provider
+  (#1248). This comes before the final read.
 - **Read and publish.** A final read of the step 2 PR, then mark each
   legal file `published: true`.
 
