@@ -270,6 +270,31 @@ describe("sweepExports", () => {
     expect(reports).toStrictEqual([]);
   });
 
+  it("forgets failures no build claimed without asking R2 to delete no keys", async () => {
+    // R2 refuses an empty delete (`test/platform/strict-r2.ts`), and every
+    // failure here died before a build claimed it, so none has a ZIP.
+    const unclaimed = [
+      await seedExport("failed", {
+        requestedAt: NOW - EXPORT_LINK_TTL_S - 1,
+        claimId: undefined,
+      }),
+      await seedExport("too-large", {
+        requestedAt: NOW - EXPORT_LINK_TTL_S - 1,
+        claimId: undefined,
+      }),
+    ];
+    const anomalies: string[] = [];
+    const { deps: sweep, reports } = deps();
+
+    await sweepExports(anomalies, sweep);
+
+    for (const row of unclaimed) {
+      expect(await statusOf(row.id)).toBeUndefined();
+    }
+    expect(anomalies).toStrictEqual([]);
+    expect(reports).toStrictEqual([]);
+  });
+
   it("expires an unclaimed ready row too, asking the bucket to delete nothing for it", async () => {
     // Not reachable in production — a build always assigns a claim before a
     // row goes `ready` — but the cleanup must not corrupt itself if it ever
@@ -296,7 +321,8 @@ describe("sweepExports", () => {
     await sweepExports(anomalies, sweep);
 
     expect(await statusOf(unclaimed.id)).toBeUndefined();
-    expect(deleted).toStrictEqual([[]]);
+    // No call at all: R2 refuses a delete of no keys.
+    expect(deleted).toStrictEqual([]);
     expect(await env.IMPORTS.head(keyOf(live))).not.toBeNull();
     expect(anomalies).toStrictEqual([]);
     expect(reports).toStrictEqual([]);
